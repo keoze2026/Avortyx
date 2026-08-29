@@ -39,13 +39,26 @@ interface TimeSeriesPointWire {
   avgDuration: number;
 }
 
+/** `/api/analytics/time-series` ships either a bare array (legacy) or the
+ *  standard paginated envelope (`{ items: [...] }`) — see contract §1.3.
+ *  Both shapes must map to the same point list or the chart silently
+ *  renders empty. */
+type TimeSeriesResponseWire =
+  | TimeSeriesPointWire[]
+  | { items?: TimeSeriesPointWire[] | null };
+
 interface CallRecordWire {
   id: string;
   callerNumber: string;
   calledNumber?: string;
   destinationNumber: string;
   status: string;
-  duration: number;
+  /* Call length. The contract (§3.13 Call Record) names this `duration_sec`;
+     some CDR rows still ship the legacy `duration` / `duration_seconds`.
+     Read all three — picking only one leaves the column at 00:00:00. */
+  duration?: number;
+  durationSec?: number;
+  durationSeconds?: number;
   callerAreaCode?: string;
   callerState?: string;
   callerCountry?: string;
@@ -56,10 +69,16 @@ interface CallRecordWire {
   publisherId?: string | null;
   publisherName?: string | null;
   revenue: string;
-  buyerPayout: string;
+  payout?: string;
+  buyerPayout?: string;
   publisherPayout?: string;
   recordingUrl?: string;
-  createdAt: string;
+  recordingUri?: string;
+  /* §3.13 calls this `started_at`; the CDR list endpoint has historically
+     sent `created_at`. Either one is the call's start instant. */
+  startedAt?: string;
+  createdAt?: string;
+  endedAt?: string;
   updatedAt?: string;
   tags?: unknown[];
   notes?: string;
@@ -130,6 +149,19 @@ function toNum(s: string | number | undefined, fallback = 0): number {
   return fallback;
 }
 
+/** First candidate that is actually a finite number (or numeric string).
+ *  `0` is a legitimate value, so this can't be a chain of `??`/`||`. */
+function firstNum(...candidates: Array<string | number | null | undefined>): number {
+  for (const c of candidates) {
+    if (typeof c === "number" && Number.isFinite(c)) return c;
+    if (typeof c === "string" && c.trim() !== "") {
+      const n = Number(c);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return 0;
+}
+
 function toTs(s: string | number | undefined): number {
   if (typeof s === "number") return s;
   if (typeof s === "string") {
@@ -161,16 +193,16 @@ function callRecordToCall(w: CallRecordWire): Call {
     publisherName: w.publisherName ?? undefined,
     callerNumber: w.callerNumber,
     destinationNumber: w.destinationNumber,
-    startedAt: toTs(w.createdAt),
-    durationSec: w.duration ?? 0,
+    startedAt: toTs(w.startedAt ?? w.createdAt),
+    durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),
-    payout: toNum(w.buyerPayout),
+    payout: firstNum(w.payout, w.buyerPayout),
     revenue: toNum(w.revenue),
     geo: {
       country: w.callerCountry ?? "",
       state: w.callerState ?? undefined,
     },
-    recordingUrl: w.recordingUrl || undefined,
+    recordingUrl: w.recordingUrl || w.recordingUri || undefined,
   };
 }
 
@@ -216,14 +248,15 @@ export const analyticsService = {
     dateTo?: string;
     granularity?: Granularity;
   } = {}): Promise<TimeSeriesPoint[]> {
-    const wire = await http.get<TimeSeriesPointWire[]>("/api/analytics/time-series", {
+    const wire = await http.get<TimeSeriesResponseWire>("/api/analytics/time-series", {
       query: {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
         granularity: query.granularity,
       },
     });
-    return wire.map(timeSeriesPointToPoint);
+    const items = Array.isArray(wire) ? wire : (wire?.items ?? []);
+    return items.map(timeSeriesPointToPoint);
   },
 
   /**
@@ -233,7 +266,7 @@ export const analyticsService = {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 50;
     const offset = (page - 1) * pageSize;
-    const wire = await http.get<CallLogListWire>("/api/analytics/calls", {
+    const wire = await http.get<CallLogListWire | CallRecordWire[]>("/api/analytics/calls", {
       query: {
         offset,
         limit: pageSize,
@@ -245,11 +278,13 @@ export const analyticsService = {
         publisherId: query.publisherId,
       },
     });
+    // Same defensive unwrap as time-series — a bare array is a legacy shape.
+    const rows = Array.isArray(wire) ? wire : (wire?.items ?? []);
     return {
-      total: wire.total,
+      total: Array.isArray(wire) ? rows.length : (wire?.total ?? rows.length),
       page,
       pageSize,
-      items: wire.items.map(callRecordToCall),
+      items: rows.map(callRecordToCall),
     };
   },
 

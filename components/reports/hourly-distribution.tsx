@@ -17,7 +17,8 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import type { Call } from "@/lib/types";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/format";
+import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
 type Grain = "H" | "D" | "M";
@@ -73,32 +74,58 @@ function fmt12Hour(h: number): string {
   return `${display.toString().padStart(2, "0")}:00 ${period}`;
 }
 
-function bucketize(calls: Call[], grain: Grain): Bucket[] {
-  const now = new Date();
-  const day = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** "2026-08-29" → the UTC-midnight instant for that key. Day keys are
+ *  already timezone-resolved, so plain UTC arithmetic on them is exact —
+ *  no DST drift. */
+function dayKeyToUtcMs(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+function utcMsToDayKey(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+/** "MM-DD" axis label for a day key. */
+function dayKeyLabel(key: string): string {
+  const [, m, d] = key.split("-");
+  return `${m}-${d}`;
+}
+
+/**
+ * The day the window of D / M buckets ends on: the most recent call in the
+ * set, falling back to today. Anchoring on `Date.now()` instead meant that
+ * selecting any historical range slid every call out of the window and the
+ * chart rendered flat while the donut beside it showed the right total.
+ */
+function anchorDayKey(calls: Call[], timeZone: string): string {
+  let latest = -Infinity;
+  for (const c of calls) if (c.startedAt > latest) latest = c.startedAt;
+  return zonedDayKey(Number.isFinite(latest) ? latest : Date.now(), timeZone);
+}
+
+function bucketize(calls: Call[], grain: Grain, timeZone: string): Bucket[] {
   if (grain === "H") {
-    // 24 hour-buckets for today (00:00 → 23:00 local), aggregated from the
-    // passed-in calls. The legacy HOURLY_REF silhouette is no longer used —
-    // the chart now reflects real call data the same way Day and Month grains do.
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    const slots: Bucket[] = Array.from({ length: 24 }, (_, h) => {
-      const d = new Date(startOfDay);
-      d.setHours(h, 0, 0, 0);
-      return {
-        label: fmt12Hour(h),
-        ts: d.getTime(),
-        converted: 0,
-        notConverted: 0,
-        noAnswer: 0,
-        revenue: 0,
-      };
-    });
+    // Hour-of-day distribution across every call handed in. The caller has
+    // already scoped the set to the selected date range, so this must not
+    // re-filter to "today" — doing that emptied the chart for every
+    // historical range. Hours are resolved in the report timezone, not the
+    // viewer's, so the peaks line up with the times shown in the Call Log.
+    const slots: Bucket[] = Array.from({ length: 24 }, (_, h) => ({
+      label: fmt12Hour(h),
+      ts: h,
+      converted: 0,
+      notConverted: 0,
+      noAnswer: 0,
+      revenue: 0,
+    }));
     for (const c of calls) {
-      if (c.startedAt < startOfDay.getTime()) continue;
-      const hour = new Date(c.startedAt).getHours();
-      if (hour < 0 || hour >= 24) continue;
+      const hour = zonedHour(c.startedAt, timeZone);
+      if (!Number.isFinite(hour) || hour < 0 || hour >= 24) continue;
       const k = classify(c);
       slots[hour][k] += 1;
       slots[hour].revenue += c.revenue;
@@ -106,28 +133,26 @@ function bucketize(calls: Call[], grain: Grain): Bucket[] {
     return slots;
   }
 
+  const anchorMs = dayKeyToUtcMs(anchorDayKey(calls, timeZone));
+
   if (grain === "D") {
-    // Last 14 days
+    // 14 days ending on the most recent day in the set.
     const days = 14;
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    const slots: Bucket[] = Array.from({ length: days }, (_, i) => {
-      const d = new Date(start.getTime() - (days - 1 - i) * day);
-      return {
-        label: `${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`,
-        ts: d.getTime(),
-        converted: 0,
-        notConverted: 0,
-        noAnswer: 0,
-        revenue: 0,
-      };
-    });
+    const keys = Array.from({ length: days }, (_, i) =>
+      utcMsToDayKey(anchorMs - (days - 1 - i) * DAY_MS),
+    );
+    const indexByKey = new Map(keys.map((k, i) => [k, i]));
+    const slots: Bucket[] = keys.map((key) => ({
+      label: dayKeyLabel(key),
+      ts: dayKeyToUtcMs(key),
+      converted: 0,
+      notConverted: 0,
+      noAnswer: 0,
+      revenue: 0,
+    }));
     for (const c of calls) {
-      const d = new Date(c.startedAt);
-      d.setHours(0, 0, 0, 0);
-      const offsetDays = Math.round((start.getTime() - d.getTime()) / day);
-      if (offsetDays < 0 || offsetDays >= days) continue;
-      const idx = days - 1 - offsetDays;
+      const idx = indexByKey.get(zonedDayKey(c.startedAt, timeZone));
+      if (idx === undefined) continue;
       const k = classify(c);
       slots[idx][k] += 1;
       slots[idx].revenue += c.revenue;
@@ -135,15 +160,13 @@ function bucketize(calls: Call[], grain: Grain): Bucket[] {
     return slots;
   }
 
-  // M: last 30 days grouped into 5 weekly buckets
+  // M: the 35 days ending on the anchor, grouped into 5 weekly buckets.
   const weeks = 5;
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
   const slots: Bucket[] = Array.from({ length: weeks }, (_, i) => {
-    const d = new Date(start.getTime() - (weeks - 1 - i) * 7 * day);
+    const startMs = anchorMs - (weeks - 1 - i) * 7 * DAY_MS;
     return {
-      label: `${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`,
-      ts: d.getTime(),
+      label: dayKeyLabel(utcMsToDayKey(startMs)),
+      ts: startMs,
       converted: 0,
       notConverted: 0,
       noAnswer: 0,
@@ -151,7 +174,8 @@ function bucketize(calls: Call[], grain: Grain): Bucket[] {
     };
   });
   for (const c of calls) {
-    const offsetDays = Math.round((start.getTime() - c.startedAt) / day);
+    const callDayMs = dayKeyToUtcMs(zonedDayKey(c.startedAt, timeZone));
+    const offsetDays = Math.round((anchorMs - callDayMs) / DAY_MS);
     if (offsetDays < 0 || offsetDays >= weeks * 7) continue;
     const weekFromOldest = weeks - 1 - Math.floor(offsetDays / 7);
     const k = classify(c);
@@ -163,6 +187,7 @@ function bucketize(calls: Call[], grain: Grain): Bucket[] {
 
 export function HourlyDistribution({ calls }: HourlyDistributionProps) {
   const { t } = useTranslation();
+  const timeZone = useUIStore((s) => s.reportTimezone);
   const [grain, setGrain] = React.useState<Grain>("H");
   // Track the actual CHART CONTAINER width via ResizeObserver — the
   // viewport can be 1200px while the chart card only gets ~600px because
@@ -188,11 +213,11 @@ export function HourlyDistribution({ calls }: HourlyDistributionProps) {
   // advertising reference: "181 · 267 · 444 · 607 · …" labels per column).
   const data = React.useMemo(
     () =>
-      bucketize(calls, grain).map((b) => ({
+      bucketize(calls, grain, timeZone).map((b) => ({
         ...b,
         total: b.converted + b.notConverted + b.noAnswer,
       })),
-    [calls, grain],
+    [calls, grain, timeZone],
   );
 
   return (
@@ -365,17 +390,21 @@ const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function headerForBucket(b: Bucket, grain: Grain, weekOfLabel: string): string {
-  const d = new Date(b.ts);
   if (grain === "H") {
-    // "Friday, May 29, 13:00"
-    return `${DOW[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${b.label}`;
+    // An H bucket is an hour-of-day across the whole selected range, not one
+    // hour of one day — so the header is just the hour: "01:00 pm".
+    return b.label;
   }
+  // D / M buckets carry a UTC-midnight instant for an already
+  // timezone-resolved day, so read them with the UTC getters — the local
+  // ones would slide the label a day for viewers west of UTC.
+  const d = new Date(b.ts);
   if (grain === "D") {
     // "Friday, May 29"
-    return `${DOW[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+    return `${DOW[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
   }
   // M: "Week of May 22"
-  return `${weekOfLabel} ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return `${weekOfLabel} ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
 function HourlyTooltipWrapper(props: HourlyTooltipProps) {

@@ -26,15 +26,12 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
   const { t } = useTranslation();
   const { total, completed, dropped } = useMemo(() => {
     if (calls) {
-      // Match the topbar TOTAL — only count calls that started today, so the
-      // donut headline stays in sync with the topbar's "today" counter and
-      // the hourly chart above it.
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const startMs = startOfToday.getTime();
-      const today = calls.filter((c) => c.startedAt >= startMs);
-      const all = today.length;
-      const ok = today.filter((c) => c.status === "completed").length;
+      // Count exactly what was handed in. The caller (dashboard / reports)
+      // has already applied the page's date range and destination filter —
+      // re-filtering to "today" here made the headline read 0 for every
+      // historical range while the rest of the page showed real data.
+      const all = calls.length;
+      const ok = calls.filter((c) => c.status === "completed").length;
       return { total: all, completed: ok, dropped: Math.max(0, all - ok) };
     }
     const all = TODAY_HOURLY.reduce((s, p) => s + p.calls, 0);

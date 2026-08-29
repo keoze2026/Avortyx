@@ -6,6 +6,8 @@ import {
   Copy,
   DollarSign,
   Download,
+  Loader2,
+  Pause,
   PhoneOff,
   Play,
   Plus,
@@ -36,8 +38,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
+import { analyticsService } from "@/lib/api/services/analytics.service";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { formatCurrency, formatHMS, toE164 } from "@/lib/format";
+import { formatCallTime, formatCurrency, formatHMS, toE164 } from "@/lib/format";
+import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -106,16 +110,12 @@ const ALL_VISIBLE: Record<ColumnKey, boolean> = COLUMNS.reduce(
   {} as Record<ColumnKey, boolean>,
 );
 
-function timeLabel(ts: number) {
-  const d = new Date(ts);
-  const month = d.toLocaleString("en-US", { month: "short" });
-  const day = d.getDate();
-  let h = d.getHours();
-  const m = d.getMinutes().toString().padStart(2, "0");
-  const s = d.getSeconds().toString().padStart(2, "0");
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${month} ${day}, ${h}:${m}:${s} ${ampm}`;
+/** Call start rendered in the report timezone picked in the toolbar.
+ *  Reading `Date#getHours()` here instead applied the *viewer's* UTC offset
+ *  on top of the instant the backend already sent, so the same row read
+ *  8 hours late for an operator in UTC+8. */
+function timeLabel(ts: number, timeZone: string) {
+  return formatCallTime(ts, timeZone);
 }
 
 const STATUS_LABEL_FALLBACK: Record<CallStatus, string> = {
@@ -263,6 +263,7 @@ interface CallLogTableProps {
 
 export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
   const { t } = useTranslation();
+  const timeZone = useUIStore((s) => s.reportTimezone);
   const [query, setQuery] = React.useState("");
   const [columns, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   const [pageSize, setPageSize] = React.useState<number>(limit);
@@ -293,6 +294,74 @@ export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
   const visible = React.useMemo(
     () => filtered.slice(page * pageSize, page * pageSize + pageSize),
     [filtered, page, pageSize],
+  );
+
+  /* ─── Recording playback ───────────────────────────────────────────
+   * One <audio> element for the whole table: starting a second recording
+   * stops the first, and there's never a stack of orphaned players. The
+   * row's own `recordingUrl` is used when the CDR carried one; otherwise
+   * we resolve it through GET /api/analytics/calls/{id}/recording, which
+   * is what the endpoint exists for. */
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = React.useState<string | null>(null);
+  const [loadingId, setLoadingId] = React.useState<string | null>(null);
+  // Resolved URLs are cached so replaying a row doesn't refetch.
+  const urlCache = React.useRef(new Map<string, string>());
+
+  React.useEffect(() => {
+    // Release the element (and stop audio) when the table unmounts.
+    return () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
+    };
+  }, []);
+
+  const resolveRecordingUrl = React.useCallback(async (call: Call): Promise<string> => {
+    if (call.recordingUrl) return call.recordingUrl;
+    const cached = urlCache.current.get(call.id);
+    if (cached) return cached;
+    const res = await analyticsService.recordingUrl(call.id);
+    const url =
+      ("url" in res && res.url) ||
+      ("recordingUrl" in res && res.recordingUrl) ||
+      "";
+    if (!url) throw new Error("No recording URL returned");
+    urlCache.current.set(call.id, url);
+    return url;
+  }, []);
+
+  const toggleRecording = React.useCallback(
+    async (call: Call) => {
+      const audio = audioRef.current ?? new Audio();
+      audioRef.current = audio;
+
+      // Second click on the row that's already playing → pause.
+      if (playingId === call.id && !audio.paused) {
+        audio.pause();
+        setPlayingId(null);
+        return;
+      }
+
+      audio.pause();
+      setLoadingId(call.id);
+      try {
+        const url = await resolveRecordingUrl(call);
+        audio.src = url;
+        audio.onended = () => setPlayingId((id) => (id === call.id ? null : id));
+        audio.onerror = () => {
+          setPlayingId((id) => (id === call.id ? null : id));
+          toast.error(t("toolsUI.reports.callLog.actions.recordingError"));
+        };
+        await audio.play();
+        setPlayingId(call.id);
+      } catch {
+        setPlayingId(null);
+        toast.error(t("toolsUI.reports.callLog.actions.recordingError"));
+      } finally {
+        setLoadingId((id) => (id === call.id ? null : id));
+      }
+    },
+    [playingId, resolveRecordingUrl, t],
   );
 
   const onExport = (format: ExportFormat) => {
@@ -405,7 +474,7 @@ export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="pl-6 whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
-                        {timeLabel(c.startedAt)}
+                        {timeLabel(c.startedAt, timeZone)}
                       </TableCell>
                       {columns.campaign && (
                         <TableCell className="whitespace-nowrap font-medium">{c.campaignName}</TableCell>
@@ -483,18 +552,12 @@ export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
                       )}
                       {columns.recording && (
                         <TableCell>
-                          {c.recordingUrl ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              aria-label={t("toolsUI.reports.callLog.actions.playRecording")}
-                            >
-                              <Play className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          <RecordingCell
+                            call={c}
+                            playing={playingId === c.id}
+                            loading={loadingId === c.id}
+                            onToggle={() => toggleRecording(c)}
+                          />
                         </TableCell>
                       )}
                       <TableCell className="pr-6">
@@ -522,6 +585,50 @@ export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
+
+/**
+ * Recording cell — play/pause toggle for the row's call recording.
+ *
+ * A row with no `recordingUrl` on the CDR still gets a button: the URL is
+ * resolved on demand from `/api/analytics/calls/{id}/recording`. Only rows
+ * that are known to have no recording at all render the em-dash.
+ */
+function RecordingCell({
+  call,
+  playing,
+  loading,
+  onToggle,
+}: {
+  call: Call;
+  playing: boolean;
+  loading: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  // `completed` calls always have (or can resolve) a recording; anything
+  // that never connected has nothing to play.
+  const hasRecording = Boolean(call.recordingUrl) || call.status === "completed";
+  if (!hasRecording) return <span className="text-muted-foreground">—</span>;
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn("h-7 w-7", playing && "text-accent")}
+      disabled={loading}
+      aria-label={t("toolsUI.reports.callLog.actions.playRecording")}
+      aria-pressed={playing}
+      onClick={onToggle}
+    >
+      {loading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : playing ? (
+        <Pause className="h-3.5 w-3.5" />
+      ) : (
+        <Play className="h-3.5 w-3.5" />
+      )}
+    </Button>
+  );
+}
 
 /**
  * Hang-up indicator — a phone-with-cross icon tinted by who hung up first.

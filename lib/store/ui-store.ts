@@ -5,10 +5,20 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+import { DEFAULT_DISPLAY_TIMEZONE } from "@/lib/timezones";
+
 interface UIState {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   setSidebar: (collapsed: boolean) => void;
+
+  /**
+   * IANA timezone every reporting surface renders call timestamps in —
+   * driven by the Reports toolbar picker and shared with the Dashboard so
+   * the two never disagree. Persisted: an operator picks their zone once.
+   */
+  reportTimezone: string;
+  setReportTimezone: (iana: string) => void;
 
   commandOpen: boolean;
   setCommandOpen: (open: boolean) => void;
@@ -30,6 +40,9 @@ export const useUIStore = create<UIState>()(
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setSidebar: (collapsed) => set({ sidebarCollapsed: collapsed }),
 
+      reportTimezone: DEFAULT_DISPLAY_TIMEZONE,
+      setReportTimezone: (iana) => set({ reportTimezone: iana }),
+
       commandOpen: false,
       setCommandOpen: (open) => set({ commandOpen: open }),
 
@@ -46,7 +59,10 @@ export const useUIStore = create<UIState>()(
     {
       name: "vortyx.ui",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed }),
+      partialize: (s) => ({
+        sidebarCollapsed: s.sidebarCollapsed,
+        reportTimezone: s.reportTimezone,
+      }),
     },
   ),
 );

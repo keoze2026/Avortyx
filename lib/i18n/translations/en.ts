@@ -3648,6 +3648,7 @@ export const en = {
         },
         actions: {
           playRecording: "Play recording",
+          recordingError: "Could not play this recording.",
           copyCaller: "Copy caller number",
           blockCaller: "Block caller",
           billAdjust: "Bill / adjust payout",

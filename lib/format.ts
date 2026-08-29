@@ -123,3 +123,110 @@ export function toE164(value: string | null | undefined): string {
   if (digits.length === 10) return `+1${digits}`;
   return `+${digits}`;
 }
+
+/* ─── Timezone-aware timestamp rendering ───────────────────────────────
+ *
+ * Every reporting surface renders call times in one explicitly chosen
+ * timezone (see `useUIStore().reportTimezone`) instead of whatever zone the
+ * viewer's machine happens to sit in. Reading the raw `Date` getters applies
+ * the browser's UTC offset on top of the instant the backend already sent,
+ * so the same CDR read 8 hours apart for an operator in UTC+8 and one in UTC.
+ *
+ * `Intl.DateTimeFormat` construction is the expensive part, so formatters are
+ * memoized per timezone — a 50-row call log rebuilds none of them.
+ */
+
+const PARTS_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+
+function partsFormatter(timeZone: string): Intl.DateTimeFormat {
+  const cached = PARTS_FORMATTERS.get(timeZone);
+  if (cached) return cached;
+  let fmt: Intl.DateTimeFormat;
+  try {
+    fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+  } catch {
+    // Unknown/typo'd IANA id — fall back to the viewer's zone rather than
+    // throwing inside a render.
+    fmt = new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+  }
+  PARTS_FORMATTERS.set(timeZone, fmt);
+  return fmt;
+}
+
+export interface ZonedParts {
+  year: number;
+  /** Abbreviated month name, e.g. "Aug". */
+  month: string;
+  /** Day of month, 1-31. */
+  day: number;
+  /** Hour of day in the target zone, 0-23. */
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+/** Break a timestamp (ms) into calendar parts as seen in `timeZone`. */
+export function zonedParts(timestamp: number, timeZone: string): ZonedParts {
+  const parts = partsFormatter(timeZone).formatToParts(new Date(timestamp));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  // `hourCycle: "h23"` still emits "24" for midnight in some engines.
+  const hour = Number(get("hour")) % 24;
+  return {
+    year: Number(get("year")),
+    month: get("month"),
+    day: Number(get("day")),
+    hour: Number.isFinite(hour) ? hour : 0,
+    minute: Number(get("minute")),
+    second: Number(get("second")),
+  };
+}
+
+/** Hour of day (0-23) a timestamp falls in, as seen in `timeZone`. */
+export function zonedHour(timestamp: number, timeZone: string): number {
+  return zonedParts(timestamp, timeZone).hour;
+}
+
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** Calendar day key ("2026-08-29") a timestamp falls on in `timeZone`.
+ *  Use for day bucketing so rows near midnight land on the right day. */
+export function zonedDayKey(timestamp: number, timeZone: string): string {
+  const p = zonedParts(timestamp, timeZone);
+  const monthIndex = MONTH_ABBR.indexOf(p.month);
+  const mm = (monthIndex >= 0 ? monthIndex + 1 : 1).toString().padStart(2, "0");
+  return `${p.year}-${mm}-${p.day.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Call-log timestamp → "Aug 29, 8:30:00 AM" rendered in `timeZone`.
+ * Replaces the old browser-local `new Date(ts).getHours()` formatting.
+ */
+export function formatCallTime(timestamp: number, timeZone: string): string {
+  const p = zonedParts(timestamp, timeZone);
+  const ampm = p.hour >= 12 ? "PM" : "AM";
+  const h12 = p.hour % 12 || 12;
+  const mm = p.minute.toString().padStart(2, "0");
+  const ss = p.second.toString().padStart(2, "0");
+  return `${p.month} ${p.day}, ${h12}:${mm}:${ss} ${ampm}`;
+}

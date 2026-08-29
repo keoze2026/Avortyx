@@ -3619,6 +3619,7 @@ export const ru: TranslationShape = {
         },
         actions: {
           playRecording: "Воспроизвести запись",
+          recordingError: "Не удалось воспроизвести запись.",
           copyCaller: "Скопировать номер абонента",
           blockCaller: "Заблокировать абонента",
           billAdjust: "Биллинг / правка выплаты",

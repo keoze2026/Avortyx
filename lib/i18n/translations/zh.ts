@@ -3619,6 +3619,7 @@ export const zh: TranslationShape = {
         },
         actions: {
           playRecording: "播放录音",
+          recordingError: "无法播放此录音。",
           copyCaller: "复制来电号码",
           blockCaller: "屏蔽来电者",
           billAdjust: "计费/调整分成",

@@ -21,7 +21,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TIMEZONES as TZ_OPTIONS } from "@/lib/timezones";
+import { TIMEZONES as TZ_OPTIONS, TIMEZONE_BY_IANA } from "@/lib/timezones";
+import { useUIStore } from "@/lib/store/ui-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
@@ -110,11 +111,13 @@ export function ReportsToolbar({
   onVisibilityChange,
 }: ReportsToolbarProps) {
   const { t } = useTranslation();
-  // Default to Eastern Time — first entry in the curated list that matches.
-  const [tz, setTz] = useState<string>(
-    TZ_OPTIONS.find((t) => t.iana === "America/New_York")?.label ??
-      TZ_OPTIONS[0].label,
-  );
+  // The picked zone lives in the UI store, not in local state — the Call Log
+  // and the hourly chart render their timestamps in it, and it persists
+  // across reloads. Local state here meant the picker changed a label and
+  // nothing else, while every row silently used the browser's own zone.
+  const tzIana = useUIStore((s) => s.reportTimezone);
+  const setTzIana = useUIStore((s) => s.setReportTimezone);
+  const tzLabel = TIMEZONE_BY_IANA[tzIana]?.label ?? tzIana;
   const [refresh, setRefresh] = useState<RefreshOption>("Auto refresh");
 
   // Live ticking countdown: seconds remaining until the next auto-refresh fires.
@@ -222,7 +225,7 @@ export function ReportsToolbar({
               className={cn("gap-2", TOOLBAR_BTN_HOVER)}
             >
               <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="truncate max-w-[18rem]">{tz}</span>
+              <span className="truncate max-w-[18rem]">{tzLabel}</span>
               <ChevronDown className="h-3 w-3 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
@@ -230,8 +233,8 @@ export function ReportsToolbar({
             {TZ_OPTIONS.map((t) => (
               <DropdownMenuItem
                 key={t.iana}
-                onSelect={() => setTz(t.label)}
-                className={cn(tz === t.label && "text-accent")}
+                onSelect={() => setTzIana(t.iana)}
+                className={cn(tzIana === t.iana && "text-accent")}
               >
                 {t.label}
               </DropdownMenuItem>

@@ -107,3 +107,15 @@ export const TIMEZONE_BY_IANA: Record<string, TimezoneOption> = Object.fromEntri
 export const TIMEZONE_BY_LABEL: Record<string, TimezoneOption> = Object.fromEntries(
   TIMEZONES.map((t) => [t.label, t]),
 );
+
+/**
+ * Timezone every reporting surface renders call timestamps in until the
+ * operator picks another one in the Reports toolbar.
+ *
+ * UTC — deliberately. The backend sends instants tagged `Z` (contract §1.5),
+ * so rendering in UTC shows the operator exactly the wall-clock time the CDR
+ * carries, with no offset applied on top of it. Rendering in the browser's
+ * own zone silently re-based every row by the viewer's UTC offset, which is
+ * what made call times read 8 hours late for operators in UTC+8.
+ */
+export const DEFAULT_DISPLAY_TIMEZONE = "Etc/UTC";

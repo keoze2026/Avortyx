@@ -3618,6 +3618,7 @@ export const ja: TranslationShape = {
         },
         actions: {
           playRecording: "録音を再生",
+          recordingError: "この録音を再生できませんでした。",
           copyCaller: "発信者番号をコピー",
           blockCaller: "発信者をブロック",
           billAdjust: "請求 / 支払い調整",
