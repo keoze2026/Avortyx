@@ -561,10 +561,17 @@ route("POST", "/api/routing/rules", (req) => {
     name: String(body.name ?? "New Routing Plan"),
     description: String(body.description ?? ""),
     status: "draft",
+    rule_type: body.ruleType ?? "visual-graph",
+    priority: body.priority ?? 1,
     campaign_id: body.campaignId ?? null,
     campaign_name: body.campaignName ?? null,
-    nodes: body.nodes ?? [],
-    edges: body.edges ?? [],
+    // The wire shape the editor actually reads (see routing.service.ts /
+    // routing-bridge.ts) — the visual graph is packed into `conditions`,
+    // buyer assignments live in `destinations`. Both start empty; the
+    // client's create flow immediately follows up with addCondition() /
+    // addDestination() calls below to fill them in.
+    conditions: [],
+    destinations: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -588,6 +595,89 @@ route("DELETE", "/api/routing/rules/{id}", (req) => {
   const rows = readTable<Record<string, unknown>>("routing", seedRoutingPlans);
   writeTable("routing", rows.filter((r) => r.id !== id));
   return { ok: true };
+});
+
+// These three were entirely unmocked — every call silently fell through to
+// `emptyFor()`'s `{ ok: true }` stub with no write to the `routing` table.
+// The routing editor's Save button therefore always reported success
+// (no thrown error) while persisting nothing: a fresh plan reloaded blank
+// right after creation, and edits to an existing plan reverted on refresh.
+// This reproduces "routing rules can't be created or edited" independent of
+// any backend state — worth fixing here regardless of the backend's own bug.
+route("POST", "/api/routing/rules/{ruleId}/conditions", (req) => {
+  const id = paramAt("/api/routing/rules/{ruleId}/conditions", req.path, 3);
+  const rows = readTable<Record<string, unknown>>("routing", seedRoutingPlans);
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx < 0) throw notFound("Routing plan not found");
+  const body = camelKeyPatch(req.body) as { conditions?: Record<string, unknown> };
+  const created = { id: demoId("cond"), conditions: body.conditions ?? {} };
+  const prevConditions = Array.isArray(rows[idx].conditions) ? (rows[idx].conditions as unknown[]) : [];
+  const updated = [...rows];
+  updated[idx] = {
+    ...rows[idx],
+    // The bridge picks the latest graph blob on reconstruct — append, don't
+    // replace, mirroring the real backend's documented behavior.
+    conditions: [...prevConditions, created],
+    updated_at: new Date().toISOString(),
+  };
+  writeTable("routing", updated);
+  return created;
+});
+route("POST", "/api/routing/rules/{ruleId}/destinations", (req) => {
+  const id = paramAt("/api/routing/rules/{ruleId}/destinations", req.path, 3);
+  const rows = readTable<Record<string, unknown>>("routing", seedRoutingPlans);
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx < 0) throw notFound("Routing plan not found");
+  const body = camelKeyPatch(req.body) as { buyerId?: string; weight?: number; priority?: number };
+  const buyerRows = readTable<Record<string, unknown>>("buyers", seedBuyers);
+  const buyer = buyerRows.find((b) => b.id === body.buyerId);
+  const created = {
+    id: demoId("dest"),
+    buyer_id: body.buyerId ?? "",
+    buyer_name: (buyer?.name as string | undefined) ?? "",
+    weight: body.weight ?? 100,
+    priority: body.priority ?? 1,
+  };
+  const prevDestinations = Array.isArray(rows[idx].destinations) ? (rows[idx].destinations as unknown[]) : [];
+  const updated = [...rows];
+  updated[idx] = {
+    ...rows[idx],
+    destinations: [...prevDestinations, created],
+    updated_at: new Date().toISOString(),
+  };
+  writeTable("routing", updated);
+  return created;
+});
+route("POST", "/api/routing/rules/{ruleId}/simulate", (req) => {
+  const id = paramAt("/api/routing/rules/{ruleId}/simulate", req.path, 3);
+  const rows = readTable<Record<string, unknown>>("routing", seedRoutingPlans);
+  const rule = rows.find((r) => r.id === id);
+  if (!rule) throw notFound("Routing plan not found");
+  const conditions = Array.isArray(rule.conditions) ? (rule.conditions as Array<{ id: string }>) : [];
+  const destinations = Array.isArray(rule.destinations)
+    ? (rule.destinations as Array<{ id: string; buyer_id?: string; buyer_name?: string; weight?: number; priority?: number }>)
+    : [];
+  const picked = destinations[0];
+  return {
+    matched_conditions: conditions.map((c) => ({ condition_id: c.id, matched: true })),
+    selected_destination: picked
+      ? {
+          id: picked.id,
+          name: picked.buyer_name ?? "Buyer",
+          buyer_name: picked.buyer_name ?? "Buyer",
+          weight: picked.weight ?? 100,
+          priority: picked.priority ?? 1,
+        }
+      : undefined,
+    trace: [
+      { step: "Inbound", outcome: "Call received" },
+      { step: "Conditions", outcome: `${conditions.length} evaluated` },
+      {
+        step: "Destination",
+        outcome: picked ? `Routed to ${picked.buyer_name ?? "buyer"}` : "No destination configured",
+      },
+    ],
+  };
 });
 
 /* ─── IVR ───────────────────────────────────────────────────────────── */

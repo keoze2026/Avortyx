@@ -54,7 +54,17 @@ function extractGraphBlob(conditions: RoutingCondition[]): { nodes: RoutingNode[
     if (typeof raw === "string" && raw.length > 0) {
       try {
         const parsed = JSON.parse(raw) as { nodes?: unknown; edges?: unknown };
-        if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+        // A blob that parses but carries zero nodes is treated the same as a
+        // missing blob — it falls through to `synthesizeGraph` below. Without
+        // this, a rule that was ever saved with an empty graph (a stale draft,
+        // a race on first load, a placeholder row created outside the visual
+        // builder) permanently shows 0 nodes/0 buyers even though the rule's
+        // real `destinations` still exist on the backend record.
+        if (
+          Array.isArray(parsed.nodes) &&
+          Array.isArray(parsed.edges) &&
+          parsed.nodes.length > 0
+        ) {
           return {
             nodes: parsed.nodes as RoutingNode[],
             edges: parsed.edges as RoutingEdge[],

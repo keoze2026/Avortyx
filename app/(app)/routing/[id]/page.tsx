@@ -11,6 +11,7 @@ import { RoutingPalette } from "@/components/routing/routing-palette";
 import { RoutingToolbar } from "@/components/routing/routing-toolbar";
 import { TestCallerDialog } from "@/components/routing/test-caller-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingEdge, RoutingNode, RoutingNodeData } from "@/lib/types";
@@ -20,6 +21,7 @@ export default function RoutingEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const plan = useRoutingStore((s) => s.getById(params.id));
+  const fetchOne = useRoutingStore((s) => s.fetchOne);
   const setGraph = useRoutingStore((s) => s.setGraph);
   const setStatus = useRoutingStore((s) => s.setStatus);
   const remove = useRoutingStore((s) => s.remove);
@@ -33,21 +35,47 @@ export default function RoutingEditorPage() {
   const [selected, setSelected] = useState<RoutingNode | null>(null);
   const [saving, setSaving] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
-  const initialSyncRef = useRef(false);
+  // Tracks which plan id `workingNodes`/`workingEdges` currently reflect, so
+  // a re-render that doesn't change the id (e.g. the detail fetch below
+  // resolving) doesn't stomp in-progress edits.
+  const syncedIdRef = useRef<string | null>(null);
 
   // Track patches pushed into the canvas (inspector edits).
   const [patchVersion, setPatchVersion] = useState(0);
   const [patchedNode, setPatchedNode] = useState<{ id: string; data: Partial<RoutingNodeData> } | null>(null);
 
-  // When the plan id changes (route nav), reset the working copy.
+  // `fetch()` (called once at app boot) hydrates the store from the
+  // paginated LIST endpoint, which many backends serialize slim — omitting
+  // the nested conditions/destinations a specific rule needs to render its
+  // graph. Re-fetch this one rule from the detail endpoint every time the
+  // editor opens, so it never renders (or saves over) a slimmer snapshot
+  // than what's actually on the backend record.
+  const [detailLoading, setDetailLoading] = useState(true);
   useEffect(() => {
-    if (!plan) return;
-    if (initialSyncRef.current && (workingNodes === plan.nodes || workingEdges === plan.edges)) return;
+    let cancelled = false;
+    setDetailLoading(true);
+    fetchOne(params.id)
+      .catch(() => {
+        // Non-fatal — fall back to whatever the list hydration already
+        // produced (or "Plan not found" if that came up empty too).
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, fetchOne]);
+
+  // Sync the working copy once the plan's full detail is in — not on every
+  // render, so it doesn't overwrite edits already in progress.
+  useEffect(() => {
+    if (!plan || detailLoading) return;
+    if (syncedIdRef.current === plan.id) return;
     setWorkingNodes(plan.nodes);
     setWorkingEdges(plan.edges);
-    initialSyncRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+    syncedIdRef.current = plan.id;
+  }, [plan, detailLoading]);
 
   const dirty = useMemo(() => {
     if (!plan) return false;
@@ -56,6 +84,22 @@ export default function RoutingEditorPage() {
       JSON.stringify(workingEdges) !== JSON.stringify(plan.edges)
     );
   }, [plan, workingNodes, workingEdges]);
+
+  // Hold the canvas until the per-rule detail fetch resolves — `plan` can
+  // already be non-null here from the list hydration (slim, per the backend
+  // contract's list/detail split) by the time this page mounts via in-app
+  // navigation. Rendering the canvas off that snapshot would seed React
+  // Flow's one-time `initialNodes` with it, and the subsequent `fetchOne`
+  // resolving can't correct it after the fact — so wait for both here
+  // instead of gating on `!plan` alone.
+  if (detailLoading) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col gap-3 p-4 sm:p-6">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-full flex-1 rounded-xl" />
+      </div>
+    );
+  }
 
   if (!plan) {
     return (

@@ -21,6 +21,15 @@ interface RoutingState {
   hydrated: boolean;
 
   fetch: () => Promise<void>;
+  /**
+   * Refresh a single plan from `GET /api/routing/rules/{id}` and upsert it
+   * into `plans`. `fetch()` populates the store from the paginated LIST
+   * endpoint, which many backends serialize slim (omitting nested
+   * conditions/destinations); the editor calls this on open so it always
+   * works from the fully-detailed record instead of whatever the list
+   * happened to include.
+   */
+  fetchOne: (id: string) => Promise<void>;
   getById: (id: string) => RoutingPlan | undefined;
   add: (input: Omit<RoutingPlan, "id" | "createdAt" | "updatedAt">) => Promise<RoutingPlan>;
   remove: (id: string) => Promise<void>;
@@ -51,6 +60,19 @@ export const useRoutingStore = create<RoutingState>()((set, get) => ({
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
     }
+  },
+
+  fetchOne: async (id) => {
+    const rule = await routingService.getRule(id);
+    const existing = get().plans.find((p) => p.id === id);
+    const plan = reconstructPlan(rule, existing?.createdAt);
+    set((s) => {
+      const idx = s.plans.findIndex((p) => p.id === id);
+      if (idx === -1) return { plans: [plan, ...s.plans] };
+      const next = s.plans.slice();
+      next[idx] = plan;
+      return { plans: next };
+    });
   },
 
   getById: (id) => get().plans.find((p) => p.id === id),

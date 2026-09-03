@@ -197,43 +197,104 @@ export function seedDestinations() {
 
 /* ─── Routing plans ────────────────────────────────────────────────── */
 
+/**
+ * Shape matches what `routing.service.ts#wireToRule` actually reads
+ * (`rule_type`, `priority`, `conditions[]`, `destinations[]`) — NOT the
+ * frontend's `RoutingPlan.nodes`/`.edges`, which only ever exist client-side
+ * inside `conditions[].conditions.graph` (see `lib/routing-bridge.ts`).
+ *
+ * Seeding plain `nodes: []` / `edges: []` here (the old shape) meant every
+ * demo plan round-tripped through `wireToRule` with empty `conditions` and
+ * `destinations` arrays regardless of what a `nodes`/`edges` key held — the
+ * exact "0 nodes / 0 buyers / 0 edges despite a real buyer destination"
+ * report, reproduced locally by our own fixture rather than a live backend.
+ *
+ * Two plans below carry a real saved graph blob (inbound → buyer); the third
+ * carries only a `destinations` entry and no blob, to exercise the bridge's
+ * `synthesizeGraph` fallback — the path a rule created outside the visual
+ * builder takes.
+ */
+function graphCondition(nodes: unknown[], edges: unknown[]) {
+  return [
+    {
+      id: "cond_graph",
+      conditions: { graph: JSON.stringify({ nodes, edges }) },
+    },
+  ];
+}
+
 export function seedRoutingPlans() {
   return [
     {
       id: "rp_demo_health",
       name: "Health Insurance — Geo Split",
       description: "Routes by caller state, with cap-aware fallback.",
-      status: "published",
+      status: "active",
+      rule_type: "visual-graph",
+      priority: 1,
       campaign_id: "c_health_001",
       campaign_name: "Medicare Open Enrollment 2026",
       created_at: new Date(NOW - 45 * DAY).toISOString(),
       updated_at: new Date(NOW - 3 * DAY).toISOString(),
-      nodes: [],
-      edges: [],
+      conditions: graphCondition(
+        [
+          { id: "inbound", type: "inbound", position: { x: 60, y: 120 }, data: { kind: "inbound", inbound: { campaignId: "c_health_001" } } },
+          { id: "geo", type: "geoFilter", position: { x: 340, y: 120 }, data: { kind: "geoFilter", geoFilter: { mode: "allow", states: ["TX", "FL", "OH"] } } },
+          { id: "buyer_apex", type: "buyer", position: { x: 620, y: 120 }, data: { kind: "buyer", buyer: { buyerId: "b_apex", buyerName: "Apex Insurance Group" } } },
+        ],
+        [
+          { id: "e_inbound_geo", source: "inbound", target: "geo", sourceHandle: "out", targetHandle: "in" },
+          { id: "e_geo_buyer", source: "geo", target: "buyer_apex", sourceHandle: "out", targetHandle: "in" },
+        ],
+      ),
+      destinations: [
+        { id: "dest_health_apex", buyer_id: "b_apex", buyer_name: "Apex Insurance Group", weight: 100, priority: 1 },
+      ],
     },
     {
       id: "rp_demo_solar",
       name: "Solar — FICO + Hours",
       description: "Business-hours filter, then FICO 700+ buyer priority.",
-      status: "published",
+      status: "active",
+      rule_type: "visual-graph",
+      priority: 1,
       campaign_id: "c_solar_001",
       campaign_name: "Solar — Homeowner 700+ FICO",
       created_at: new Date(NOW - 22 * DAY).toISOString(),
       updated_at: new Date(NOW - 1 * DAY).toISOString(),
-      nodes: [],
-      edges: [],
+      conditions: graphCondition(
+        [
+          { id: "inbound", type: "inbound", position: { x: 60, y: 120 }, data: { kind: "inbound", inbound: { campaignId: "c_solar_001" } } },
+          { id: "hours", type: "hoursFilter", position: { x: 340, y: 120 }, data: { kind: "hoursFilter", hoursFilter: { days: [1, 2, 3, 4, 5], startHour: 9, endHour: 20 } } },
+          { id: "buyer_solar", type: "buyer", position: { x: 620, y: 120 }, data: { kind: "buyer", buyer: { buyerId: "b_solar_united", buyerName: "Solar United" } } },
+        ],
+        [
+          { id: "e_inbound_hours", source: "inbound", target: "hours", sourceHandle: "out", targetHandle: "in" },
+          { id: "e_hours_buyer", source: "hours", target: "buyer_solar", sourceHandle: "out", targetHandle: "in" },
+        ],
+      ),
+      destinations: [
+        { id: "dest_solar_united", buyer_id: "b_solar_united", buyer_name: "Solar United", weight: 100, priority: 1 },
+      ],
     },
     {
       id: "rp_demo_legal",
       name: "Legal Intake — Mass Tort",
       description: "Vertical-specific tag filter into Pinnacle Legal.",
       status: "draft",
+      rule_type: "visual-graph",
+      priority: 1,
       campaign_id: "c_legal_001",
       campaign_name: "Mass Tort Intake — Talc",
       created_at: new Date(NOW - 9 * DAY).toISOString(),
       updated_at: new Date(NOW - 2 * DAY).toISOString(),
-      nodes: [],
-      edges: [],
+      // No condition blob on purpose — this plan renders via
+      // `synthesizeGraph`, rebuilding inbound → buyer from `destinations`
+      // alone, the same as a rule created directly through the API.
+      conditions: [],
+      destinations: [
+        { id: "dest_legal_pinnacle", buyer_id: "b_pinnacle_legal", buyer_name: "Pinnacle Legal Partners", weight: 100, priority: 1 },
+      ],
     },
   ];
 }
