@@ -85,41 +85,12 @@ export default function RoutingEditorPage() {
     );
   }, [plan, workingNodes, workingEdges]);
 
-  // Hold the canvas until the per-rule detail fetch resolves — `plan` can
-  // already be non-null here from the list hydration (slim, per the backend
-  // contract's list/detail split) by the time this page mounts via in-app
-  // navigation. Rendering the canvas off that snapshot would seed React
-  // Flow's one-time `initialNodes` with it, and the subsequent `fetchOne`
-  // resolving can't correct it after the fact — so wait for both here
-  // instead of gating on `!plan` alone.
-  if (detailLoading) {
-    return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col gap-3 p-4 sm:p-6">
-        <Skeleton className="h-9 w-64" />
-        <Skeleton className="h-full flex-1 rounded-xl" />
-      </div>
-    );
-  }
-
-  if (!plan) {
-    return (
-      <div className="p-6">
-        <EmptyState
-          icon={GitFork}
-          tone="amber"
-          title="Plan not found"
-          description="It may have been deleted. Sending you back to the routing list…"
-        />
-      </div>
-    );
-  }
-
-  const inboundOnCanvas = workingNodes.some((n) => n.type === "inbound");
-
-  // NOTE — these MUST be stable across renders. React Flow watches the
-  // `onSelectionChange` callback identity inside the canvas; if these change
-  // every render, the canvas re-fires the handler → setSelected → new render
-  // → new handler → infinite loop (React error #185).
+  // All useCallback hooks must be declared before any early return (Rules of
+  // Hooks — React error #310). They only close over state setters, which are
+  // stable references from useState, so moving them above the guards is safe.
+  // React Flow watches the onSelectionChange callback identity inside the
+  // canvas; if it changes every render the canvas re-fires → setSelected →
+  // new render → new callback → infinite loop (React error #185).
   const onSelectNode = useCallback((n: RoutingNode | null) => setSelected(n), []);
 
   const onChange = useCallback(
@@ -152,6 +123,37 @@ export default function RoutingEditorPage() {
       return null;
     });
   }, []);
+
+  // Hold the canvas until the per-rule detail fetch resolves — `plan` can
+  // already be non-null here from the list hydration (slim, per the backend
+  // contract's list/detail split) by the time this page mounts via in-app
+  // navigation. Rendering the canvas off that snapshot would seed React
+  // Flow's one-time `initialNodes` with it, and the subsequent `fetchOne`
+  // resolving can't correct it after the fact — so wait for both here
+  // instead of gating on `!plan` alone.
+  if (detailLoading) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col gap-3 p-4 sm:p-6">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-full flex-1 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={GitFork}
+          tone="amber"
+          title="Plan not found"
+          description="It may have been deleted. Sending you back to the routing list…"
+        />
+      </div>
+    );
+  }
+
+  const inboundOnCanvas = workingNodes.some((n) => n.type === "inbound");
 
   const onSave = async () => {
     setSaving(true);
