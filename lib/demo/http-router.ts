@@ -486,6 +486,62 @@ route("DELETE", "/api/numbers/{id}", (req) => {
   return { ok: true };
 });
 
+/* ─── Phone number provisioning (Twilio-backed) ─────────────────────── */
+// These are the real contract endpoints the backend exposes for number
+// provisioning. The legacy /api/numbers/search and /api/numbers/purchase
+// routes above stay in place for other flows; the provision dialog uses
+// these exclusively.
+
+route("POST", "/api/phone-numbers/search", (req) => {
+  const body = camelKeyPatch(req.body);
+  const numberType = String(body.numberType ?? "toll_free");
+  const areaCode = String(body.areaCode ?? "212");
+  const limit = Math.min(Number(body.limit ?? 5), 5);
+  const isTollFree = numberType === "toll_free" || numberType === "tollfree";
+
+  function fmt(e164: string) {
+    const m = e164.match(/^\+1(\d{3})(\d{3})(\d{4})$/);
+    return m ? `+1 (${m[1]}) ${m[2]}-${m[3]}` : e164;
+  }
+
+  const TF_PREFIXES = ["800", "833", "844", "855", "866"];
+  const results = Array.from({ length: limit }, (_, i) => {
+    const lineNum = String(1001 + i).padStart(4, "0");
+    const phoneNumber = isTollFree
+      ? `+1${TF_PREFIXES[i % TF_PREFIXES.length]}555${lineNum}`
+      : `+1${areaCode}555${lineNum}`;
+    return {
+      phone_number: phoneNumber,
+      friendly_name: fmt(phoneNumber),
+      number_type: numberType,
+      monthly_cost: isTollFree ? 5.0 : 2.0,
+    };
+  });
+  return results;
+});
+
+route("POST", "/api/phone-numbers/purchase", (req) => {
+  const body = camelKeyPatch(req.body);
+  const phoneNumber = String(body.phoneNumber ?? "+12125559999");
+  const created = {
+    id: demoId("n"),
+    number: phoneNumber,
+    formatted_number: phoneNumber,
+    friendly_name: phoneNumber,
+    country: "US",
+    status: "active",
+    number_type: String(body.numberType ?? "local"),
+    provider: "Twilio",
+    monthly_cost: 2.0,
+    campaign_id: body.campaignId ?? null,
+    calls_today: 0,
+    created_at: new Date().toISOString(),
+  };
+  const rows = readTable("numbers", seedNumbers);
+  writeTable("numbers", [created, ...rows]);
+  return created;
+});
+
 /* ─── Destinations ──────────────────────────────────────────────────── */
 
 route("GET", "/api/destinations/", (req) => paged(readTable("destinations", seedDestinations), req.query));

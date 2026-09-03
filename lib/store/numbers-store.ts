@@ -22,6 +22,14 @@ interface NumbersState {
   fetch: () => Promise<void>;
 
   addNumber: (input: Omit<TrackingNumber, "id" | "provisionedAt">) => Promise<TrackingNumber>;
+  /** Purchase a specific Twilio number returned by the phone-numbers search
+   *  endpoint. Uses POST /api/phone-numbers/purchase (not /api/numbers/purchase). */
+  provisionNumber: (input: {
+    phoneNumber: string;
+    numberType: "toll_free" | "local";
+    campaignId?: string;
+    campaignName?: string;
+  }) => Promise<TrackingNumber>;
   updateNumber: (id: string, patch: Partial<TrackingNumber>) => Promise<void>;
   setNumberStatus: (id: string, status: NumberStatus) => Promise<void>;
   removeNumber: (id: string) => Promise<void>;
@@ -93,6 +101,29 @@ export const useNumbersStore = create<NumbersState>()((set, get) => ({
       // the caller intended, so the campaign-scoped tracking-numbers
       // table renders the new row immediately — regardless of whether
       // /assign succeeded server-side.
+      final = {
+        ...created,
+        campaignId: input.campaignId,
+        campaignName: input.campaignName ?? created.campaignName,
+      };
+    }
+    set((s) => ({ numbers: [final, ...s.numbers] }));
+    return final;
+  },
+
+  provisionNumber: async (input) => {
+    const created = await numbersService.phoneNumberPurchase({
+      phoneNumber: input.phoneNumber,
+      numberType: input.numberType,
+      campaignId: input.campaignId,
+    });
+    let final = created;
+    if (input.campaignId && created.campaignId !== input.campaignId) {
+      try {
+        await numbersService.assign(created.id, input.campaignId);
+      } catch {
+        // Non-fatal — proceed with optimistic local patch.
+      }
       final = {
         ...created,
         campaignId: input.campaignId,

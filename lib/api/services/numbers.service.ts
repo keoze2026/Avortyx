@@ -180,6 +180,19 @@ function normalizeDupeRevenue(raw: string | undefined): TrackingNumber["dupeReve
   return undefined;
 }
 
+/* ─── Phone number search result (POST /api/phone-numbers/search) ─────── */
+
+/** Shape returned by the Twilio-backed number search endpoint.
+ *  Keys are camelCase because the http layer converts the snake_case response. */
+export interface PhoneNumberSearchResult {
+  /** E.164 string, e.g. "+18005551001" — pass verbatim to phoneNumberPurchase. */
+  phoneNumber: string;
+  friendlyName?: string;
+  numberType?: string;
+  monthlyCost?: number;
+  region?: string;
+}
+
 /* ─── DNI pool wire shapes ────────────────────────────────────────────── */
 
 interface PoolWire {
@@ -327,6 +340,52 @@ export const numbersService = {
     return wireToNumber(
       await http.post<NumberWire>("/api/numbers/purchase", {
         body: { phoneNumber: input.number, campaignId: input.campaignId },
+      }),
+    );
+  },
+
+  /**
+   * Search available Twilio numbers.
+   * Maps to POST /api/phone-numbers/search.
+   * The http layer converts camelCase keys → snake_case on the wire, so
+   * `numberType` arrives as `number_type`, `countryCode` as `country_code`.
+   */
+  async phoneNumberSearch(query: {
+    numberType: "toll_free" | "local";
+    countryCode?: string;
+    limit?: number;
+    areaCode?: string;
+  }): Promise<PhoneNumberSearchResult[]> {
+    const body: Record<string, unknown> = {
+      numberType: query.numberType,
+      countryCode: query.countryCode ?? "US",
+      limit: query.limit ?? 5,
+    };
+    if (query.areaCode) body.areaCode = query.areaCode;
+    const res = await http.post<
+      PhoneNumberSearchResult[] | { items: PhoneNumberSearchResult[] }
+    >("/api/phone-numbers/search", { body });
+    return Array.isArray(res) ? res : res.items;
+  },
+
+  /**
+   * Purchase a specific Twilio number returned by phoneNumberSearch.
+   * Maps to POST /api/phone-numbers/purchase.
+   * `phoneNumber` must be the exact E.164 string from the search result —
+   * never a client-generated value.
+   */
+  async phoneNumberPurchase(input: {
+    phoneNumber: string;
+    numberType: "toll_free" | "local";
+    campaignId?: string;
+  }): Promise<TrackingNumber> {
+    return wireToNumber(
+      await http.post<NumberWire>("/api/phone-numbers/purchase", {
+        body: {
+          phoneNumber: input.phoneNumber,
+          numberType: input.numberType,
+          campaignId: input.campaignId,
+        },
       }),
     );
   },
