@@ -57,7 +57,7 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
       className="flex h-full flex-col"
       onClick={() => setActiveKey(null)}
     >
-      <CardContent className="flex flex-1 flex-col items-center justify-center gap-5 p-6">
+      <CardContent className="flex flex-1 flex-col items-center justify-center">
         <div
           // Suppress the default focus-ring rectangle Recharts paints on the
           // sectors when a slice is clicked.

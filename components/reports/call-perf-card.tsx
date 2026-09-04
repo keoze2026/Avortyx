@@ -18,7 +18,7 @@ export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
   return (
     <Card>
       <CardContent>
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-3 text-center">
           <Cell label={t("toolsUI.reports.perfCard.revenue")} value={formatCurrency(revenue, true)} />
           <Cell label={t("toolsUI.reports.perfCard.payout")} value={formatCurrency(payout, true)} />
           <Cell
