@@ -631,16 +631,14 @@ function RecordingCell({
 }
 
 /**
- * Hang-up indicator — a phone-with-cross icon tinted by who hung up first.
- * Caller-hang-ups read as warm (caller dropped early — possible filter
- * issue), buyer-hang-ups read as cool (normal close), carrier drops red.
+ * Hang-up indicator — icon + label tinted together so the color matches
+ * the text beside it (previously the icon was colored but the label was
+ * hidden in a tooltip, giving a confusing icon-only cell).
  */
 function HangUpCell({ call }: { call: Call }) {
   const side = getHangUpSide(call);
   if (side === "open") {
-    return (
-      <span className="inline-block h-3 w-3 rounded-full bg-muted" aria-label="No hang-up" />
-    );
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
   const tone =
     side === "caller"
@@ -649,11 +647,9 @@ function HangUpCell({ call }: { call: Call }) {
         ? "text-[oklch(0.78_0.14_220)]"
         : "text-destructive";
   return (
-    <span
-      title={HANG_UP_LABEL[side]}
-      className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md", tone)}
-    >
-      <PhoneOff className="h-3.5 w-3.5" />
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-xs", tone)}>
+      <PhoneOff className="h-3 w-3 shrink-0" />
+      {HANG_UP_LABEL[side]}
     </span>
   );
 }
