@@ -158,9 +158,11 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           <HourlyDistribution calls={scopedCalls} />
         </div>
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex h-full min-w-0 flex-col gap-4">
           <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
-          <VerticalDonut calls={scopedCalls} />
+          <div className="min-h-0 flex-1">
+            <VerticalDonut calls={scopedCalls} />
+          </div>
         </div>
       </div>
 
