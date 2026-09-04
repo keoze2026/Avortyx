@@ -297,7 +297,7 @@ export function HourlyDistribution({ calls }: HourlyDistributionProps) {
                 }}
               />
               <Tooltip
-                cursor={{ fill: "var(--muted)", fillOpacity: 0.5 }}
+                cursor={false}
                 content={<HourlyTooltipWrapper grain={grain} />}
               />
               <Legend
