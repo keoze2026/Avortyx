@@ -178,7 +178,17 @@ export function DateRangePicker({
 
   const onPresetChange = (id: PresetId) => {
     setPreset(id);
-    if (id !== "custom") setBuffer(rangeForPreset(id));
+    if (id === "custom") {
+      // Custom keeps the picker open so the user can pick dates manually.
+      setBuffer(undefined);
+    } else {
+      // Named presets (Today, Yesterday, Last 7 days, …) apply immediately
+      // and close — no need to hit Apply.
+      const range = rangeForPreset(id);
+      setBuffer(range);
+      onChange(range);
+      setOpen(false);
+    }
   };
 
   const onCalendarSelect = (range: DateRange | undefined) => {
