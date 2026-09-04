@@ -631,25 +631,21 @@ function RecordingCell({
 }
 
 /**
- * Hang-up indicator — icon + label tinted together so the color matches
- * the text beside it (previously the icon was colored but the label was
- * hidden in a tooltip, giving a confusing icon-only cell).
+ * Hang-up indicator — icon only, colored to match the muted tag elements in
+ * the adjacent Tag column (text-muted-foreground). The label is in the title
+ * tooltip for accessibility.
  */
 function HangUpCell({ call }: { call: Call }) {
   const side = getHangUpSide(call);
   if (side === "open") {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
-  const tone =
-    side === "caller"
-      ? "text-[oklch(0.82_0.16_75)]"
-      : side === "callee"
-        ? "text-[oklch(0.78_0.14_220)]"
-        : "text-destructive";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-xs", tone)}>
-      <PhoneOff className="h-3 w-3 shrink-0" />
-      {HANG_UP_LABEL[side]}
+    <span
+      title={HANG_UP_LABEL[side]}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground"
+    >
+      <PhoneOff className="h-3 w-3" />
     </span>
   );
 }
