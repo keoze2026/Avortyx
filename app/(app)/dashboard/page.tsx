@@ -9,6 +9,7 @@ import { DestinationSummaryTable } from "@/components/dashboard/destination-summ
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { TopCampaignsBars } from "@/components/dashboard/top-campaigns-bars";
 import { VerticalDonut } from "@/components/dashboard/vertical-donut";
+import { CallPerfCard } from "@/components/reports/call-perf-card";
 import { HourlyDistribution } from "@/components/reports/hourly-distribution";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { ExportMenu } from "@/components/shared/export-menu";
@@ -91,6 +92,11 @@ export default function DashboardPage() {
     return dateFilteredCalls.filter((c) => c.destinationNumber === destinationTfn);
   }, [destinationTfn, allSelected, dateFilteredCalls]);
 
+  const summary = useMemo(() => ({
+    revenue: scopedCalls.reduce((s, c) => s + c.revenue, 0),
+    payout: scopedCalls.reduce((s, c) => s + c.payout, 0),
+  }), [scopedCalls]);
+
   const onExport = (format: ExportFormat) => {
     const rows = buildDestinationExportRows(
       destinations,
@@ -153,6 +159,7 @@ export default function DashboardPage() {
           <HourlyDistribution calls={scopedCalls} />
         </div>
         <div className="flex min-w-0 flex-col gap-4">
+          <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
           <VerticalDonut calls={scopedCalls} />
         </div>
       </div>

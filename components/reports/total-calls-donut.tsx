@@ -78,7 +78,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                 nameKey="label"
                 cx="50%"
                 cy="50%"
-                innerRadius="62%"
+                innerRadius="76%"
                 outerRadius="92%"
                 paddingAngle={2}
                 stroke="var(--card)"
