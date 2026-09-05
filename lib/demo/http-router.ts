@@ -492,7 +492,7 @@ route("DELETE", "/api/numbers/{id}", (req) => {
 // routes above stay in place for other flows; the provision dialog uses
 // these exclusively.
 
-route("POST", "/api/phone-numbers/search", (req) => {
+route("POST", "/api/numbers/search", (req) => {
   const body = camelKeyPatch(req.body);
   const numberType = String(body.numberType ?? "toll_free");
   const areaCode = String(body.areaCode ?? "212");
@@ -520,7 +520,7 @@ route("POST", "/api/phone-numbers/search", (req) => {
   return results;
 });
 
-route("POST", "/api/phone-numbers/purchase", (req) => {
+route("POST", "/api/numbers/purchase", (req) => {
   const body = camelKeyPatch(req.body);
   const phoneNumber = String(body.phoneNumber ?? "+12125559999");
   const created = {

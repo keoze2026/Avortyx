@@ -346,7 +346,7 @@ export const numbersService = {
 
   /**
    * Search available Twilio numbers.
-   * Maps to POST /api/phone-numbers/search.
+   * Maps to POST /api/numbers/search (router mounted at /api/numbers/).
    * The http layer converts camelCase keys → snake_case on the wire, so
    * `numberType` arrives as `number_type`, `countryCode` as `country_code`.
    */
@@ -364,13 +364,13 @@ export const numbersService = {
     if (query.areaCode) body.areaCode = query.areaCode;
     const res = await http.post<
       PhoneNumberSearchResult[] | { items: PhoneNumberSearchResult[] }
-    >("/api/phone-numbers/search", { body });
+    >("/api/numbers/search", { body });
     return Array.isArray(res) ? res : res.items;
   },
 
   /**
    * Purchase a specific Twilio number returned by phoneNumberSearch.
-   * Maps to POST /api/phone-numbers/purchase.
+   * Maps to POST /api/numbers/purchase (router mounted at /api/numbers/).
    * `phoneNumber` must be the exact E.164 string from the search result —
    * never a client-generated value.
    */
@@ -380,7 +380,7 @@ export const numbersService = {
     campaignId?: string;
   }): Promise<TrackingNumber> {
     return wireToNumber(
-      await http.post<NumberWire>("/api/phone-numbers/purchase", {
+      await http.post<NumberWire>("/api/numbers/purchase", {
         body: {
           phoneNumber: input.phoneNumber,
           numberType: input.numberType,

@@ -19,11 +19,15 @@ export function Topbar() {
   // hydrated on app mount by <StoreHydrator />. Zero values render until the
   // first response lands; that's accurate, not a degraded state.
   const kpis = useCallsStore((s) => s.kpis);
+  // liveCount is written by useLiveSocket on every WebSocket event, so it
+  // tracks in-flight calls in real time. Falls back to kpis.liveCalls (the
+  // REST snapshot) until the user opens /live and the socket connects.
+  const liveCount = useCallsStore((s) => s.liveCount);
   // Wallet balance comes from the billing account fetched by the onboarding
   // store on mount (and refreshed after every recharge). Renders 0 until the
   // first response lands.
   const balance = useOnboardingStore((s) => s.balance);
-  const liveCalls = kpis?.liveCalls ?? 0;
+  const liveCalls = liveCount > 0 ? liveCount : (kpis?.liveCalls ?? 0);
   const totalCalls = kpis?.callsToday ?? 0;
 
   return (

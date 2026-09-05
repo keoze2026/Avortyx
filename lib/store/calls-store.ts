@@ -28,6 +28,9 @@ interface CallsState {
   kpis: DashboardKpis | null;
   /** Cached time-series for the dashboard hourly/day chart. */
   timeSeries: TimeSeriesPoint[];
+  /** Real-time in-flight call count, written by useLiveSocket on every
+   *  WebSocket event. Topbar reads this instead of the stale kpis.liveCalls. */
+  liveCount: number;
 
   loading: boolean;
   error: string | null;
@@ -37,6 +40,7 @@ interface CallsState {
   fetchKpis: () => Promise<void>;
   fetchTimeSeries: (query?: { dateFrom?: string; dateTo?: string; granularity?: "hour" | "day" | "week" | "month" }) => Promise<void>;
   fetchPage: (query: CallLogQuery) => Promise<CallLogPage>;
+  setLiveCount: (n: number) => void;
 }
 
 const RECENT_DEFAULT = 200;
@@ -45,6 +49,7 @@ export const useCallsStore = create<CallsState>()((set) => ({
   recent: [],
   kpis: null,
   timeSeries: [],
+  liveCount: 0,
   loading: false,
   error: null,
   hydrated: false,
@@ -79,6 +84,8 @@ export const useCallsStore = create<CallsState>()((set) => ({
 
   // Pass-through to the analytics service; callers manage their own paging UI.
   fetchPage: (query) => analyticsService.calls(query),
+
+  setLiveCount: (n) => set({ liveCount: n }),
 }));
 
 function messageFromError(e: unknown): string {

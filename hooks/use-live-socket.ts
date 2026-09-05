@@ -18,6 +18,7 @@
 import { useEffect, useReducer, useRef } from "react";
 
 import { callsService } from "@/lib/api/services/calls.service";
+import { useCallsStore } from "@/lib/store/calls-store";
 import {
   createCallSocket,
   type CallEventType,
@@ -252,6 +253,13 @@ export function useLiveSocket({ paused }: UseLiveSocketOptions): UseLiveSocketRe
       connectedRef.current = false;
     };
   }, []);
+
+  // Keep the topbar LIVE badge in sync — write inFlight.length to the global
+  // calls store so the topbar doesn't need its own socket connection.
+  const setLiveCount = useCallsStore((s) => s.setLiveCount);
+  useEffect(() => {
+    setLiveCount(state.inFlight.length);
+  }, [state.inFlight.length, setLiveCount]);
 
   return {
     ...state,
