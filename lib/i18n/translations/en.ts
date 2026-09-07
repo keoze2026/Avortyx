@@ -272,6 +272,12 @@ export const en = {
       peak: "peak",
       avg: "avg",
       callsByHour: "Calls by hour",
+      // Composed as "Calls by : <grain>" so the heading tracks the H/D/M
+      // toggle. The separator is punctuation and lives in the markup.
+      callsBy: "Calls by",
+      grainHour: "Hour",
+      grainDay: "Day",
+      grainMonth: "Month",
     },
     donut: {
       total: "Total",

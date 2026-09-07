@@ -29,6 +29,13 @@ const GRAINS: Array<{ id: Grain; label: string }> = [
   { id: "M", label: "M" },
 ];
 
+/** Heading noun per grain, so the title follows the H/D/M toggle. */
+const GRAIN_NOUN_KEYS: Record<Grain, string> = {
+  H: "dashboard.chart.grainHour",
+  D: "dashboard.chart.grainDay",
+  M: "dashboard.chart.grainMonth",
+};
+
 // Strict two-color binary: indigo for the positive outcome, red for the rest.
 // "Not converted" and "No answer" both ride the destructive red so the chart
 // reads as good-vs-bad at a glance; "No answer" sits at full strength while
@@ -242,7 +249,7 @@ export function HourlyDistribution({ calls }: HourlyDistributionProps) {
         {/* Cased in CSS rather than in the copy, so translations stay
             natural-cased and every locale gets the same treatment. */}
         <div className="flex-1 text-center text-xs uppercase tracking-wider text-muted-foreground">
-          {t("dashboard.chart.callsByHour")}
+          {`${t("dashboard.chart.callsBy")} : ${t(GRAIN_NOUN_KEYS[grain])}`}
         </div>
       </CardHeader>
       <CardContent>
