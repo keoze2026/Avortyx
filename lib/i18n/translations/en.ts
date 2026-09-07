@@ -298,6 +298,14 @@ export const en = {
     },
 
     profileSection: {
+      connections: "Connections",
+      telegram: "Telegram",
+      telegramDesc: "Receive call, payout and alert notifications in Telegram.",
+      telegramConnectedDesc: "Notifications are being delivered to your Telegram.",
+      telegramUnavailable: "Not enabled for this workspace yet.",
+      connect: "Connect",
+      disconnect: "Disconnect",
+      connected: "Connected",
       eyebrow: "Profile",
       title: "Your account",
       description: "Your personal details — visible to your teammates and on activity feeds.",

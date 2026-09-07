@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, KeyRound, Loader2, Mail, Shield, Trash2, User } from "lucide-react";
+import { Camera, KeyRound, Loader2, Mail, Send, Shield, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { authService } from "@/lib/api/services/auth.service";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useIntegrationsStore } from "@/lib/store/integrations-store";
 
 /** Largest avatar the multipart endpoint will accept. Aligns with the
  *  backend's 1.5 MB upload cap; bigger files get rejected client-side so
@@ -256,6 +257,9 @@ export function ProfileSection() {
         </CardContent>
       </Card>
 
+      {/* Connections */}
+      <ConnectionsCard />
+
       {/* Security */}
       <Card>
         <CardHeader className="pb-2">
@@ -286,6 +290,106 @@ export function ProfileSection() {
         </CardContent>
       </Card>
     </SectionShell>
+  );
+}
+
+/* ---------- connections ---------- */
+
+/** Id this integration is registered under in the backend catalog. */
+const TELEGRAM_INTEGRATION_ID = "telegram";
+
+/**
+ * Telegram link-up, surfaced on the profile page.
+ *
+ * Wired to the same integrations endpoints the Integrations page uses, so the
+ * state shown here is the real one rather than a local toggle. If the backend
+ * catalog doesn't carry a `telegram` entry, the row says so instead of
+ * rendering a Connect button that would 404 — a control that can't work
+ * shouldn't look like one that can.
+ */
+function ConnectionsCard() {
+  const { t } = useTranslation();
+  const apps = useIntegrationsStore((s) => s.apps);
+  const hydrated = useIntegrationsStore((s) => s.hydrated);
+  const fetchApps = useIntegrationsStore((s) => s.fetch);
+  const connect = useIntegrationsStore((s) => s.connect);
+  const disconnect = useIntegrationsStore((s) => s.disconnect);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!hydrated) void fetchApps();
+  }, [hydrated, fetchApps]);
+
+  const telegram = apps.find((a) => a.id === TELEGRAM_INTEGRATION_ID);
+  const connected = Boolean(telegram?.connected);
+
+  const onToggle = async () => {
+    if (!telegram) return;
+    setBusy(true);
+    try {
+      if (connected) {
+        await disconnect(TELEGRAM_INTEGRATION_ID);
+        toast.success(t("settings.profileSection.disconnect"));
+      } else {
+        await connect(TELEGRAM_INTEGRATION_ID);
+        toast.success(t("settings.profileSection.connected"));
+      }
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let action: React.ReactNode;
+  if (!hydrated) {
+    action = (
+      <Button variant="outline" size="sm" disabled>
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </Button>
+    );
+  } else if (!telegram) {
+    action = (
+      <span className="text-[11px] text-muted-foreground">
+        {t("settings.profileSection.telegramUnavailable")}
+      </span>
+    );
+  } else {
+    action = (
+      <Button
+        variant={connected ? "outline" : "default"}
+        size="sm"
+        onClick={onToggle}
+        disabled={busy}
+      >
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+        {connected
+          ? t("settings.profileSection.disconnect")
+          : t("settings.profileSection.connect")}
+      </Button>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">
+          {t("settings.profileSection.connections")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Row
+          icon={Send}
+          label={t("settings.profileSection.telegram")}
+          description={
+            connected
+              ? t("settings.profileSection.telegramConnectedDesc")
+              : t("settings.profileSection.telegramDesc")
+          }
+          action={action}
+        />
+      </CardContent>
+    </Card>
   );
 }
 
