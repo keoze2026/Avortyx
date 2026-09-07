@@ -3680,6 +3680,7 @@ export const en = {
         },
       },
       perfCard: {
+        title: "Call performance",
         revenue: "Revenue",
         payout: "Payout",
         profit: "Profit",

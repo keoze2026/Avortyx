@@ -17,6 +17,11 @@ export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
 
   return (
     <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {t("toolsUI.reports.perfCard.title")}
+        </CardTitle>
+      </CardHeader>
       <CardContent>
         {/* Hairline rules separate the three figures so they don't read as
             one run of numbers. `divide-x` borders every cell after the first. */}
@@ -45,7 +50,9 @@ function Cell({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      {/* Sentence case: the card heading carries the uppercase treatment, so
+          shouting here too would flatten the hierarchy between them. */}
+      <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className={cn("mt-1 truncate text-base font-semibold tabular-nums", valueClass)}>
         {value}
       </div>
