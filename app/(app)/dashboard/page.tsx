@@ -14,6 +14,7 @@ import { HourlyDistribution } from "@/components/reports/hourly-distribution";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { PageHeader } from "@/components/shared/page-header";
+import { TimezonePicker } from "@/components/shared/timezone-picker";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import {
@@ -116,6 +117,7 @@ export default function DashboardPage() {
         description={t("page.dashboard.description")}
         actions={
           <>
+            <TimezonePicker />
             <Select value={destinationTfn} onValueChange={setDestinationTfn}>
               <SelectTrigger size="sm" className="w-[20rem]">
                 <SelectValue placeholder={t("dashboard.allDestinations")} />

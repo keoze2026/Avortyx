@@ -239,7 +239,9 @@ export function HourlyDistribution({ calls }: HourlyDistributionProps) {
             </button>
           ))}
         </div>
-        <div className="flex-1 text-center text-xs text-muted-foreground">
+        {/* Cased in CSS rather than in the copy, so translations stay
+            natural-cased and every locale gets the same treatment. */}
+        <div className="flex-1 text-center text-xs uppercase tracking-wider text-muted-foreground">
           {t("dashboard.chart.callsByHour")}
         </div>
       </CardHeader>
