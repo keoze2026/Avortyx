@@ -25,19 +25,30 @@ export function AuthCard({ title, description, children, footer, className }: Au
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl border border-accent/15 bg-card/85 p-9 backdrop-blur-2xl",
-        // Layered shadow: a deep cool drop for elevation, plus a soft accent
-        // glow so the card reads as part of the same atmosphere as the
-        // vortex behind it.
-        "shadow-[0_30px_80px_-40px_rgba(8,10,32,0.55),0_0_40px_-20px_color-mix(in_oklch,var(--accent)_45%,transparent)]",
+        "relative w-full overflow-hidden rounded-2xl border border-accent/20 bg-card/85 p-9 backdrop-blur-2xl",
+        // Layered shadow: a deep neutral drop for elevation, plus a soft accent
+        // glow so the card reads as part of the same atmosphere as the vortex
+        // behind it. The drop is green-black, not the old indigo-era navy.
+        "shadow-[0_30px_80px_-40px_rgba(6,14,11,0.55),0_0_44px_-18px_color-mix(in_oklch,var(--accent)_50%,transparent)]",
         className,
       )}
     >
+      {/* Lit top edge — a single accent hairline reads as precision rather
+          than ornament, and ties the card to the orbital glow behind it. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)",
+        }}
+      />
+
       {/* Subtle top-down sheen — gives the card a hint of dimensional
           gloss without distracting from the form below it. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-accent/[0.08] to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-accent/[0.10] to-transparent"
       />
 
       <div className="relative">

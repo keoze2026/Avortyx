@@ -1,10 +1,20 @@
 /**
  * Avortyx logo — vector mark (inline SVG).
- * Indigo gradient (#818CF8 → #5266E0 → #3A4BC4) matching the brand palette.
- * Single-hue ramp gives the vortex depth without competing with other colors.
+ *
+ * Three concentric arcs sweeping toward a bright core. The mark adapts to the
+ * surface it sits on via `tone`:
+ *   • "brand"   — theme accent ramp (follows the green/blue accent switcher)
+ *   • "light"   — near-white, for dark backgrounds
+ *   • "dark"    — near-black, for light backgrounds
+ *   • "current" — inherits `currentColor` from the parent
+ *
+ * Brand tones read from the `--vortyx-*` theme variables so the mark tracks
+ * the active accent rather than pinning a hard-coded hue.
  */
 
 import { cn } from "@/lib/utils";
+
+export type LogoTone = "brand" | "light" | "dark" | "current";
 
 interface LogoProps {
   className?: string;
@@ -12,12 +22,27 @@ interface LogoProps {
   animated?: boolean;
   /** Optional uid suffix when multiple instances exist on a page */
   uid?: string;
+  /** Surface adaptation. Defaults to the brand accent ramp. */
+  tone?: LogoTone;
 }
 
-export function Logo({ className, animated = false, uid = "root" }: LogoProps) {
+const SOLID: Record<Exclude<LogoTone, "brand">, string> = {
+  light: "#F2F5F3",
+  dark: "#0C0F0D",
+  current: "currentColor",
+};
+
+export function Logo({
+  className,
+  animated = false,
+  uid = "root",
+  tone = "brand",
+}: LogoProps) {
   const gradId = `vortyx-grad-${uid}`;
   const coreId = `vortyx-core-${uid}`;
-  const glowId = `vortyx-glow-${uid}`;
+
+  const isBrand = tone === "brand";
+  const stroke = isBrand ? `url(#${gradId})` : SOLID[tone];
 
   return (
     <svg
@@ -27,53 +52,50 @@ export function Logo({ className, animated = false, uid = "root" }: LogoProps) {
       aria-hidden="true"
       className={cn("h-8 w-8", animated && "animate-vortyx-spin", className)}
     >
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#818CF8" />
-          <stop offset="55%" stopColor="#5266E0" />
-          <stop offset="100%" stopColor="#3A4BC4" />
-        </linearGradient>
-        <radialGradient id={coreId} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#EEF1FE" stopOpacity="1" />
-          <stop offset="60%" stopColor="#818CF8" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#5266E0" stopOpacity="0" />
-        </radialGradient>
-        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="0.9" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+      {isBrand && (
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--vortyx-bright, #3DD68C)" />
+            <stop offset="55%" stopColor="var(--vortyx-teal, #12805C)" />
+            <stop offset="100%" stopColor="var(--vortyx-deep, #0C6647)" />
+          </linearGradient>
+          <radialGradient id={coreId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--vortyx-ultra, #A7EFCB)" stopOpacity="0.9" />
+            <stop offset="65%" stopColor="var(--vortyx-teal, #12805C)" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="var(--vortyx-teal, #12805C)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+      )}
 
-      <circle cx="32" cy="32" r="20" fill={`url(#${coreId})`} opacity="0.45" />
+      {isBrand && <circle cx="32" cy="32" r="20" fill={`url(#${coreId})`} opacity="0.4" />}
 
       <path
         d="M52 32a20 20 0 1 1-13.2-18.8"
-        stroke={`url(#${gradId})`}
+        stroke={stroke}
         strokeWidth="3"
         strokeLinecap="round"
-        filter={`url(#${glowId})`}
       />
       <path
         d="M44.5 32a12.5 12.5 0 1 1-8.9-11.9"
-        stroke={`url(#${gradId})`}
+        stroke={stroke}
         strokeWidth="2.5"
         strokeLinecap="round"
-        filter={`url(#${glowId})`}
-        opacity="0.92"
+        opacity="0.9"
       />
       <path
         d="M38 32a6 6 0 1 1-4.2-5.7"
-        stroke={`url(#${gradId})`}
+        stroke={stroke}
         strokeWidth="2"
         strokeLinecap="round"
-        filter={`url(#${glowId})`}
-        opacity="0.9"
+        opacity="0.8"
       />
 
-      <circle cx="32" cy="32" r="1.6" fill="#EEF1FE" filter={`url(#${glowId})`} />
+      <circle
+        cx="32"
+        cy="32"
+        r="1.7"
+        fill={isBrand ? "var(--vortyx-ultra, #A7EFCB)" : stroke}
+      />
     </svg>
   );
 }

@@ -1,54 +1,23 @@
-import { CodeSection } from "@/components/marketing/code-section";
-import { ContactSection } from "@/components/marketing/contact-section";
-import { CTASection } from "@/components/marketing/cta-section";
-import { FeaturesSection } from "@/components/marketing/features-section";
-import { HeroSection } from "@/components/marketing/hero-section";
-import { HowItWorks } from "@/components/marketing/how-it-works";
-import { IntegrationsSection } from "@/components/marketing/integrations-section";
-import { ScrollReveal } from "@/components/marketing/scroll-reveal";
-import { VerticalsSection } from "@/components/marketing/verticals-section";
+import { Hero } from "@/components/marketing/hero";
+import { LogoRail } from "@/components/marketing/logo-rail";
+import { FeatureRouting } from "@/components/marketing/feature-routing";
+import { FeatureCompliance } from "@/components/marketing/feature-compliance";
+import { Capabilities } from "@/components/marketing/capabilities";
+import { Showcase } from "@/components/marketing/showcase";
+import { Developers } from "@/components/marketing/developers";
+import { Cta } from "@/components/marketing/cta";
 
-/**
- * Marketing home — the hero handles its own intro animation; every section
- * after it is wrapped in <ScrollReveal> so the page reads as a single
- * choreographed scroll experience instead of a static stack.
- */
 export default function HomePage() {
   return (
     <>
-      <HeroSection />
-
-      <ScrollReveal>
-        <IntegrationsSection />
-      </ScrollReveal>
-
-      <ScrollReveal>
-        <FeaturesSection />
-      </ScrollReveal>
-
-      <ScrollReveal>
-        <CodeSection />
-      </ScrollReveal>
-
-      <ScrollReveal>
-        <HowItWorks />
-      </ScrollReveal>
-
-      <ScrollReveal>
-        <VerticalsSection />
-      </ScrollReveal>
-
-      {/* CTA + Contact rendered side-by-side as matched panels at md+,
-          stacking vertically on mobile. Both panels share the same card
-          treatment so they read as a single conversion section. */}
-      <ScrollReveal>
-        <section className="px-6 py-24">
-          <div className="mx-auto grid max-w-7xl grid-cols-1 items-stretch gap-6 md:grid-cols-2">
-            <CTASection />
-            <ContactSection />
-          </div>
-        </section>
-      </ScrollReveal>
+      <Hero />
+      <LogoRail />
+      <FeatureRouting />
+      <FeatureCompliance />
+      <Capabilities />
+      <Showcase />
+      <Developers />
+      <Cta />
     </>
   );
 }

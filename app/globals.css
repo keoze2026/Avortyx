@@ -16,7 +16,7 @@
      Eye-comfort target: low chroma on surfaces, accent only on
      interactive / important elements. */
   --background: hsl(0 0% 100%);
-  --foreground: hsl(222 20% 11%);                            /* near-black slate */
+  --foreground: hsl(222 20% 11%);                            /* near-black */
   --card: hsl(0 0% 100%);
   --card-foreground: hsl(222 20% 11%);
   --popover: hsl(0 0% 100%);
@@ -31,7 +31,7 @@
   --muted-foreground: hsl(220 9% 46%);                       /* WCAG-comfortable secondary text */
 
   /* Indigo — the single brand accent */
-  --accent: hsl(231 70% 58%);                                /* #5266E0 */
+  --accent: hsl(224 76% 48%);                                /* #1D4ED8 */
   --accent-foreground: hsl(0 0% 100%);
 
   /* Signal colors — desaturated for comfort */
@@ -42,12 +42,12 @@
 
   --border: hsl(220 13% 91%);
   --input: hsl(220 14% 96%);
-  --ring: hsl(231 70% 58%);
+  --ring: hsl(224 76% 48%);
 
   /* Chart palette — five distinct hues at similar luminance so no
      series visually dominates. Indigo leads, supporting hues are
      all calm/desaturated relative to typical Tailwind defaults. */
-  --chart-1: hsl(231 70% 58%);                               /* indigo brand */
+  --chart-1: hsl(224 76% 48%);                               /* blue brand */
   --chart-2: hsl(174 60% 46%);                               /* teal */
   --chart-3: hsl(38 92% 56%);                                /* amber */
   --chart-4: hsl(340 70% 58%);                               /* rose */
@@ -57,35 +57,35 @@
 
   --sidebar: hsl(220 14% 98%);
   --sidebar-foreground: hsl(222 20% 14%);
-  --sidebar-primary: hsl(231 70% 58%);
+  --sidebar-primary: hsl(224 76% 48%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
   --sidebar-accent: hsl(220 14% 93%);
   --sidebar-accent-foreground: hsl(222 20% 14%);
   --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(231 70% 58%);
+  --sidebar-ring: hsl(224 76% 48%);
 
   --grid-line: hsl(220 14% 93%);
   --scrollbar-thumb: hsl(220 13% 80%);
   --scrollbar-thumb-hover: hsl(220 9% 60%);
 
-  /* Brand ramp — single-hue indigo (deep → bright).
+  /* Brand ramp — single-hue blue (deep → bright).
      Legacy variable names retained so existing consumers keep working. */
-  --vortyx-teal: #5266E0;     /* indigo (legacy slot — name kept for compat) */
-  --vortyx-cyan: #818CF8;     /* lighter indigo (was cyan) */
-  --vortyx-deep: #3A4BC4;     /* deep indigo */
-  --vortyx-bright: #818CF8;   /* bright indigo */
-  --vortyx-ultra: #C7D2FE;    /* near-white indigo */
-  --vortyx-glow: rgba(82, 102, 224, 0.16);
-  --vortyx-particle: rgba(82, 102, 224, 0.45);
-  /* Default theme uses a single-hue accent gradient (deep → bright indigo).
+  --vortyx-teal: #1D4ED8;     /* blue (legacy slot — name kept for compat) */
+  --vortyx-cyan: #60A5FA;     /* lighter blue (was cyan) */
+  --vortyx-deep: #1739A8;     /* deep blue */
+  --vortyx-bright: #60A5FA;   /* bright blue */
+  --vortyx-ultra: #DBEAFE;    /* near-white blue */
+  --vortyx-glow: rgba(29, 78, 216, 0.16);
+  --vortyx-particle: rgba(29, 78, 216, 0.45);
+  /* Default theme uses a single-hue accent gradient (deep → bright blue).
      Other themes redefine this — the gradient themes (aurora, sunset, …)
      supply real multi-stop gradients. */
-  --accent-gradient: linear-gradient(135deg, #3A4BC4 0%, #5266E0 55%, #818CF8 100%);
+  --accent-gradient: linear-gradient(135deg, #1739A8 0%, #1D4ED8 55%, #60A5FA 100%);
 }
 
 .dark {
   /* Dark mode — deep slate canvas (not pure black, gentler on eyes),
-     slightly lighter cards, slate borders. Brand stays the same indigo
+     slightly lighter cards, slate borders. Brand stays the same blue
      hue but lifts in luminance so it pops on dark backgrounds. */
   --background: hsl(222 24% 7%);                             /* #0E1219 */
   --foreground: hsl(220 14% 96%);                            /* #F1F2F5 */
@@ -103,7 +103,7 @@
   --muted-foreground: hsl(220 10% 64%);                      /* readable secondary text */
 
   /* Indigo accent — slightly brighter than light mode to lift off dark */
-  --accent: hsl(231 80% 66%);                                /* #6B7EE9 */
+  --accent: hsl(217 91% 60%);                                /* #3B82F6 */
   --accent-foreground: hsl(0 0% 100%);
 
   --destructive: hsl(0 72% 60%);
@@ -113,10 +113,10 @@
 
   --border: hsl(222 16% 20%);                                /* soft slate hairline */
   --input: hsl(222 18% 16%);
-  --ring: hsl(231 80% 66%);
+  --ring: hsl(217 91% 60%);
 
   /* Chart palette — same hues, lifted in luminance for dark canvas */
-  --chart-1: hsl(231 80% 66%);                               /* indigo brand */
+  --chart-1: hsl(217 91% 60%);                               /* blue brand */
   --chart-2: hsl(174 60% 56%);                               /* teal */
   --chart-3: hsl(38 92% 62%);                                /* amber */
   --chart-4: hsl(340 75% 68%);                               /* rose */
@@ -124,25 +124,25 @@
 
   --sidebar: hsl(222 24% 6%);                                /* slightly deeper than canvas */
   --sidebar-foreground: hsl(220 14% 92%);
-  --sidebar-primary: hsl(231 80% 66%);
+  --sidebar-primary: hsl(217 91% 60%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
   --sidebar-accent: hsl(222 22% 12%);
   --sidebar-accent-foreground: hsl(220 14% 96%);
   --sidebar-border: hsl(222 16% 18%);
-  --sidebar-ring: hsl(231 80% 66%);
+  --sidebar-ring: hsl(217 91% 60%);
 
   --grid-line: hsl(222 16% 16%);
   --scrollbar-thumb: hsl(222 16% 22%);
   --scrollbar-thumb-hover: hsl(222 16% 32%);
 
-  --vortyx-teal: #6B7EE9;                                    /* indigo (legacy slot) */
-  --vortyx-cyan: #93A3F5;                                    /* lighter indigo */
-  --vortyx-bright: #93A3F5;
-  --vortyx-deep: #3A4BC4;
-  --vortyx-ultra: #DBE0FB;
-  --vortyx-glow: rgba(107, 126, 233, 0.20);
-  --vortyx-particle: rgba(107, 126, 233, 0.50);
-  --accent-gradient: linear-gradient(135deg, #3A4BC4 0%, #5266E0 55%, #93A3F5 100%);
+  --vortyx-teal: #3B82F6;                                    /* blue (legacy slot) */
+  --vortyx-cyan: #93C5FD;                                    /* lighter blue */
+  --vortyx-bright: #93C5FD;
+  --vortyx-deep: #1739A8;
+  --vortyx-ultra: #DBEAFE;
+  --vortyx-glow: rgba(59, 130, 246, 0.20);
+  --vortyx-particle: rgba(59, 130, 246, 0.50);
+  --accent-gradient: linear-gradient(135deg, #1739A8 0%, #1D4ED8 55%, #93C5FD 100%);
 }
 
 /* =========================================================
@@ -1666,4 +1666,460 @@
   .animate-waveform-bar {
     animation: none !important;
   }
+}
+
+
+/* =========================================================
+   Avortyx marketing design system
+   Light-first. Restrained type, hairline rules, one accent.
+   Scoped to .marketing-shell.
+   ========================================================= */
+.marketing-shell {
+  /* ── Surfaces ── */
+  --m-bg:            #FFFFFF;
+  --m-bg-alt:        #F6F8FA;
+  --m-surface:       #FFFFFF;
+  --m-surface-alt:   #FAFBFC;
+  --m-bg-dark:       #0A0F1A;
+  --m-bg-dark-2:     #101725;
+  --m-bg-dark-3:     #162032;
+
+  /* ── Text on light ── */
+  --m-fg:            #0A0F16;
+  --m-fg-2:          #56606E;
+  --m-fg-3:          #878F9C;
+
+  /* ── Text on dark ── */
+  --m-fg-d:          #F2F5F3;
+  --m-fg-d2:         #A2AFC4;
+  --m-fg-d3:         #6C7A90;
+
+  /* ── Hairlines ── */
+  --m-line:          rgba(10,15,22,0.08);
+  --m-line-2:        rgba(10,15,22,0.14);
+  --m-line-d:        rgba(255,255,255,0.09);
+  --m-line-d2:       rgba(255,255,255,0.16);
+
+  /* ── Accent — blue (shipped default) ── */
+  --m-accent:        #1D4ED8;
+  --m-accent-hi:     #2563EB;
+  --m-accent-lo:     #1739A8;
+  --m-accent-d:      #7CA5FF;
+  --m-accent-tint:   rgba(29,78,216,0.07);
+  --m-accent-line:   rgba(29,78,216,0.22);
+  --m-accent-tint-d: rgba(124,165,255,0.10);
+  --m-accent-line-d: rgba(124,165,255,0.24);
+
+  /* ── Type ── */
+  --m-sans:          var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+  --m-display:       var(--font-inter-tight, var(--font-inter), ui-sans-serif, system-ui, sans-serif);
+  --m-mono:          var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, monospace);
+
+  /* ── Radius ── */
+  --m-r-xs:          4px;
+  --m-r-sm:          6px;
+  --m-r:             10px;
+  --m-r-lg:          14px;
+
+  /* ── Elevation — barely there ── */
+  --m-shadow:        0 1px 2px rgba(10,15,22,0.04), 0 8px 24px -14px rgba(10,15,22,0.14);
+  --m-shadow-lg:     0 2px 4px rgba(10,15,22,0.04), 0 24px 48px -24px rgba(10,15,22,0.20);
+  --m-shadow-d:      0 2px 8px rgba(0,0,0,0.24), 0 24px 56px -28px rgba(0,0,0,0.5);
+
+  font-family: var(--m-sans);
+  background: var(--m-bg);
+  color: var(--m-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Green variant ──────────────────────────────────────────────────
+   Opt-in. Driven by the same `.theme-green-accent` class the app shell
+   uses, so one selection moves marketing, auth and the product together.
+   Blue is the base above, which also means a JS failure lands on the
+   shipped default rather than on the alternate theme. */
+html.theme-green-accent .marketing-shell {
+  --m-accent:        #12805C;
+  --m-accent-hi:     #16A46F;
+  --m-accent-lo:     #0C6647;
+  --m-accent-d:      #3DD68C;
+  --m-accent-tint:   rgba(18,128,92,0.07);
+  --m-accent-line:   rgba(18,128,92,0.22);
+  --m-accent-tint-d: rgba(61,214,140,0.10);
+  --m-accent-line-d: rgba(61,214,140,0.24);
+  --m-bg-dark:       #0C1310;
+  --m-bg-dark-2:     #121A16;
+  --m-bg-dark-3:     #18221D;
+  --m-bg-alt:        #F7F8F7;
+  --m-surface-alt:   #FAFBFA;
+  --m-fg:            #0C0F0D;
+  --m-fg-2:          #5A6560;
+  --m-fg-3:          #8A938E;
+  --m-fg-d2:         #A3B0A8;
+  --m-fg-d3:         #6B7A72;
+  --m-line:          rgba(12,15,13,0.08);
+  --m-line-2:        rgba(12,15,13,0.14);
+}
+
+/* ── Typographic primitives ── */
+.m-h1 {
+  font-family: var(--m-display);
+  font-size: clamp(38px, 5vw, 60px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  margin: 0;
+  text-wrap: balance;
+}
+.m-h2 {
+  font-family: var(--m-display);
+  font-size: clamp(28px, 3.4vw, 42px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
+  margin: 0;
+  text-wrap: balance;
+}
+.m-h3 {
+  font-family: var(--m-display);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.016em;
+  margin: 0;
+}
+.m-lead {
+  font-size: 17px;
+  line-height: 1.6;
+  letter-spacing: -0.006em;
+  margin: 0;
+}
+.m-body {
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0;
+}
+.m-label {
+  font-family: var(--m-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── Section rhythm ── */
+.m-section { padding: 88px 24px; }
+@media (min-width: 768px)  { .m-section { padding: 112px 32px; } }
+@media (min-width: 1280px) { .m-section { padding: 128px 32px; } }
+.m-container { max-width: 1140px; margin: 0 auto; width: 100%; }
+
+/* ── Link with arrow ── */
+.m-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--m-accent);
+  text-decoration: none;
+  transition: gap 0.18s ease;
+}
+.m-link:hover { gap: 10px; }
+
+/* ── Buttons ── */
+.m-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  padding: 11px 20px;
+  border-radius: var(--m-r-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+.m-btn-primary { background: var(--m-accent); color: #fff; }
+.m-btn-primary:hover { background: var(--m-accent-lo); }
+.m-btn-ghost { background: transparent; color: var(--m-fg); border-color: var(--m-line-2); }
+.m-btn-ghost:hover { background: var(--m-bg-alt); border-color: var(--m-fg-3); }
+.m-btn-on-dark { background: #fff; color: var(--m-bg-dark); }
+.m-btn-on-dark:hover { background: var(--m-fg-d2); }
+.m-btn-ghost-dark { background: transparent; color: var(--m-fg-d); border-color: var(--m-line-d2); }
+.m-btn-ghost-dark:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.3); }
+
+/* ── Soft ambient wash — used twice, hero + CTA ── */
+.m-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 50% 0%,   var(--m-accent-tint-d) 0%, transparent 62%),
+    radial-gradient(80% 55% at 12% 100%,  rgba(255,255,255,0.045) 0%, transparent 70%);
+}
+
+/* ── Faint dot field for dark surfaces ── */
+.m-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
+}
+
+/* ── Marquee for the logo rail ── */
+@keyframes m-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.m-marquee { animation: m-marquee 38s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .m-marquee { animation: none; }
+}
+
+/* ── Reveal ── */
+@keyframes m-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.m-rise { animation: m-rise 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .m-rise { animation: none; }
+}
+
+/* ── Live indicator — a soft halo, not a glow ── */
+@keyframes m-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--m-accent-line-d); }
+  70%  { box-shadow: 0 0 0 6px rgba(0,0,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+}
+.m-pulse { animation: m-pulse 2.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .m-pulse { animation: none; }
+}
+
+/* =========================================================
+   Green accent theme — app shell
+   Applied to <html> by the init script in app/layout.tsx so the
+   product surface (auth, dashboard, chat) shares the marketing
+   emerald instead of the default indigo.
+   ========================================================= */
+.theme-green-accent {
+  /* Neutrals shift off the indigo-era cool slate (hue 220) onto a faintly
+     green-leaning grey, so the accent and the greys share a family. Values
+     mirror the marketing tokens: --m-fg, --m-fg-2, --m-line, --m-bg-alt. */
+  --foreground:           hsl(140 11% 5%);
+  --muted-foreground:     hsl(153 6% 37%);
+  --secondary:            hsl(120 5% 97%);
+  --secondary-foreground: hsl(140 11% 9%);
+  --muted:                hsl(120 5% 97%);
+  --border:               hsl(150 8% 91%);
+  --input:                hsl(140 6% 96%);
+  --card-foreground:      hsl(140 11% 5%);
+  --popover-foreground:   hsl(140 11% 5%);
+  --grid-line:            hsl(150 8% 93%);
+  --scrollbar-thumb:      hsl(150 7% 80%);
+  --scrollbar-thumb-hover: hsl(152 6% 60%);
+
+  --accent:               hsl(160 72% 30%);
+  --accent-foreground:    hsl(0 0% 100%);
+  --primary:              hsl(160 72% 27%);
+  --primary-foreground:   hsl(0 0% 100%);
+  --ring:                 hsl(160 72% 30%);
+  --sidebar-primary:      hsl(160 72% 30%);
+  --sidebar-ring:         hsl(160 72% 30%);
+  --chart-1:              hsl(160 72% 34%);
+  --vortyx-teal:          #12805C;
+  --vortyx-cyan:          #16A46F;
+  --vortyx-deep:          #0C6647;
+  --vortyx-bright:        #3DD68C;
+  --vortyx-ultra:         #A7EFCB;
+  --vortyx-glow:          rgba(18,128,92,0.16);
+  --vortyx-particle:      rgba(18,128,92,0.45);
+  --accent-gradient:      linear-gradient(135deg,#0C6647 0%,#12805C 55%,#3DD68C 100%);
+}
+.dark.theme-green-accent,
+.theme-green-accent .dark {
+  /* Same shift on the dark canvas — a green-black ground rather than the
+     indigo-era navy, so the emerald accent sits in its own family. */
+  --background:           hsl(155 14% 6%);
+  --foreground:           hsl(140 8% 95%);
+  --card:                 hsl(155 12% 9%);
+  --card-foreground:      hsl(140 8% 95%);
+  --popover:              hsl(155 12% 10%);
+  --popover-foreground:   hsl(140 8% 95%);
+  --secondary:            hsl(155 10% 15%);
+  --secondary-foreground: hsl(140 8% 92%);
+  --muted:                hsl(155 10% 13%);
+  --muted-foreground:     hsl(150 7% 62%);
+  --border:               hsl(153 10% 19%);
+  --input:                hsl(155 10% 15%);
+  --sidebar:              hsl(155 14% 5%);
+  --sidebar-foreground:   hsl(140 8% 92%);
+  --sidebar-accent:       hsl(155 12% 11%);
+  --sidebar-accent-foreground: hsl(140 8% 95%);
+  --sidebar-border:       hsl(153 10% 17%);
+  --grid-line:            hsl(153 10% 15%);
+  --scrollbar-thumb:      hsl(153 10% 21%);
+  --scrollbar-thumb-hover: hsl(153 10% 31%);
+
+  --accent:               hsl(158 60% 46%);
+  --accent-foreground:    hsl(160 40% 8%);
+  --primary:              hsl(158 60% 46%);
+  --primary-foreground:   hsl(160 40% 8%);
+  --ring:                 hsl(158 60% 46%);
+  --sidebar-primary:      hsl(158 60% 46%);
+  --sidebar-ring:         hsl(158 60% 46%);
+  --chart-1:              hsl(158 60% 50%);
+  --vortyx-teal:          #3DD68C;
+  --vortyx-glow:          rgba(61,214,140,0.18);
+  --vortyx-particle:      rgba(61,214,140,0.45);
+}
+
+/* =========================================================
+   Accent gradients + glows
+   Scoped for overlay surfaces (chat widget, auth) that carry
+   more visual weight than the flat marketing sections.
+   All values resolve through --m-accent-*, so they follow the
+   green/blue switcher automatically.
+   ========================================================= */
+.marketing-shell,
+:root {
+  --m-grad-accent: linear-gradient(135deg, var(--m-accent-hi, #2563EB) 0%, var(--m-accent, #1D4ED8) 55%, var(--m-accent-lo, #1739A8) 100%);
+  --m-grad-bright: linear-gradient(135deg, var(--m-accent-d, #7CA5FF) 0%, var(--m-accent-hi, #2563EB) 100%);
+  --m-accent-glow: rgba(29, 78, 216, 0.30);
+  --m-accent-glow-d: rgba(124, 165, 255, 0.26);
+  --m-glow-soft: 0 0 0 1px var(--m-accent-line-d, rgba(124,165,255,0.24)), 0 6px 24px var(--m-accent-glow-d);
+  --m-glow-lift: 0 0 0 1px var(--m-accent-line-d, rgba(124,165,255,0.24)), 0 10px 34px var(--m-accent-glow-d), 0 20px 56px rgba(0, 0, 0, 0.34);
+  /* Accent-tinted dark, for overlay panels that sit on the light canvas. */
+  --m-panel-dark: #0A1020;
+  --m-panel-wash: radial-gradient(130% 90% at 50% 0%, var(--m-accent-tint-d, rgba(124,165,255,0.10)) 0%, transparent 62%);
+}
+
+html.theme-green-accent .marketing-shell,
+html.theme-green-accent {
+  --m-accent-glow: rgba(18, 128, 92, 0.30);
+  --m-accent-glow-d: rgba(61, 214, 140, 0.26);
+  --m-panel-dark: #0B1512;
+}
+
+/* =========================================================
+   Motion system
+
+   Reveals are transition-based and driven by an IntersectionObserver
+   (components/marketing/reveal.tsx), which works in every browser —
+   the previous `animation-timeline: view()` approach silently did
+   nothing in Safari and Firefox.
+
+   The rest state is only hidden under `.js-reveal`, a class the
+   observer adds at runtime. So: no JS, no hidden content. Reduced
+   motion, no hidden content. Anything already on screen at mount is
+   marked `.is-in` synchronously, before `.js-reveal` lands, so
+   above-the-fold content never flashes.
+   ========================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  .js-reveal .m-reveal,
+  .js-reveal .m-reveal-late,
+  .js-reveal .m-reveal-object {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+
+  /* Product mockups — a touch of scale so the object feels physical. */
+  .js-reveal .m-reveal-object {
+    transform: translateY(20px) scale(0.985);
+    transform-origin: 50% 80%;
+  }
+
+  /* Trails its heading. */
+  .js-reveal .m-reveal-late { transition-delay: 0.1s; }
+
+  .js-reveal .m-reveal.is-in,
+  .js-reveal .m-reveal-late.is-in,
+  .js-reveal .m-reveal-object.is-in {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
+  /* Ambient drift on the two accent washes. Long cycle, low amplitude —
+     it should register as atmosphere, never as movement. */
+  @keyframes m-wash-drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+    50%      { transform: translate3d(0, -1.5%, 0) scale(1.07); opacity: 0.82; }
+  }
+  .m-wash { animation: m-wash-drift 22s ease-in-out infinite; }
+}
+
+/* ── Hover affordances ──────────────────────────────────────────── */
+.m-btn {
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.m-btn-primary:hover,
+.m-btn-on-dark:hover { transform: translateY(-1px); }
+.m-btn:active { transform: translateY(0); }
+
+/* Cards that lift. Opt-in via .m-lift so it never applies blindly. */
+.m-lift {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .m-lift:hover { transform: translateY(-3px); }
+}
+.m-lift:hover {
+  box-shadow: var(--m-shadow-lg);
+  border-color: var(--m-line-2);
+}
+
+/* Underline that draws in from the left. */
+.m-underline {
+  position: relative;
+  text-decoration: none;
+}
+.m-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.m-underline:hover::after { transform: scaleX(1); }
+
+/* ── Marquee track ──────────────────────────────────────────────── */
+/* Expects two identical halves inside; translating -50% loops seamlessly. */
+.m-marquee-track {
+  display: flex;
+  width: max-content;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .m-marquee-track { animation: m-marquee 46s linear infinite; }
+  .m-marquee-mask:hover .m-marquee-track { animation-play-state: paused; }
+}
+.m-marquee-mask {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }

@@ -28,7 +28,12 @@ export interface ColorTheme {
 
 export const ACCENTS: ColorTheme[] = [
   // ── Solid hues ──────────────────────────────────────────────
-  { id: "default", name: "Default (Indigo)", swatch: "#5266E0", className: "" },
+  // The two primary site themes lead the list. "default" keeps its id so
+  // previously-persisted state still resolves; it is now Blue rather than
+  // Indigo, and is the shipped default across marketing, auth and the app.
+  { id: "default", name: "Blue", swatch: "#1D4ED8", className: "" },
+  { id: "green", name: "Green", swatch: "#12805C", className: "theme-green-accent" },
+
   { id: "red", name: "Red", swatch: "#DC2626", className: "theme-red" },
   { id: "amber", name: "Amber", swatch: "#F59E0B", className: "theme-amber" },
   { id: "emerald", name: "Emerald", swatch: "#10B981", className: "theme-emerald" },

@@ -4,7 +4,7 @@
  * Marketing-site chat widget.
  *
  * Pattern:
- *   • Floating FAB bottom-right. Click to expand a glass panel.
+ *   • Floating FAB bottom-right. Click to expand the panel.
  *   • The AI assistant ("Avortyx AI") handles the opening exchange via the
  *     Anthropic-proxy /api/chat endpoint.
  *   • After the AI replies, a "Talk to a person" escalation row offers the
@@ -16,8 +16,12 @@
  *   • Quick-reply chips sit above the composer for one-click intents
  *     (Pricing / Book a demo / Docs).
  *
- * Visual: thin transparent accent border + glass + soft accent halo, matching
- * the AuthCard / hero stage glass formula. Theme-aware via CSS vars.
+ * Visual: a dark, gradient-accented floating panel. This is a deliberate
+ * exception to the flat, restrained marketing sections — the widget is an
+ * overlay on a light page, so it carries the gradient + glow the page
+ * sections intentionally don't. Colours come from the `--m-*` tokens defined
+ * on `.marketing-shell`, which wraps this widget; every accent-derived value
+ * resolves through a var so the green/blue switcher still applies.
  */
 
 import * as React from "react";
@@ -43,7 +47,6 @@ import {
   getStoredSessionId,
   storeSessionId,
 } from "@/lib/support-guest-identity";
-import { cn } from "@/lib/utils";
 
 /* Poll interval for fetching agent replies (ms). 3s is the sweet spot
    between "feels live" and "doesn't hammer the backend". */
@@ -99,10 +102,24 @@ const TEAM: TeamMember[] = [
   },
 ];
 
-const TONE_BG: Record<TeamMember["tone"], string> = {
-  accent: "bg-accent/15 text-accent",
-  success: "bg-[color:var(--success)]/15 text-[color:var(--success)]",
-  warning: "bg-[color:var(--warning)]/15 text-[color:var(--warning)]",
+/* Initials-fallback treatment per tone. Deliberately quiet — these only
+   surface when a portrait fails to decode. Dark-panel variants. */
+const TONE_BG: Record<TeamMember["tone"], React.CSSProperties> = {
+  accent: {
+    background: "var(--m-accent-tint-d)",
+    color: "var(--m-accent-d)",
+    border: "1px solid var(--m-accent-line-d)",
+  },
+  success: {
+    background: "var(--m-bg-dark-3)",
+    color: "var(--m-fg-d2)",
+    border: "1px solid var(--m-line-d)",
+  },
+  warning: {
+    background: "var(--m-bg-dark-3)",
+    color: "var(--m-fg-d2)",
+    border: "1px solid var(--m-line-d)",
+  },
 };
 
 const QUICK_REPLIES = [
@@ -110,6 +127,9 @@ const QUICK_REPLIES = [
   { id: "demo", labelKey: "marketingUI.chat.quick.demo" },
   { id: "docs", labelKey: "marketingUI.chat.quick.docs" },
 ];
+
+/* Quiet, standard easing — no spring, no overshoot. */
+const EASE: [number, number, number, number] = [0.4, 0, 0.2, 1];
 
 export function ChatWidget() {
   const { t } = useTranslation();
@@ -347,39 +367,178 @@ export function ChatWidget() {
     );
   };
 
+  const sendDisabled = pending || !input.trim();
+
   return (
     <>
+      {/* Presentational-only stylesheet: hover/focus/placeholder states and
+          the typing-dot keyframes. Kept here so every colour still resolves
+          from the --m-* tokens.
+
+          Anything with a hover/focus/disabled state has its *resting* paint
+          declared here too, not inline — an inline style beats a class rule,
+          so a hover that only lives in CSS can never override an inline
+          background/border/colour. */}
+      <style jsx global>{`
+        .cw-focus:focus-visible {
+          outline: 2px solid var(--m-accent-line-d);
+          outline-offset: 2px;
+        }
+        /* FAB — reads as a lit object sitting on the light page. */
+        .cw-fab {
+          background: var(--m-grad-bright);
+          box-shadow: var(--m-glow-lift);
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .cw-fab:hover {
+          transform: scale(1.05);
+          box-shadow: 0 0 0 1px var(--m-accent-line-d),
+            0 14px 42px var(--m-accent-glow-d), 0 24px 64px rgba(0, 0, 0, 0.38);
+        }
+        .cw-icon-btn {
+          background: transparent;
+          color: var(--m-fg-d3);
+          transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .cw-icon-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--m-fg-d);
+        }
+        .cw-chip {
+          border: 1px solid var(--m-line-d2);
+          background: rgba(255, 255, 255, 0.04);
+          color: var(--m-fg-d2);
+          transition: background-color 0.15s ease, border-color 0.15s ease,
+            color 0.15s ease;
+        }
+        .cw-chip:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.07);
+          border-color: var(--m-accent-line-d);
+          color: var(--m-fg-d);
+        }
+        .cw-chip:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .cw-field {
+          border: 1px solid var(--m-line-d2);
+          border-radius: var(--m-r);
+          transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+        .cw-field:focus-within {
+          border-color: var(--m-accent-line-d);
+          box-shadow: var(--m-glow-soft);
+        }
+        .cw-input::placeholder {
+          color: var(--m-fg-d3);
+        }
+        .cw-send {
+          background: var(--m-grad-bright);
+          color: #fff;
+          box-shadow: 0 2px 10px var(--m-accent-glow-d);
+          transition: box-shadow 0.16s ease, background 0.16s ease;
+        }
+        .cw-send:not(:disabled):hover {
+          box-shadow: 0 3px 18px var(--m-accent-glow-d);
+        }
+        .cw-send:disabled {
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--m-fg-d3);
+          box-shadow: none;
+          cursor: not-allowed;
+        }
+        .cw-cta {
+          flex: 1;
+        }
+        /* Beats .m-btn-ghost-dark:hover from globals.css on specificity so the
+           panel's own hover tint wins regardless of stylesheet order. */
+        .m-btn.cw-cta:hover {
+          background: rgba(255, 255, 255, 0.07);
+          border-color: var(--m-line-d2);
+        }
+        @keyframes chat-dot-pulse {
+          0%,
+          80%,
+          100% {
+            opacity: 0.25;
+          }
+          40% {
+            opacity: 1;
+          }
+        }
+        /* Static dots at rest; only animate when motion is welcome. */
+        @media (prefers-reduced-motion: no-preference) {
+          .cw-dot {
+            animation: chat-dot-pulse 1.2s ease-in-out infinite;
+          }
+        }
+        @keyframes cw-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        /* Local spinner instead of Tailwind's animate-spin utility, which
+           globals.css does not reduced-motion gate. */
+        @media (prefers-reduced-motion: no-preference) {
+          .cw-spin {
+            animation: cw-spin 0.9s linear infinite;
+          }
+        }
+        .cw-panel {
+          width: 380px;
+        }
+        @media (max-width: 440px) {
+          .cw-panel {
+            width: calc(100vw - 32px);
+          }
+        }
+      `}</style>
+
       {/* Floating action button */}
       <button
         type="button"
         aria-label={open ? t("marketingUI.chat.closeLabel") : t("marketingUI.chat.openLabel")}
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "fixed bottom-5 right-5 z-50 inline-flex h-12 w-12 items-center justify-center rounded-full",
-          "border border-accent/30 bg-foreground text-background shadow-[0_12px_36px_-12px_rgba(8,10,32,0.6),0_0_28px_-12px_color-mix(in_oklch,var(--accent)_70%,transparent)]",
-          "transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-        )}
+        className="cw-fab cw-focus"
+        style={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          zIndex: 50,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: 54,
+          width: 54,
+          borderRadius: 999,
+          border: "none",
+          padding: 0,
+          color: "#fff",
+          cursor: "pointer",
+        }}
       >
         <AnimatePresence mode="wait" initial={false}>
           {open ? (
             <motion.span
               key="x"
-              initial={{ rotate: -45, opacity: 0 }}
+              initial={{ rotate: -20, opacity: 0 }}
               animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 45, opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              exit={{ rotate: 20, opacity: 0 }}
+              transition={{ duration: 0.15, ease: EASE }}
+              style={{ display: "inline-flex" }}
             >
-              <X className="h-5 w-5" />
+              <X size={20} strokeWidth={1.75} />
             </motion.span>
           ) : (
             <motion.span
               key="msg"
-              initial={{ rotate: 45, opacity: 0 }}
+              initial={{ rotate: 20, opacity: 0 }}
               animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -45, opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              exit={{ rotate: -20, opacity: 0 }}
+              transition={{ duration: 0.15, ease: EASE }}
+              style={{ display: "inline-flex" }}
             >
-              <MessageCircle className="h-5 w-5" />
+              <MessageCircle size={20} strokeWidth={1.75} />
             </motion.span>
           )}
         </AnimatePresence>
@@ -390,23 +549,60 @@ export function ChatWidget() {
         {open && (
           <motion.div
             key="chat-panel"
-            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, scale: 0.995 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className={cn(
-              "fixed bottom-20 right-5 z-50 flex w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-hidden",
-              "rounded-2xl border border-accent/15 bg-card/90 backdrop-blur-2xl",
-              "shadow-[0_30px_80px_-30px_rgba(8,10,32,0.55),0_0_60px_-30px_color-mix(in_oklch,var(--accent)_55%,transparent)]",
-            )}
-            style={{ height: "min(34rem, calc(100vh - 7rem))" }}
+            exit={{ opacity: 0, y: 8, scale: 0.995 }}
+            transition={{ duration: 0.2, ease: EASE }}
+            className="cw-panel"
+            style={{
+              position: "fixed",
+              bottom: 84,
+              right: 20,
+              zIndex: 50,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              maxWidth: "calc(100vw - 32px)",
+              height: "min(560px, calc(100vh - 124px))",
+              background: "var(--m-panel-dark)",
+              border: "1px solid var(--m-line-d2)",
+              borderRadius: "var(--m-r-lg)",
+              boxShadow: "var(--m-glow-lift)",
+              color: "var(--m-fg-d)",
+              fontFamily: "var(--m-sans)",
+            }}
             role="dialog"
             aria-label={t("marketingUI.chat.dialogLabel")}
           >
-            {/* Top accent sheen — same recipe as AuthCard. */}
+            {/* Accent wash pinned to the panel's top edge — makes the header
+                area glow faintly without a second surface colour. Sits behind
+                every content layer. */}
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-accent/[0.09] to-transparent"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 200,
+                zIndex: 0,
+                pointerEvents: "none",
+                background: "var(--m-panel-wash)",
+              }}
+            />
+            {/* 1px gradient top edge */}
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 1,
+                zIndex: 2,
+                pointerEvents: "none",
+                background: "var(--m-grad-bright)",
+              }}
             />
 
             {/* Header — swaps between AI and active-agent identity */}
@@ -418,7 +614,17 @@ export function ChatWidget() {
             {/* Messages */}
             <div
               ref={scrollRef}
-              className="relative flex-1 space-y-3 overflow-y-auto px-4 py-4"
+              style={{
+                position: "relative",
+                zIndex: 1,
+                flex: 1,
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+                padding: 16,
+                background: "transparent",
+              }}
             >
               {messages.map((m, i) => (
                 <MessageBubble
@@ -450,14 +656,35 @@ export function ChatWidget() {
 
             {/* Quick replies — one-click suggestions above the composer */}
             {!activeAgent && (
-              <div className="flex flex-wrap gap-1.5 border-t border-border/40 px-4 pt-2 pb-1">
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 1,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  padding: "10px 16px",
+                  background: "transparent",
+                  borderTop: "1px solid var(--m-line-d)",
+                }}
+              >
                 {QUICK_REPLIES.map((q) => (
                   <button
                     key={q.id}
                     type="button"
                     onClick={() => void send(t(q.labelKey))}
                     disabled={pending}
-                    className="rounded-full border border-accent/20 bg-background/40 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground disabled:opacity-50"
+                    className="cw-chip cw-focus"
+                    /* Border/background/colour live in `.cw-chip` so the
+                       hover state isn't out-specificity'd by an inline rule. */
+                    style={{
+                      fontFamily: "inherit",
+                      fontSize: 12.5,
+                      lineHeight: 1.2,
+                      padding: "6px 12px",
+                      borderRadius: 999,
+                      cursor: "pointer",
+                    }}
                   >
                     {t(q.labelKey)}
                   </button>
@@ -466,8 +693,25 @@ export function ChatWidget() {
             )}
 
             {/* Composer */}
-            <div className="border-t border-border/60 bg-background/40 p-3">
-              <div className="flex items-end gap-2">
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
+                borderTop: "1px solid var(--m-line-d)",
+                background: "transparent",
+                padding: 12,
+              }}
+            >
+              <div
+                className="cw-field"
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 8,
+                  padding: "5px 5px 5px 11px",
+                  background: "rgba(255,255,255,0.03)",
+                }}
+              >
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -475,27 +719,61 @@ export function ChatWidget() {
                   onKeyDown={onKey}
                   placeholder={t("marketingUI.chat.placeholder")}
                   rows={1}
-                  className={cn(
-                    "max-h-32 min-h-[2.25rem] flex-1 resize-none rounded-lg border border-border/60 bg-secondary/40 px-3 py-2 text-sm",
-                    "placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
-                  )}
+                  className="cw-input"
+                  style={{
+                    flex: 1,
+                    resize: "none",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    boxShadow: "none",
+                    padding: "6px 0",
+                    maxHeight: 112,
+                    minHeight: 22,
+                    fontFamily: "inherit",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    color: "var(--m-fg-d)",
+                  }}
                   disabled={pending}
                 />
                 <button
                   type="button"
                   onClick={() => void send()}
-                  disabled={pending || !input.trim()}
+                  disabled={sendDisabled}
                   aria-label={t("marketingUI.chat.sendLabel")}
-                  className={cn(
-                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                    "bg-accent text-accent-foreground transition-all hover:bg-accent/90 hover:scale-105",
-                    "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100",
-                  )}
+                  className="cw-send cw-focus"
+                  /* Enabled/disabled paint lives in `.cw-send` + `.cw-send:disabled`
+                     — same reason as the chips: inline would beat the hover rule. */
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    height: 32,
+                    width: 32,
+                    padding: 0,
+                    border: "none",
+                    borderRadius: "var(--m-r-sm)",
+                    cursor: "pointer",
+                  }}
                 >
-                  <Send className="h-4 w-4" />
+                  <Send size={15} strokeWidth={1.75} />
                 </button>
               </div>
-              <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-muted-foreground">
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "0 2px",
+                  fontSize: 11,
+                  lineHeight: 1.4,
+                  color: "var(--m-fg-d3)",
+                }}
+              >
                 <span>{t("marketingUI.chat.disclaimer")}</span>
                 <TeamOnlineHint />
               </div>
@@ -520,30 +798,94 @@ function Header({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="relative flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
+    <div
+      style={{
+        position: "relative",
+        zIndex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        padding: "14px 16px",
+        borderBottom: "1px solid var(--m-line-d)",
+        /* Transparent so the panel's accent wash reads through. */
+        background: "transparent",
+      }}
+    >
       {activeAgent ? (
-        <div className="flex items-center gap-2.5">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <AgentAvatar member={activeAgent} size="md" pulse />
-          <div className="leading-tight">
-            <div className="text-sm font-semibold">{t(activeAgent.nameKey)}</div>
-            <div className="text-[10px] text-muted-foreground">
-              {t(activeAgent.roleKey)} ·{" "}
-              <span className="text-[color:var(--success)]">
-                {t("marketingUI.chat.replyingNow")}
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "-0.006em",
+                color: "var(--m-fg-d)",
+                lineHeight: 1.3,
+              }}
+            >
+              {t(activeAgent.nameKey)}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: "var(--m-fg-d3)",
+              }}
+            >
+              <StatusDot live />
+              <span>
+                {t(activeAgent.roleKey)} · {t("marketingUI.chat.replyingNow")}
               </span>
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-2.5">
-          <div className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
-            <Sparkles className="h-4 w-4" />
-            <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-2 w-2 rounded-full border-2 border-card bg-[color:var(--success)]" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold">{t("marketingUI.chat.title")}</div>
-            <div className="text-[10px] text-muted-foreground">
-              {t("marketingUI.chat.status")}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: 32,
+              width: 32,
+              flexShrink: 0,
+              borderRadius: 999,
+              background: "var(--m-accent-tint-d)",
+              border: "1px solid var(--m-accent-line-d)",
+              color: "var(--m-accent-d)",
+            }}
+          >
+            <Sparkles size={16} strokeWidth={1.75} />
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "-0.006em",
+                color: "var(--m-fg-d)",
+                lineHeight: 1.3,
+              }}
+            >
+              {t("marketingUI.chat.title")}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: "var(--m-fg-d3)",
+              }}
+            >
+              <StatusDot />
+              <span>{t("marketingUI.chat.status")}</span>
             </div>
           </div>
         </div>
@@ -552,11 +894,42 @@ function Header({
         type="button"
         aria-label={t("marketingUI.chat.closeButton")}
         onClick={onClose}
-        className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        className="cw-icon-btn cw-focus"
+        /* Colour + background come from `.cw-icon-btn` so the hover wins. */
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          height: 28,
+          width: 28,
+          padding: 0,
+          border: "none",
+          borderRadius: "var(--m-r-sm)",
+          cursor: "pointer",
+        }}
       >
-        <X className="h-4 w-4" />
+        <X size={16} strokeWidth={1.75} />
       </button>
     </div>
+  );
+}
+
+/** 6px accent status dot. `live` adds the design-system halo pulse. */
+function StatusDot({ live }: { live?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={live ? "m-pulse" : undefined}
+      style={{
+        display: "inline-block",
+        flexShrink: 0,
+        height: 6,
+        width: 6,
+        borderRadius: 999,
+        background: "var(--m-accent-d)",
+      }}
+    />
   );
 }
 
@@ -573,62 +946,108 @@ function EscalationCard({
   const [maya, jordan, sofia] = TEAM;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-xl border border-accent/20 bg-background/50 p-3"
+      transition={{ duration: 0.2, ease: EASE }}
+      style={{
+        border: "1px solid var(--m-line-d)",
+        borderRadius: "var(--m-r)",
+        background: "var(--m-bg-dark-2)",
+        padding: 14,
+      }}
     >
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
+        <span className="m-label" style={{ color: "var(--m-accent-d)" }}>
           {t("marketingUI.chat.escalation.heading")}
-        </div>
-        <span className="inline-flex items-center gap-1 text-[10px] text-[color:var(--success)]">
-          <span className="relative inline-flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[color:var(--success)] opacity-70" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--success)]" />
-          </span>
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11,
+            lineHeight: 1.4,
+            color: "var(--m-fg-d3)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <StatusDot live />
           {t("marketingUI.chat.escalation.online").replace("{count}", String(TEAM.length))}
         </span>
       </div>
 
-      <p className="mb-3 text-xs text-foreground/90">
-        {t("marketingUI.chat.escalation.prompt")}
-      </p>
-
       {/* Avatar row + small clickable handoff per member */}
-      <div className="mb-3 flex items-center gap-2">
-        {TEAM.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onPick(m, "direct")}
-            title={t(m.nameKey)}
-            className="group flex flex-col items-center gap-1"
-          >
-            <AgentAvatar member={m} size="md" pulse />
-            <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground">
-              {t(m.nameKey).split(" ")[0]}
-            </span>
-          </button>
-        ))}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+          {TEAM.map((m, i) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onPick(m, "direct")}
+              title={t(m.nameKey)}
+              aria-label={t(m.nameKey)}
+              className="cw-focus"
+              style={{
+                display: "inline-flex",
+                padding: 0,
+                background: "transparent",
+                border: "2px solid var(--m-panel-dark)",
+                borderRadius: 999,
+                marginLeft: i === 0 ? 0 : -6,
+                position: "relative",
+                zIndex: i,
+                cursor: "pointer",
+              }}
+            >
+              <AgentAvatar member={m} size="sm" />
+            </button>
+          ))}
+        </span>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13,
+            lineHeight: 1.45,
+            color: "var(--m-fg-d2)",
+          }}
+        >
+          {t("marketingUI.chat.escalation.prompt")}
+        </p>
       </div>
 
       {/* Sales / Support split-CTA */}
-      <div className="grid grid-cols-2 gap-2">
+      <div style={{ display: "flex", gap: 8 }}>
         <button
           type="button"
           onClick={() => onPick(maya, "sales")}
-          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/20"
+          className="m-btn m-btn-ghost-dark cw-cta cw-focus"
+          style={{ fontSize: 13, padding: "8px 12px", gap: 6 }}
         >
-          <Headphones className="h-3.5 w-3.5 text-accent" />
+          <Headphones size={15} strokeWidth={1.75} style={{ color: "var(--m-fg-d3)" }} />
           {t("marketingUI.chat.escalation.sales")}
         </button>
         <button
           type="button"
           onClick={() => onPick(jordan ?? sofia, "support")}
-          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border/60 bg-background/40 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/30"
+          className="m-btn m-btn-ghost-dark cw-cta cw-focus"
+          style={{ fontSize: 13, padding: "8px 12px", gap: 6 }}
         >
-          <LifeBuoy className="h-3.5 w-3.5 text-[color:var(--success)]" />
+          <LifeBuoy size={15} strokeWidth={1.75} style={{ color: "var(--m-fg-d3)" }} />
           {t("marketingUI.chat.escalation.support")}
         </button>
       </div>
@@ -650,8 +1069,16 @@ function MessageBubble({
   const { t } = useTranslation();
   if (message.sender === "system") {
     return (
-      <div className="flex justify-center">
-        <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-0.5 text-[10px] text-muted-foreground">
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <span
+          style={{
+            fontSize: 11.5,
+            lineHeight: 1.5,
+            color: "var(--m-fg-d3)",
+            textAlign: "center",
+            padding: "0 8px",
+          }}
+        >
           {message.content}
         </span>
       </div>
@@ -660,34 +1087,72 @@ function MessageBubble({
 
   const isUser = message.sender === "user";
   return (
-    <div className={cn("flex items-end gap-2", isUser ? "justify-end" : "justify-start")}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 8,
+        justifyContent: isUser ? "flex-end" : "flex-start",
+      }}
+    >
       {!isUser && (
         <>
           {agent ? (
             <AgentAvatar member={agent} size="sm" />
           ) : (
-            <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-accent">
-              <Sparkles className="h-3.5 w-3.5" />
-            </div>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 26,
+                width: 26,
+                flexShrink: 0,
+                borderRadius: 999,
+                background: "var(--m-accent-tint-d)",
+                border: "1px solid var(--m-accent-line-d)",
+                color: "var(--m-accent-d)",
+              }}
+            >
+              <Sparkles size={14} strokeWidth={1.75} />
+            </span>
           )}
         </>
       )}
-      <div className="max-w-[80%]">
+      <div style={{ maxWidth: "82%", minWidth: 0 }}>
         <div
-          className={cn(
-            "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm leading-relaxed",
-            isUser
-              ? "rounded-br-sm bg-accent text-accent-foreground"
-              : "rounded-bl-sm bg-secondary text-foreground",
-          )}
+          style={{
+            whiteSpace: "pre-wrap",
+            overflowWrap: "break-word",
+            fontSize: 14,
+            lineHeight: 1.55,
+            padding: "9px 12px",
+            borderRadius: "var(--m-r)",
+            ...(isUser
+              ? {
+                  borderBottomRightRadius: "var(--m-r-xs)",
+                  background: "var(--m-grad-accent)",
+                  color: "#fff",
+                  boxShadow: "0 2px 12px var(--m-accent-glow-d)",
+                }
+              : {
+                  borderBottomLeftRadius: "var(--m-r-xs)",
+                  background: "var(--m-bg-dark-2)",
+                  border: "1px solid var(--m-line-d)",
+                  color: "var(--m-fg-d)",
+                }),
+          }}
         >
           {message.content}
         </div>
         <div
-          className={cn(
-            "mt-1 text-[10px] text-muted-foreground/70",
-            isUser ? "text-right" : "text-left",
-          )}
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            lineHeight: 1.4,
+            color: "var(--m-fg-d3)",
+            textAlign: isUser ? "right" : "left",
+          }}
         >
           {isUser
             ? t("marketingUI.chat.you")
@@ -707,32 +1172,54 @@ function MessageBubble({
 
 function TypingIndicator({ activeAgent }: { activeAgent: TeamMember | null }) {
   return (
-    <div className="flex items-end gap-2">
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
       {activeAgent ? (
         <AgentAvatar member={activeAgent} size="sm" />
       ) : (
-        <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-accent">
-          <Sparkles className="h-3.5 w-3.5" />
-        </div>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: 26,
+            width: 26,
+            flexShrink: 0,
+            borderRadius: 999,
+            background: "var(--m-accent-tint-d)",
+            border: "1px solid var(--m-accent-line-d)",
+            color: "var(--m-accent-d)",
+          }}
+        >
+          <Sparkles size={14} strokeWidth={1.75} />
+        </span>
       )}
-      <div className="inline-flex items-center gap-1 rounded-2xl rounded-bl-sm bg-secondary px-3 py-2.5">
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "11px 12px",
+          borderRadius: "var(--m-r)",
+          borderBottomLeftRadius: "var(--m-r-xs)",
+          background: "var(--m-bg-dark-2)",
+          border: "1px solid var(--m-line-d)",
+        }}
+      >
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground"
+            className="cw-dot"
             style={{
-              animation: "chat-dot-pulse 1.2s ease-in-out infinite",
+              display: "inline-block",
+              height: 5,
+              width: 5,
+              borderRadius: 999,
+              background: "var(--m-fg-d3)",
               animationDelay: `${i * 0.15}s`,
             }}
           />
         ))}
       </div>
-      <style jsx global>{`
-        @keyframes chat-dot-pulse {
-          0%, 80%, 100% { opacity: 0.25; transform: scale(0.9); }
-          40%            { opacity: 1;    transform: scale(1); }
-        }
-      `}</style>
     </div>
   );
 }
@@ -755,13 +1242,27 @@ function TypingIndicator({ activeAgent }: { activeAgent: TeamMember | null }) {
 function SendingStatus() {
   const { t } = useTranslation();
   return (
-    <div className="flex justify-end pr-1">
+    <div style={{ display: "flex", justifyContent: "flex-end" }}>
       <span
         role="status"
         aria-live="polite"
-        className="inline-flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "5px 10px",
+          borderRadius: 999,
+          border: "1px solid var(--m-line-d)",
+          background: "rgba(255,255,255,0.04)",
+          fontSize: 11,
+          lineHeight: 1.3,
+          fontWeight: 500,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "var(--m-fg-d3)",
+        }}
       >
-        <Loader2 className="h-3 w-3 animate-spin text-accent" />
+        <Loader2 size={14} strokeWidth={1.75} className="cw-spin" />
         {t("marketingUI.chat.sending")}
       </span>
     </div>
@@ -775,9 +1276,16 @@ function SendingStatus() {
 function TeamOnlineHint() {
   const { t } = useTranslation();
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="inline-flex -space-x-1.5">
-        {TEAM.map((m) =>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center" }}>
+        {TEAM.map((m, i) =>
           m.avatar ? (
             <img
               key={m.id}
@@ -785,16 +1293,31 @@ function TeamOnlineHint() {
               alt=""
               title={t(m.nameKey)}
               loading="lazy"
-              className="h-3.5 w-3.5 rounded-full border border-card object-cover"
+              style={{
+                height: 15,
+                width: 15,
+                borderRadius: 999,
+                objectFit: "cover",
+                border: "1px solid var(--m-panel-dark)",
+                marginLeft: i === 0 ? 0 : -4,
+              }}
             />
           ) : (
             <span
               key={m.id}
-              className={cn(
-                "inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-card text-[7px] font-semibold",
-                TONE_BG[m.tone],
-              )}
               title={t(m.nameKey)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 15,
+                width: 15,
+                borderRadius: 999,
+                fontSize: 7,
+                fontWeight: 600,
+                marginLeft: i === 0 ? 0 : -4,
+                ...TONE_BG[m.tone],
+              }}
             >
               {m.initials.slice(0, 1)}
             </span>
@@ -809,7 +1332,7 @@ function TeamOnlineHint() {
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
-/*  Agent avatar — colored circle + initials + optional online dot       */
+/*  Agent avatar — portrait (or initials) + online dot                   */
 /* ─────────────────────────────────────────────────────────────────── */
 
 function AgentAvatar({
@@ -821,39 +1344,63 @@ function AgentAvatar({
   size?: "sm" | "md";
   pulse?: boolean;
 }) {
-  const sizeCls = size === "md" ? "h-8 w-8 text-[10px]" : "h-7 w-7 text-[9px]";
+  const px = size === "md" ? 32 : 26;
   // Photo failed to decode → fall back to initials so the chip never blanks.
   const [imgFailed, setImgFailed] = React.useState(false);
   return (
-    <span className="relative inline-flex">
+    <span
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        flexShrink: 0,
+      }}
+    >
       {member.avatar && !imgFailed ? (
         <img
           src={member.avatar}
           alt=""
           loading="lazy"
           onError={() => setImgFailed(true)}
-          className={cn(
-            "rounded-full object-cover ring-1 ring-border/60",
-            sizeCls,
-          )}
+          style={{
+            height: px,
+            width: px,
+            borderRadius: 999,
+            objectFit: "cover",
+            border: "1px solid var(--m-accent-line-d)",
+          }}
         />
       ) : (
         <span
-          className={cn(
-            "inline-flex items-center justify-center rounded-full font-bold",
-            sizeCls,
-            TONE_BG[member.tone],
-          )}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: px,
+            width: px,
+            borderRadius: 999,
+            fontSize: size === "md" ? 11 : 10,
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            ...TONE_BG[member.tone],
+          }}
         >
           {member.initials}
         </span>
       )}
       <span
         aria-hidden
-        className={cn(
-          "absolute -bottom-0.5 -right-0.5 inline-flex h-2 w-2 rounded-full border-2 border-card bg-[color:var(--success)]",
-          pulse && "after:absolute after:inset-0 after:animate-ping after:rounded-full after:bg-[color:var(--success)] after:opacity-70",
-        )}
+        className={pulse ? "m-pulse" : undefined}
+        style={{
+          position: "absolute",
+          bottom: -1,
+          right: -1,
+          height: 8,
+          width: 8,
+          borderRadius: 999,
+          background: "var(--m-accent-d)",
+          border: "2px solid var(--m-panel-dark)",
+          boxSizing: "content-box",
+        }}
       />
     </span>
   );
