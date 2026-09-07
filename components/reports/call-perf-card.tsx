@@ -18,7 +18,7 @@ export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {t("toolsUI.reports.perfCard.title")}
         </CardTitle>
       </CardHeader>

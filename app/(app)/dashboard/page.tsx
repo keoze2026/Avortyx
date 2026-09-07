@@ -157,8 +157,11 @@ export default function DashboardPage() {
           Uses the same composed-chart component as the Reports page so the
           two surfaces share an identical visual language. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <HourlyDistribution calls={scopedCalls} />
+        {/* h-full on both wrapper and card so the chart matches the height of
+            the two stacked cards beside it; the chart then centres in the
+            extra space rather than leaving a gap at the bottom. */}
+        <div className="h-full lg:col-span-2">
+          <HourlyDistribution calls={scopedCalls} className="h-full" />
         </div>
         <div className="flex h-full min-w-0 flex-col gap-4">
           <CallPerfCard revenue={summary.revenue} payout={summary.payout} />

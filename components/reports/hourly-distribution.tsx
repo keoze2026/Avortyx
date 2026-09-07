@@ -47,6 +47,13 @@ const COLOR_REVENUE = "var(--accent)";
 
 interface HourlyDistributionProps {
   calls: Call[];
+  /**
+   * Applied to the Card. Pass `h-full` where the chart shares a grid row with
+   * a taller column and should match its height — the content then centres in
+   * the extra space. Left off, the card sizes to its content as before, so
+   * other surfaces using this chart are unaffected.
+   */
+  className?: string;
 }
 
 interface Bucket {
@@ -192,7 +199,7 @@ function bucketize(calls: Call[], grain: Grain, timeZone: string): Bucket[] {
   return slots;
 }
 
-export function HourlyDistribution({ calls }: HourlyDistributionProps) {
+export function HourlyDistribution({ calls, className }: HourlyDistributionProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const [grain, setGrain] = React.useState<Grain>("H");
@@ -228,7 +235,7 @@ export function HourlyDistribution({ calls }: HourlyDistributionProps) {
   );
 
   return (
-    <Card>
+    <Card className={cn("flex flex-col", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-1 rounded-md border border-border bg-muted p-0.5">
           {GRAINS.map((g) => (
@@ -248,11 +255,11 @@ export function HourlyDistribution({ calls }: HourlyDistributionProps) {
         </div>
         {/* Cased in CSS rather than in the copy, so translations stay
             natural-cased and every locale gets the same treatment. */}
-        <div className="flex-1 text-center text-xs uppercase tracking-wider text-muted-foreground">
+        <div className="flex-1 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {`${t("dashboard.chart.callsBy")} : ${t(GRAIN_NOUN_KEYS[grain])}`}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col justify-center">
         <div ref={containerRef} className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 12, right: 4, left: 4, bottom: 0 }}>
