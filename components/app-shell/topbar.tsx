@@ -1,6 +1,6 @@
 "use client";
 
-import { Command, DollarSign, Search } from "lucide-react";
+import { Command, Search, Wallet } from "lucide-react";
 
 import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
@@ -53,18 +53,29 @@ export function Topbar() {
               ("Live: 0"), with colour carried by the value alone so the row
               scans as figures rather than as chrome. Labels collapse on
               mobile; values stay in full form ("3,016", never "3K"). */}
-          <div className="inline-flex items-center gap-3 sm:gap-5">
+          <div className="inline-flex items-center gap-4 sm:gap-6">
+            {/* Balance. A wallet rather than a "$" glyph — the figure already
+                carries its own currency symbol, so a "$" badge read as "$ $0". */}
             <span className="inline-flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-foreground/60 text-foreground">
-                <DollarSign className="h-3.5 w-3.5" />
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground">
+                <Wallet className="h-3.5 w-3.5" />
               </span>
-              <span className={cn("text-[15px] font-semibold tabular-nums", GREEN_TEXT)}>
+              <span
+                className={cn(
+                  "text-[15px] font-semibold leading-none tabular-nums",
+                  GREEN_TEXT,
+                )}
+              >
                 {formatCurrency(balance ?? 0)}
               </span>
             </span>
 
-            <TopStat label={t("topbar.live")} value={formatNumber(liveCalls)} live />
-            <TopStat label={t("topbar.total")} value={formatNumber(totalCalls)} accent />
+            {/* Counters sit closer to each other than to the balance — they're
+                one category (live call activity), the balance is another. */}
+            <span className="inline-flex items-center gap-4">
+              <TopStat label={t("topbar.live")} value={formatNumber(liveCalls)} live />
+              <TopStat label={t("topbar.total")} value={formatNumber(totalCalls)} accent />
+            </span>
           </div>
 
           {/* Language + theme + notifications grouped in a pill */}
@@ -138,11 +149,14 @@ interface TopStatProps {
 function TopStat({ label, value, live = false, accent = false }: TopStatProps) {
   return (
     <span className="inline-flex items-baseline gap-1.5">
-      {/* Label collapses on mobile so the row stays compact. */}
-      <span className="hidden text-[13px] text-foreground/80 sm:inline">{label}:</span>
+      {/* Muted so the figure carries the emphasis, not the word.
+          Collapses on mobile so the row stays compact. */}
+      <span className="hidden text-[12px] leading-none text-muted-foreground sm:inline">
+        {label}:
+      </span>
       <span
         className={cn(
-          "text-[15px] font-semibold tabular-nums",
+          "text-[15px] font-semibold leading-none tabular-nums",
           live ? GREEN_TEXT : accent ? "text-accent" : "text-foreground",
         )}
       >
