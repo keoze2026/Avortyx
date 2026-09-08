@@ -53,10 +53,14 @@ export function Topbar() {
               ("Live: 0"), with colour carried by the value alone so the row
               scans as figures rather than as chrome. Labels collapse on
               mobile; values stay in full form ("3,016", never "3K"). */}
-          <div className="inline-flex items-center gap-4 sm:gap-6">
+          {/* Staggered bracket: each cell carries a different edge set, so the
+              three read as distinct without a full box around each. Padding
+              rather than gaps does the spacing now — the borders separate them.
+              items-stretch keeps every cell the same height so the edges line up. */}
+          <div className="inline-flex items-stretch">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 border-b border-l border-border px-3 py-2">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground">
                 <Wallet className="h-3.5 w-3.5" />
               </span>
@@ -70,12 +74,18 @@ export function Topbar() {
               </span>
             </span>
 
-            {/* Counters sit closer to each other than to the balance — they're
-                one category (live call activity), the balance is another. */}
-            <span className="inline-flex items-center gap-4">
-              <TopStat label={t("topbar.live")} value={formatNumber(liveCalls)} live />
-              <TopStat label={t("topbar.total")} value={formatNumber(totalCalls)} accent />
-            </span>
+            <TopStat
+              label={t("topbar.live")}
+              value={formatNumber(liveCalls)}
+              live
+              className="border-l border-t border-border px-3 py-2"
+            />
+            <TopStat
+              label={t("topbar.total")}
+              value={formatNumber(totalCalls)}
+              accent
+              className="border-b border-l border-r border-border px-3 py-2"
+            />
           </div>
 
           {/* Language + theme + notifications grouped in a pill */}
@@ -144,11 +154,13 @@ interface TopStatProps {
   live?: boolean;
   /** Renders the value in the portal accent. */
   accent?: boolean;
+  /** Border/padding for the stat's cell in the topbar bracket. */
+  className?: string;
 }
 
-function TopStat({ label, value, live = false, accent = false }: TopStatProps) {
+function TopStat({ label, value, live = false, accent = false, className }: TopStatProps) {
   return (
-    <span className="inline-flex items-baseline gap-1.5">
+    <span className={cn("inline-flex items-center gap-1.5", className)}>
       {/* Muted so the figure carries the emphasis, not the word.
           Collapses on mobile so the row stays compact. */}
       <span className="hidden text-[12px] leading-none text-muted-foreground sm:inline">

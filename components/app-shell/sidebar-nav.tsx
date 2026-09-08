@@ -128,8 +128,10 @@ function BrandHeader({ collapsed }: { collapsed: boolean }) {
           <span
             className="truncate text-base font-bold tracking-tight"
             style={{
+              // Reads the theme ramp rather than fixed hexes, so the wordmark
+              // tracks the selected accent like the mark beside it already did.
               background:
-                "linear-gradient(120deg, #3A4BC4 0%, #5266E0 55%, #818CF8 100%)",
+                "linear-gradient(120deg, var(--vortyx-deep, #1739A8) 0%, var(--vortyx-teal, #1D4ED8) 55%, var(--vortyx-bright, #60A5FA) 100%)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               WebkitTextFillColor: "transparent",
