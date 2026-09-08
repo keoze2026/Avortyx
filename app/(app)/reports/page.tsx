@@ -118,7 +118,10 @@ export default function ReportsPage() {
         {(visibility.hourly || visibility.donut || visibility.perf) && (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {(visibility.hourly || visibility.donut) && (
-              <div className="relative lg:col-span-2">
+              /* lg:h-full so the chart matches the stacked cards beside it.
+                 Scoped to lg — on mobile the columns stack and each sizes
+                 to its own content. */
+              <div className="relative lg:col-span-2 lg:h-full">
                 {/* Mobile-only chart switcher — only matters when both are visible */}
                 {visibility.hourly && visibility.donut && (
                   <button
@@ -144,10 +147,10 @@ export default function ReportsPage() {
                   <div
                     className={cn(
                       visibility.donut && mobileChart === "donut" ? "hidden" : "block",
-                      "lg:block",
+                      "lg:block lg:h-full",
                     )}
                   >
-                    <HourlyDistribution calls={filtered} />
+                    <HourlyDistribution calls={filtered} className="lg:h-full" />
                   </div>
                 )}
                 {visibility.donut && (
