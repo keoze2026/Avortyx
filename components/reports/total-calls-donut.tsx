@@ -153,7 +153,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                   onClick={() =>
                     setActiveKey((prev) => (prev === s.key ? null : s.key))
                   }
-                  className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   style={{ opacity: activeKey === null || isActive ? 1 : 0.65 }}
                   aria-pressed={isActive}
                 >

@@ -13,7 +13,6 @@ import {
   Plus,
   Search,
   Settings,
-  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -673,7 +672,10 @@ function TagCell({ call }: { call: Call }) {
         onClick={() => toast.info(t("toolsUI.reports.callLog.actions.tagSoon"))}
         className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent"
       >
-        {tags.length === 0 ? <Tag className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+        {/* Always the "+" — the button's job is "add a tag" either way, and
+            swapping in a tag glyph on empty rows made the column read as two
+            different controls. */}
+        <Plus className="h-3 w-3" />
       </button>
     </div>
   );

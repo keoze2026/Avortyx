@@ -170,7 +170,10 @@ export function TableToolbar({
         value={String(pageSize)}
         onValueChange={(v) => onPageSize(Number(v) as PageSize)}
       >
-        <SelectTrigger size="sm" className="h-9 w-32">
+        {/* Sizes to content with a floor, rather than a fixed w-32 that clipped
+            "On page 100" — and clipped sooner still in locales where the
+            phrase is longer than the English one. */}
+        <SelectTrigger size="sm" className="h-9 w-auto min-w-[9rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="end">
