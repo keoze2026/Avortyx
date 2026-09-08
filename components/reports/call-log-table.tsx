@@ -650,31 +650,20 @@ function HangUpCell({ call }: { call: Call }) {
 }
 
 /**
- * Tag cell — renders the existing tag chips inline and a "+" button to
- * surface the add-tag affordance. Stays compact in the column.
+ * Tag cell — just the add-tag affordance. The chips that used to render here
+ * are gone; tags still travel with the row in exports (see the "tag" column
+ * in the export mapping), they're simply not shown in the table.
  */
 function TagCell({ call }: { call: Call }) {
   const { t } = useTranslation();
-  const tags = getTags(call);
   return (
     <div className="inline-flex items-center gap-1">
-      {tags.map((tagValue) => (
-        <span
-          key={tagValue}
-          className="inline-flex items-center rounded-md border border-border bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-        >
-          {tagValue}
-        </span>
-      ))}
       <button
         type="button"
         aria-label={t("toolsUI.reports.callLog.actions.addTagAria").replace("{id}", call.id)}
         onClick={() => toast.info(t("toolsUI.reports.callLog.actions.tagSoon"))}
         className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent"
       >
-        {/* Always the "+" — the button's job is "add a tag" either way, and
-            swapping in a tag glyph on empty rows made the column read as two
-            different controls. */}
         <Plus className="h-3 w-3" />
       </button>
     </div>
