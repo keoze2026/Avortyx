@@ -178,7 +178,7 @@ function TopStat({ label, value, tone, icon: Icon }: TopStatProps) {
       <Icon className={cn("h-3.5 w-3.5 shrink-0 sm:hidden", TONE_TEXT[tone])} aria-hidden />
       <span
         className={cn(
-          "sr-only sm:not-sr-only sm:text-[12px] sm:leading-none",
+          "sr-only font-bold sm:not-sr-only sm:text-[12px] sm:leading-none",
           TONE_TEXT[tone],
         )}
       >
