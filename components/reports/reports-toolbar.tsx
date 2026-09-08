@@ -207,7 +207,9 @@ export function ReportsToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      {/* ml-auto only from sm up. On phones it pushed this group to its own
+          line and stranded the view button alone on the row above. */}
+      <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
         <TimezonePicker className={TOOLBAR_BTN_HOVER} />
 
         {/* Date-range picker with preset shortcuts + Cancel/Apply (buffered) */}

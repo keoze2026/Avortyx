@@ -30,10 +30,12 @@ export function TimezonePicker({ className }: { className?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("gap-2", className)}>
-          <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="max-w-[18rem] truncate">{tzLabel}</span>
-          <ChevronDown className="h-3 w-3 opacity-60" />
+        {/* min-w-0 lets the label actually truncate inside the flex row, and
+            the cap scales with the viewport — 18rem overflowed on phones. */}
+        <Button variant="outline" size="sm" className={cn("min-w-0 gap-2", className)}>
+          <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span className="max-w-[11rem] truncate sm:max-w-[18rem]">{tzLabel}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-80 w-80 overflow-y-auto">

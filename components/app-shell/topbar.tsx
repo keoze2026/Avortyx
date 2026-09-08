@@ -53,20 +53,16 @@ export function Topbar() {
               ("Live: 0"), with colour carried by the value alone so the row
               scans as figures rather than as chrome. Labels collapse on
               mobile; values stay in full form ("3,016", never "3K"). */}
-          {/* Staggered bracket: each cell carries a different edge set, so the
-              three read as distinct without a full box around each. Padding
-              rather than gaps does the spacing now — the borders separate them.
-              items-stretch keeps every cell the same height so the edges line up. */}
-          <div className="inline-flex items-stretch">
+          <div className="inline-flex items-center gap-4 sm:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
-            <span className="inline-flex items-center gap-2 border-b border-l border-border px-3 py-2">
+            <span className="inline-flex items-center gap-2">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground">
                 <Wallet className="h-3.5 w-3.5" />
               </span>
               <span
                 className={cn(
-                  "text-[15px] font-semibold leading-none tabular-nums",
+                  "text-[15px] font-bold leading-none tabular-nums",
                   GREEN_TEXT,
                 )}
               >
@@ -74,18 +70,15 @@ export function Topbar() {
               </span>
             </span>
 
-            <TopStat
-              label={t("topbar.live")}
-              value={formatNumber(liveCalls)}
-              live
-              className="border-l border-t border-border px-3 py-2"
-            />
-            <TopStat
-              label={t("topbar.total")}
-              value={formatNumber(totalCalls)}
-              accent
-              className="border-b border-l border-r border-border px-3 py-2"
-            />
+            {/* Counters sit closer to each other than to the balance — they're
+                one category (live call activity), the balance is another.
+                Hidden below sm: the topbar has no room for their labels there,
+                and bare "0  0" with nothing naming them reads as noise. The
+                balance stays because its wallet icon still identifies it. */}
+            <span className="hidden items-center gap-4 sm:inline-flex">
+              <TopStat label={t("topbar.live")} value={formatNumber(liveCalls)} tone="green" />
+              <TopStat label={t("topbar.total")} value={formatNumber(totalCalls)} tone="blue" />
+            </span>
           </div>
 
           {/* Language + theme + notifications grouped in a pill */}
@@ -146,30 +139,36 @@ function CommandSearch({ placeholder }: { placeholder: string }) {
 /** Bright Won-green ramp, shared by the balance figure and the Live stat. */
 const GREEN_TEXT = "text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]";
 
+/**
+ * Fixed blue for Total. Deliberately not `text-accent`: these two figures sit
+ * side by side and the colour is what separates them, so under the green theme
+ * an accent-driven Total would go green too and the pair would read as one.
+ */
+const BLUE_TEXT = "text-[oklch(0.52_0.19_262)] dark:text-[oklch(0.74_0.15_258)]";
+
+const TONE_TEXT = {
+  green: GREEN_TEXT,
+  blue: BLUE_TEXT,
+} as const;
+
 interface TopStatProps {
   /** Shown before the value as "Label:". Collapses on mobile. */
   label: string;
   value: string;
-  /** Renders the value in the live-green ramp. */
-  live?: boolean;
-  /** Renders the value in the portal accent. */
-  accent?: boolean;
-  /** Border/padding for the stat's cell in the topbar bracket. */
-  className?: string;
+  /** Which fixed ramp the figure renders in. */
+  tone: keyof typeof TONE_TEXT;
 }
 
-function TopStat({ label, value, live = false, accent = false, className }: TopStatProps) {
+function TopStat({ label, value, tone }: TopStatProps) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5", className)}>
-      {/* Muted so the figure carries the emphasis, not the word.
-          Collapses on mobile so the row stays compact. */}
-      <span className="hidden text-[12px] leading-none text-muted-foreground sm:inline">
-        {label}:
-      </span>
+    <span className="inline-flex items-baseline gap-1.5">
+      {/* Muted so the figure carries the emphasis, not the word. No breakpoint
+          guard needed — the whole group is hidden below sm. */}
+      <span className="text-[12px] leading-none text-muted-foreground">{label}:</span>
       <span
         className={cn(
-          "text-[15px] font-semibold leading-none tabular-nums",
-          live ? GREEN_TEXT : accent ? "text-accent" : "text-foreground",
+          "text-[15px] font-bold leading-none tabular-nums",
+          TONE_TEXT[tone],
         )}
       >
         {value}
