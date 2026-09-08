@@ -176,7 +176,12 @@ function TopStat({ label, value, tone, icon: Icon }: TopStatProps) {
           numbers with neither read as noise, which is what the old
           label-only-on-desktop rule produced on phones. */}
       <Icon className={cn("h-3.5 w-3.5 shrink-0 sm:hidden", TONE_TEXT[tone])} aria-hidden />
-      <span className="sr-only sm:not-sr-only sm:text-[12px] sm:leading-none sm:text-muted-foreground">
+      <span
+        className={cn(
+          "sr-only sm:not-sr-only sm:text-[12px] sm:leading-none",
+          TONE_TEXT[tone],
+        )}
+      >
         {label}:
       </span>
       <span
