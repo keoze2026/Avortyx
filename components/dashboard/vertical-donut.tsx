@@ -151,7 +151,7 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
               onClick={() =>
                 setActiveKey((prev) => (prev === "completed" ? null : "completed"))
               }
-              className="inline-flex items-center gap-2 rounded px-1 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-2 rounded px-1 py-0.5 font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               style={{ opacity: activeKey === null || activeKey === "completed" ? 1 : 0.65 }}
               aria-pressed={activeKey === "completed"}
             >
@@ -161,7 +161,7 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
                 style={{ background: SUCCESS_SWATCH }}
               />
               <span>{t("dashboard.donut.totalCalls")}</span>
-              <span className="font-medium tabular-nums">{formatNumber(total)}</span>
+              <span className="tabular-nums">{formatNumber(total)}</span>
             </button>
           </li>
           <li>
@@ -170,7 +170,7 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
               onClick={() =>
                 setActiveKey((prev) => (prev === "dropped" ? null : "dropped"))
               }
-              className="inline-flex items-center gap-2 rounded px-1 py-0.5 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-2 rounded px-1 py-0.5 font-bold text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               style={{ opacity: activeKey === null || activeKey === "dropped" ? 1 : 0.65 }}
               aria-pressed={activeKey === "dropped"}
             >
@@ -180,7 +180,7 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
                 style={{ background: DROP_SWATCH }}
               />
               <span>{t("dashboard.donut.notConnected")}</span>
-              <span className="font-medium tabular-nums">{formatNumber(dropped)}</span>
+              <span className="tabular-nums">{formatNumber(dropped)}</span>
             </button>
           </li>
         </ul>
