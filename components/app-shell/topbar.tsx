@@ -186,7 +186,7 @@ function TopStat({ label, value, tone, icon: Icon }: TopStatProps) {
       </span>
       <span
         className={cn(
-          "text-[15px] font-bold leading-none tabular-nums",
+          "text-[13px] font-bold leading-none tabular-nums",
           TONE_TEXT[tone],
         )}
       >
