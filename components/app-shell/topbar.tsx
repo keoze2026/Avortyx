@@ -1,6 +1,6 @@
 "use client";
 
-import { Command, Search, Wallet } from "lucide-react";
+import { Command, PhoneCall, PhoneIncoming, Search, Wallet } from "lucide-react";
 
 import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
@@ -53,7 +53,7 @@ export function Topbar() {
               ("Live: 0"), with colour carried by the value alone so the row
               scans as figures rather than as chrome. Labels collapse on
               mobile; values stay in full form ("3,016", never "3K"). */}
-          <div className="inline-flex items-center gap-4 sm:gap-6">
+          <div className="inline-flex items-center gap-2.5 sm:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
             <span className="inline-flex items-center gap-2">
@@ -72,12 +72,20 @@ export function Topbar() {
 
             {/* Counters sit closer to each other than to the balance — they're
                 one category (live call activity), the balance is another.
-                Hidden below sm: the topbar has no room for their labels there,
-                and bare "0  0" with nothing naming them reads as noise. The
-                balance stays because its wallet icon still identifies it. */}
-            <span className="hidden items-center gap-4 sm:inline-flex">
-              <TopStat label={t("topbar.live")} value={formatNumber(liveCalls)} tone="green" />
-              <TopStat label={t("topbar.total")} value={formatNumber(totalCalls)} tone="blue" />
+                Gaps tighten below sm so all three indicators still fit. */}
+            <span className="inline-flex items-center gap-2.5 sm:gap-4">
+              <TopStat
+                label={t("topbar.live")}
+                value={formatNumber(liveCalls)}
+                tone="green"
+                icon={PhoneIncoming}
+              />
+              <TopStat
+                label={t("topbar.total")}
+                value={formatNumber(totalCalls)}
+                tone="blue"
+                icon={PhoneCall}
+              />
             </span>
           </div>
 
@@ -152,19 +160,25 @@ const TONE_TEXT = {
 } as const;
 
 interface TopStatProps {
-  /** Shown before the value as "Label:". Collapses on mobile. */
+  /** Shown before the value as "Label:" from sm up. */
   label: string;
   value: string;
   /** Which fixed ramp the figure renders in. */
   tone: keyof typeof TONE_TEXT;
+  /** Stands in for the label below sm, where there's no room for the word. */
+  icon: React.ElementType;
 }
 
-function TopStat({ label, value, tone }: TopStatProps) {
+function TopStat({ label, value, tone, icon: Icon }: TopStatProps) {
   return (
-    <span className="inline-flex items-baseline gap-1.5">
-      {/* Muted so the figure carries the emphasis, not the word. No breakpoint
-          guard needed — the whole group is hidden below sm. */}
-      <span className="text-[12px] leading-none text-muted-foreground">{label}:</span>
+    <span className="inline-flex items-center gap-1.5">
+      {/* Below sm the icon names the figure; from sm up the word does. Bare
+          numbers with neither read as noise, which is what the old
+          label-only-on-desktop rule produced on phones. */}
+      <Icon className={cn("h-3.5 w-3.5 shrink-0 sm:hidden", TONE_TEXT[tone])} aria-hidden />
+      <span className="sr-only sm:not-sr-only sm:text-[12px] sm:leading-none sm:text-muted-foreground">
+        {label}:
+      </span>
       <span
         className={cn(
           "text-[15px] font-bold leading-none tabular-nums",
