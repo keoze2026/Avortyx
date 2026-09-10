@@ -130,7 +130,15 @@ export interface CallLogQuery {
   pageSize?: number;
   dateFrom?: string;
   dateTo?: string;
-  status?: CallStatus;
+  /**
+   * Raw backend status value (e.g. "ANSWERED") — NOT the normalized
+   * frontend `CallStatus`. `normalizeStatus()` below only translates
+   * *inbound* records; the backend's outbound filter vocabulary is a
+   * separate set of values the caller is responsible for getting right.
+   */
+  status?: string;
+  /** Wire key: `is_qualified` (case-adapted automatically by http.ts). */
+  isQualified?: boolean;
   campaignId?: string;
   buyerId?: string;
   publisherId?: string;
@@ -177,7 +185,10 @@ function normalizeStatus(raw: string | null | undefined): CallStatus {
       s === "missed" || s === "rejected" || s === "failed") return s;
   if (s === "queued") return "ringing";
   if (s === "connected") return "in-progress";
-  if (s === "ended") return "completed";
+  // "ANSWERED" is the raw status the backend expects on outbound Call Log
+  // queries (see CallLogQuery.status) — a call that was picked up reads as
+  // completed here, matching what "Connected" already means on this page.
+  if (s === "ended" || s === "answered") return "completed";
   if (s === "spam-blocked" || s === "blocked") return "rejected";
   return "completed";
 }
@@ -192,7 +203,12 @@ function callRecordToCall(w: CallRecordWire): Call {
     publisherId: w.publisherId ?? undefined,
     publisherName: w.publisherName ?? undefined,
     callerNumber: w.callerNumber,
-    destinationNumber: w.destinationNumber,
+    // The wire record can name this either way (`calledNumber`/`called_number`
+    // is the contract's own term for "the dialed destination"; some CDR rows
+    // still ship `destinationNumber`). Reading only one silently dropped the
+    // called number whenever the backend sent the other — try both, in the
+    // order the contract names them.
+    destinationNumber: w.calledNumber || w.destinationNumber || "",
     startedAt: toTs(w.startedAt ?? w.createdAt),
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),
@@ -273,6 +289,7 @@ export const analyticsService = {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
         status: query.status,
+        isQualified: query.isQualified,
         campaignId: query.campaignId,
         buyerId: query.buyerId,
         publisherId: query.publisherId,

@@ -65,7 +65,7 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "campaign", label: "Campaign" },
   { id: "publisher", label: "Publisher" },
   { id: "caller", label: "Caller ID" },
-  { id: "dialed", label: "Dialed" },
+  { id: "dialed", label: "Called Number" },
   { id: "buyer", label: "Buyer" },
   { id: "revenue", label: "Revenue" },
   { id: "payout", label: "Payout" },
@@ -258,9 +258,15 @@ interface CallLogTableProps {
   calls: Call[];
   /** Optional limit for the visible rows (default 50). */
   limit?: number;
+  /** True while `calls` reflects a backend request in flight (e.g. the
+   *  Connected/Qualified click-filters, which query the API directly rather
+   *  than filtering an already-loaded set) — shows a loading row instead of
+   *  the empty-state message so a still-loading result doesn't briefly read
+   *  as "no calls match." */
+  loading?: boolean;
 }
 
-export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
+export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTableProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const [query, setQuery] = React.useState("");
@@ -461,7 +467,16 @@ export function CallLogTable({ calls, limit = 50 }: CallLogTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visible.length === 0 ? (
+              {loading ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={colSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {t("toolsUI.reports.callLog.loading")}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ) : visible.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={colSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
                     {t("toolsUI.reports.callLog.empty")}

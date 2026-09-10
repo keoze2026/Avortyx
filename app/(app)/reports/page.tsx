@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { BarChart3, PieChart } from "lucide-react";
+import { BarChart3, PieChart, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { CallLogTable } from "@/components/reports/call-log-table";
@@ -18,8 +18,12 @@ import {
 } from "@/components/reports/reports-toolbar";
 import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { friendlyErrorMessage } from "@/lib/api/errors";
+import { callStatusFilterToQuery, matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { useCallsStore } from "@/lib/store/calls-store";
+import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function startOfDay(d: Date) {
@@ -34,6 +38,14 @@ function endOfDay(d: Date) {
   return x;
 }
 
+/** Reuses the Call Summary's own column labels so the reset strip names the
+ *  active filter with the exact word the operator just clicked. */
+const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
+  connected: "toolsUI.reports.summary.columns.connected",
+  qualified: "toolsUI.reports.summary.columns.qualified",
+  notConnected: "toolsUI.reports.summary.columns.noConnect",
+};
+
 export default function ReportsPage() {
   const { t } = useTranslation();
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
@@ -42,15 +54,23 @@ export default function ReportsPage() {
   });
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
   const [visibility, setVisibility] = useState<ReportsVisibility>(DEFAULT_REPORTS_VISIBILITY);
+  // Set by clicking a Connected / Qualified / Not Connected total in the Call
+  // Summary card below. Narrows the Call Log to matching rows; cleared by
+  // clicking the same total again or the reset control above the log.
+  const [statusFilter, setStatusFilter] = useState<CallStatusFilter | null>(null);
   // Mobile-only chart switch — desktop always shows both. The donut is hidden
   // on mobile because it eats vertical real-estate; the toggle button below
   // swaps which chart occupies the main slot.
   const [mobileChart, setMobileChart] = useState<"hourly" | "donut">("hourly");
 
   // Reads from the shared calls store (populated by the StoreHydrator on app
-  // mount). Filtering happens client-side for the cached slice; the Call Log
-  // table at the bottom of this page pages directly against the backend.
+  // mount). Filtering happens client-side for the cached slice. The one
+  // exception is the Connected/Qualified click-filters below, which query
+  // the backend directly via fetchPage() rather than filtering this cache —
+  // the cache only holds the most recent 200 calls, not the full history a
+  // status filter should search.
   const recentCalls = useCallsStore((s) => s.recent);
+  const fetchCallsPage = useCallsStore((s) => s.fetchPage);
 
   const filtered = useMemo(() => {
     const start = dateRange?.from ? startOfDay(dateRange.from).getTime() : -Infinity;
@@ -80,6 +100,76 @@ export default function ReportsPage() {
     const payout = filtered.reduce((s, c) => s + c.payout, 0);
     return { revenue, payout };
   }, [filtered]);
+
+  // Connected / Qualified query the backend directly (GET /api/analytics/calls
+  // with status=ANSWERED or is_qualified=true) rather than filtering the
+  // client cache — see the comment on `recentCalls` above. Not Connected has
+  // no backend param in the contract yet, so it stays a client-side filter.
+  const [remoteLogCalls, setRemoteLogCalls] = useState<Call[] | null>(null);
+  const [logLoading, setLogLoading] = useState(false);
+
+  useEffect(() => {
+    if (statusFilter !== "connected" && statusFilter !== "qualified") {
+      setRemoteLogCalls(null);
+      setLogLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLogLoading(true);
+
+    const fromIso = dateRange?.from ? new Date(dateRange.from).toISOString().slice(0, 10) : undefined;
+    const toIso = dateRange?.to
+      ? new Date(dateRange.to).toISOString().slice(0, 10)
+      : fromIso;
+
+    // NOTE: campaign/buyer/publisher and the toolbar's own status multi-select
+    // aren't threaded through here — CallLogQuery only takes one id per field,
+    // not the arrays this page's filter popover collects, so there's no way to
+    // serialize a multi-select into this request without guessing a wire
+    // format the backend hasn't specified. Clicking a total currently searches
+    // the full account within the date range, not "within the campaigns I've
+    // also filtered to" — flagged here rather than silently narrowed wrong.
+    fetchCallsPage({
+      pageSize: 200,
+      dateFrom: fromIso,
+      dateTo: toIso,
+      ...callStatusFilterToQuery(statusFilter),
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setRemoteLogCalls(result.items);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        toast.error(friendlyErrorMessage(e, "Couldn't load filtered calls"));
+        setRemoteLogCalls([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLogLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [statusFilter, dateRange, fetchCallsPage]);
+
+  // Narrows the Call Log to whichever Call Summary total was clicked. The
+  // summary's own totals keep reading from `filtered` unfiltered by this —
+  // clicking "Qualified" shows only qualified calls below, it doesn't shrink
+  // the Qualified total itself to match.
+  const logCalls = useMemo(() => {
+    if (statusFilter === "notConnected") {
+      return filtered.filter((c) => matchesCallStatusFilter(c, "notConnected"));
+    }
+    if (statusFilter === "connected" || statusFilter === "qualified") {
+      // While the request is in flight (or hasn't resolved yet), show
+      // nothing rather than flashing the full unfiltered list — `logLoading`
+      // drives the actual loading row in CallLogTable.
+      return remoteLogCalls ?? [];
+    }
+    return filtered;
+  }, [filtered, statusFilter, remoteLogCalls]);
 
   // The PIN gate trips when the requested range starts before today's
   // midnight. Today-only views always pass through.
@@ -180,9 +270,38 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {visibility.summary && <CallSummaryTable calls={filtered} />}
+        {visibility.summary && (
+          <CallSummaryTable
+            calls={filtered}
+            activeStatusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
+        )}
 
-        {visibility.log && <CallLogTable calls={filtered} />}
+        {/* Lives at the page level, not inside CallSummaryTable, so it's
+            reachable to clear the filter even if the operator hides the
+            summary card via the toolbar's view-settings toggle. */}
+        {statusFilter && (
+          <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">
+              {t("toolsUI.reports.summary.filteredBy")}{" "}
+              <span className="font-semibold text-accent">
+                {t(STATUS_FILTER_LABEL_KEYS[statusFilter])}
+              </span>
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-7 gap-1 px-2 text-xs"
+              onClick={() => setStatusFilter(null)}
+            >
+              <X className="h-3 w-3" />
+              {t("toolsUI.reports.summary.resetFilter")}
+            </Button>
+          </div>
+        )}
+
+        {visibility.log && <CallLogTable calls={logCalls} loading={logLoading} />}
       </ReportsPinGate>
     </>
   );

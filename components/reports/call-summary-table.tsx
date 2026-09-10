@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Call } from "@/lib/types";
+import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { formatCurrency, formatNumber, formatPercent, formatTimer, toE164 } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
@@ -656,15 +657,16 @@ function groupCalls(calls: Call[], group: GroupKey): SummaryRow[] {
 
     row.incoming += 1;
     if (c.status === "ringing" || c.status === "in-progress") row.live += 1;
-    if (c.status === "completed" || c.status === "in-progress") row.connected += 1;
-    if (c.status === "completed" && c.durationSec >= 60) row.qualified += 1;
+    // Connected / Qualified / Not Connected read from the shared predicate so
+    // these totals always match exactly what clicking one filters the Call
+    // Log to (see lib/call-status.ts).
+    if (matchesCallStatusFilter(c, "connected")) row.connected += 1;
+    if (matchesCallStatusFilter(c, "qualified")) row.qualified += 1;
     if (c.status === "completed" && c.payout > 0) {
       row.paid += 1;
       row.converted += 1;
     }
-    if (c.status === "missed" || c.status === "rejected" || c.status === "failed") {
-      row.noConnect += 1;
-    }
+    if (matchesCallStatusFilter(c, "notConnected")) row.noConnect += 1;
     row.tcl += c.durationSec;
     row.payout += c.payout;
     row.revenue += c.revenue;
@@ -753,6 +755,12 @@ function summaryCellValue(row: SummaryRow, key: ColumnKey): number | string {
 
 interface CallSummaryTableProps {
   calls: Call[];
+  /** Which totals-row bucket, if any, the Call Log below is filtered to. */
+  activeStatusFilter?: CallStatusFilter | null;
+  /** Click a totals cell to set/clear that filter. Clicking the active one
+   *  again clears it — same toggle behaviour as everywhere else in this
+   *  table (columns, sort). */
+  onStatusFilterChange?: (filter: CallStatusFilter | null) => void;
 }
 
 type SummarySortKey = "label" | ColumnKey;
@@ -766,7 +774,11 @@ function sortValue(r: SummaryRow, key: SummarySortKey): number | string {
   return r[key];
 }
 
-export function CallSummaryTable({ calls }: CallSummaryTableProps) {
+export function CallSummaryTable({
+  calls,
+  activeStatusFilter = null,
+  onStatusFilterChange,
+}: CallSummaryTableProps) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
   const [visible, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
@@ -1076,11 +1088,39 @@ export function CallSummaryTable({ calls }: CallSummaryTableProps) {
                   {visible.incoming && (
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.incoming)}</TableCell>
                   )}
+                  {/* Connected / Qualified / Not Connected totals double as
+                      filters for the Call Log below — click one to narrow it,
+                      click again (or use the reset control above the log) to
+                      clear it. Only the totals row does this, not the
+                      per-group rows above: this is "show me every call that
+                      counted toward this total," not a per-campaign filter. */}
                   {visible.connected && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.connected)}</TableCell>
+                    <TotalsFilterCell
+                      count={totals.connected}
+                      tone="neutral"
+                      active={activeStatusFilter === "connected"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() =>
+                          onStatusFilterChange(
+                            activeStatusFilter === "connected" ? null : "connected",
+                          ))
+                      }
+                    />
                   )}
                   {visible.qualified && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.qualified)}</TableCell>
+                    <TotalsFilterCell
+                      count={totals.qualified}
+                      tone="success"
+                      active={activeStatusFilter === "qualified"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() =>
+                          onStatusFilterChange(
+                            activeStatusFilter === "qualified" ? null : "qualified",
+                          ))
+                      }
+                    />
                   )}
                   {visible.paid && (
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.paid)}</TableCell>
@@ -1089,7 +1129,18 @@ export function CallSummaryTable({ calls }: CallSummaryTableProps) {
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.converted)}</TableCell>
                   )}
                   {visible.noConnect && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.noConnect)}</TableCell>
+                    <TotalsFilterCell
+                      count={totals.noConnect}
+                      tone="destructive"
+                      active={activeStatusFilter === "notConnected"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() =>
+                          onStatusFilterChange(
+                            activeStatusFilter === "notConnected" ? null : "notConnected",
+                          ))
+                      }
+                    />
                   )}
                   {visible.dupe && (
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.dupe)}</TableCell>
@@ -1196,5 +1247,58 @@ function SortHeader({
         <ChevronsUpDown className="h-3 w-3 opacity-50" />
       )}
     </button>
+  );
+}
+
+/**
+ * A totals-row count that doubles as a filter toggle for the Call Log below.
+ * Renders as plain text when no handler is wired up, so the component still
+ * works standalone if it's ever used somewhere the page-level filter state
+ * doesn't apply.
+ */
+function TotalsFilterCell({
+  count,
+  tone,
+  active,
+  onClick,
+}: {
+  count: number;
+  /** Colour the count takes when active/hovered — matches this status's
+   *  meaning elsewhere in the app (green = good, red = bad, neutral = plain). */
+  tone: "neutral" | "success" | "destructive";
+  active: boolean;
+  onClick?: () => void;
+}) {
+  const toneText =
+    tone === "success"
+      ? "text-[color:var(--success)]"
+      : tone === "destructive"
+        ? "text-destructive"
+        : "text-accent";
+
+  if (!onClick) {
+    return (
+      <TableCell className="text-center tabular-nums">{formatNumber(count)}</TableCell>
+    );
+  }
+
+  return (
+    <TableCell className="p-0 text-center">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={cn(
+          // The row itself is already font-semibold — active steps up to
+          // font-bold plus the status's own colour, so the selected total
+          // reads as pressed, not just hovered.
+          "w-full cursor-pointer px-4 py-3 text-center tabular-nums transition-colors",
+          "hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          active && cn("bg-accent/10 font-bold", toneText),
+        )}
+      >
+        {formatNumber(count)}
+      </button>
+    </TableCell>
   );
 }

@@ -828,7 +828,21 @@ route("GET", "/api/analytics/calls", (req) => {
   //
   // Important: `analyticsService.calls()` translates `pageSize` → `limit`
   // and `page` → `offset` on the wire, so we read those, not page_size.
-  const all = getDemoCalls();
+  let all = getDemoCalls();
+
+  // Reports page click-to-filter (Connected / Qualified totals). The demo
+  // corpus already uses the app's normalized status vocabulary (completed,
+  // missed, ...), not the real backend's raw values — "ANSWERED" is
+  // translated the same way analyticsService.normalizeStatus() does inbound,
+  // so demo mode exercises the same filter the real backend would apply.
+  if (req.query.status) {
+    const wanted = req.query.status.toUpperCase() === "ANSWERED" ? "completed" : req.query.status.toLowerCase();
+    all = all.filter((c) => c.status === wanted);
+  }
+  if (req.query.is_qualified === "true") {
+    all = all.filter((c) => c.status === "completed" && c.duration >= 60);
+  }
+
   const limit = Number(req.query.limit ?? req.query.page_size ?? req.query.pageSize ?? "25") || 25;
   if (limit >= 100) {
     return { items: all, total: all.length, offset: 0, limit: all.length };

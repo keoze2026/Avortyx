@@ -3611,7 +3611,7 @@ export const en = {
           campaign: "Campaign",
           publisher: "Publisher",
           callerId: "Caller ID",
-          dialed: "Dialed",
+          dialed: "Called Number",
           buyer: "Buyer",
           revenue: "Revenue",
           payout: "Payout",
@@ -3626,6 +3626,7 @@ export const en = {
           action: "Action",
         },
         empty: "No matching calls.",
+        loading: "Loading calls…",
         toastExport: "Exported {count} rows to {format}",
         statusLabel: {
           ringing: "Ringing",
@@ -3690,6 +3691,8 @@ export const en = {
         toastExport: "Exported {count} rows to {format}",
         totals: "Totals",
         empty: "No calls in this range.",
+        filteredBy: "Filtered by",
+        resetFilter: "Reset filter",
         columns: {
           live: "Live",
           incoming: "Incoming",
