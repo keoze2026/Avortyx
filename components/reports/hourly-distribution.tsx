@@ -259,7 +259,13 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
           {`${t("dashboard.chart.callsBy")} : ${t(GRAIN_NOUN_KEYS[grain])}`}
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-center">
+      {/* justify-end, not justify-center: the legend is the last element
+          rendered inside the fixed-height chart block below. Bottom-anchoring
+          the block means the legend lands flush with the card's bottom edge —
+          the same edge the donut cards anchor their own legend to — so the
+          two rows line up exactly regardless of chart vs. donut proportions
+          above them. Centering would leave that alignment to chance. */}
+      <CardContent className="flex flex-1 flex-col justify-end">
         <div ref={containerRef} className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 12, right: 4, left: 4, bottom: 0 }}>
@@ -317,7 +323,7 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                 content={<HourlyTooltipWrapper grain={grain} />}
               />
               <Legend
-                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 8 }}
                 iconSize={8}
                 // Filter out the now-hidden `notConverted` entry — only show
                 // Converted, No Answer, and Revenue in the legend so it

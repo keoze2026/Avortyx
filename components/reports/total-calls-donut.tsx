@@ -62,7 +62,10 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
       // back to TOTAL. Each sector stops propagation via its own onClick.
       onClick={() => setActiveKey(null)}
     >
-      <CardContent className="flex flex-1 flex-col items-center justify-center gap-4">
+      {/* justify-end anchors the ring+legend block to the card's bottom edge,
+          matching the hourly chart's legend anchor so both rows sit on the
+          same line across the two equal-height sibling cards. */}
+      <CardContent className="flex flex-1 flex-col items-center justify-end gap-4">
         <div
           // Suppress the browser's default focus outline on the SVG sectors
           // Recharts renders — clicking a slice was painting a square focus

@@ -16,7 +16,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
       <OnboardingGate>
-        <SidebarProvider>
+        {/* h-svh + overflow-hidden locks the shell to exactly the viewport.
+            SidebarProvider's own wrapper is only `min-h-svh` — a floor, not
+            a ceiling — so if the page's rendered height ever nudges past the
+            viewport (routine on mobile as the browser's address bar
+            collapses/expands), the *document* becomes a second, independent
+            scroll region stacked on top of the inner `overflow-y-auto` div
+            below. Two scroll containers fighting produces exactly the
+            symptom reported on mobile: the sticky topbar stays pinned while
+            the sidebar and content behind it visibly drift as the two
+            scrolls fight for the gesture. Capping the wrapper here means
+            the inner div is the only element that can ever scroll. */}
+        <SidebarProvider className="h-svh overflow-hidden">
           <AppSidebar />
           <SidebarInset className="app-canvas !bg-transparent">
             <Topbar />

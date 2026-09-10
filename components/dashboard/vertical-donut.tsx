@@ -57,7 +57,10 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
       className="flex h-full flex-col"
       onClick={() => setActiveKey(null)}
     >
-      <CardContent className="flex flex-1 flex-col items-center justify-center">
+      {/* justify-end anchors the ring+legend block to the card's bottom edge,
+          matching the hourly chart's legend anchor so both rows sit on the
+          same line across the two equal-height sibling cards. */}
+      <CardContent className="flex flex-1 flex-col items-center justify-end">
         <div
           // Suppress the default focus-ring rectangle Recharts paints on the
           // sectors when a slice is clicked.
