@@ -30,7 +30,6 @@ interface PublishersTableProps {
   columns?: Record<PublisherColumnKey, boolean>;
   onToggle: (id: string) => void;
   onArchive: (id: string) => void;
-  onEdit: (id: string) => void;
 }
 
 export function PublishersTable({
@@ -38,7 +37,6 @@ export function PublishersTable({
   columns = ALL_PUBLISHER_COLUMNS,
   onToggle,
   onArchive,
-  onEdit,
 }: PublishersTableProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -134,10 +132,13 @@ export function PublishersTable({
                   )}
                   <TableCell className="pr-4" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-0.5">
+                      {/* Same destination the row itself navigates to on
+                          click — this icon is an explicit affordance for
+                          operators who don't realize the row is clickable. */}
                       <ActionIcon
                         icon={Pencil}
                         label={t("networkUI.common.edit")}
-                        onClick={() => onEdit(p.id)}
+                        onClick={() => router.push(`${ROUTES.publishers}/${p.id}`)}
                       />
                       <ActionIcon icon={Undo2} label={t("networkUI.common.revert")} />
                       <ActionIcon

@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Mail, MoreVertical, Pause, Play, Settings as SettingsIcon, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Mail, MoreVertical, Pause, Pencil, Play, Trash2, Users } from "lucide-react";
 
+import { EditPublisherDialog } from "@/components/publishers/edit-publisher-dialog";
 import { PartnerStatusBadge } from "@/components/network/partner-status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +25,7 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
   const router = useRouter();
   const setStatus = usePublishersStore((s) => s.setStatus);
   const remove = usePublishersStore((s) => s.remove);
+  const [editOpen, setEditOpen] = useState(false);
 
   const isActive = publisher.status === "active";
 
@@ -107,6 +110,10 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                <Pencil className="h-4 w-4" /> {t("networkUI.common.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:text-destructive">
                 <Trash2 className="h-4 w-4" /> {t("networkUI.publishers.detail.removePublisher")}
               </DropdownMenuItem>
@@ -114,6 +121,11 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
           </DropdownMenu>
         </div>
       </div>
+
+      <EditPublisherDialog
+        publisherId={editOpen ? publisher.id : null}
+        onOpenChange={setEditOpen}
+      />
     </div>
   );
 }

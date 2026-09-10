@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Users } from "lucide-react";
 import { toast } from "sonner";
 
-import { EditPublisherDialog } from "@/components/publishers/edit-publisher-dialog";
 import { InvitePublisherDialog } from "@/components/publishers/invite-publisher-dialog";
 import { PublishersTable } from "@/components/publishers/publishers-table";
 import {
@@ -29,7 +28,6 @@ export default function PublishersPage() {
   const remove = usePublishersStore((s) => s.remove);
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
 
   // Toolbar state
   const [query, setQuery] = useState("");
@@ -148,7 +146,6 @@ export default function PublishersPage() {
             columns={columns}
             onToggle={onToggle}
             onArchive={onArchive}
-            onEdit={setEditId}
           />
           <Pagination
             page={page}
@@ -161,10 +158,6 @@ export default function PublishersPage() {
       )}
 
       <InvitePublisherDialog open={inviteOpen} onOpenChange={setInviteOpen} />
-      <EditPublisherDialog
-        publisherId={editId}
-        onOpenChange={(open) => !open && setEditId(null)}
-      />
     </>
   );
 }
