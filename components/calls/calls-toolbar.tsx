@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import type { DateRange } from "@/lib/analytics";
 import type { ExportFormat } from "@/lib/export";
+import { formatNumber } from "@/lib/format";
 import type { CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -221,7 +222,7 @@ export function CallsToolbar({
         </DropdownMenu>
 
         <span className="ml-auto text-[11px] font-mono text-muted-foreground">
-          {t("toolsUI.callLogs.toolbar.countOfTotal").replace("{count}", String(count)).replace("{total}", String(total))}
+          {t("toolsUI.callLogs.toolbar.countOfTotal").replace("{count}", formatNumber(count)).replace("{total}", formatNumber(total))}
         </span>
 
         <ExportMenu onExport={onExport}>

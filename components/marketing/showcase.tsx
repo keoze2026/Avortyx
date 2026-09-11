@@ -122,7 +122,7 @@ export function Showcase() {
               THE CONSOLE
             </p>
             <h2 className="m-h2" style={{ marginTop: 14 }}>
-              Your whole network, one screen.
+              See your whole network on one screen.
             </h2>
             <p className="m-lead" style={{ marginTop: 16, color: "var(--m-fg-2)" }}>
               Operators live here — call queue, buyer health and revenue on a single

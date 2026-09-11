@@ -130,6 +130,7 @@ export interface DemoCallWire {
   destination_number: string;
   status: string;
   duration: number;
+  is_qualified: boolean;
   caller_area_code: string;
   caller_state: string;
   caller_country: string;
@@ -245,6 +246,12 @@ function makeCall(
   const publisher = pick(PUBLISHER_REFS, rng);
   const isConverted = chance(rng, convertRate);
   const status: string = isConverted ? "completed" : pick(LIVE_FAILURE_STATUSES, rng);
+  // Qualified is a narrower bar than "connected" — not every completed call
+  // clears it (lead score, buyer confirmation, etc., in a real backend).
+  // Demo data mirrors that instead of treating the two as identical, which
+  // the duration-only fallback heuristic would otherwise always do here
+  // (every completed demo call already runs ≥90s).
+  const isQualified = isConverted && chance(rng, 0.7);
   const duration = isConverted
     ? intRange(rng, 90, 720)
     : status === "missed"
@@ -259,6 +266,7 @@ function makeCall(
     destination_number: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
     status,
     duration,
+    is_qualified: isQualified,
     caller_area_code: areaCode,
     caller_state: pick(STATES, rng),
     caller_country: "US",
@@ -308,6 +316,9 @@ export function generateLiveCalls(count = liveCallsCount()): DemoCallWire[] {
       destination_number: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
       status: pick(liveStatuses, rng),
       duration: Math.floor((Date.now() - startedAt) / 1000),
+      // Still ringing or in-progress — qualification only applies once a
+      // call has actually completed.
+      is_qualified: false,
       caller_area_code: pick(AREA_CODES, rng),
       caller_state: pick(STATES, rng),
       caller_country: "US",

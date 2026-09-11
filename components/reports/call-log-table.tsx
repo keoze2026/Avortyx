@@ -39,7 +39,7 @@ import {
 import { Pagination } from "@/components/shared/pagination";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { formatCallTime, formatCurrency, formatHMS, toE164 } from "@/lib/format";
+import { formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
@@ -379,7 +379,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
       value: (row) => logCellValue(row, c.id),
     }));
     downloadRows(format, [dateCol, ...dataCols], visible, dateStamped("vortyx-call-log"), "Call log");
-    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", String(visible.length)).replace("{format}", format.toUpperCase()));
+    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(visible.length)).replace("{format}", format.toUpperCase()));
   };
 
   return (

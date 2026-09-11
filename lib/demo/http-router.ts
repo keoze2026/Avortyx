@@ -840,7 +840,7 @@ route("GET", "/api/analytics/calls", (req) => {
     all = all.filter((c) => c.status === wanted);
   }
   if (req.query.is_qualified === "true") {
-    all = all.filter((c) => c.status === "completed" && c.duration >= 60);
+    all = all.filter((c) => c.is_qualified);
   }
 
   const limit = Number(req.query.limit ?? req.query.page_size ?? req.query.pageSize ?? "25") || 25;

@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -42,9 +43,9 @@ export function Pagination({
     <div className={cn("flex flex-wrap items-center justify-between gap-3", className)}>
       <p className="text-[11px] font-mono text-muted-foreground">
         {t("sharedUI.pagination.showingTemplate")
-          .replace("{from}", String(from))
-          .replace("{to}", String(to))
-          .replace("{total}", String(total))}
+          .replace("{from}", formatNumber(from))
+          .replace("{to}", formatNumber(to))
+          .replace("{total}", formatNumber(total))}
       </p>
 
       <div className="flex items-center gap-2">

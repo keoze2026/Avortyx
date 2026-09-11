@@ -858,7 +858,7 @@ export function CallSummaryTable({
     downloadRows(format, [labelCol, ...dataCols], allRows, stem, "Call summary");
     toast.success(
       t("toolsUI.reports.summary.toastExport")
-        .replace("{count}", String(allRows.length))
+        .replace("{count}", formatNumber(allRows.length))
         .replace("{format}", format.toUpperCase()),
     );
   };

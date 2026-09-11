@@ -23,24 +23,30 @@ const RULES = [
   {
     name: "Health · CA",
     condition: "intent ≥ 85",
+    // Where this threshold sits on the 0-100 intent scale — rendered as a
+    // marker, not just stated, so the bar a call has to clear is visible.
+    threshold: 85,
     destination: "Apex Insurance",
     priority: "P1",
   },
   {
     name: "Solar · TX",
     condition: "weight 60% · cap 12",
+    threshold: null,
     destination: "SolarEdge",
     priority: "P2",
   },
   {
     name: "Legal · national",
     condition: "intent ≥ 90",
+    threshold: 90,
     destination: "Metro Legal",
     priority: "P1",
   },
   {
     name: "Fallback",
     condition: "any unmatched",
+    threshold: null,
     destination: "Overflow pool",
     priority: "P4",
   },
@@ -255,7 +261,10 @@ export function FeatureRouting() {
                     style={{
                       position: "relative",
                       display: "grid",
-                      gridTemplateColumns: "minmax(0,1fr) auto",
+                      // Rank column added: evaluation order is the thing this
+                      // panel exists to make legible, so it gets its own slot
+                      // rather than living only in the P-priority chip.
+                      gridTemplateColumns: "24px minmax(0,1fr) auto",
                       gap: 14,
                       alignItems: "center",
                       padding: "13px 16px",
@@ -265,6 +274,19 @@ export function FeatureRouting() {
                           : "none",
                     }}
                   >
+                    <span
+                      aria-hidden
+                      style={{
+                        fontFamily: "var(--m-mono)",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--m-fg-d3)",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+
                     <div style={{ minWidth: 0 }}>
                       <div
                         style={{
@@ -280,16 +302,62 @@ export function FeatureRouting() {
                       </div>
                       <div
                         style={{
-                          fontFamily: "var(--m-mono)",
-                          fontSize: 12.5,
-                          color: "var(--m-fg-d3)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
                           marginTop: 4,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          // Lets the condition text actually shrink below its
+                          // content width — flex items default to min-width:
+                          // auto, which would otherwise fight its own
+                          // overflow:hidden and let the row spill past the card.
+                          minWidth: 0,
                         }}
                       >
-                        {r.condition}
+                        <span
+                          style={{
+                            fontFamily: "var(--m-mono)",
+                            fontSize: 12.5,
+                            color: "var(--m-fg-d3)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            minWidth: 0,
+                          }}
+                        >
+                          {r.condition}
+                        </span>
+                        {/* Not every rule gates on intent — only render the
+                            scale for the ones that do, rather than a marker
+                            with nothing to mark. */}
+                        {r.threshold != null && (
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "relative",
+                              width: 40,
+                              height: 3,
+                              borderRadius: 999,
+                              background: "var(--m-line-d2)",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {/* Single marker at the threshold — a cutoff
+                                point on the 0-100 scale, not a fill amount. */}
+                            <span
+                              style={{
+                                position: "absolute",
+                                left: `${r.threshold}%`,
+                                top: "50%",
+                                width: 3,
+                                height: 9,
+                                marginLeft: -1.5,
+                                transform: "translateY(-50%)",
+                                borderRadius: 999,
+                                background: "var(--m-accent-d)",
+                              }}
+                            />
+                          </span>
+                        )}
                       </div>
                     </div>
 

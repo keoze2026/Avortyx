@@ -19,6 +19,14 @@ export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): b
     return call.status === "completed" || call.status === "in-progress";
   }
   if (filter === "qualified") {
+    // Prefer the backend's own verdict — it's the exact same field
+    // `is_qualified=true` filters by server-side, so a call counted here is
+    // guaranteed to be one the click-filter's backend request also returns.
+    // Only fall back to the duration heuristic for records that don't carry
+    // the flag at all (demo-mode fixtures, or a backend response that
+    // predates the field) — never let the two silently disagree on a call
+    // that does carry it.
+    if (call.isQualified != null) return call.isQualified;
     return call.status === "completed" && call.durationSec >= 60;
   }
   return call.status === "missed" || call.status === "rejected" || call.status === "failed";

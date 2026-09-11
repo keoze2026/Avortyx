@@ -5,10 +5,10 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
 const ROUTED = [
-  { num: "+1 (888) 555-0147", vert: "Health", buyer: "Apex Insurance",   payout: "$22.50", ms: "0.28s" },
-  { num: "+1 (800) 555-0923", vert: "Solar",  buyer: "SolarEdge Partners", payout: "$18.00", ms: "0.31s" },
-  { num: "+1 (844) 555-0381", vert: "Legal",  buyer: "Metro Legal Group", payout: "$41.00", ms: "0.19s" },
-  { num: "+1 (877) 555-0264", vert: "Home",   buyer: "Beacon Roofing",    payout: "$16.75", ms: "0.34s" },
+  { num: "+1 (888) 555-0147", vert: "Health", score: 94, buyer: "Apex Insurance",   payout: "$22.50", ms: "0.28s" },
+  { num: "+1 (800) 555-0923", vert: "Solar",  score: 87, buyer: "SolarEdge Partners", payout: "$18.00", ms: "0.31s" },
+  { num: "+1 (844) 555-0381", vert: "Legal",  score: 91, buyer: "Metro Legal Group", payout: "$41.00", ms: "0.19s" },
+  { num: "+1 (877) 555-0264", vert: "Home",   score: 82, buyer: "Beacon Roofing",    payout: "$16.75", ms: "0.34s" },
 ];
 
 const STATS = [
@@ -105,13 +105,13 @@ export function Hero() {
             </span>
 
             <h1 className="m-h1" style={{ marginTop: 22, color: "var(--m-fg-d)", maxWidth: "13ch" }}>
-              Every call, routed to its best buyer.
+              Turn every call into revenue.
             </h1>
 
             <p className="m-lead" style={{ marginTop: 20, color: "var(--m-fg-d2)", maxWidth: "46ch" }}>
-              Avortyx scores each inbound call as it arrives and connects it to the
-              buyer most likely to convert — with compliance, monitoring and payouts
-              handled end to end.
+              Avortyx scores every call the moment it rings and routes it to the
+              buyer most likely to close. Compliance, monitoring and payouts run
+              underneath — automatically.
             </p>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 30 }}>
@@ -153,7 +153,7 @@ export function Hero() {
                   style={{ width: 6, height: 6, borderRadius: 999, background: "var(--m-accent-d)" }}
                   className="m-pulse"
                 />
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--m-fg-d)" }}>Live routing</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--m-fg-d)" }}>Live scoring</span>
                 <span
                   style={{
                     marginLeft: "auto",
@@ -218,17 +218,68 @@ export function Hero() {
                           {r.vert}
                         </span>
                       </div>
+                      {/* The score is what decided this row — shown as the
+                          meter that earns the arrow, not just stated as a
+                          number. A short bar reads as "how it got here" in a
+                          way a bare figure doesn't. */}
                       <div
                         style={{
-                          fontSize: 12,
-                          color: "var(--m-fg-d3)",
-                          marginTop: 4,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          marginTop: 6,
+                          // Lets the buyer/latency text actually shrink below
+                          // its content width — flex items default to
+                          // min-width: auto, which would otherwise stop the
+                          // ellipsis below from ever engaging.
+                          minWidth: 0,
                         }}
                       >
-                        → {r.buyer} · {r.ms}
+                        <span
+                          style={{
+                            fontFamily: "var(--m-mono)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "var(--m-accent-d)",
+                            fontVariantNumeric: "tabular-nums",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {r.score}
+                        </span>
+                        <span
+                          aria-hidden
+                          style={{
+                            width: 30,
+                            height: 4,
+                            borderRadius: 999,
+                            background: "var(--m-line-d2)",
+                            overflow: "hidden",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "block",
+                              height: "100%",
+                              width: `${r.score}%`,
+                              borderRadius: 999,
+                              background: "var(--m-accent-d)",
+                            }}
+                          />
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "var(--m-fg-d3)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            minWidth: 0,
+                          }}
+                        >
+                          → {r.buyer} · {r.ms}
+                        </span>
                       </div>
                     </div>
                     <div

@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/hooks/use-translation";
+import { formatNumber } from "@/lib/format";
 import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingPlanStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -118,7 +119,7 @@ export default function RoutingPage() {
           )}
 
           <span className="ml-auto font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:ml-2">
-            {t("trafficUI.routing.countOfTotal").replace("{count}", String(filtered.length)).replace("{total}", String(plans.length))}
+            {t("trafficUI.routing.countOfTotal").replace("{count}", formatNumber(filtered.length)).replace("{total}", formatNumber(plans.length))}
           </span>
         </div>
       </div>

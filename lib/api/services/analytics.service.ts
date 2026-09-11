@@ -53,6 +53,11 @@ interface CallRecordWire {
   calledNumber?: string;
   destinationNumber: string;
   status: string;
+  /** Backend's own qualification verdict — the same field `is_qualified=true`
+   *  filters by on this endpoint. Absent on records from backends that don't
+   *  send it yet; callers fall back to a local heuristic in that case (see
+   *  matchesCallStatusFilter in lib/call-status.ts). */
+  isQualified?: boolean;
   /* Call length. The contract (§3.13 Call Record) names this `duration_sec`;
      some CDR rows still ship the legacy `duration` / `duration_seconds`.
      Read all three — picking only one leaves the column at 00:00:00. */
@@ -212,6 +217,7 @@ function callRecordToCall(w: CallRecordWire): Call {
     startedAt: toTs(w.startedAt ?? w.createdAt),
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),
+    isQualified: w.isQualified,
     payout: firstNum(w.payout, w.buyerPayout),
     revenue: toNum(w.revenue),
     geo: {

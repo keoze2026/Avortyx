@@ -68,7 +68,7 @@ export function LogoRail() {
           className="m-label"
           style={{ color: "var(--m-fg-3)", textAlign: "center", margin: 0 }}
         >
-          Trusted by call networks routing at scale
+          Trusted by networks that route calls at scale
         </p>
 
         <div className="m-marquee-mask" style={{ marginTop: 22 }}>

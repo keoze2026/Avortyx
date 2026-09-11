@@ -268,7 +268,14 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
       <CardContent className="flex flex-1 flex-col justify-end">
         <div ref={containerRef} className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 12, right: 4, left: 4, bottom: 0 }}>
+            <ComposedChart
+              data={data}
+              margin={{ top: 12, right: 4, left: 4, bottom: 0 }}
+              // Recharts' default (10%) packs bars nearly edge-to-edge — a
+              // modest bump so each column reads as distinct without
+              // shrinking the bars so much the chart looks sparse.
+              barCategoryGap="28%"
+            >
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"

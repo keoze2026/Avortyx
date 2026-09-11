@@ -23,6 +23,10 @@ export interface Call {
   revenue: number;
   geo: { country: string; state?: string; city?: string };
   recordingUrl?: string;
+  /** The backend's own qualification verdict, when it sends one — see
+   *  matchesCallStatusFilter() in lib/call-status.ts for how this is used
+   *  and what happens when a record doesn't carry it. */
+  isQualified?: boolean;
 }
 
 /** Real-time event emitted by the (mock) socket. */
