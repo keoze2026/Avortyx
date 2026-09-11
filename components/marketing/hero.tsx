@@ -11,6 +11,117 @@ const ROUTED = [
   { num: "+1 (877) 555-0264", vert: "Home",   score: 82, buyer: "Beacon Roofing",    payout: "$16.75", ms: "0.34s" },
 ];
 
+// Diamond layout (NE/SE/SW/NW) rather than a clock face — reads as a signal
+// map, not a timer. Each position is 72% of the dial's radius from centre.
+const RADAR_POS = [
+  { left: "75.5%", top: "24.5%" },
+  { left: "75.5%", top: "75.5%" },
+  { left: "24.5%", top: "75.5%" },
+  { left: "24.5%", top: "24.5%" },
+];
+
+const RADAR_CSS = `
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes hero-radar-spin { to { transform: rotate(360deg); } }
+  .hero-radar-sweep { animation: hero-radar-spin 8s linear infinite; }
+  @keyframes hero-readout-in {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .hero-readout-enter { animation: hero-readout-in 0.4s ease both; }
+}
+`;
+
+/**
+ * The dial is the section's thesis made visible: Avortyx doesn't hold a
+ * static list of calls, it continuously scans and locks onto whichever one
+ * is worth the most attention right now. The beam's rotation is ambient —
+ * always sweeping — while the highlighted blip and the readout below it
+ * advance together on their own interval, so "the system is scanning" and
+ * "the system just made a decision" read as two distinct, legible ideas
+ * instead of one blurred loop.
+ */
+function RadarDial({ activeIndex }: { activeIndex: number }) {
+  return (
+    <div aria-hidden style={{ position: "relative", width: 172, height: 172, margin: "6px auto 0" }}>
+      <style dangerouslySetInnerHTML={{ __html: RADAR_CSS }} />
+      {/* rings */}
+      <span style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px solid var(--m-line-d)" }} />
+      <span style={{ position: "absolute", inset: "19%", borderRadius: "50%", border: "1px solid var(--m-line-d)" }} />
+      <span style={{ position: "absolute", inset: "40%", borderRadius: "50%", border: "1px solid var(--m-line-d)" }} />
+
+      {/* rotating beam, clipped to the dial's circle */}
+      <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden" }}>
+        <div
+          className="hero-radar-sweep"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "conic-gradient(from 0deg, transparent 0deg, var(--m-accent-tint-d) 320deg, var(--m-accent-line-d) 350deg, var(--m-accent-d) 359deg, transparent 360deg)",
+          }}
+        />
+      </div>
+
+      {/* core */}
+      <span
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: 6,
+          height: 6,
+          marginLeft: -3,
+          marginTop: -3,
+          borderRadius: "50%",
+          background: "var(--m-accent-d)",
+        }}
+      />
+
+      {/* the four calls the dial is tracking */}
+      {ROUTED.map((r, i) => {
+        const active = activeIndex === i;
+        return (
+          <div
+            key={r.num}
+            style={{
+              position: "absolute",
+              ...RADAR_POS[i],
+              transform: "translate(-50%, -50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <span
+              style={{
+                width: active ? 9 : 6,
+                height: active ? 9 : 6,
+                borderRadius: "50%",
+                background: active ? "var(--m-accent-d)" : "var(--m-fg-d3)",
+                boxShadow: active ? "0 0 0 5px var(--m-accent-tint-d)" : "none",
+                transition: "width 0.3s ease, height 0.3s ease, background 0.3s ease, box-shadow 0.3s ease",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--m-mono)",
+                fontSize: 9,
+                letterSpacing: "0.06em",
+                color: active ? "var(--m-accent-d)" : "var(--m-fg-d3)",
+                transition: "color 0.3s ease",
+              }}
+            >
+              {r.vert.toUpperCase()}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const STATS = [
   { to: 2.4,   dp: 1, pre: "$", suf: "B",  l: "Routed annually" },
   { to: 12,    dp: 0, pre: "",  suf: "M+", l: "Calls connected" },
@@ -61,6 +172,16 @@ function CountUp({ to, dp, pre, suf }: { to: number; dp: number; pre: string; su
 }
 
 export function Hero() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setActiveIndex((i) => (i + 1) % ROUTED.length), 2200);
+    return () => clearInterval(id);
+  }, []);
+
+  const r = ROUTED[activeIndex];
+
   return (
     <section
       id="hero"
@@ -166,136 +287,115 @@ export function Hero() {
                 </span>
               </div>
 
-              {/* Rows */}
-              <div>
-                {ROUTED.map((r, i) => (
-                  <div
-                    key={r.num}
-                    className="m-rise"
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto",
-                      gap: 12,
-                      alignItems: "center",
-                      padding: "13px 16px",
-                      borderBottom: i < ROUTED.length - 1 ? "1px solid var(--m-line-d)" : "none",
-                      // Rows arrive in sequence, echoing calls landing one by one.
-                      animationDelay: `${260 + i * 110}ms`,
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <div
+              {/* Radar — see RadarDial's own comment for why this replaced
+                  the flat row list: the dial shows continuous scanning, the
+                  single readout below shows the decision that scan just made. */}
+              <div style={{ padding: "18px 16px 16px" }}>
+                <RadarDial activeIndex={activeIndex} />
+
+                <div
+                  key={activeIndex}
+                  className="hero-readout-enter"
+                  style={{
+                    marginTop: 20,
+                    paddingTop: 16,
+                    borderTop: "1px solid var(--m-line-d)",
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13,
+                        color: "var(--m-fg-d)",
+                        fontFamily: "var(--m-mono)",
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {r.num}
+                      </span>
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          fontSize: 13,
-                          color: "var(--m-fg-d)",
+                          flexShrink: 0,
+                          fontFamily: "var(--m-sans)",
+                          fontSize: 10.5,
+                          padding: "1.5px 7px",
+                          borderRadius: 999,
+                          border: "1px solid var(--m-line-d2)",
+                          color: "var(--m-fg-d2)",
+                        }}
+                      >
+                        {r.vert}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6, minWidth: 0 }}>
+                      <span
+                        style={{
                           fontFamily: "var(--m-mono)",
-                          letterSpacing: "-0.01em",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "var(--m-accent-d)",
+                          fontVariantNumeric: "tabular-nums",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {r.score}
+                      </span>
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 30,
+                          height: 4,
+                          borderRadius: 999,
+                          background: "var(--m-line-d2)",
+                          overflow: "hidden",
+                          flexShrink: 0,
                         }}
                       >
                         <span
                           style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {r.num}
-                        </span>
-                        <span
-                          style={{
-                            flexShrink: 0,
-                            fontFamily: "var(--m-sans)",
-                            fontSize: 10.5,
-                            padding: "1.5px 7px",
+                            display: "block",
+                            height: "100%",
+                            width: `${r.score}%`,
                             borderRadius: 999,
-                            border: "1px solid var(--m-line-d2)",
-                            color: "var(--m-fg-d2)",
+                            background: "var(--m-accent-d)",
                           }}
-                        >
-                          {r.vert}
-                        </span>
-                      </div>
-                      {/* The score is what decided this row — shown as the
-                          meter that earns the arrow, not just stated as a
-                          number. A short bar reads as "how it got here" in a
-                          way a bare figure doesn't. */}
-                      <div
+                        />
+                      </span>
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 7,
-                          marginTop: 6,
-                          // Lets the buyer/latency text actually shrink below
-                          // its content width — flex items default to
-                          // min-width: auto, which would otherwise stop the
-                          // ellipsis below from ever engaging.
+                          fontSize: 12,
+                          color: "var(--m-fg-d3)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                           minWidth: 0,
                         }}
                       >
-                        <span
-                          style={{
-                            fontFamily: "var(--m-mono)",
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: "var(--m-accent-d)",
-                            fontVariantNumeric: "tabular-nums",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {r.score}
-                        </span>
-                        <span
-                          aria-hidden
-                          style={{
-                            width: 30,
-                            height: 4,
-                            borderRadius: 999,
-                            background: "var(--m-line-d2)",
-                            overflow: "hidden",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <span
-                            style={{
-                              display: "block",
-                              height: "100%",
-                              width: `${r.score}%`,
-                              borderRadius: 999,
-                              background: "var(--m-accent-d)",
-                            }}
-                          />
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--m-fg-d3)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            minWidth: 0,
-                          }}
-                        >
-                          → {r.buyer} · {r.ms}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--m-mono)",
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: "var(--m-accent-d)",
-                        fontVariantNumeric: "tabular-nums",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {r.payout}
+                        → {r.buyer} · {r.ms}
+                      </span>
                     </div>
                   </div>
-                ))}
+                  <div
+                    style={{
+                      fontFamily: "var(--m-mono)",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: "var(--m-accent-d)",
+                      fontVariantNumeric: "tabular-nums",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {r.payout}
+                  </div>
+                </div>
               </div>
 
               {/* Panel footer */}

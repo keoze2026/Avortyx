@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Phone } from "lucide-react";
 
 const FEATURES = [
   {
@@ -90,6 +91,28 @@ const ROUTING_CSS = `
     opacity: 1;
     animation: rt-scan-move 6s linear infinite;
     will-change: transform;
+  }
+}
+
+/* The phone in the header is the signal's source — the scan band above
+   already sweeps top-to-bottom through the rules, so anchoring a rippling
+   phone glyph right where that sweep starts reads as "a call comes in here,
+   and its evaluation travels down through the stack," not two unrelated
+   animations sharing a card. */
+.rt-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid var(--m-accent-line-d);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rt-ripple {
+    0%   { transform: scale(0.55); opacity: 0.6; }
+    100% { transform: scale(2.3); opacity: 0; }
+  }
+  .rt-ring {
+    animation: rt-ripple 3s ease-out infinite;
   }
 }
 `;
@@ -229,12 +252,43 @@ export function FeatureRouting() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  padding: "14px 16px",
+                  gap: 10,
+                  padding: "12px 16px",
                   borderBottom: "1px solid var(--m-line-d)",
                 }}
               >
+                {/* The signal source — every rule below exists to answer
+                    "where does this call go," so the call itself opens the
+                    panel rather than a plain label. */}
+                <span
+                  aria-hidden
+                  style={{
+                    position: "relative",
+                    width: 22,
+                    height: 22,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <span className="rt-ring" />
+                  <span className="rt-ring" style={{ animationDelay: "-1.5s" }} />
+                  <span
+                    style={{
+                      position: "relative",
+                      display: "grid",
+                      placeItems: "center",
+                      width: 20,
+                      height: 20,
+                      borderRadius: 999,
+                      background: "var(--m-accent-tint-d)",
+                      border: "1px solid var(--m-accent-line-d)",
+                    }}
+                  >
+                    <Phone size={11} color="var(--m-accent-d)" strokeWidth={2} />
+                  </span>
+                </span>
+
                 <span
                   style={{
                     fontFamily: "var(--m-display)",
@@ -246,7 +300,7 @@ export function FeatureRouting() {
                 >
                   Routing rules
                 </span>
-                <span style={chipQuiet}>4 active</span>
+                <span style={{ ...chipQuiet, marginLeft: "auto" }}>4 active</span>
               </div>
 
               <div style={{ position: "relative" }}>
