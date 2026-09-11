@@ -2,17 +2,22 @@
  * Display formatters. All deterministic — fine for SSR.
  */
 
-const NF = new Intl.NumberFormat("en-US");
+// useGrouping: false — no thousand separators anywhere formatNumber() or
+// formatCurrency() is used. Both are the shared formatters for essentially
+// every number/currency value in the app, so this one change is site-wide.
+const NF = new Intl.NumberFormat("en-US", { useGrouping: false });
 const CF = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 0,
+  useGrouping: false,
 });
 const CF_PRECISE = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
+  useGrouping: false,
 });
 
 export function formatNumber(n: number) {

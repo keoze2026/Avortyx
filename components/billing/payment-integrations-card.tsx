@@ -40,17 +40,17 @@ const CURRENCY_FMT: Record<
   USD: {
     symbol: "$",
     format: (n) =>
-      n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }),
   },
   EUR: {
     symbol: "€",
     format: (n) =>
-      n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }),
   },
   RUB: {
     symbol: "₽",
     format: (n) =>
-      n.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+      n.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: false }),
   },
 };
 

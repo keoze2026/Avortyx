@@ -193,7 +193,7 @@ export default function DestinationsPage() {
         t("networkUI.destinations.toast.capUpdated")
           .replace("{name}", d.name)
           .replace("{field}", fieldLabel)
-          .replace("{value}", value > 0 ? value.toLocaleString() : "∞"),
+          .replace("{value}", value > 0 ? value.toLocaleString("en-US", { useGrouping: false }) : "∞"),
       );
     } catch (e) {
       toast.error(friendlyErrorMessage(e, "Couldn't update cap."));

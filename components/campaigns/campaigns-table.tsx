@@ -222,10 +222,10 @@ export function CampaignsTable({
                     <TableCell className="tabular-nums">{m.daily}</TableCell>
                   )}
                   {columns.monthly && (
-                    <TableCell className="tabular-nums">{m.monthly.toLocaleString()}</TableCell>
+                    <TableCell className="tabular-nums">{m.monthly.toLocaleString("en-US", { useGrouping: false })}</TableCell>
                   )}
                   {columns.global && (
-                    <TableCell className="tabular-nums">{m.global.toLocaleString()}</TableCell>
+                    <TableCell className="tabular-nums">{m.global.toLocaleString("en-US", { useGrouping: false })}</TableCell>
                   )}
                   {columns.status && (
                     <TableCell onClick={(e) => e.stopPropagation()}>

@@ -46,7 +46,7 @@ export function SessionMeter({ totals, inFlightCount }: SessionMeterProps) {
         <Cell label={t("liveUI.session.totals.start")} value={totals.started} />
         <Cell label={t("liveUI.session.totals.done")} value={totals.completed} />
         <Cell label={t("liveUI.session.totals.miss")} value={totals.missed} />
-        <Cell label={t("liveUI.session.totals.money")} value={`$${Math.round(totals.revenue).toLocaleString()}`} />
+        <Cell label={t("liveUI.session.totals.money")} value={`$${Math.round(totals.revenue).toLocaleString("en-US", { useGrouping: false })}`} />
       </div>
     </BracketCard>
   );
