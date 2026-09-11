@@ -71,6 +71,15 @@ export default function ReportsPage() {
   // status filter should search.
   const recentCalls = useCallsStore((s) => s.recent);
   const fetchCallsPage = useCallsStore((s) => s.fetchPage);
+  // Same precedence the topbar uses: the live socket count when it's
+  // actually flowing, the dashboard KPI snapshot otherwise. Needed because
+  // the call log (`recentCalls`, and `filtered` below) is a completed-call
+  // record — it can never contain an in-progress call, so summing it for
+  // "Live" always reads 0. See the comment on CallSummaryTable's `liveNow`
+  // prop for the rest of this story.
+  const kpis = useCallsStore((s) => s.kpis);
+  const socketLiveCount = useCallsStore((s) => s.liveCount);
+  const liveNow = socketLiveCount > 0 ? socketLiveCount : (kpis?.liveCalls ?? 0);
 
   const filtered = useMemo(() => {
     const start = dateRange?.from ? startOfDay(dateRange.from).getTime() : -Infinity;
@@ -275,6 +284,7 @@ export default function ReportsPage() {
             calls={filtered}
             activeStatusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
+            liveNow={liveNow}
           />
         )}
 

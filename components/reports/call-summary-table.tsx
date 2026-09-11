@@ -761,6 +761,20 @@ interface CallSummaryTableProps {
    *  again clears it — same toggle behaviour as everywhere else in this
    *  table (columns, sort). */
   onStatusFilterChange?: (filter: CallStatusFilter | null) => void;
+  /**
+   * The real in-flight call count (same source the topbar reads — live
+   * socket count, falling back to the dashboard KPI snapshot), shown in the
+   * Totals row's Live cell instead of summing `calls`.
+   *
+   * `calls` here is GET /api/analytics/calls — a call *log*, i.e. completed
+   * call detail records. A CDR only exists once a call has ended, so this
+   * endpoint structurally cannot contain a still-ringing call; summing its
+   * rows for "live" will always read 0, on any backend that honours that
+   * contract. There is no per-campaign live breakdown available anywhere in
+   * the API today, so the per-row Live cells still can't be made accurate —
+   * only the aggregate can, by reading it from where it actually lives.
+   */
+  liveNow?: number;
 }
 
 type SummarySortKey = "label" | ColumnKey;
@@ -778,6 +792,7 @@ export function CallSummaryTable({
   calls,
   activeStatusFilter = null,
   onStatusFilterChange,
+  liveNow,
 }: CallSummaryTableProps) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
@@ -1018,7 +1033,17 @@ export function CallSummaryTable({
                     <TableRow key={r.key}>
                       <TableCell className="pl-6 text-left font-medium">{r.label}</TableCell>
                       {visible.live && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.live)}</TableCell>
+                        // Not "0 live calls for this campaign" — the call log
+                        // this row is built from only contains calls that
+                        // have already ended, so a per-campaign live count
+                        // isn't something this data can answer. A dash says
+                        // "not tracked here" instead of a confident, wrong 0.
+                        <TableCell
+                          className="text-center tabular-nums text-muted-foreground/60"
+                          title={t("toolsUI.reports.summary.liveNotTracked")}
+                        >
+                          —
+                        </TableCell>
                       )}
                       {visible.incoming && (
                         <TableCell className="text-center tabular-nums">{formatNumber(r.incoming)}</TableCell>
@@ -1082,8 +1107,15 @@ export function CallSummaryTable({
               {allRows.length > 0 && (
                 <TableRow className="border-t-2 border-border bg-muted/40 hover:bg-muted/40 font-semibold">
                   <TableCell className="pl-6 text-left">{t("toolsUI.reports.summary.totals")}</TableCell>
+                  {/* liveNow, when provided, is the real in-flight count —
+                      the same figure the topbar shows. totals.live (summed
+                      from completed-call log rows) is kept as the fallback
+                      so this component still renders something sane if a
+                      caller doesn't wire liveNow up. */}
                   {visible.live && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.live)}</TableCell>
+                    <TableCell className="text-center tabular-nums">
+                      {formatNumber(liveNow ?? totals.live)}
+                    </TableCell>
                   )}
                   {visible.incoming && (
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.incoming)}</TableCell>

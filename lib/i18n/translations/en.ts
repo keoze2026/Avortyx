@@ -3693,6 +3693,7 @@ export const en = {
         empty: "No calls in this range.",
         filteredBy: "Filtered by",
         resetFilter: "Reset filter",
+        liveNotTracked: "Live calls aren't tracked per campaign — see the Live figure in the topbar for the current total.",
         columns: {
           live: "Live",
           incoming: "Incoming",
