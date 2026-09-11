@@ -54,65 +54,51 @@ const RULES = [
 ];
 
 /**
- * Focal motion: a single low-alpha accent band drifts down the rule list on a
- * 6s loop, reading as continuous evaluation. Nothing else in the section moves.
- * The band is invisible by default and only switches on under
- * `prefers-reduced-motion: no-preference`, so the reduced-motion frame is the
- * clean static card.
+ * Focal motion, now told as one continuous story instead of two separate
+ * loops: the phone is the source, rings push outward from its edge the way a
+ * call signal would, and each rule materializes out of soft focus, holds
+ * long enough to read, then dissolves back — as if it only exists for the
+ * moment a call is actually being weighed against it. The four rows run the
+ * same animation on staggered offsets so they never move in lockstep; at any
+ * instant some are sharp, some are forming, some are dispersing.
+ *
+ * Both motions default OFF (opacity: 0 / static) and only switch on under
+ * `prefers-reduced-motion: no-preference`, so the reduced-motion frame is
+ * the phone at rest and all four rules fully legible, all the time.
  */
 const ROUTING_CSS = `
 .rt-grid { display: grid; }
-.rt-scan-wrap {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.rt-scan {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 34%;
-  opacity: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--m-accent-tint-d) 50%,
-    transparent 100%
-  );
-}
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes rt-scan-move {
-    0%   { transform: translateY(-100%); }
-    100% { transform: translateY(294%); }
-  }
-  .rt-scan {
-    opacity: 1;
-    animation: rt-scan-move 6s linear infinite;
-    will-change: transform;
-  }
-}
 
-/* The phone in the header is the signal's source — the scan band above
-   already sweeps top-to-bottom through the rules, so anchoring a rippling
-   phone glyph right where that sweep starts reads as "a call comes in here,
-   and its evaluation travels down through the stack," not two unrelated
-   animations sharing a card. */
 .rt-ring {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  border: 1px solid var(--m-accent-line-d);
+  border: 1.5px solid var(--m-accent-line-d);
   opacity: 0;
 }
 @media (prefers-reduced-motion: no-preference) {
   @keyframes rt-ripple {
-    0%   { transform: scale(0.55); opacity: 0.6; }
-    100% { transform: scale(2.3); opacity: 0; }
+    0%   { transform: scale(1);    opacity: 0.55; }
+    100% { transform: scale(2.75); opacity: 0; }
   }
   .rt-ring {
-    animation: rt-ripple 3s ease-out infinite;
+    animation: rt-ripple 4s ease-out infinite;
+  }
+}
+
+.rt-row-cycle {
+  opacity: 1;
+  filter: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rt-smoke {
+    0%   { opacity: 0; filter: blur(7px); transform: translateY(6px) scale(0.98); }
+    14%  { opacity: 1; filter: blur(0px); transform: none; }
+    72%  { opacity: 1; filter: blur(0px); transform: none; }
+    100% { opacity: 0; filter: blur(7px); transform: translateY(-6px) scale(0.98); }
+  }
+  .rt-row-cycle {
+    animation: rt-smoke 7s ease-in-out infinite;
   }
 }
 `;
@@ -248,70 +234,70 @@ export function FeatureRouting() {
                 overflow: "hidden",
               }}
             >
+              {/* The signal source — large and centred, not a header
+                  ornament. Every rule below exists to answer "where does
+                  this call go," so the call itself is what the panel opens
+                  on. Rings are sized to visibly clear the phone's edge at
+                  their largest, not just brush past it. */}
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "12px 16px",
+                  padding: "30px 16px 22px",
                   borderBottom: "1px solid var(--m-line-d)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
                 }}
               >
-                {/* The signal source — every rule below exists to answer
-                    "where does this call go," so the call itself opens the
-                    panel rather than a plain label. */}
                 <span
                   aria-hidden
                   style={{
                     position: "relative",
-                    width: 22,
-                    height: 22,
-                    flexShrink: 0,
+                    width: 56,
+                    height: 56,
                     display: "grid",
                     placeItems: "center",
                   }}
                 >
                   <span className="rt-ring" />
-                  <span className="rt-ring" style={{ animationDelay: "-1.5s" }} />
+                  <span className="rt-ring" style={{ animationDelay: "-1.33s" }} />
+                  <span className="rt-ring" style={{ animationDelay: "-2.66s" }} />
                   <span
                     style={{
                       position: "relative",
                       display: "grid",
                       placeItems: "center",
-                      width: 20,
-                      height: 20,
+                      width: 52,
+                      height: 52,
                       borderRadius: 999,
                       background: "var(--m-accent-tint-d)",
                       border: "1px solid var(--m-accent-line-d)",
                     }}
                   >
-                    <Phone size={11} color="var(--m-accent-d)" strokeWidth={2} />
+                    <Phone size={24} color="var(--m-accent-d)" strokeWidth={1.75} />
                   </span>
                 </span>
 
-                <span
-                  style={{
-                    fontFamily: "var(--m-display)",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    letterSpacing: "-0.015em",
-                    color: "var(--m-fg-d)",
-                  }}
-                >
-                  Routing rules
-                </span>
-                <span style={{ ...chipQuiet, marginLeft: "auto" }}>4 active</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16 }}>
+                  <span
+                    style={{
+                      fontFamily: "var(--m-display)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      letterSpacing: "-0.015em",
+                      color: "var(--m-fg-d)",
+                    }}
+                  >
+                    Routing rules
+                  </span>
+                  <span style={chipQuiet}>4 active</span>
+                </div>
               </div>
 
               <div style={{ position: "relative" }}>
-                {/* focal motion: evaluation band */}
-                <span aria-hidden className="rt-scan-wrap">
-                  <span className="rt-scan" />
-                </span>
-
                 {RULES.map((r, i) => (
                   <div
                     key={r.name}
+                    className="rt-row-cycle"
                     style={{
                       position: "relative",
                       display: "grid",
@@ -326,6 +312,9 @@ export function FeatureRouting() {
                         i < RULES.length - 1
                           ? "1px solid var(--m-line-d)"
                           : "none",
+                      // 7s cycle / 4 rows — each starts a quarter-cycle later
+                      // so they're never all forming or fading at once.
+                      animationDelay: `${-i * 1.75}s`,
                     }}
                   >
                     <span
