@@ -763,20 +763,21 @@ export const MOCK_TOKENS: TokenEntry[] = [
 
 /* ─── Display helpers ────────────────────────────────────────────────── */
 
+// NF backs formatSupply()'s fallback — a token *count*, not a price, so it
+// stays comma-free like every other count in the app. CF_USD/_PRECISE are
+// dollar prices and keep standard grouping, same as formatCurrency().
 const NF = new Intl.NumberFormat("en-US", { useGrouping: false });
 const CF_USD = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-  useGrouping: false,
 });
 const CF_USD_PRECISE = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   minimumFractionDigits: 4,
   maximumFractionDigits: 7,
-  useGrouping: false,
 });
 
 /** "$98,412.55" — uses extra decimals for tiny prices. */

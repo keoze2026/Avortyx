@@ -2,22 +2,21 @@
  * Display formatters. All deterministic — fine for SSR.
  */
 
-// useGrouping: false — no thousand separators anywhere formatNumber() or
-// formatCurrency() is used. Both are the shared formatters for essentially
-// every number/currency value in the app, so this one change is site-wide.
+// formatNumber() is for counts (calls, rows, selections) — no thousand
+// separators. formatCurrency() is money, and keeps standard comma grouping:
+// billing figures read as amounts, not as call volume, and losing the
+// separator there makes large dollar figures harder to parse at a glance.
 const NF = new Intl.NumberFormat("en-US", { useGrouping: false });
 const CF = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 0,
-  useGrouping: false,
 });
 const CF_PRECISE = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-  useGrouping: false,
 });
 
 export function formatNumber(n: number) {
