@@ -228,12 +228,60 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
     }
   }
 
+  // A handful of today's calls are still in flight — mirrors what a real
+  // backend's "calls so far today" listing legitimately contains. Without
+  // this, every call in the corpus is already resolved (completed or
+  // failed), so anything reading "live" from this data — the Call Summary
+  // table's Live column — is structurally stuck at 0 no matter what's
+  // happening on the Live Monitor page.
+  const liveNowCount = bucketInt(41, 3, 9);
+  for (let i = 0; i < liveNowCount; i++) {
+    const startedAt = Date.now() - intRange(rng, 5, 240) * 1000;
+    out.push(makeLiveCall(`live_today_${i.toString(36)}`, startedAt, rng));
+  }
+
   // Sort newest → oldest.
   out.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   return out;
 }
 
 const LIVE_FAILURE_STATUSES = ["missed", "rejected", "failed"];
+const LIVE_STATUSES = ["ringing", "in-progress", "in-progress", "in-progress"];
+
+/** Builds a still-in-flight call record — shared by the Live Monitor feed
+ *  and by the handful of "right now" rows seeded into today's corpus above,
+ *  so both stay in sync if the shape of a live record ever changes. */
+function makeLiveCall(idSuffix: string, startedAt: number, rng: () => number): DemoCallWire {
+  const camp = pickCampaign(rng);
+  const buyer = pick(BUYER_REFS, rng);
+  const publisher = pick(PUBLISHER_REFS, rng);
+  return {
+    id: idSuffix,
+    caller_number: makePhone(rng),
+    destination_number: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
+    status: pick(LIVE_STATUSES, rng),
+    duration: Math.floor((Date.now() - startedAt) / 1000),
+    // Still ringing or in-progress — qualification only applies once a call
+    // has actually completed.
+    is_qualified: false,
+    caller_area_code: pick(AREA_CODES, rng),
+    caller_state: pick(STATES, rng),
+    caller_country: "US",
+    campaign_id: camp.id,
+    campaign_name: camp.name,
+    buyer_id: buyer.id,
+    buyer_name: buyer.name,
+    publisher_id: publisher.id,
+    publisher_name: publisher.name,
+    revenue: "0.00",
+    buyer_payout: "0.00",
+    publisher_payout: "0.00",
+    recording_url: "",
+    created_at: new Date(startedAt).toISOString(),
+    tags: [],
+    notes: "",
+  };
+}
 
 function makeCall(
   idSuffix: string,
@@ -304,38 +352,9 @@ export function liveCallsCount(): number {
 export function generateLiveCalls(count = liveCallsCount()): DemoCallWire[] {
   const rng = makeRng(7_777);
   const rows: DemoCallWire[] = [];
-  const liveStatuses = ["ringing", "in-progress", "in-progress", "in-progress"];
   for (let i = 0; i < count; i++) {
-    const camp = pickCampaign(rng);
-    const buyer = pick(BUYER_REFS, rng);
-    const publisher = pick(PUBLISHER_REFS, rng);
     const startedAt = Date.now() - intRange(rng, 5, 240) * 1000;
-    rows.push({
-      id: `live_${i.toString(36)}`,
-      caller_number: makePhone(rng),
-      destination_number: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
-      status: pick(liveStatuses, rng),
-      duration: Math.floor((Date.now() - startedAt) / 1000),
-      // Still ringing or in-progress — qualification only applies once a
-      // call has actually completed.
-      is_qualified: false,
-      caller_area_code: pick(AREA_CODES, rng),
-      caller_state: pick(STATES, rng),
-      caller_country: "US",
-      campaign_id: camp.id,
-      campaign_name: camp.name,
-      buyer_id: buyer.id,
-      buyer_name: buyer.name,
-      publisher_id: publisher.id,
-      publisher_name: publisher.name,
-      revenue: "0.00",
-      buyer_payout: "0.00",
-      publisher_payout: "0.00",
-      recording_url: "",
-      created_at: new Date(startedAt).toISOString(),
-      tags: [],
-      notes: "",
-    });
+    rows.push(makeLiveCall(`live_${i.toString(36)}`, startedAt, rng));
   }
   return rows;
 }
