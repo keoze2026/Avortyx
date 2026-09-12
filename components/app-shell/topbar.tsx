@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Command, PhoneCall, PhoneIncoming, Search, Wallet } from "lucide-react";
 
 import { NotificationsMenu } from "./notifications-menu";
@@ -13,6 +14,8 @@ import { useCallsStore } from "@/lib/store/calls-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { cn } from "@/lib/utils";
 
+const KPI_POLL_MS = 15_000;
+
 export function Topbar() {
   const { t } = useTranslation();
   // Live counters now come straight from the analytics dashboard endpoint,
@@ -23,6 +26,17 @@ export function Topbar() {
   // tracks in-flight calls in real time. Falls back to kpis.liveCalls (the
   // REST snapshot) until the user opens /live and the socket connects.
   const liveCount = useCallsStore((s) => s.liveCount);
+
+  // <StoreHydrator /> fetches kpis exactly once, on app mount — fine for
+  // callsToday, but it left "Live" frozen at whatever it was at login on
+  // every page except /live (the only place the socket runs). Poll it here
+  // instead, since the topbar is the one thing mounted on every page.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void useCallsStore.getState().fetchKpis();
+    }, KPI_POLL_MS);
+    return () => window.clearInterval(id);
+  }, []);
   // Wallet balance comes from the billing account fetched by the onboarding
   // store on mount (and refreshed after every recharge). Renders 0 until the
   // first response lands.
