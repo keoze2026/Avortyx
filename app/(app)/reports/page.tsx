@@ -208,6 +208,7 @@ export default function ReportsPage() {
         onFiltersChange={setFilters}
         visibility={visibility}
         onVisibilityChange={setVisibility}
+        liveNow={liveNow}
       />
 
       <ReportsPinGate needsPin={needsPin} onCancel={cancelHistorical}>

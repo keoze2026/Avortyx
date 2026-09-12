@@ -22,7 +22,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TimezonePicker } from "@/components/shared/timezone-picker";
 import { useTranslation } from "@/hooks/use-translation";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+/** Fixed Won-green ramp — matches the topbar's Live figure so the two read
+ *  as the same signal wherever an operator sees them. */
+const LIVE_GREEN = "text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]";
 
 type RefreshOption =
   | "Off"
@@ -97,6 +102,10 @@ interface ReportsToolbarProps {
   onFiltersChange: (filters: ReportFilters) => void;
   visibility: ReportsVisibility;
   onVisibilityChange: (next: ReportsVisibility) => void;
+  /** Real in-flight call count — same source (and precedence) as the topbar's
+   *  Live figure. Shown next to the date range picker so it reads on this
+   *  page without a glance up at the topbar. */
+  liveNow: number;
 }
 
 export function ReportsToolbar({
@@ -107,6 +116,7 @@ export function ReportsToolbar({
   onFiltersChange,
   visibility,
   onVisibilityChange,
+  liveNow,
 }: ReportsToolbarProps) {
   const { t } = useTranslation();
   const [refresh, setRefresh] = useState<RefreshOption>("Auto refresh");
@@ -211,6 +221,24 @@ export function ReportsToolbar({
           line and stranded the view button alone on the row above. */}
       <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
         <TimezonePicker className={TOOLBAR_BTN_HOVER} />
+
+        {/* Live indicator, right before the date range it sits next to.
+            liveNow > 0 pulses the dot the same way the auto-refresh chip
+            does when armed; at 0 it just reads as a quiet count. */}
+        <span
+          className={cn(
+            "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium tabular-nums",
+            liveNow > 0 ? cn("border-current/30 bg-current/10", LIVE_GREEN) : "border-border text-muted-foreground",
+          )}
+        >
+          {liveNow > 0 && (
+            <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+            </span>
+          )}
+          {t("toolsUI.reports.toolbar.live")}: {formatNumber(liveNow)}
+        </span>
 
         {/* Date-range picker with preset shortcuts + Cancel/Apply (buffered) */}
         <DateRangePicker

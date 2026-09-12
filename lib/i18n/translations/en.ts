@@ -3834,6 +3834,7 @@ export const en = {
           log: "Call log",
         },
         refresh: "Refresh",
+        live: "Live",
         refreshOptions: {
           off: "Off",
           auto: "Auto refresh",
