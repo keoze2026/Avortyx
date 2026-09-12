@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Command, PhoneCall, PhoneIncoming, Search, Wallet } from "lucide-react";
+import { Command, Search, Wallet } from "lucide-react";
 
 import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
@@ -64,18 +64,19 @@ export function Topbar() {
           {/* Live stats — balance, in-flight, total today.
               Sits open on the bar rather than inside a pill: no frame, no
               dividers, no per-stat icon badges. Label and value read inline
-              ("Live: 0"), with colour carried by the value alone so the row
-              scans as figures rather than as chrome. Labels collapse on
-              mobile; values stay in full form ("3,016", never "3K"). Sized
-              down further at the base breakpoint (below the sm: overrides)
-              than earlier — page zoom / larger accessibility text scales up
-              every one of these boxes at once, and the old mobile sizing left
-              no slack before the group outgrew the viewport and got clipped
-              by the shell's overflow-hidden. */}
-          <div className="inline-flex items-center gap-1.5 sm:gap-6">
+              ("Live: 0") at every width — they used to collapse to an icon
+              below sm, which read as the labels being broken/missing rather
+              than an intentional space-saving swap. Values stay in full form
+              ("3,016", never "3K"). `overflow-x-auto scrollbar-hide` is a
+              safety net, not the primary fix: the shell layout clips
+              horizontal overflow instead of reflowing it (see
+              app/(app)/layout.tsx), so if page zoom ever still outgrows this
+              block despite the small sizing below, it scrolls internally
+              instead of clipping into invisibility. */}
+          <div className="inline-flex items-center gap-1.5 overflow-x-auto scrollbar-hide sm:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
-            <span className="inline-flex items-center gap-1.5 sm:gap-2">
+            <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border text-muted-foreground sm:h-6 sm:w-6">
                 <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </span>
@@ -92,18 +93,16 @@ export function Topbar() {
             {/* Counters sit closer to each other than to the balance — they're
                 one category (live call activity), the balance is another.
                 Gaps tighten below sm so all three indicators still fit. */}
-            <span className="inline-flex items-center gap-1.5 sm:gap-4">
+            <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-4">
               <TopStat
                 label={t("topbar.live")}
                 value={formatNumber(liveCalls)}
                 tone="green"
-                icon={PhoneIncoming}
               />
               <TopStat
                 label={t("topbar.total")}
                 value={formatNumber(totalCalls)}
                 tone="blue"
-                icon={PhoneCall}
               />
             </span>
           </div>
@@ -179,25 +178,19 @@ const TONE_TEXT = {
 } as const;
 
 interface TopStatProps {
-  /** Shown before the value as "Label:" from sm up. */
+  /** Shown before the value as "Label:" at every width. */
   label: string;
   value: string;
   /** Which fixed ramp the figure renders in. */
   tone: keyof typeof TONE_TEXT;
-  /** Stands in for the label below sm, where there's no room for the word. */
-  icon: React.ElementType;
 }
 
-function TopStat({ label, value, tone, icon: Icon }: TopStatProps) {
+function TopStat({ label, value, tone }: TopStatProps) {
   return (
-    <span className="inline-flex items-center gap-1 sm:gap-1.5">
-      {/* Below sm the icon names the figure; from sm up the word does. Bare
-          numbers with neither read as noise, which is what the old
-          label-only-on-desktop rule produced on phones. */}
-      <Icon className={cn("h-3 w-3 shrink-0 sm:hidden", TONE_TEXT[tone])} aria-hidden />
+    <span className="inline-flex items-center gap-1 whitespace-nowrap sm:gap-1.5">
       <span
         className={cn(
-          "sr-only font-bold sm:not-sr-only sm:text-[12px] sm:leading-none",
+          "text-[11px] font-bold leading-none sm:text-[12px]",
           TONE_TEXT[tone],
         )}
       >
