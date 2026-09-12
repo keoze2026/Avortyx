@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { ROUTES } from "@/lib/constants";
-import { formatCurrency, formatDuration, formatRelativeTime, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatDuration, formatRelativeTime } from "@/lib/format";
 import type { CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +64,7 @@ export function RecentCallsFeed() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-mono text-xs">{toE164(c.callerNumber)}</span>
+                  <span className="truncate font-mono text-xs">{formatCallerId(c.callerNumber)}</span>
                   <Badge variant="outline" className="text-[10px]">
                     {c.geo.state}
                   </Badge>

@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/sheet";
 import { callsService, type CallDetail } from "@/lib/api/services/calls.service";
 import { ROUTES } from "@/lib/constants";
-import { formatCurrency, formatDuration, formatRelativeTime, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatDuration, formatRelativeTime, toE164 } from "@/lib/format";
 import type { Call } from "@/lib/types";
 
 interface Props {
@@ -121,7 +121,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                 <span className="text-muted-foreground/40">·</span>
                 <span>{new Date(call.startedAt).toLocaleString()}</span>
               </div>
-              <SheetTitle className="font-mono text-lg">{toE164(call.callerNumber)}</SheetTitle>
+              <SheetTitle className="font-mono text-lg">{formatCallerId(call.callerNumber)}</SheetTitle>
               <SheetDescription>
                 <CallStatusBadge status={call.status} />
               </SheetDescription>
@@ -151,7 +151,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                   <Step
                     icon={PhoneIncoming}
                     label={t("toolsUI.callLogs.detail.caller")}
-                    value={toE164(call.callerNumber)}
+                    value={formatCallerId(call.callerNumber)}
                     sub={call.geo.state ? `${call.geo.city}, ${call.geo.state}` : t("toolsUI.callLogs.detail.unknownGeo")}
                   />
                   <Step

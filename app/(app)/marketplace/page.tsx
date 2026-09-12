@@ -59,7 +59,7 @@ import {
 } from "@/lib/api/services/marketplace.service";
 import { createCallSocket, type CallSocket } from "@/lib/api/socket";
 import { useBuyersStore } from "@/lib/store/buyers-store";
-import { formatCurrency, formatRelativeTime, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const STATUS_VARIANT: Record<AuctionStatus, "success" | "outline" | "destructive"> = {
@@ -256,7 +256,7 @@ export default function MarketplacePage() {
                       </TableCell>
                       <TableCell className="text-xs">{a.campaignName ?? "—"}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {a.callerNumber ? toE164(a.callerNumber) : "—"}
+                        {a.callerNumber ? formatCallerId(a.callerNumber) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums text-xs">
                         {formatCurrency(a.bidFloor, true)}
@@ -484,7 +484,7 @@ function AuctionDetailSheet({
                 <span>{formatRelativeTime(auction.createdAt)}</span>
               </div>
               <SheetTitle className="font-mono text-lg">
-                {auction.callerNumber ? toE164(auction.callerNumber) : "Auction"}
+                {auction.callerNumber ? formatCallerId(auction.callerNumber) : "Auction"}
               </SheetTitle>
               <SheetDescription className="flex items-center gap-2">
                 <Badge variant={STATUS_VARIANT[auction.status]} className="gap-1.5 text-[10px] uppercase tracking-wider">

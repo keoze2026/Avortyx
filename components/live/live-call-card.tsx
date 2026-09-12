@@ -7,7 +7,7 @@ import { CheckCircle2, MapPin, Phone, PhoneIncoming, PhoneMissed, XCircle } from
 import { CallWaveform } from "@/components/live/call-waveform";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/use-translation";
-import { formatTimer, toE164 } from "@/lib/format";
+import { formatCallerId, formatTimer } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +104,7 @@ export function LiveCallCard({ call, isLive }: LiveCallCardProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate font-mono text-sm">{toE164(call.callerNumber)}</span>
+            <span className="truncate font-mono text-sm">{formatCallerId(call.callerNumber)}</span>
             <Badge variant="outline" className="text-[10px]">
               <MapPin className="h-2.5 w-2.5" /> {call.geo.state}
             </Badge>

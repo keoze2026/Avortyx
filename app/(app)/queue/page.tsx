@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { queueService, type QueuedCall } from "@/lib/api/services/queue.service";
-import { formatRelativeTime, toE164 } from "@/lib/format";
+import { formatCallerId, formatRelativeTime, toE164 } from "@/lib/format";
 
 function formatWait(sec: number): string {
   if (sec < 60) return `${sec}s`;
@@ -115,7 +115,7 @@ export default function QueuePage() {
               <TableBody>
                 {calls.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-mono text-xs">{toE164(c.callerNumber)}</TableCell>
+                    <TableCell className="font-mono text-xs">{formatCallerId(c.callerNumber)}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {c.destinationNumber ? toE164(c.destinationNumber) : "—"}
                     </TableCell>

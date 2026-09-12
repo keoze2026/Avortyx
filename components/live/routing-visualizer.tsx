@@ -5,7 +5,7 @@ import { Building2, GitFork, Hash, PhoneIncoming, Sparkles, Users } from "lucide
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
-import { toE164 } from "@/lib/format";
+import { formatCallerId } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ export function RoutingVisualizer({ call }: RoutingVisualizerProps) {
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {call
-            ? `${t("liveUI.routing.watchingPrefix")} ${toE164(call.callerNumber)}`
+            ? `${t("liveUI.routing.watchingPrefix")} ${formatCallerId(call.callerNumber)}`
             : t("liveUI.routing.pickToFollow")}
         </p>
       </CardHeader>

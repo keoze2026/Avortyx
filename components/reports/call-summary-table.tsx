@@ -32,7 +32,7 @@ import {
 import type { Call } from "@/lib/types";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { formatCurrency, formatNumber, formatPercent, formatTimer, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTimer, toE164 } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
@@ -571,7 +571,7 @@ function deriveGroup(c: Call, group: GroupKey): { key: string; label: string } |
       return labelOf(pickFrom(c, "i-lt", LINE_TYPES));
     case "identity-phone": {
       // The caller's own number is already known on the record.
-      const v = toE164(c.callerNumber);
+      const v = formatCallerId(c.callerNumber);
       return { key: v, label: v };
     }
     case "identity-zipcode": {

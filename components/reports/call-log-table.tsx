@@ -6,6 +6,7 @@ import {
   Copy,
   DollarSign,
   Download,
+  ExternalLink,
   Loader2,
   Pause,
   PhoneOff,
@@ -39,7 +40,7 @@ import {
 import { Pagination } from "@/components/shared/pagination";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
+import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
@@ -168,18 +169,6 @@ function getTTCSeconds(c: Call): number {
   }
 }
 
-const FAIL_REASONS: Partial<Record<CallStatus, string[]>> = {
-  missed: ["No answer", "Caller hung up", "Timed out"],
-  rejected: ["Buyer rejected", "Filter blocked", "Daily cap"],
-  failed: ["Carrier error", "Network error", "Invalid number"],
-};
-
-function getFailReason(c: Call): string {
-  const reasons = FAIL_REASONS[c.status];
-  if (!reasons) return "";
-  return reasons[callHash(c.id) % reasons.length];
-}
-
 /**
  * Hang-up side per call. Derived deterministically from the call id so the
  * same row always shows the same direction across renders/refresh.
@@ -228,7 +217,7 @@ function logCellValue(c: Call, key: ColumnKey): number | string {
     case "publisher":
       return c.publisherName ?? "";
     case "caller":
-      return toE164(c.callerNumber);
+      return formatCallerId(c.callerNumber);
     case "dialed":
       return toE164(c.destinationNumber);
     case "buyer":
@@ -248,9 +237,12 @@ function logCellValue(c: Call, key: ColumnKey): number | string {
     case "status":
       return STATUS_LABEL_FALLBACK[c.status];
     case "failReason":
-      return getFailReason(c);
+      // No trustworthy backend fail-reason field exists yet — showing a
+      // fabricated one (e.g. "Carrier error") read as real diagnostic data.
+      // A dash here is accurate; a guessed reason isn't.
+      return "—";
     case "recording":
-      return c.recordingUrl ? "yes" : "";
+      return c.recordingUrl ?? "";
   }
 }
 
@@ -500,7 +492,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                       )}
                       {columns.caller && (
                         <TableCell className="whitespace-nowrap font-mono text-xs">
-                          {toE164(c.callerNumber)}
+                          {formatCallerId(c.callerNumber)}
                         </TableCell>
                       )}
                       {columns.dialed && (
@@ -561,7 +553,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                       )}
                       {columns.failReason && (
                         <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {getFailReason(c) || "—"}
+                          —
                         </TableCell>
                       )}
                       {columns.recording && (
@@ -601,11 +593,11 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
 /* ─────────────────────────────────────────────────────────────────── */
 
 /**
- * Recording cell — play/pause toggle for the row's call recording.
- *
- * A row with no `recordingUrl` on the CDR still gets a button: the URL is
- * resolved on demand from `/api/analytics/calls/{id}/recording`. Only rows
- * that are known to have no recording at all render the em-dash.
+ * Recording cell — play/pause toggle for the row's call recording, plus a
+ * direct link when the CDR itself carried `recordingUrl` (rows that only
+ * resolve one on demand via `/api/analytics/calls/{id}/recording` get just
+ * the play button, since there's no URL yet to link to). Only rows that are
+ * known to have no recording at all render the em-dash.
  */
 function RecordingCell({
   call,
@@ -624,23 +616,38 @@ function RecordingCell({
   const hasRecording = Boolean(call.recordingUrl) || call.status === "completed";
   if (!hasRecording) return <span className="text-muted-foreground">—</span>;
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={cn("h-7 w-7", playing && "text-accent")}
-      disabled={loading}
-      aria-label={t("toolsUI.reports.callLog.actions.playRecording")}
-      aria-pressed={playing}
-      onClick={onToggle}
-    >
-      {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : playing ? (
-        <Pause className="h-3.5 w-3.5" />
-      ) : (
-        <Play className="h-3.5 w-3.5" />
+    <span className="inline-flex items-center gap-0.5">
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn("h-7 w-7", playing && "text-accent")}
+        disabled={loading}
+        aria-label={t("toolsUI.reports.callLog.actions.playRecording")}
+        aria-pressed={playing}
+        onClick={onToggle}
+      >
+        {loading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : playing ? (
+          <Pause className="h-3.5 w-3.5" />
+        ) : (
+          <Play className="h-3.5 w-3.5" />
+        )}
+      </Button>
+      {call.recordingUrl && (
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          aria-label={t("toolsUI.reports.callLog.actions.openRecording")}
+        >
+          <a href={call.recordingUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </Button>
       )}
-    </Button>
+    </span>
   );
 }
 
@@ -688,7 +695,7 @@ function TagCell({ call }: { call: Call }) {
 /** Three inline icon actions per row: copy caller, block caller, bill/adjust. */
 function CallRowActions({ call }: { call: Call }) {
   const { t } = useTranslation();
-  const caller = toE164(call.callerNumber);
+  const caller = formatCallerId(call.callerNumber);
 
   const onCopy = async () => {
     try {
@@ -706,7 +713,6 @@ function CallRowActions({ call }: { call: Call }) {
   };
 
   const onBill = () => {
-    const reason = getFailReason(call);
     const ttc = formatHMS(getTTCSeconds(call));
     if (call.status === "completed" || call.status === "in-progress") {
       toast.success(t("toolsUI.reports.callLog.actions.toastPayoutReview").replace("{number}", caller), {
@@ -717,7 +723,7 @@ function CallRowActions({ call }: { call: Call }) {
     } else {
       toast.success(t("toolsUI.reports.callLog.actions.toastBilledMissed").replace("{number}", caller), {
         description: t("toolsUI.reports.callLog.actions.toastBilledMissedDesc")
-          .replace("{reason}", reason || t("toolsUI.reports.callLog.actions.noConnect"))
+          .replace("{reason}", t("toolsUI.reports.callLog.actions.noConnect"))
           .replace("{ttc}", ttc),
       });
     }

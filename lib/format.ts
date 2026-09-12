@@ -128,6 +128,18 @@ export function toE164(value: string | null | undefined): string {
   return `+${digits}`;
 }
 
+/**
+ * Caller ID for display — same number as `toE164`, minus the leading "+1"
+ * (US/Canada) country code. Dialed/tracking/DID numbers still need the full
+ * E.164 form to be dialable, so this is deliberately separate from `toE164`
+ * rather than a change to it: only the Caller ID column renders the bare
+ * national number, everywhere else keeps "+1…".
+ */
+export function formatCallerId(value: string | null | undefined): string {
+  const e164 = toE164(value);
+  return e164.startsWith("+1") ? e164.slice(2) : e164;
+}
+
 /* ─── Timezone-aware timestamp rendering ───────────────────────────────
  *
  * Every reporting surface renders call times in one explicitly chosen
