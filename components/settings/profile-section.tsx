@@ -98,9 +98,16 @@ export function ProfileSection() {
     }
   };
 
-  const onRemoveAvatar = () => {
-    setAvatar(null);
-    toast.success(t("settings.profileSection.avatarRemoved"));
+  const onRemoveAvatar = async () => {
+    setAvatarBusy(true);
+    try {
+      await setAvatar(null);
+      toast.success(t("settings.profileSection.avatarRemoved"));
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, "Couldn't remove avatar"));
+    } finally {
+      setAvatarBusy(false);
+    }
   };
 
   const onSendResetLink = async () => {
@@ -189,9 +196,14 @@ export function ProfileSection() {
                   variant="ghost"
                   size="sm"
                   onClick={onRemoveAvatar}
+                  disabled={avatarBusy}
                   className="text-muted-foreground hover:text-destructive"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  {avatarBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
                   {t("settings.profileSection.remove")}
                 </Button>
               )}

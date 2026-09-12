@@ -59,8 +59,10 @@ interface AuthState {
    */
   bootstrap: () => Promise<void>;
   setRole: (role: Role) => void;
-  /** Replace the user's avatar locally (and patch it to /me when available). */
-  setAvatar: (avatarUrl: string | null) => void;
+  /** Replace the user's avatar locally, then patch it to /me. Throws (and
+   *  reverts the local change) on failure — see the implementation note on
+   *  why the backend patch currently can't actually clear a stored avatar. */
+  setAvatar: (avatarUrl: string | null) => Promise<void>;
   /** Update name + phone via PATCH /api/accounts/me. Throws on failure. */
   updateProfile: (patch: { name?: string; phone?: string }) => Promise<void>;
   /** Multipart-upload a new avatar file. Returns the hosted URL the backend
@@ -223,19 +225,29 @@ export const useAuthStore = create<AuthState>()(
 
       setRole: (role) => set((s) => (s.user ? { user: { ...s.user, role } } : s)),
 
-      setAvatar: (avatarUrl) => {
+      setAvatar: async (avatarUrl) => {
+        const previous = get().user;
+        if (!previous) return;
         // Optimistic local flip.
-        set((s) =>
-          s.user ? { user: { ...s.user, avatarUrl: avatarUrl ?? undefined } } : s,
-        );
-        // Sync to backend regardless of value — passing `""` (or null) clears
-        // the avatar on the server, which the old "only sync when truthy"
-        // guard prevented. Errors are toasted by the caller, not this store.
-        const current = get().user;
-        if (!current) return;
-        void authService
-          .updateProfile({ avatarUrl: avatarUrl ?? "" })
-          .catch(() => undefined);
+        set({ user: { ...previous, avatarUrl: avatarUrl ?? undefined } });
+        try {
+          // Sync to backend — passing `""` (or null) clears the avatar there
+          // too. Per BACKEND-CONTRACT.md §2.16, `avatarUrl` isn't actually a
+          // documented PATCH /me field (it's populated read-only by the
+          // upload endpoint), so this currently has no effect server-side —
+          // the backend silently ignores it rather than rejecting it, which
+          // is why we can't just check the response and have to rely on the
+          // caller re-hydrating from /me to notice. Throwing here (instead of
+          // swallowing) at least stops the store from claiming success when
+          // the request itself failed outright.
+          await authService.updateProfile({ avatarUrl: avatarUrl ?? "" });
+        } catch (e) {
+          // Revert the optimistic flip — showing "removed" when the backend
+          // rejected the change would just reintroduce the same bug on the
+          // next /me refresh, one screen later.
+          set({ user: previous });
+          throw e;
+        }
       },
 
       updateProfile: async (patch) => {

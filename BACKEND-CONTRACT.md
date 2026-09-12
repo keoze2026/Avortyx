@@ -276,6 +276,17 @@ The frontend has hit these specific bugs this week. They block production usabil
 
 **Required from you:** Make `buyer_id` nullable on the Destination model. Per §3.9, the API accepts `null` for the field on `POST /api/destinations/` and `PATCH /api/destinations/{id}/`, and returns `null` on `GET`. The list query at `GET /api/destinations/?buyer_id=<uuid>` should still filter by FK match; please also support `?buyer_id=__unassigned__` (or similar sentinel) to list orphan destinations.
 
+### 2.16 No way to remove an avatar once uploaded
+
+**Reproducer:**
+1. Upload an avatar via `POST /api/accounts/me/avatar` → it shows up everywhere.
+2. Click "Remove" on the profile page → the avatar disappears from the UI.
+3. Refresh the page → the old avatar is back.
+
+**Why:** per §3.1, `avatarUrl` is documented as populated only by `POST /api/accounts/me/avatar` — there's no corresponding delete/clear operation anywhere in the contract. The frontend was (incorrectly) sending `avatarUrl: ""` on `PATCH /api/accounts/me` hoping that would clear it; since that field was never a real PATCH /me input, the backend has nothing to act on, silently keeps the stored URL, and the next `GET /me` brings the old avatar right back. We've since made the frontend stop pretending this succeeded (it now surfaces an error and reverts the optimistic UI change instead), but there's still no way for a user to actually remove an avatar.
+
+**Required from you:** add a real removal path — either accept `avatarUrl: null` on `PATCH /api/accounts/me` and clear the stored file, or add `DELETE /api/accounts/me/avatar`. Either is fine; let us know which so we can wire the frontend to it.
+
 ### 2.13 Missing per-campaign live counters
 
 The campaigns table needs **`liveCalls`**, **`callsHour`**, **`callsMonth`**, and **`callsGlobal`** on every campaign returned by `GET /api/campaigns/` and `GET /api/campaigns/{id}`. See §3.8 "Live counter fields" for the field shapes.
@@ -1041,6 +1052,7 @@ In priority order:
 - [ ] §2.13 / §3.8 — Add `liveCalls`, `callsHour`, `callsMonth`, `callsGlobal` to the Campaign list + detail responses so the campaigns table can render real numbers
 - [ ] §2.14 / §3.7 — Add `POST /api/buyers/{id}/invite` so operators can email a setup link to a buyer's contact after the buyer record is created
 - [ ] §2.15 / §3.9 — Make Destination `buyer_id` nullable so operators can create unassigned destinations
+- [ ] §2.16 — Add a real way to remove an uploaded avatar (`PATCH /me` accepting `avatarUrl: null`, or `DELETE /api/accounts/me/avatar`)
 
 ### Convention cleanup (any time)
 
