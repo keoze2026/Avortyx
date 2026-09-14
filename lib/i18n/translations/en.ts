@@ -3776,14 +3776,14 @@ export const en = {
       },
       hourly: {
         legend: {
-          converted: "Converted",
+          converted: "Connected",
           notConverted: "Not converted",
           noAnswer: "No answer",
           revenue: "Revenue",
         },
         tooltip: {
           totalCalls: "Total calls",
-          converted: "Converted",
+          converted: "Connected",
           notConverted: "Not Converted",
           noAnswer: "No Answer",
           revenue: "Revenue",
@@ -3850,7 +3850,7 @@ export const en = {
       },
       totalDonut: {
         total: "Total",
-        converted: "Converted",
+        converted: "Connected",
         notConverted: "Not converted",
         noAnswer: "No answer",
         callsSuffix: "calls",

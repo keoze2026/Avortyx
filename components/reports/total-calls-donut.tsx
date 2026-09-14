@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { matchesCallStatusFilter } from "@/lib/call-status";
 import { formatNumber } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
@@ -23,15 +24,20 @@ interface Slice {
 }
 
 /** Binary classification:
- *    "converted" — call connected and qualified (paying conversion)
- *    "noAnswer"  — everything else (missed, rejected, failed, in-flight)
+ *    "converted" — completed OR still in-progress (connected)
+ *    "noAnswer"  — everything else (missed/no-answer, rejected, failed)
+ *
+ * Reuses the same `matchesCallStatusFilter("connected")` the Call Summary
+ * totals use — this used to be its own local check
+ * (`status === "completed" && payout > 0`), which routed in-progress calls
+ * and unpaid completed calls into the red slice, disagreeing with the
+ * Connected total shown elsewhere on the same page for the same data.
  *
  * We deliberately collapse the old "notConverted" category into "noAnswer"
  * so the donut reads as a strict 2-slice success/failure split — operators
  * shouldn't have to disambiguate two different red labels. */
 function classify(c: Call): SliceKey {
-  if (c.status === "completed" && c.payout > 0) return "converted";
-  return "noAnswer";
+  return matchesCallStatusFilter(c, "connected") ? "converted" : "noAnswer";
 }
 
 export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {

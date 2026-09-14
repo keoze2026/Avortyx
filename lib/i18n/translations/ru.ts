@@ -3724,14 +3724,14 @@ export const ru: TranslationShape = {
       },
       hourly: {
         legend: {
-          converted: "Конверсия",
+          converted: "Подключён",
           notConverted: "Без конверсии",
           noAnswer: "Без ответа",
           revenue: "Выручка",
         },
         tooltip: {
           totalCalls: "Всего звонков",
-          converted: "Конверсия",
+          converted: "Подключён",
           notConverted: "Без конверсии",
           noAnswer: "Без ответа",
           revenue: "Выручка",
@@ -3797,7 +3797,7 @@ export const ru: TranslationShape = {
       },
       totalDonut: {
         total: "Итого",
-        converted: "Конверсия",
+        converted: "Подключён",
         notConverted: "Без конверсии",
         noAnswer: "Без ответа",
         callsSuffix: "звонков",

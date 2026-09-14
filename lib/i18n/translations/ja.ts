@@ -3651,7 +3651,7 @@ export const ja: TranslationShape = {
           connected: "接続",
           qualified: "条件達成",
           paid: "支払済",
-          converted: "コンバージョン",
+          converted: "接続済み",
           noConnect: "未接続",
           dupe: "重複",
           conversionRate: "コンバージョン率",
@@ -3723,14 +3723,14 @@ export const ja: TranslationShape = {
       },
       hourly: {
         legend: {
-          converted: "コンバージョン",
+          converted: "接続済み",
           notConverted: "未コンバージョン",
           noAnswer: "応答なし",
           revenue: "収益",
         },
         tooltip: {
           totalCalls: "総通話数",
-          converted: "コンバージョン",
+          converted: "接続済み",
           notConverted: "未コンバージョン",
           noAnswer: "応答なし",
           revenue: "収益",
@@ -3796,7 +3796,7 @@ export const ja: TranslationShape = {
       },
       totalDonut: {
         total: "合計",
-        converted: "コンバージョン",
+        converted: "接続済み",
         notConverted: "未コンバージョン",
         noAnswer: "応答なし",
         callsSuffix: "コール",

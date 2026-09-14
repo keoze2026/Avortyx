@@ -3652,7 +3652,7 @@ export const zh: TranslationShape = {
           connected: "已接通",
           qualified: "合格",
           paid: "已付款",
-          converted: "已转化",
+          converted: "已接通",
           noConnect: "未接通",
           dupe: "重复",
           conversionRate: "转化率",
@@ -3724,14 +3724,14 @@ export const zh: TranslationShape = {
       },
       hourly: {
         legend: {
-          converted: "已转化",
+          converted: "已接通",
           notConverted: "未转化",
           noAnswer: "无人接听",
           revenue: "收入",
         },
         tooltip: {
           totalCalls: "通话总数",
-          converted: "已转化",
+          converted: "已接通",
           notConverted: "未转化",
           noAnswer: "无人接听",
           revenue: "收入",
@@ -3797,7 +3797,7 @@ export const zh: TranslationShape = {
       },
       totalDonut: {
         total: "总计",
-        converted: "已转化",
+        converted: "已接通",
         notConverted: "未转化",
         noAnswer: "无人接听",
         callsSuffix: "通",

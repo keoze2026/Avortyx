@@ -16,6 +16,7 @@ import {
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { matchesCallStatusFilter } from "@/lib/call-status";
 import type { Call } from "@/lib/types";
 import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -68,15 +69,21 @@ interface Bucket {
 
 /** Binary classification — collapsed from three categories to two so the
  *  chart and donut tell the same story:
- *    "converted" — call connected and qualified (paying conversion)
- *    "noAnswer"  — everything else (missed, rejected, failed, in-flight)
+ *    "converted" — completed OR still in-progress (connected)
+ *    "noAnswer"  — everything else (missed/no-answer, rejected, failed)
+ *
+ *  Reuses the same `matchesCallStatusFilter("connected")` the Call Summary
+ *  totals and click-filters use — this used to be its own local check
+ *  (`status === "completed" && payout > 0`), which routed every in-progress
+ *  call, and every completed call with no payout yet recorded, into the red
+ *  bucket. That's also why this chart's blue count could disagree with the
+ *  Connected total sitting right above it on the same page.
  *
  *  The legacy `notConverted` bucket is kept in the Bucket type with a
  *  permanent 0 so the chart's data shape doesn't break, but no calls are
  *  routed to it at runtime. */
 function classify(c: Call): "converted" | "noAnswer" {
-  if (c.status === "completed" && c.payout > 0) return "converted";
-  return "noAnswer";
+  return matchesCallStatusFilter(c, "connected") ? "converted" : "noAnswer";
 }
 
 /** Format an hour 0-23 as zero-padded 12-hour with lowercase am/pm —
