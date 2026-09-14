@@ -219,10 +219,15 @@ function callRecordToCall(w: CallRecordWire): Call {
     id: w.id,
     campaignId: w.campaignId ?? "",
     campaignName: w.campaignName ?? "—",
-    buyerId: w.buyerId ?? undefined,
-    buyerName: w.buyerName ?? undefined,
-    publisherId: w.publisherId ?? undefined,
-    publisherName: w.publisherName ?? undefined,
+    // `||`, not `??` — the backend sends `""` for "no publisher/buyer" on
+    // some rows rather than `null`, and `??` only replaces null/undefined.
+    // That let an empty string reach every `c.publisherName ?? "—"` fallback
+    // downstream, which also only catches nullish values — so the cell
+    // rendered as a blank instead of the intended "—".
+    buyerId: w.buyerId || undefined,
+    buyerName: w.buyerName || undefined,
+    publisherId: w.publisherId || undefined,
+    publisherName: w.publisherName || undefined,
     callerNumber: w.callerNumber,
     // The wire record can name this either way (`calledNumber`/`called_number`
     // is the contract's own term for "the dialed destination"; some CDR rows
