@@ -41,6 +41,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
+import { usePublishersStore } from "@/lib/store/publishers-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
@@ -210,13 +211,25 @@ function getTags(c: Call): string[] {
   return out;
 }
 
+/**
+ * A CDR row sometimes carries `publisherId` without `publisherName` (the
+ * backend's own join into its publishers table came back empty even though
+ * the FK is there) — resolve it against the publishers list already loaded
+ * for the account instead of showing "—" when we actually know who it is.
+ */
+function resolvePublisherName(c: Call, publisherNameById: Map<string, string>): string {
+  if (c.publisherName) return c.publisherName;
+  if (c.publisherId) return publisherNameById.get(c.publisherId) ?? "";
+  return "";
+}
+
 /** Single source of truth for export cell values. Numbers stay numeric. */
-function logCellValue(c: Call, key: ColumnKey): number | string {
+function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, string>): number | string {
   switch (key) {
     case "campaign":
       return c.campaignName;
     case "publisher":
-      return c.publisherName ?? "";
+      return resolvePublisherName(c, publisherNameById);
     case "caller":
       return formatCallerId(c.callerNumber);
     case "dialed":
@@ -262,6 +275,11 @@ interface CallLogTableProps {
 export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTableProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
+  const publishers = usePublishersStore((s) => s.publishers);
+  const publisherNameById = React.useMemo(
+    () => new Map(publishers.map((p) => [p.id, p.name])),
+    [publishers],
+  );
   const [query, setQuery] = React.useState("");
   const [columns, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   const [pageSize, setPageSize] = React.useState<number>(limit);
@@ -282,12 +300,12 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
     const sorted = [...calls].sort((a, b) => b.startedAt - a.startedAt);
     return q
       ? sorted.filter((c) =>
-          `${c.campaignName} ${c.publisherName ?? ""} ${c.buyerName ?? ""} ${c.callerNumber} ${c.destinationNumber}`
+          `${c.campaignName} ${resolvePublisherName(c, publisherNameById)} ${c.buyerName ?? ""} ${c.callerNumber} ${c.destinationNumber}`
             .toLowerCase()
             .includes(q),
         )
       : sorted;
-  }, [calls, query]);
+  }, [calls, query, publisherNameById]);
 
   const visible = React.useMemo(
     () => filtered.slice(page * pageSize, page * pageSize + pageSize),
@@ -369,7 +387,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
     };
     const dataCols: ExportColumn<Call>[] = COLUMNS.filter((c) => columns[c.id]).map((c) => ({
       label: t(COLUMN_LABEL_KEYS[c.id]),
-      value: (row) => logCellValue(row, c.id),
+      value: (row) => logCellValue(row, c.id, publisherNameById),
     }));
     downloadRows(format, [dateCol, ...dataCols], visible, dateStamped("vortyx-call-log"), "Call log");
     toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(visible.length)).replace("{format}", format.toUpperCase()));
@@ -488,7 +506,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                       )}
                       {columns.publisher && (
                         <TableCell className="whitespace-nowrap text-muted-foreground">
-                          {c.publisherName ?? "—"}
+                          {resolvePublisherName(c, publisherNameById) || "—"}
                         </TableCell>
                       )}
                       {columns.caller && (
