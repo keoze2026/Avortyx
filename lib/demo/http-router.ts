@@ -830,14 +830,13 @@ route("GET", "/api/analytics/calls", (req) => {
   // and `page` → `offset` on the wire, so we read those, not page_size.
   let all = getDemoCalls();
 
-  // Reports page click-to-filter (Connected / Qualified totals). The demo
-  // corpus already uses the app's normalized status vocabulary (completed,
-  // missed, ...), not the real backend's raw values — "ANSWERED" is
-  // translated the same way analyticsService.normalizeStatus() does inbound,
-  // so demo mode exercises the same filter the real backend would apply.
+  // Reports page click-to-filter (Connected / Qualified totals). The real
+  // backend's CDR `status` column only ever holds `no_answer` | `completed`
+  // | `failed`, and the frontend now queries with that same vocabulary
+  // (status=completed for "Connected"), so a plain lowercase match here
+  // exercises the same filter the real backend applies.
   if (req.query.status) {
-    const wanted = req.query.status.toUpperCase() === "ANSWERED" ? "completed" : req.query.status.toLowerCase();
-    all = all.filter((c) => c.status === wanted);
+    all = all.filter((c) => c.status === req.query.status!.toLowerCase());
   }
   if (req.query.is_qualified === "true") {
     all = all.filter((c) => c.is_qualified);

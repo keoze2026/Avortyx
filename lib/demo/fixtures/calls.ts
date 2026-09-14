@@ -55,6 +55,56 @@ const PUBLISHER_REFS = [
 ];
 
 /**
+ * Which publishers/buyers actually work each campaign. Both used to be
+ * picked fully independent of the campaign, which produced patternless
+ * pairings — the same publisher showing up on Medicare, Roofing, and Mass
+ * Tort calls back to back, or "Pinnacle Legal Partners" (a mass-tort buyer)
+ * receiving a roofing lead. Real lead-gen networks specialize by vertical;
+ * this is that specialization. A small wildcard chance (see
+ * `pickAffiliated`) keeps the mix from looking too rigid.
+ */
+const CAMPAIGN_PUBLISHERS: Record<string, string[]> = {
+  c_health_001: ["p_redline"],
+  c_health_002: ["p_redline", "p_northstar"],
+  c_auto_001: ["p_blueprint", "p_apex_dial"],
+  c_home_001: ["p_blueprint", "p_summit_traffic"],
+  c_home_002: ["p_blueprint", "p_summit_traffic"],
+  c_solar_001: ["p_apex_dial"],
+  c_legal_001: ["p_northstar"],
+  c_legal_002: ["p_northstar"],
+  c_fin_001: ["p_redline", "p_summit_traffic"],
+};
+
+const CAMPAIGN_BUYERS: Record<string, string[]> = {
+  c_health_001: ["b_apex"],
+  c_health_002: ["b_apex", "b_lighthouse_aca"],
+  c_auto_001: ["b_meridian_auto"],
+  c_home_001: ["b_hearthside"],
+  c_home_002: ["b_hearthside"],
+  c_solar_001: ["b_solar_united"],
+  c_legal_001: ["b_pinnacle_legal"],
+  c_legal_002: ["b_pinnacle_legal"],
+  c_fin_001: ["b_clearpath_debt"],
+};
+
+const WILDCARD_CHANCE = 0.1;
+
+function pickAffiliated<T extends { id: string }>(
+  rng: () => number,
+  refs: readonly T[],
+  affinityMap: Record<string, string[]>,
+  campaignId: string,
+): T {
+  const eligibleIds = affinityMap[campaignId];
+  if (eligibleIds?.length && !chance(rng, WILDCARD_CHANCE)) {
+    const id = pick(eligibleIds, rng);
+    const match = refs.find((r) => r.id === id);
+    if (match) return match;
+  }
+  return pick(refs, rng);
+}
+
+/**
  * Per-bucket hourly distribution.
  *
  * The chart shape rotates every 2h. Four parameters define each bucket's
@@ -253,8 +303,8 @@ const LIVE_STATUSES = ["ringing", "in-progress", "in-progress", "in-progress"];
  *  so both stay in sync if the shape of a live record ever changes. */
 function makeLiveCall(idSuffix: string, startedAt: number, rng: () => number): DemoCallWire {
   const camp = pickCampaign(rng);
-  const buyer = pick(BUYER_REFS, rng);
-  const publisher = pick(PUBLISHER_REFS, rng);
+  const buyer = pickAffiliated(rng, BUYER_REFS, CAMPAIGN_BUYERS, camp.id);
+  const publisher = pickAffiliated(rng, PUBLISHER_REFS, CAMPAIGN_PUBLISHERS, camp.id);
   return {
     id: idSuffix,
     caller_number: makePhone(rng),
@@ -290,8 +340,8 @@ function makeCall(
   convertRate: number,
 ): DemoCallWire {
   const camp = pickCampaign(rng);
-  const buyer = pick(BUYER_REFS, rng);
-  const publisher = pick(PUBLISHER_REFS, rng);
+  const buyer = pickAffiliated(rng, BUYER_REFS, CAMPAIGN_BUYERS, camp.id);
+  const publisher = pickAffiliated(rng, PUBLISHER_REFS, CAMPAIGN_PUBLISHERS, camp.id);
   const isConverted = chance(rng, convertRate);
   const status: string = isConverted ? "completed" : pick(LIVE_FAILURE_STATUSES, rng);
   // Qualified is a narrower bar than "connected" — not every completed call

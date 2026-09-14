@@ -3587,7 +3587,7 @@ export const ja: TranslationShape = {
           ringing: "呼出中",
           live: "通話中",
           completed: "完了",
-          missed: "不在",
+          missed: "応答なし",
           rejected: "拒否",
           failed: "失敗",
         },

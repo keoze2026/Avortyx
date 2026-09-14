@@ -3588,7 +3588,7 @@ export const ru: TranslationShape = {
           ringing: "Звонит",
           live: "В эфире",
           completed: "Завершён",
-          missed: "Пропущен",
+          missed: "Нет ответа",
           rejected: "Отклонён",
           failed: "Ошибка",
         },

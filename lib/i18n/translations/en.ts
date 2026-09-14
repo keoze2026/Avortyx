@@ -3632,7 +3632,10 @@ export const en = {
           ringing: "Ringing",
           live: "Live",
           completed: "Completed",
-          missed: "Missed",
+          // "Missed" is the CallStatus enum value here, but the backend's
+          // CDR status this always comes from is literally `no_answer` —
+          // label it that way so what's on screen matches the database.
+          missed: "No Answer",
           rejected: "Rejected",
           failed: "Failed",
         },

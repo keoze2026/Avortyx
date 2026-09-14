@@ -3588,7 +3588,7 @@ export const zh: TranslationShape = {
           ringing: "振铃中",
           live: "实时",
           completed: "已完成",
-          missed: "未接",
+          missed: "无人接听",
           rejected: "拒接",
           failed: "失败",
         },

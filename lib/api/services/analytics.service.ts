@@ -136,10 +136,12 @@ export interface CallLogQuery {
   dateFrom?: string;
   dateTo?: string;
   /**
-   * Raw backend status value (e.g. "ANSWERED") — NOT the normalized
-   * frontend `CallStatus`. `normalizeStatus()` below only translates
-   * *inbound* records; the backend's outbound filter vocabulary is a
-   * separate set of values the caller is responsible for getting right.
+   * Raw backend status value (e.g. "completed") — NOT the normalized
+   * frontend `CallStatus`. The backend's CDR `status` column only ever
+   * holds `no_answer` | `completed` | `failed`, and the outbound filter
+   * matches that same vocabulary — `normalizeStatus()` below just handles
+   * translating those (plus a few defensive synonyms) into the frontend's
+   * richer `CallStatus` enum for *inbound* records.
    */
   status?: string;
   /** Wire key: `is_qualified` (case-adapted automatically by http.ts). */
@@ -190,12 +192,26 @@ function normalizeStatus(raw: string | null | undefined): CallStatus {
       s === "missed" || s === "rejected" || s === "failed") return s;
   if (s === "queued") return "ringing";
   if (s === "connected") return "in-progress";
-  // "ANSWERED" is the raw status the backend expects on outbound Call Log
-  // queries (see CallLogQuery.status) — a call that was picked up reads as
-  // completed here, matching what "Connected" already means on this page.
+  // Defensive synonyms — not values this backend actually sends (its CDR
+  // `status` column is exactly `no_answer` | `completed` | `failed`, per
+  // the backend team), but harmless to keep mapped in case that ever
+  // changes or another backend integration uses these terms.
   if (s === "ended" || s === "answered") return "completed";
   if (s === "spam-blocked" || s === "blocked") return "rejected";
-  return "completed";
+  // Never-connected outcomes the backend sends outside the §3.13 enum
+  // (ringing/in-progress/completed/missed/rejected/failed) — these used to
+  // fall through to the "completed" default below, which is how a
+  // `no_answer` CDR ended up rendering as "Connected" in both the Call Log
+  // and the Call Summary totals.
+  if (s === "no-answer" || s === "unanswered" || s === "not-answered" || s === "busy") return "missed";
+  if (s === "canceled" || s === "cancelled") return "rejected";
+  // A genuinely unrecognized status used to default to "completed", which
+  // quietly counted calls of unknown outcome as successful connections.
+  // "failed" is the safer default — visibly wrong instead of confidently
+  // wrong — and it's logged so a new raw value gets a real mapping added
+  // above instead of silently miscategorizing calls again.
+  if (raw) console.warn(`[analytics] Unrecognized call status "${raw}" — defaulting to "failed". Add a mapping in normalizeStatus().`);
+  return "failed";
 }
 
 function callRecordToCall(w: CallRecordWire): Call {

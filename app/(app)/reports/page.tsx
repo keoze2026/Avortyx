@@ -111,7 +111,7 @@ export default function ReportsPage() {
   }, [filtered]);
 
   // Connected / Qualified query the backend directly (GET /api/analytics/calls
-  // with status=ANSWERED or is_qualified=true) rather than filtering the
+  // with status=completed or is_qualified=true) rather than filtering the
   // client cache — see the comment on `recentCalls` above. Not Connected has
   // no backend param in the contract yet, so it stays a client-side filter.
   const [remoteLogCalls, setRemoteLogCalls] = useState<Call[] | null>(null);

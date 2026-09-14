@@ -33,16 +33,20 @@ export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): b
 }
 
 /**
- * Backend query params for GET /api/analytics/calls, per the analytics API
- * contract — Connected sends `status=ANSWERED`, Qualified sends
- * `is_qualified=true` (case-adapted automatically from `isQualified`, see
- * lib/api/http.ts). "Not Connected" has no contracted param yet, so the
- * Reports page keeps filtering it client-side with matchesCallStatusFilter()
- * above instead of hitting the backend for it.
+ * Backend query params for GET /api/analytics/calls. Connected sends
+ * `status=completed` — the backend team confirmed the CDR `status` column
+ * only ever holds exactly `no_answer` | `completed` | `failed`, so that's
+ * also what the query filter has to match. This used to send
+ * `status=ANSWERED`, a value the database never contains, so the filter
+ * silently returned zero rows no matter how many calls actually connected.
+ * Qualified sends `is_qualified=true` (case-adapted automatically from
+ * `isQualified`, see lib/api/http.ts). "Not Connected" has no contracted
+ * param yet, so the Reports page keeps filtering it client-side with
+ * matchesCallStatusFilter() above instead of hitting the backend for it.
  */
 export function callStatusFilterToQuery(
   filter: Extract<CallStatusFilter, "connected" | "qualified">,
 ): { status?: string; isQualified?: boolean } {
-  if (filter === "connected") return { status: "ANSWERED" };
+  if (filter === "connected") return { status: "completed" };
   return { isQualified: true };
 }

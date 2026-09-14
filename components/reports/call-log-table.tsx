@@ -122,7 +122,8 @@ const STATUS_LABEL_FALLBACK: Record<CallStatus, string> = {
   ringing: "Ringing",
   "in-progress": "Live",
   completed: "Completed",
-  missed: "Missed",
+  // Matches statusLabel.missed in en.ts — this is always a `no_answer` CDR.
+  missed: "No Answer",
   rejected: "Rejected",
   failed: "Failed",
 };
