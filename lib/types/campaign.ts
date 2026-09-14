@@ -41,6 +41,15 @@ export interface Campaign {
   revenueToday: number;
   conversionRate: number;
 
+  /** Currently ringing / in-progress calls on this campaign. */
+  liveCalls: number;
+  /** Calls started in the current hour (org timezone). */
+  callsHour: number;
+  /** Calls started in the current calendar month. */
+  callsMonth: number;
+  /** Lifetime call count. */
+  callsGlobal: number;
+
   /* ─── Call audio + duplicate handling — round-tripped on the wire ─── */
   /** Whether the campaign auto-records every call. */
   recordingEnabled?: boolean;

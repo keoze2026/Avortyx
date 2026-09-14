@@ -131,6 +131,10 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
       callsToday: 0,
       revenueToday: 0,
       conversionRate: 0,
+      liveCalls: 0,
+      callsHour: 0,
+      callsMonth: 0,
+      callsGlobal: 0,
     });
     toast.success(t("trafficUI.campaigns.toast.created").replace("{name}", created.name), {
       description: t("trafficUI.campaigns.toast.createdDescription"),

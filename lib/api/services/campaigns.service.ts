@@ -49,6 +49,18 @@ interface CampaignListWire {
   createdAt: string;
   vertical?: string;
   payoutModel?: string;
+  /** Per BACKEND-CONTRACT.md §3.8 "Live counter fields" — read-only
+   *  aggregates the backend computes from the Call table. Optional here
+   *  since older/unmigrated rows may not carry them yet; the mapper below
+   *  falls back to 0 rather than showing `undefined`. `callsToday` was
+   *  already being sent (confirmed in the contract) — this interface just
+   *  never declared it, so `listWireToCampaign` hardcoded 0 instead of
+   *  reading the real value. */
+  callsToday?: number;
+  liveCalls?: number;
+  callsHour?: number;
+  callsMonth?: number;
+  callsGlobal?: number;
 }
 
 interface CampaignWire extends CampaignListWire {
@@ -211,9 +223,13 @@ function listWireToCampaign(w: CampaignListWire): Campaign {
     numbersCount: 0,
     buyersCount: 0,
     publishersCount: 0,
-    callsToday: 0,
+    callsToday: w.callsToday ?? 0,
     revenueToday: 0,
     conversionRate: 0,
+    liveCalls: w.liveCalls ?? 0,
+    callsHour: w.callsHour ?? 0,
+    callsMonth: w.callsMonth ?? 0,
+    callsGlobal: w.callsGlobal ?? 0,
     createdAt: Date.parse(w.createdAt) || Date.now(),
   };
 }

@@ -58,19 +58,19 @@ interface CampaignMetrics {
 }
 
 /**
- * Real metrics pulled from the Campaign record. The backend only ships
- * `callsToday` per campaign today; until it adds hourly / monthly / global
- * counters those columns render 0. The "live cap" column is the daily-cap
- * value the user configured (0 = unlimited).
+ * Real metrics pulled from the Campaign record — see BACKEND-CONTRACT.md
+ * §3.8 "Live counter fields" for where `liveCalls`/`callsHour`/`callsMonth`/
+ * `callsGlobal` come from. The "live cap" column is the daily-cap value the
+ * user configured (0 = unlimited), not a backend-computed count.
  */
 function makeMetrics(c: Campaign): CampaignMetrics {
   return {
-    liveCurrent: 0,
+    liveCurrent: c.liveCalls,
     liveCap: c.dailyCap,
-    hourly: 0,
+    hourly: c.callsHour,
     daily: c.callsToday,
-    monthly: 0,
-    global: 0,
+    monthly: c.callsMonth,
+    global: c.callsGlobal,
   };
 }
 
