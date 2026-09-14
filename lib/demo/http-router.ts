@@ -822,13 +822,28 @@ route("GET", "/api/spam/reports", () => ({ items: [], total: 0 }));
 route("GET", "/api/analytics/calls", (req) => {
   // Dashboards and report aggregates ask for big windows (limit ≥ 100) so
   // they can client-side bucket the data into charts. For those, return the
-  // entire corpus so the donut totals + hourly distribution look full. For
-  // the Call Log table's normal paging (limit ≤ 50), respect paging so the
-  // pagination UI stays coherent.
+  // entire (already date/status-filtered) matching set so the donut totals +
+  // hourly distribution look full. For the Call Log table's normal paging
+  // (limit ≤ 50), respect paging so the pagination UI stays coherent.
   //
   // Important: `analyticsService.calls()` translates `pageSize` → `limit`
   // and `page` → `offset` on the wire, so we read those, not page_size.
   let all = getDemoCalls();
+
+  // Reports page date range — previously unfiltered here (the frontend used
+  // to apply its own, browser-timezone client-side date check instead), so
+  // picking a historical range in demo mode silently showed every call ever
+  // generated. `date_from`/`date_to` are "YYYY-MM-DD" report-timezone day
+  // keys already resolved by the caller; comparing against the UTC slice of
+  // `created_at` is close enough for demo fixture data.
+  if (req.query.date_from) {
+    const from = req.query.date_from;
+    const to = req.query.date_to || from;
+    all = all.filter((c) => {
+      const day = c.created_at.slice(0, 10);
+      return day >= from && day <= to;
+    });
+  }
 
   // Reports page click-to-filter (Connected / Qualified totals). The real
   // backend's CDR `status` column only ever holds `no_answer` | `completed`

@@ -20,22 +20,36 @@ import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import type { CallLogPage, CallLogQuery } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { callStatusFilterToQuery, matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
+import { zonedDayKey } from "@/lib/format";
 import { useCallsStore } from "@/lib/store/calls-store";
+import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function endOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(23, 59, 59, 999);
-  return x;
+/**
+ * Pages through GET /api/analytics/calls until every row in range has been
+ * fetched, instead of trusting a single request's `items` — a fixed
+ * `pageSize` silently truncates any day whose call volume exceeds it, which
+ * is exactly how a real 146-call day was showing up as 113 on this page.
+ * Capped at 20 pages (10,000 rows) as a sanity backstop, not an expected
+ * ceiling for a single day/range.
+ */
+async function fetchAllCalls(
+  fetchPage: (query: CallLogQuery) => Promise<CallLogPage>,
+  query: Omit<CallLogQuery, "page" | "pageSize">,
+): Promise<Call[]> {
+  const PAGE_SIZE = 500;
+  const MAX_PAGES = 20;
+  const all: Call[] = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const res = await fetchPage({ ...query, page, pageSize: PAGE_SIZE });
+    all.push(...res.items);
+    if (all.length >= res.total || res.items.length < PAGE_SIZE) break;
+  }
+  return all;
 }
 
 /** Reuses the Call Summary's own column labels so the reset strip names the
@@ -63,17 +77,10 @@ export default function ReportsPage() {
   // swaps which chart occupies the main slot.
   const [mobileChart, setMobileChart] = useState<"hourly" | "donut">("hourly");
 
-  // Reads from the shared calls store (populated by the StoreHydrator on app
-  // mount). Filtering happens client-side for the cached slice. The one
-  // exception is the Connected/Qualified click-filters below, which query
-  // the backend directly via fetchPage() rather than filtering this cache —
-  // the cache only holds the most recent 200 calls, not the full history a
-  // status filter should search.
-  const recentCalls = useCallsStore((s) => s.recent);
   const fetchCallsPage = useCallsStore((s) => s.fetchPage);
   // Same precedence the topbar uses: the live socket count when it's
   // actually flowing, the dashboard KPI snapshot otherwise. Needed because
-  // the call log (`recentCalls`, and `filtered` below) is a completed-call
+  // the call log (`rangeCalls`, and `filtered` below) is a completed-call
   // record — it can never contain an in-progress call, so summing it for
   // "Live" always reads 0. See the comment on CallSummaryTable's `liveNow`
   // prop for the rest of this story.
@@ -81,19 +88,61 @@ export default function ReportsPage() {
   const socketLiveCount = useCallsStore((s) => s.liveCount);
   const liveNow = socketLiveCount > 0 ? socketLiveCount : (kpis?.liveCalls ?? 0);
 
-  const filtered = useMemo(() => {
-    const start = dateRange?.from ? startOfDay(dateRange.from).getTime() : -Infinity;
-    const end = dateRange?.from
-      ? endOfDay(dateRange.to ?? dateRange.from).getTime()
-      : Infinity;
+  // Every reporting surface on this page renders in this timezone (the Call
+  // Log's timestamps, the hourly chart's buckets) — the date range needs to
+  // resolve "today" in the same zone, or a call near midnight can fall on
+  // the wrong side of the boundary the backend applies for `dateFrom`/`dateTo`.
+  const timeZone = useUIStore((s) => s.reportTimezone);
+  const fromKey = dateRange?.from ? zonedDayKey(dateRange.from.getTime(), timeZone) : undefined;
+  const toKey = dateRange?.to
+    ? zonedDayKey(dateRange.to.getTime(), timeZone)
+    : fromKey;
 
+  // The page's base dataset — every call in the selected range, fetched
+  // directly from the backend. This used to read from the shared calls
+  // store's `recent` cache (the most recent 200 calls *account-wide*, not
+  // scoped to any date range) filtered client-side by a browser-local-time
+  // day boundary. On a day with more than 200 calls total recently, or for
+  // an operator whose browser timezone doesn't match the report timezone,
+  // that silently dropped or misdated real rows — which is exactly the "DB
+  // says 146, portal shows 113" gap this replaces.
+  const [rangeCalls, setRangeCalls] = useState<Call[]>([]);
+  const [rangeLoading, setRangeLoading] = useState(false);
+
+  useEffect(() => {
+    if (!fromKey) {
+      setRangeCalls([]);
+      return;
+    }
+    let cancelled = false;
+    setRangeLoading(true);
+    fetchAllCalls(fetchCallsPage, { dateFrom: fromKey, dateTo: toKey })
+      .then((items) => {
+        if (!cancelled) setRangeCalls(items);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        setRangeCalls([]);
+      })
+      .finally(() => {
+        if (!cancelled) setRangeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fromKey, toKey, fetchCallsPage]);
+
+  const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);
     const buyerSet = new Set(filters.buyerIds);
     const publisherSet = new Set(filters.publisherIds);
     const statusSet = new Set(filters.statuses);
 
-    return recentCalls.filter((c) => {
-      if (c.startedAt < start || c.startedAt > end) return false;
+    // Date scoping already happened server-side (dateFrom/dateTo above) — no
+    // client-side day-boundary re-check here, since that's what applied the
+    // wrong (browser-local) timezone in the first place.
+    return rangeCalls.filter((c) => {
       if (campaignSet.size > 0 && !campaignSet.has(c.campaignId)) return false;
       if (buyerSet.size > 0 && (!c.buyerId || !buyerSet.has(c.buyerId))) return false;
       if (publisherSet.size > 0 && (!c.publisherId || !publisherSet.has(c.publisherId))) {
@@ -102,7 +151,7 @@ export default function ReportsPage() {
       if (statusSet.size > 0 && !statusSet.has(c.status)) return false;
       return true;
     });
-  }, [dateRange, filters, recentCalls]);
+  }, [filters, rangeCalls]);
 
   const summary = useMemo(() => {
     const revenue = filtered.reduce((s, c) => s + c.revenue, 0);
@@ -111,9 +160,11 @@ export default function ReportsPage() {
   }, [filtered]);
 
   // Connected / Qualified query the backend directly (GET /api/analytics/calls
-  // with status=completed or is_qualified=true) rather than filtering the
-  // client cache — see the comment on `recentCalls` above. Not Connected has
-  // no backend param in the contract yet, so it stays a client-side filter.
+  // with status=completed or is_qualified=true), same as the base range fetch
+  // above but scoped further by status — a separate request rather than a
+  // client-side re-filter of `rangeCalls` because "Qualified" needs the
+  // backend's own `is_qualified` verdict. Not Connected has no backend param
+  // in the contract yet, so it stays a client-side filter of `filtered`.
   const [remoteLogCalls, setRemoteLogCalls] = useState<Call[] | null>(null);
   const [logLoading, setLogLoading] = useState(false);
 
@@ -123,14 +174,13 @@ export default function ReportsPage() {
       setLogLoading(false);
       return;
     }
+    if (!fromKey) {
+      setRemoteLogCalls([]);
+      return;
+    }
 
     let cancelled = false;
     setLogLoading(true);
-
-    const fromIso = dateRange?.from ? new Date(dateRange.from).toISOString().slice(0, 10) : undefined;
-    const toIso = dateRange?.to
-      ? new Date(dateRange.to).toISOString().slice(0, 10)
-      : fromIso;
 
     // NOTE: campaign/buyer/publisher and the toolbar's own status multi-select
     // aren't threaded through here — CallLogQuery only takes one id per field,
@@ -139,15 +189,14 @@ export default function ReportsPage() {
     // format the backend hasn't specified. Clicking a total currently searches
     // the full account within the date range, not "within the campaigns I've
     // also filtered to" — flagged here rather than silently narrowed wrong.
-    fetchCallsPage({
-      pageSize: 200,
-      dateFrom: fromIso,
-      dateTo: toIso,
+    fetchAllCalls(fetchCallsPage, {
+      dateFrom: fromKey,
+      dateTo: toKey,
       ...callStatusFilterToQuery(statusFilter),
     })
-      .then((result) => {
+      .then((items) => {
         if (cancelled) return;
-        setRemoteLogCalls(result.items);
+        setRemoteLogCalls(items);
       })
       .catch((e) => {
         if (cancelled) return;
@@ -161,7 +210,7 @@ export default function ReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter, dateRange, fetchCallsPage]);
+  }, [statusFilter, fromKey, toKey, fetchCallsPage]);
 
   // Narrows the Call Log to whichever Call Summary total was clicked. The
   // summary's own totals keep reading from `filtered` unfiltered by this —
@@ -181,12 +230,14 @@ export default function ReportsPage() {
   }, [filtered, statusFilter, remoteLogCalls]);
 
   // The PIN gate trips when the requested range starts before today's
-  // midnight. Today-only views always pass through.
+  // midnight *in the report timezone* — Today-only views always pass
+  // through. Comparing "YYYY-MM-DD" keys instead of raw timestamps sidesteps
+  // the browser-local-vs-report-timezone mismatch a plain Date comparison
+  // would reintroduce.
   const needsPin = useMemo(() => {
-    if (!dateRange?.from) return false;
-    const todayStart = startOfDay(new Date()).getTime();
-    return startOfDay(dateRange.from).getTime() < todayStart;
-  }, [dateRange]);
+    if (!fromKey) return false;
+    return fromKey < zonedDayKey(Date.now(), timeZone);
+  }, [fromKey, timeZone]);
 
   const cancelHistorical = () => {
     const today = new Date();
@@ -312,7 +363,12 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {visibility.log && <CallLogTable calls={logCalls} loading={logLoading} />}
+        {visibility.log && (
+          <CallLogTable
+            calls={logCalls}
+            loading={logLoading || (!statusFilter && rangeLoading)}
+          />
+        )}
       </ReportsPinGate>
     </>
   );
