@@ -127,6 +127,17 @@ function wireToDestination(w: DestinationWire): Destination {
     businessHoursEnabled: !!w.businessHoursEnabled,
     businessHourSlots: Array.isArray(w.businessHourSlots) ? w.businessHourSlots : [],
     timezone: w.timezone ?? undefined,
+    // These were already declared on `DestinationWire` above but never
+    // actually read here — the Destinations table's LIVE/HOURLY/DAILY/
+    // MONTHLY/GLOBAL columns were instead deriving their own counts
+    // client-side from the calls cache, which structurally can't contain
+    // ringing/in-progress rows (that cache is a completed-call log). Wiring
+    // these through is what actually fixes the LIVE column.
+    liveCalls: w.liveCalls ?? 0,
+    hourlyCalls: w.hourlyCalls ?? 0,
+    dailyCalls: w.dailyCalls ?? 0,
+    monthlyCalls: w.monthlyCalls ?? 0,
+    globalCalls: w.globalCalls ?? 0,
   };
 }
 

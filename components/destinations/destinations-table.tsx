@@ -19,9 +19,8 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
-import { useCallsStore } from "@/lib/store/calls-store";
 import { formatNumber, toE164 } from "@/lib/format";
-import type { Buyer, Call, Destination } from "@/lib/types";
+import type { Buyer, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type CapField = "concurrencyCap" | "dailyCap" | "monthlyCap";
@@ -49,51 +48,28 @@ interface Row {
 }
 
 /**
- * Counts calls per destination TFN at five different windows:
- *   live    — currently ringing or in-progress (any time)
- *   hourly  — calls started in the current hour
- *   daily   — calls started today (since 00:00 local)
- *   monthly — calls started this month (since the 1st)
- *   global  — all calls ever recorded for this TFN
+ * Live/hourly/daily/monthly/global usage counters, straight off each
+ * Destination record (backend-computed — see BACKEND-CONTRACT.md §3.9).
+ *
+ * This used to derive "live" by counting `ringing`/`in-progress` rows in
+ * the shared calls cache filtered by TFN — but that cache is backed by
+ * `/api/analytics/calls`, a completed-call log that structurally cannot
+ * contain a ringing or in-progress row (the backend's CDR `status` column
+ * only ever holds `no_answer` | `completed` | `failed`). So LIVE always
+ * read 0, for every destination, regardless of real traffic.
  */
-function buildRows(destinations: Destination[], recentCalls: Call[], buyers: Buyer[]): Row[] {
-  const now = new Date();
-  const startOfHour = new Date(now);
-  startOfHour.setMinutes(0, 0, 0);
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const startOfDayMs = startOfDay.getTime();
-  const startOfHourMs = startOfHour.getTime();
-
-  const live = new Map<string, number>();
-  const hourly = new Map<string, number>();
-  const daily = new Map<string, number>();
-  const monthly = new Map<string, number>();
-  const global = new Map<string, number>();
-
-  for (const c of recentCalls) {
-    const tfn = c.destinationNumber;
-    global.set(tfn, (global.get(tfn) ?? 0) + 1);
-    if (c.startedAt >= startOfMonth) monthly.set(tfn, (monthly.get(tfn) ?? 0) + 1);
-    if (c.startedAt >= startOfDayMs) daily.set(tfn, (daily.get(tfn) ?? 0) + 1);
-    if (c.startedAt >= startOfHourMs) hourly.set(tfn, (hourly.get(tfn) ?? 0) + 1);
-    if (c.status === "ringing" || c.status === "in-progress") {
-      live.set(tfn, (live.get(tfn) ?? 0) + 1);
-    }
-  }
-
+function buildRows(destinations: Destination[], buyers: Buyer[]): Row[] {
   const buyerById = new Map<string, Buyer>();
   for (const b of buyers) buyerById.set(b.id, b);
 
   return destinations.map<Row>((destination) => ({
     destination,
     buyer: buyerById.get(destination.buyerId),
-    live: live.get(destination.tfn) ?? 0,
-    hourly: hourly.get(destination.tfn) ?? 0,
-    daily: daily.get(destination.tfn) ?? 0,
-    monthly: monthly.get(destination.tfn) ?? 0,
-    global: global.get(destination.tfn) ?? 0,
+    live: destination.liveCalls,
+    hourly: destination.hourlyCalls,
+    daily: destination.dailyCalls,
+    monthly: destination.monthlyCalls,
+    global: destination.globalCalls,
   }));
 }
 
@@ -115,11 +91,10 @@ export function DestinationsTable({
 }: DestinationsTableProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const recentCalls = useCallsStore((s) => s.recent);
   const buyers = useBuyersStore((s) => s.buyers);
   const rows = useMemo(
-    () => buildRows(destinations, recentCalls, buyers),
-    [destinations, recentCalls, buyers],
+    () => buildRows(destinations, buyers),
+    [destinations, buyers],
   );
 
   const selectable = !!onSelectionChange;

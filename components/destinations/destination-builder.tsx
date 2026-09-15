@@ -126,6 +126,11 @@ export function DestinationBuilder({
       dailyCap: form.dailyCap,
       monthlyCap: form.monthlyCap,
       enabled: form.enabled,
+      liveCalls: 0,
+      hourlyCalls: 0,
+      dailyCalls: 0,
+      monthlyCalls: 0,
+      globalCalls: 0,
     };
 
     try {

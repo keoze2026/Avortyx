@@ -62,9 +62,15 @@ function buildRows(
   // Pre-compute per-destination (keyed by TFN) call aggregates from the
   // shared calls cache. Pass in from the component so the table reactively
   // updates when fresh calls land.
+  //
+  // `cc` (concurrent/live calls) is NOT derived from this cache — it used to
+  // count `ringing`/`in-progress` rows here, but the cache is backed by
+  // `/api/analytics/calls`, a completed-call log that structurally can't
+  // contain one (the backend's CDR `status` column only ever holds
+  // `no_answer` | `completed` | `failed`). It reads `destination.liveCalls`
+  // instead, straight off the Destination record.
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
-  const ccByTfn = new Map<string, number>();
   for (const c of recentCalls) {
     if (c.startedAt >= startMs) {
       callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
@@ -72,9 +78,6 @@ function buildRows(
         c.destinationNumber,
         (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
       );
-    }
-    if (c.status === "ringing" || c.status === "in-progress") {
-      ccByTfn.set(c.destinationNumber, (ccByTfn.get(c.destinationNumber) ?? 0) + 1);
     }
   }
 
@@ -97,7 +100,7 @@ function buildRows(
       return {
         destination,
         buyer: buyerById.get(destination.buyerId),
-        cc: ccByTfn.get(destination.tfn) ?? 0,
+        cc: destination.liveCalls,
         callsToday,
         revenueToday: revenueByTfn.get(destination.tfn) ?? 0,
         capPct: cap > 0 ? Math.min(100, (callsToday / cap) * 100) : 0,

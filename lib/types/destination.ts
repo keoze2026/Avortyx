@@ -63,4 +63,16 @@ export interface Destination {
   businessHourSlots?: BusinessHourSlot[];
   /** Per-destination timezone override (IANA, e.g. "America/New_York"). */
   timezone?: string;
+
+  /* ─── Read-only usage counters, per BACKEND-CONTRACT.md §3.9 ─────────── */
+  /** Currently ringing / in-progress calls on this destination. */
+  liveCalls: number;
+  /** Calls started in the current hour. */
+  hourlyCalls: number;
+  /** Calls started today. */
+  dailyCalls: number;
+  /** Calls started this calendar month. */
+  monthlyCalls: number;
+  /** Lifetime call count. */
+  globalCalls: number;
 }
