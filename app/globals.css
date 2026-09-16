@@ -1670,95 +1670,167 @@
 
 
 /* =========================================================
-   Avortyx marketing design system
-   Light-first. Restrained type, hairline rules, one accent.
-   Scoped to .marketing-shell.
+   Landing-page palette (the purchased "anchor" design)
+
+   Two ramps, defined once at the root so both the marketing shell and
+   the auth surface can resolve against them:
+     baltic-sea-*  — the near-black / violet-grey neutrals
+     keppel-*      — the teal-green accent
+
+   Every landing-page component references these through
+   `var(--color-…)`, and every chat-widget / auth colour below maps
+   onto them too. That single fact is what makes the header's colour
+   toggle a pure variable swap: `html.site-blue` redefines only the
+   eleven keppel stops to a blue ramp of matching lightness/chroma and
+   the whole site — sections, terminals, chat panel, login — follows,
+   with no component knowing the difference.
    ========================================================= */
-.marketing-shell {
-  /* ── Surfaces ── */
-  --m-bg:            #FFFFFF;
-  --m-bg-alt:        #F6F8FA;
-  --m-surface:       #FFFFFF;
-  --m-surface-alt:   #FAFBFC;
-  --m-bg-dark:       #0A0F1A;
-  --m-bg-dark-2:     #101725;
-  --m-bg-dark-3:     #162032;
+:root {
+  --color-baltic-sea-50:  oklch(97.48% 0.0 301.43);
+  --color-baltic-sea-100: oklch(94.80% 0.01 297.72);
+  --color-baltic-sea-200: oklch(88.34% 0.01 296.33);
+  --color-baltic-sea-300: oklch(47.69% 0.02 291.24);
+  --color-baltic-sea-400: oklch(44.91% 0.04 292.35);
+  --color-baltic-sea-500: oklch(40.99% 0.04 292.76);
+  --color-baltic-sea-600: oklch(34.20% 0.04 293.15);
+  --color-baltic-sea-700: oklch(30.16% 0.04 295.15);
+  --color-baltic-sea-800: oklch(26.32% 0.03 293.63);
+  --color-baltic-sea-900: oklch(17.16% 0.02 294.89);
+  --color-baltic-sea-950: oklch(16% 0.0152 296.75);
 
-  /* ── Text on light ── */
-  --m-fg:            #0A0F16;
-  --m-fg-2:          #56606E;
-  --m-fg-3:          #878F9C;
+  --color-keppel-50:  oklch(98.08% 0.01 181.42);
+  --color-keppel-100: oklch(93.79% 0.03 177.17);
+  --color-keppel-200: oklch(87.75% 0.06 177.32);
+  --color-keppel-300: oklch(79.68% 0.09 178.36);
+  --color-keppel-400: oklch(70.64% 0.1 179.4);
+  --color-keppel-500: oklch(67.55% 0.11 179.75);
+  --color-keppel-600: oklch(52.92% 0.08 180.79);
+  --color-keppel-700: oklch(45.58% 0.07 182.55);
+  --color-keppel-800: oklch(39.55% 0.05 182.73);
+  --color-keppel-900: oklch(35.39% 0.04 183.99);
+  --color-keppel-950: oklch(25.12% 0.03 188.72);
 
-  /* ── Text on dark ── */
-  --m-fg-d:          #F2F5F3;
-  --m-fg-d2:         #A2AFC4;
-  --m-fg-d3:         #6C7A90;
+  /* The landing page's canvas black and card shadow. */
+  --site-canvas: hsl(255, 11.11%, 7.06%);
+  --bento-shadow: inset 0 -20px 80px -20px #ffffff0f;
+}
 
-  /* ── Hairlines ── */
-  --m-line:          rgba(10,15,22,0.08);
-  --m-line-2:        rgba(10,15,22,0.14);
-  --m-line-d:        rgba(255,255,255,0.09);
-  --m-line-d2:       rgba(255,255,255,0.16);
+/* ── Blue variant ────────────────────────────────────────────────────
+   Avortyx's original brand colour, selected from the header toggle.
+   Same lightness and chroma steps as keppel, hue moved to 262 so the
+   contrast relationships the design was built on (keppel-950 text on a
+   keppel-400 button, keppel-400 on baltic-950, …) hold exactly. The 400
+   stop lands on the #7CA5FF the brand has always used on dark. */
+html.site-blue {
+  --color-keppel-50:  oklch(98% 0.01 262);
+  --color-keppel-100: oklch(94% 0.03 262);
+  --color-keppel-200: oklch(88% 0.07 262);
+  --color-keppel-300: oklch(80% 0.11 262);
+  --color-keppel-400: oklch(72% 0.14 262);
+  --color-keppel-500: oklch(66% 0.17 262);
+  --color-keppel-600: oklch(54% 0.16 262);
+  --color-keppel-700: oklch(46% 0.14 262);
+  --color-keppel-800: oklch(40% 0.11 262);
+  --color-keppel-900: oklch(34% 0.08 262);
+  --color-keppel-950: oklch(25% 0.05 262);
+}
 
-  /* ── Accent — blue (shipped default) ── */
-  --m-accent:        #1D4ED8;
-  --m-accent-hi:     #2563EB;
-  --m-accent-lo:     #1739A8;
-  --m-accent-d:      #7CA5FF;
-  --m-accent-tint:   rgba(29,78,216,0.07);
-  --m-accent-line:   rgba(29,78,216,0.22);
-  --m-accent-tint-d: rgba(124,165,255,0.10);
-  --m-accent-line-d: rgba(124,165,255,0.24);
+/* =========================================================
+   Site surface — the landing page's tokens, applied to a subtree.
 
-  /* ── Type ── */
-  --m-sans:          var(--font-inter, ui-sans-serif, system-ui, sans-serif);
-  --m-display:       var(--font-inter-tight, var(--font-inter), ui-sans-serif, system-ui, sans-serif);
-  --m-mono:          var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, monospace);
+   Maps the app's shadcn token names (`--background`, `--accent`, …)
+   onto the palette above so any shared component rendered inside —
+   Button, Input, Card, the auth forms, the brand vortex — takes the
+   landing page's colours. Used by `.marketing-shell` (landing page)
+   and `.site-surface` (login / sign-up), so the two never drift.
+   ========================================================= */
+.marketing-shell,
+.site-surface {
+  --background: var(--site-canvas);
+  --foreground: var(--color-baltic-sea-100);
+  --card: var(--color-baltic-sea-900);
+  --card-foreground: var(--color-baltic-sea-100);
+  --popover: var(--color-baltic-sea-900);
+  --popover-foreground: var(--color-baltic-sea-100);
+  --primary: var(--color-baltic-sea-100);
+  --primary-foreground: var(--color-baltic-sea-950);
+  --secondary: var(--color-baltic-sea-800);
+  --secondary-foreground: var(--color-baltic-sea-200);
+  --muted: var(--color-baltic-sea-800);
+  --muted-foreground: var(--color-baltic-sea-400);
+  --accent: var(--color-keppel-500);
+  --accent-foreground: var(--color-keppel-950);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: var(--color-baltic-sea-700);
+  --input: var(--color-baltic-sea-800);
+  --ring: var(--color-keppel-500);
+  --chart-1: var(--color-keppel-400);
+  --chart-2: var(--color-keppel-500);
+  --radius: 0.75rem;
 
-  /* ── Radius ── */
-  --m-r-xs:          4px;
-  --m-r-sm:          6px;
-  --m-r:             10px;
-  --m-r-lg:          14px;
+  /* Brand mark + auth vortex read these. */
+  --vortyx-bright: var(--color-keppel-300);
+  --vortyx-teal:   var(--color-keppel-500);
+  --vortyx-deep:   var(--color-keppel-700);
+  --vortyx-ultra:  var(--color-keppel-100);
+  --vortyx-glow:   color-mix(in oklch, var(--color-keppel-400) 18%, transparent);
+  --vortyx-particle: color-mix(in oklch, var(--color-keppel-400) 45%, transparent);
+  --accent-gradient: linear-gradient(135deg, var(--color-keppel-700) 0%, var(--color-keppel-500) 55%, var(--color-keppel-300) 100%);
 
-  /* ── Elevation — barely there ── */
-  --m-shadow:        0 1px 2px rgba(10,15,22,0.04), 0 8px 24px -14px rgba(10,15,22,0.14);
-  --m-shadow-lg:     0 2px 4px rgba(10,15,22,0.04), 0 24px 48px -24px rgba(10,15,22,0.20);
-  --m-shadow-d:      0 2px 8px rgba(0,0,0,0.24), 0 24px 56px -28px rgba(0,0,0,0.5);
-
-  font-family: var(--m-sans);
-  background: var(--m-bg);
-  color: var(--m-fg);
+  color-scheme: dark;
+  background: var(--background);
+  color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* ── Green variant ──────────────────────────────────────────────────
-   Opt-in. Driven by the same `.theme-green-accent` class the app shell
-   uses, so one selection moves marketing, auth and the product together.
-   Blue is the base above, which also means a JS failure lands on the
-   shipped default rather than on the alternate theme. */
-html.theme-green-accent .marketing-shell {
-  --m-accent:        #12805C;
-  --m-accent-hi:     #16A46F;
-  --m-accent-lo:     #0C6647;
-  --m-accent-d:      #3DD68C;
-  --m-accent-tint:   rgba(18,128,92,0.07);
-  --m-accent-line:   rgba(18,128,92,0.22);
-  --m-accent-tint-d: rgba(61,214,140,0.10);
-  --m-accent-line-d: rgba(61,214,140,0.24);
-  --m-bg-dark:       #0C1310;
-  --m-bg-dark-2:     #121A16;
-  --m-bg-dark-3:     #18221D;
-  --m-bg-alt:        #F7F8F7;
-  --m-surface-alt:   #FAFBFA;
-  --m-fg:            #0C0F0D;
-  --m-fg-2:          #5A6560;
-  --m-fg-3:          #8A938E;
-  --m-fg-d2:         #A3B0A8;
-  --m-fg-d3:         #6B7A72;
-  --m-line:          rgba(12,15,13,0.08);
-  --m-line-2:        rgba(12,15,13,0.14);
+/* Landing page: the design's own typeface, and the `--m-*` tokens the
+   chat widget is built from, resolved against the same palette. */
+.marketing-shell {
+  --font-sans: var(--font-geist, ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-geist-mono, ui-monospace, SFMono-Regular, monospace);
+  font-family: var(--font-sans);
+
+  /* ── Chat-widget tokens (see components/marketing/chat-widget.tsx) ── */
+  --m-bg-dark:       var(--color-baltic-sea-950);
+  --m-bg-dark-2:     var(--color-baltic-sea-900);
+  --m-bg-dark-3:     var(--color-baltic-sea-800);
+  --m-panel-dark:    var(--color-baltic-sea-950);
+  --m-fg-d:          var(--color-baltic-sea-100);
+  --m-fg-d2:         var(--color-baltic-sea-200);
+  --m-fg-d3:         var(--color-baltic-sea-400);
+  --m-line-d:        var(--color-baltic-sea-800);
+  --m-line-d2:       var(--color-baltic-sea-700);
+  --m-accent:        var(--color-keppel-500);
+  --m-accent-hi:     var(--color-keppel-400);
+  --m-accent-lo:     var(--color-keppel-600);
+  --m-accent-d:      var(--color-keppel-400);
+  /* Text placed on an accent-filled surface (FAB, send button). */
+  --m-accent-fg:     var(--color-keppel-950);
+  --m-accent-tint-d: color-mix(in oklch, var(--color-keppel-400) 10%, transparent);
+  --m-accent-line-d: color-mix(in oklch, var(--color-keppel-400) 28%, transparent);
+  --m-accent-glow-d: color-mix(in oklch, var(--color-keppel-400) 26%, transparent);
+  --m-grad-accent:   linear-gradient(135deg, var(--color-keppel-400) 0%, var(--color-keppel-500) 55%, var(--color-keppel-600) 100%);
+  --m-grad-bright:   linear-gradient(135deg, var(--color-keppel-300) 0%, var(--color-keppel-500) 100%);
+  --m-panel-wash:    radial-gradient(130% 90% at 50% 0%, var(--m-accent-tint-d) 0%, transparent 62%);
+  --m-glow-soft:     0 0 0 1px var(--m-accent-line-d), 0 6px 24px var(--m-accent-glow-d);
+  --m-glow-lift:     0 0 0 1px var(--m-accent-line-d), 0 10px 34px var(--m-accent-glow-d), 0 20px 56px rgba(0, 0, 0, 0.34);
+  --m-sans:          var(--font-sans);
+  --m-mono:          var(--font-mono);
+  --m-r-xs:          4px;
+  --m-r-sm:          6px;
+  --m-r:             10px;
+  --m-r-lg:          14px;
+  /* Light-surface tokens: the page has no light surfaces any more, but the
+     chat widget's escalation buttons use the `.m-btn-*` classes below, whose
+     hover states still read these. Pointed at the dark neutrals. */
+  --m-fg:            var(--color-baltic-sea-100);
+  --m-fg-2:          var(--color-baltic-sea-200);
+  --m-fg-3:          var(--color-baltic-sea-400);
+  --m-bg-alt:        var(--color-baltic-sea-800);
+  --m-line:          var(--color-baltic-sea-800);
+  --m-line-2:        var(--color-baltic-sea-700);
 }
 
 /* ── Typographic primitives ── */
@@ -1845,7 +1917,7 @@ html.theme-green-accent .marketing-shell {
   white-space: nowrap;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
-.m-btn-primary { background: var(--m-accent); color: #fff; }
+.m-btn-primary { background: var(--m-accent); color: var(--m-accent-fg, #fff); }
 .m-btn-primary:hover { background: var(--m-accent-lo); }
 .m-btn-ghost { background: transparent; color: var(--m-fg); border-color: var(--m-line-2); }
 .m-btn-ghost:hover { background: var(--m-bg-alt); border-color: var(--m-fg-3); }
@@ -1984,32 +2056,9 @@ html.theme-green-accent .marketing-shell {
   --vortyx-particle:      rgba(61,214,140,0.45);
 }
 
-/* =========================================================
-   Accent gradients + glows
-   Scoped for overlay surfaces (chat widget, auth) that carry
-   more visual weight than the flat marketing sections.
-   All values resolve through --m-accent-*, so they follow the
-   green/blue switcher automatically.
-   ========================================================= */
-.marketing-shell,
-:root {
-  --m-grad-accent: linear-gradient(135deg, var(--m-accent-hi, #2563EB) 0%, var(--m-accent, #1D4ED8) 55%, var(--m-accent-lo, #1739A8) 100%);
-  --m-grad-bright: linear-gradient(135deg, var(--m-accent-d, #7CA5FF) 0%, var(--m-accent-hi, #2563EB) 100%);
-  --m-accent-glow: rgba(29, 78, 216, 0.30);
-  --m-accent-glow-d: rgba(124, 165, 255, 0.26);
-  --m-glow-soft: 0 0 0 1px var(--m-accent-line-d, rgba(124,165,255,0.24)), 0 6px 24px var(--m-accent-glow-d);
-  --m-glow-lift: 0 0 0 1px var(--m-accent-line-d, rgba(124,165,255,0.24)), 0 10px 34px var(--m-accent-glow-d), 0 20px 56px rgba(0, 0, 0, 0.34);
-  /* Accent-tinted dark, for overlay panels that sit on the light canvas. */
-  --m-panel-dark: #0A1020;
-  --m-panel-wash: radial-gradient(130% 90% at 50% 0%, var(--m-accent-tint-d, rgba(124,165,255,0.10)) 0%, transparent 62%);
-}
-
-html.theme-green-accent .marketing-shell,
-html.theme-green-accent {
-  --m-accent-glow: rgba(18, 128, 92, 0.30);
-  --m-accent-glow-d: rgba(61, 214, 140, 0.26);
-  --m-panel-dark: #0B1512;
-}
+/* Chat-widget gradient + glow tokens live on `.marketing-shell` above,
+   resolved against the landing-page palette so they follow the green/blue
+   toggle. (They used to be defined here with hardcoded blue fallbacks.) */
 
 /* =========================================================
    Motion system
@@ -2122,4 +2171,84 @@ html.theme-green-accent {
   overflow: hidden;
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* =========================================================
+   Landing-page motion (from the purchased design)
+   ========================================================= */
+/* Floating dots in the final CTA */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-10px) translateX(5px);
+  }
+  50% {
+    transform: translateY(-5px) translateX(-5px);
+  }
+  75% {
+    transform: translateY(-15px) translateX(3px);
+  }
+}
+
+/* Infinite marquee rows in the testimonials section */
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scroll-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Hero routing-engine visual (components/marketing/routing-engine.tsx) */
+/* Dashed edges "flow" toward their target while a call is in flight. */
+@keyframes rv-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+/* Sweeping scanner arc around the intent core while it evaluates. */
+@keyframes rv-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* How-it-works rail: a spark travelling to the next step. */
+@keyframes hiw-travel {
+  from {
+    left: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  to {
+    left: 100%;
+    opacity: 0;
+  }
+}
+/* Soft breathing halo on the winning buyer + connected core. */
+@keyframes rv-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }

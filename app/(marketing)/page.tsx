@@ -1,23 +1,27 @@
-import { Hero } from "@/components/marketing/hero";
-import { LogoRail } from "@/components/marketing/logo-rail";
-import { FeatureRouting } from "@/components/marketing/feature-routing";
-import { FeatureCompliance } from "@/components/marketing/feature-compliance";
-import { Capabilities } from "@/components/marketing/capabilities";
-import { Showcase } from "@/components/marketing/showcase";
-import { Developers } from "@/components/marketing/developers";
-import { Cta } from "@/components/marketing/cta";
+import { HeroSection } from "@/components/marketing/hero-section";
+import { LogoCloud } from "@/components/marketing/logo-cloud";
+import { BentoGrid } from "@/components/marketing/bento-grid";
+import { HowItWorks } from "@/components/marketing/how-it-works";
+import { TerminalDemo } from "@/components/marketing/terminal-demo";
+import { Pricing } from "@/components/marketing/pricing";
+import { Testimonials } from "@/components/marketing/testimonials";
+import { Comparison } from "@/components/marketing/comparison";
+import { FAQ } from "@/components/marketing/faq";
+import { FinalCTA } from "@/components/marketing/final-cta";
 
 export default function HomePage() {
   return (
     <>
-      <Hero />
-      <LogoRail />
-      <FeatureRouting />
-      <FeatureCompliance />
-      <Capabilities />
-      <Showcase />
-      <Developers />
-      <Cta />
+      <HeroSection />
+      <LogoCloud />
+      <BentoGrid />
+      <HowItWorks />
+      <TerminalDemo />
+      <Testimonials />
+      <Comparison />
+      <Pricing />
+      <FAQ />
+      <FinalCTA />
     </>
   );
 }

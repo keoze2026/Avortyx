@@ -224,12 +224,14 @@ function resolveCssColor(value: string): RGB | null {
   );
 }
 
-/** Read one custom property off <html>, falling back on any failure. */
-function readVarColor(name: string, fallback: RGB): RGB {
+/** Read one custom property as it resolves on `el`, falling back on any
+ *  failure. Custom properties inherit, so reading off the canvas itself
+ *  (rather than <html>) picks up any scoped override on an ancestor —
+ *  the auth pages' `.site-surface` remaps `--vortyx-*` and `--background`
+ *  to the landing page's palette. */
+function readVarColor(el: Element, name: string, fallback: RGB): RGB {
   try {
-    const raw = getComputedStyle(document.documentElement)
-      .getPropertyValue(name)
-      .trim();
+    const raw = getComputedStyle(el).getPropertyValue(name).trim();
     return resolveCssColor(raw) ?? fallback;
   } catch {
     return fallback;
@@ -237,13 +239,14 @@ function readVarColor(name: string, fallback: RGB): RGB {
 }
 
 /** Snapshot the live theme into a plain object the paint passes can read. */
-function readPalette(isDark: boolean): Palette {
+function readPalette(el: Element, isDark: boolean): Palette {
   return {
-    deep: readVarColor("--vortyx-deep", FALLBACK_DEEP),
-    mid: readVarColor("--vortyx-teal", FALLBACK_MID),
-    bright: readVarColor("--vortyx-bright", FALLBACK_BRIGHT),
-    ultra: readVarColor("--vortyx-ultra", FALLBACK_ULTRA),
+    deep: readVarColor(el, "--vortyx-deep", FALLBACK_DEEP),
+    mid: readVarColor(el, "--vortyx-teal", FALLBACK_MID),
+    bright: readVarColor(el, "--vortyx-bright", FALLBACK_BRIGHT),
+    ultra: readVarColor(el, "--vortyx-ultra", FALLBACK_ULTRA),
     base: readVarColor(
+      el,
       "--background",
       isDark ? FALLBACK_BASE_DARK : FALLBACK_BASE_LIGHT,
     ),
@@ -392,11 +395,14 @@ export function BrandVortex({ centerX = 0.5 }: BrandVortexProps = {}) {
     };
     let baseStops: [string, string, string] = computeBaseStops(palette, false);
 
-    /** Re-read mode + palette from <html>. Cheap enough to run on every
-     *  class mutation, and never called from inside the RAF loop. */
+    /** Re-read mode + palette as they resolve on the canvas. `dark` may
+     *  be on <html> (app theme) or pinned on a wrapper such as the auth
+     *  layout's `.site-surface`, so check ancestors rather than <html>
+     *  alone. Cheap enough to run on every class mutation, and never
+     *  called from inside the RAF loop. */
     const refreshTheme = () => {
-      isDark = document.documentElement.classList.contains("dark");
-      palette = readPalette(isDark);
+      isDark = canvas.closest(".dark") !== null;
+      palette = readPalette(canvas, isDark);
       baseStops = computeBaseStops(palette, isDark);
     };
     refreshTheme();

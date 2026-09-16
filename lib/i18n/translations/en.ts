@@ -4058,7 +4058,7 @@ export const en = {
       pricing: "Pricing",
       enterprise: "Enterprise",
       signin: "Sign in",
-      getStarted: "Get started free",
+      getStarted: "Get started",
     },
     hero: {
       trustChipCount: "500+ networks",
@@ -4067,7 +4067,7 @@ export const en = {
       headlineGradient: "into revenue.",
       subhead:
         "The most intelligent call-tracking platform — real-time routing, live monitoring, and AI-driven optimization for the modern pay-per-call network.",
-      ctaPrimary: "Start free",
+      ctaPrimary: "Start routing",
       ctaSecondary: "Watch 90-sec demo",
       stage: {
         briefings: { label: "Daily briefings", value: "12 new" },
@@ -4238,9 +4238,9 @@ export const en = {
     cta: {
       heading: "Ready to route calls smarter?",
       description:
-        "Join leading pay-per-call networks scaling traffic, decisioning, and revenue on Avortyx. Free for your first 2,000 calls — no credit card.",
+        "Join leading pay-per-call networks scaling traffic, decisioning, and revenue on Avortyx. Only pay for calls that reach a buyer.",
       bookDemo: "Book a demo",
-      startFree: "Start free",
+      startFree: "Start routing",
     },
     footer: {
       tagline:

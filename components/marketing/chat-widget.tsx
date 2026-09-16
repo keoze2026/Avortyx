@@ -16,12 +16,11 @@
  *   • Quick-reply chips sit above the composer for one-click intents
  *     (Pricing / Book a demo / Docs).
  *
- * Visual: a dark, gradient-accented floating panel. This is a deliberate
- * exception to the flat, restrained marketing sections — the widget is an
- * overlay on a light page, so it carries the gradient + glow the page
- * sections intentionally don't. Colours come from the `--m-*` tokens defined
- * on `.marketing-shell`, which wraps this widget; every accent-derived value
- * resolves through a var so the green/blue switcher still applies.
+ * Visual: a dark, gradient-accented floating panel. Colours come from the
+ * `--m-*` tokens defined on `.marketing-shell`, which wraps this widget and
+ * resolves them against the landing page's own palette (baltic-sea neutrals,
+ * keppel accent); every accent-derived value goes through a var, so the
+ * header's green/blue toggle re-skins the widget with no changes here.
  */
 
 import * as React from "react";
@@ -384,7 +383,7 @@ export function ChatWidget() {
           outline: 2px solid var(--m-accent-line-d);
           outline-offset: 2px;
         }
-        /* FAB — reads as a lit object sitting on the light page. */
+        /* FAB — reads as a lit object sitting on the dark page. */
         .cw-fab {
           background: var(--m-grad-bright);
           box-shadow: var(--m-glow-lift);
@@ -434,7 +433,7 @@ export function ChatWidget() {
         }
         .cw-send {
           background: var(--m-grad-bright);
-          color: #fff;
+          color: var(--m-accent-fg, #fff);
           box-shadow: 0 2px 10px var(--m-accent-glow-d);
           transition: box-shadow 0.16s ease, background 0.16s ease;
         }
@@ -513,7 +512,7 @@ export function ChatWidget() {
           borderRadius: 999,
           border: "none",
           padding: 0,
-          color: "#fff",
+          color: "var(--m-accent-fg, #fff)",
           cursor: "pointer",
         }}
       >
@@ -1132,7 +1131,7 @@ function MessageBubble({
               ? {
                   borderBottomRightRadius: "var(--m-r-xs)",
                   background: "var(--m-grad-accent)",
-                  color: "#fff",
+                  color: "var(--m-accent-fg, #fff)",
                   boxShadow: "0 2px 12px var(--m-accent-glow-d)",
                 }
               : {

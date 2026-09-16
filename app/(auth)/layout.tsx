@@ -5,7 +5,7 @@ import { Newspaper, Sparkles, TrendingUp } from "lucide-react";
 
 import { BrandVortex } from "@/components/auth/brand-vortex";
 import { Wordmark } from "@/components/brand/wordmark";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ThemeColorSwitcher } from "@/components/marketing/theme-color-switcher";
 import { formatBtcSpot, useBtcSpot } from "@/hooks/use-btc-spot";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -23,8 +23,18 @@ import { cn } from "@/lib/utils";
  * leave out a "Live calls" chip because a hardcoded call-count value reads as
  * inaccurate on a marketing surface.
  *
- * Theme-aware: the vortex and every Tailwind theme variable used here swap
- * cleanly between light and dark mode.
+ * Colour: the whole surface sits inside `.site-surface` (see globals.css),
+ * which maps the app's theme tokens — and the vortex's `--vortyx-*` ramp —
+ * onto the landing page's palette, so login and sign-up read as the same
+ * product as the site they came from. The landing page has no light mode,
+ * so the old light/dark toggle is replaced by its green/blue accent toggle;
+ * `dark` is pinned on the wrapper so every `dark:` utility resolves the
+ * same way regardless of the visitor's app-side theme preference.
+ *
+ * `isolate` matters: `.site-surface` paints its own background, and the
+ * vortex canvas sits at `-z-10`. Without a stacking context on this
+ * wrapper the canvas would drop beneath that background and vanish; with
+ * it, the canvas paints between the surface and the content.
  */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -38,13 +48,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   const marketsDelta = btc.ready ? btc.change24h : null;
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
+    <main className="dark site-surface relative isolate min-h-screen overflow-hidden">
       {/* Vortex covers the full viewport behind the grid. */}
       <BrandVortex centerX={0.38} />
 
-      {/* Theme toggle pinned to the top-right of the viewport. */}
+      {/* Accent toggle pinned to the top-right of the viewport — the same
+          green/blue switch as the landing-page header. */}
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggle />
+        <ThemeColorSwitcher />
       </div>
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[3fr_2fr]">
