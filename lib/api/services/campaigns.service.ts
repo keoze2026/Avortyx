@@ -49,18 +49,27 @@ interface CampaignListWire {
   createdAt: string;
   vertical?: string;
   payoutModel?: string;
-  /** Per BACKEND-CONTRACT.md §3.8 "Live counter fields" — read-only
-   *  aggregates the backend computes from the Call table. Optional here
-   *  since older/unmigrated rows may not carry them yet; the mapper below
-   *  falls back to 0 rather than showing `undefined`. `callsToday` was
-   *  already being sent (confirmed in the contract) — this interface just
-   *  never declared it, so `listWireToCampaign` hardcoded 0 instead of
-   *  reading the real value. */
-  callsToday?: number;
+  /** Read-only aggregates the backend computes from the Call table (per
+   *  BACKEND-CONTRACT.md §3.8 "Live counter fields"). The backend ships
+   *  them as `hourly_calls` / `daily_calls` / `monthly_calls` /
+   *  `global_calls` (the same family destinations use); the `calls_*`
+   *  spellings the contract originally requested are still read as
+   *  fallbacks so neither naming ever zeroes a column. Money arrives as a
+   *  decimal string or number. */
   liveCalls?: number;
+  hourlyCalls?: number;
   callsHour?: number;
+  dailyCalls?: number;
+  callsToday?: number;
+  monthlyCalls?: number;
   callsMonth?: number;
+  globalCalls?: number;
   callsGlobal?: number;
+  /** Revenue (what buyers paid) on today's calls. */
+  revenue?: number | string;
+  dailyRevenue?: number | string;
+  revenueToday?: number | string;
+  conversionRate?: number;
   /** Present on the list payload too when the backend serialises the full
    *  campaign; read here so the table's "live / cap" cell doesn't show
    *  "N / 0" for every row until the detail page is opened. */
@@ -163,6 +172,12 @@ function toNum(s: string | number | undefined, fallback = 0): number {
   return fallback;
 }
 
+/** Rates arrive as a 0..1 fraction or a 0..100 percentage; normalise to 0..1. */
+function toRate(v: number | undefined): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return 0;
+  return v > 1 ? v / 100 : v;
+}
+
 function defaultSchedule(): Campaign["schedule"] {
   return { days: [0, 1, 2, 3, 4, 5, 6], startHour: 0, endHour: 24, timezone: "auto" };
 }
@@ -227,13 +242,14 @@ function listWireToCampaign(w: CampaignListWire): Campaign {
     numbersCount: 0,
     buyersCount: 0,
     publishersCount: 0,
-    callsToday: w.callsToday ?? 0,
-    revenueToday: 0,
-    conversionRate: 0,
+    callsToday: w.dailyCalls ?? w.callsToday ?? 0,
+    // Was hardcoded 0 — the backend has been sending the figure all along.
+    revenueToday: toNum(w.dailyRevenue ?? w.revenueToday ?? w.revenue),
+    conversionRate: toRate(w.conversionRate),
     liveCalls: w.liveCalls ?? 0,
-    callsHour: w.callsHour ?? 0,
-    callsMonth: w.callsMonth ?? 0,
-    callsGlobal: w.callsGlobal ?? 0,
+    callsHour: w.hourlyCalls ?? w.callsHour ?? 0,
+    callsMonth: w.monthlyCalls ?? w.callsMonth ?? 0,
+    callsGlobal: w.globalCalls ?? w.callsGlobal ?? 0,
     createdAt: Date.parse(w.createdAt) || Date.now(),
   };
 }

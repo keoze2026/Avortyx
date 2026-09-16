@@ -31,16 +31,27 @@ interface BuyerListWire {
   contactName?: string;
   contactEmail?: string;
   payoutModel?: string;
-  /** Read-only usage counters. Not part of the confirmed list schema, but
-   *  read here when present so a backend that includes them on the list
-   *  (the same pattern as campaigns/destinations) lights the table up
-   *  without a second round-trip. `GET /api/buyers/{id}/stats` is the
-   *  authoritative source and is merged in on the detail page. */
+  /** Read-only usage counters. Read here when present so a backend that
+   *  includes them on the list (the same pattern as campaigns/destinations)
+   *  lights the table up without a second round-trip.
+   *  `GET /api/buyers/{id}/stats` is the authoritative source and is merged
+   *  in on the detail page. Same wire family as the stats payload. */
+  liveCalls?: number;
+  hourlyCalls?: number;
+  dailyCalls?: number;
+  monthlyCalls?: number;
+  globalCalls?: number;
+  hourlySpend?: number | string;
+  dailySpend?: number | string;
+  monthlySpend?: number | string;
+  globalSpend?: number | string;
+  /** Legacy spellings — still read as fallbacks. */
   callsToday?: number;
   callsMonth?: number;
   spendToday?: number | string;
   spendMonth?: number | string;
   lifetimeSpend?: number | string;
+  totalSpend?: number | string;
   acceptRate?: number;
   conversionRate?: number;
 }
@@ -63,12 +74,32 @@ interface BuyerWire extends BuyerListWire {
   campaigns?: Array<{ campaignId: string; campaignName?: string }>;
 }
 
+/**
+ * `GET /api/buyers/{id}/stats` (and the same fields inlined on list rows).
+ *
+ * Wire family (camelCased by the http layer):
+ *   live_calls · hourly_calls · daily_calls · monthly_calls · global_calls
+ *   hourly_spend · daily_spend · monthly_spend · global_spend
+ * The older `calls_today` / `spend_today` / `lifetime_spend` spellings are
+ * accepted as fallbacks. Previously only the legacy names were declared,
+ * so every real payload fell through to the 0 default.
+ */
 interface BuyerStatsWire {
+  liveCalls?: number;
+  hourlyCalls?: number;
+  dailyCalls?: number;
+  monthlyCalls?: number;
+  globalCalls?: number;
+  hourlySpend?: number | string;
+  dailySpend?: number | string;
+  monthlySpend?: number | string;
+  globalSpend?: number | string;
   callsToday?: number;
   callsMonth?: number;
   spendToday?: number | string;
   spendMonth?: number | string;
   lifetimeSpend?: number | string;
+  totalSpend?: number | string;
   acceptRate?: number;
   conversionRate?: number;
 }
@@ -76,7 +107,17 @@ interface BuyerStatsWire {
 /** The slice of `Buyer` that `GET /api/buyers/{id}/stats` refreshes. */
 export type BuyerStats = Pick<
   Buyer,
-  "callsToday" | "callsMonth" | "spendToday" | "spendMonth" | "lifetimeSpend" | "acceptRate" | "conversionRate"
+  | "liveCalls"
+  | "hourlyCalls"
+  | "callsToday"
+  | "callsMonth"
+  | "globalCalls"
+  | "hourlySpend"
+  | "spendToday"
+  | "spendMonth"
+  | "lifetimeSpend"
+  | "acceptRate"
+  | "conversionRate"
 >;
 
 /** Rates arrive as either a 0..1 fraction or a 0..100 percentage depending
@@ -86,13 +127,23 @@ function toRate(v: number | undefined): number {
   return v > 1 ? v / 100 : v;
 }
 
+/** First defined value among the accepted spellings of one aggregate. */
+function firstOf(...values: Array<number | string | null | undefined>): number {
+  for (const v of values) if (v !== undefined && v !== null) return toNum(v);
+  return 0;
+}
+
 function statsWireToStats(w: BuyerStatsWire): BuyerStats {
   return {
-    callsToday: w.callsToday ?? 0,
-    callsMonth: w.callsMonth ?? 0,
-    spendToday: toNum(w.spendToday),
-    spendMonth: toNum(w.spendMonth),
-    lifetimeSpend: toNum(w.lifetimeSpend),
+    liveCalls: w.liveCalls ?? 0,
+    hourlyCalls: w.hourlyCalls ?? 0,
+    callsToday: firstOf(w.dailyCalls, w.callsToday),
+    callsMonth: firstOf(w.monthlyCalls, w.callsMonth),
+    globalCalls: w.globalCalls ?? 0,
+    hourlySpend: toNum(w.hourlySpend),
+    spendToday: firstOf(w.dailySpend, w.spendToday),
+    spendMonth: firstOf(w.monthlySpend, w.spendMonth),
+    lifetimeSpend: firstOf(w.globalSpend, w.lifetimeSpend, w.totalSpend),
     acceptRate: toRate(w.acceptRate),
     conversionRate: toRate(w.conversionRate),
   };

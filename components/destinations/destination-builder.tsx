@@ -131,6 +131,14 @@ export function DestinationBuilder({
       dailyCalls: 0,
       monthlyCalls: 0,
       globalCalls: 0,
+      hourlyRevenue: 0,
+      dailyRevenue: 0,
+      monthlyRevenue: 0,
+      globalRevenue: 0,
+      hourlySpend: 0,
+      dailySpend: 0,
+      monthlySpend: 0,
+      globalSpend: 0,
     };
 
     try {

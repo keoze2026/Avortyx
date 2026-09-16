@@ -431,16 +431,25 @@ export function generateLiveCalls(count = liveCallsCount()): DemoCallWire[] {
  * count includes live calls — the whole point of the field is that a
  * completed-call log can't. */
 
-export function destinationCounters(): Map<string, { calls_today: number; live_calls: number }> {
-  const map = new Map<string, { calls_today: number; live_calls: number }>();
-  const bump = (tfn: string, live: boolean) => {
-    const row = map.get(tfn) ?? { calls_today: 0, live_calls: 0 };
-    row.calls_today += 1;
+export interface DestinationCounters {
+  daily_calls: number;
+  live_calls: number;
+  daily_revenue: number;
+  daily_spend: number;
+}
+
+export function destinationCounters(): Map<string, DestinationCounters> {
+  const map = new Map<string, DestinationCounters>();
+  const bump = (c: DemoCallWire, live: boolean) => {
+    const row = map.get(c.destination_number) ?? { daily_calls: 0, live_calls: 0, daily_revenue: 0, daily_spend: 0 };
+    row.daily_calls += 1;
     if (live) row.live_calls += 1;
-    map.set(tfn, row);
+    row.daily_revenue += Number(c.revenue || 0);
+    row.daily_spend += Number(c.publisher_payout || 0);
+    map.set(c.destination_number, row);
   };
-  for (const c of todaysCalls()) bump(c.destination_number, false);
-  for (const c of generateLiveCalls()) bump(c.destination_number, true);
+  for (const c of todaysCalls()) bump(c, false);
+  for (const c of generateLiveCalls()) bump(c, true);
   return map;
 }
 

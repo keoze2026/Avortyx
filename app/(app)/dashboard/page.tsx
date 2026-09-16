@@ -179,7 +179,7 @@ export default function DashboardPage() {
                           {d.tfn}
                         </span>
                         <span className="text-[10px] text-muted-foreground">
-                          {buyer?.name ?? "—"} · {calls} {t("dashboard.callsToday")}
+                          {buyer?.name ?? d.buyerName ?? "—"} · {calls} {t("dashboard.callsToday")}
                         </span>
                       </span>
                     </SelectItem>
@@ -278,10 +278,13 @@ function buildDestinationExportRows(
       (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
     );
   }
-  // Today: the API's own `calls_today` counter, which the on-screen table
-  // also shows (see DestinationSummaryTable).
+  // Today: the destination record's own backend-computed aggregates, which
+  // the on-screen table also shows (see DestinationSummaryTable).
   if (useLiveCounters) {
-    for (const d of destinations) callsByTfn.set(d.tfn, d.dailyCalls);
+    for (const d of destinations) {
+      callsByTfn.set(d.tfn, d.dailyCalls);
+      revenueByTfn.set(d.tfn, d.dailyRevenue);
+    }
   }
 
   // Buyers are pulled non-hook from the store since this runs at click time.
@@ -296,7 +299,7 @@ function buildDestinationExportRows(
       return {
         destination: d.name,
         tfn: d.tfn,
-        buyer: buyerById.get(d.buyerId)?.name ?? "—",
+        buyer: buyerById.get(d.buyerId)?.name ?? d.buyerName ?? "—",
         calls,
         revenue: revenueByTfn.get(d.tfn) ?? 0,
         // Live/concurrent comes off the destination record — a call log

@@ -36,7 +36,11 @@ export interface FilterGroup {
 
 export interface Destination {
   id: string;
+  /** Owning buyer's id; empty when the backend only sent the buyer's name. */
   buyerId: string;
+  /** Read-only echo of the buyer's name from the API — the fallback label
+   *  when `buyerId` can't be matched against the buyers store. */
+  buyerName?: string;
   /** The toll-free number that calls are actually dialed to. */
   tfn: string;
   /** Friendly label, e.g. "Tier-1 ACA Inbound". */
@@ -75,4 +79,22 @@ export interface Destination {
   monthlyCalls: number;
   /** Lifetime call count. */
   globalCalls: number;
+
+  /* ─── Read-only money aggregates (backend-computed from the Call table) ── */
+  /** Revenue (what buyers paid) on calls to this destination, this hour. */
+  hourlyRevenue: number;
+  /** Revenue today. */
+  dailyRevenue: number;
+  /** Revenue this calendar month. */
+  monthlyRevenue: number;
+  /** Lifetime revenue. */
+  globalRevenue: number;
+  /** Publisher payout (spend) on calls to this destination, this hour. */
+  hourlySpend: number;
+  /** Payout today. */
+  dailySpend: number;
+  /** Payout this calendar month. */
+  monthlySpend: number;
+  /** Lifetime payout. */
+  globalSpend: number;
 }

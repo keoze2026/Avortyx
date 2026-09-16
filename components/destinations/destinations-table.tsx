@@ -249,6 +249,8 @@ export function DestinationsTable({
                         >
                           {buyer.name}
                         </Link>
+                      ) : destination.buyerName ? (
+                        <span className="text-sm">{destination.buyerName}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

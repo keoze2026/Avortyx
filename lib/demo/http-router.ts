@@ -545,13 +545,20 @@ route("POST", "/api/numbers/purchase", (req) => {
 
 /* ─── Destinations ──────────────────────────────────────────────────── */
 
-/** Every destination row carries the backend's live counters
- *  (`calls_today`, `live_calls`), derived here from the demo call corpus. */
+/** Every destination row carries the backend's read-only aggregates
+ *  (`live_calls`, `daily_calls`, `daily_revenue`, `daily_spend`), derived
+ *  here from the demo call corpus. */
 function withDestinationCounters<T extends { tfn?: unknown }>(rows: T[]): T[] {
   const counters = destinationCounters();
   return rows.map((d) => {
     const c = counters.get(String(d.tfn ?? ""));
-    return { ...d, calls_today: c?.calls_today ?? 0, live_calls: c?.live_calls ?? 0 };
+    return {
+      ...d,
+      live_calls: c?.live_calls ?? 0,
+      daily_calls: c?.daily_calls ?? 0,
+      daily_revenue: (c?.daily_revenue ?? 0).toFixed(2),
+      daily_spend: (c?.daily_spend ?? 0).toFixed(2),
+    };
   });
 }
 

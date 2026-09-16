@@ -44,12 +44,32 @@ export interface DestinationListQuery {
 
 /* ─── Wire shapes ─────────────────────────────────────────────────────── */
 
+/**
+ * A destination row as the backend serialises it. Two spellings are in
+ * circulation and both are read:
+ *
+ *   contract §3.9            aggregate row (backend dev, Sep 2026)
+ *   ───────────────          ─────────────────────────────────────
+ *   tfn                      destination
+ *   name                     (absent → the number is the label)
+ *   buyer_id / buyer_name    buyer  (name only)
+ *   daily_cap                max_calls_daily
+ *   enabled                  status ("active" | …)
+ *   daily_calls              calls_today
+ *   hourly_/daily_/monthly_/global_revenue, hourly_/daily_/global_spend
+ */
 interface DestinationWire {
-  id: string;
-  buyerId: string;
+  id: string | number;
+  buyerId?: string | number | null;
   buyerName?: string;
-  tfn: string;
-  name: string;
+  /** Aggregate-row spelling of `buyer_name`. */
+  buyer?: string;
+  tfn?: string;
+  /** Aggregate-row spelling of `tfn`. */
+  destination?: string;
+  name?: string;
+  /** Aggregate-row spelling of `enabled` — "active" means enabled. */
+  status?: string;
   /**
    * Canonical wire field is `routing_type` (camelCased to `routingType` by
    * the http layer). Backend enum: `external` | `sip`.
@@ -60,22 +80,51 @@ interface DestinationWire {
    */
   routingType?: string;
   forwardType?: string;
-  concurrencyCap: number;
+  concurrencyCap?: number;
+  maxConcurrency?: number;
   hourlyCap?: number;
-  dailyCap: number;
-  monthlyCap: number;
+  maxCallsHourly?: number;
+  dailyCap?: number;
+  maxCallsDaily?: number;
+  monthlyCap?: number;
+  maxCallsMonthly?: number;
   globalCap?: number;
-  enabled: boolean;
+  maxCallsGlobal?: number;
+  enabled?: boolean;
   ringDurationSec?: number;
   timezone?: string | null;
+  /* ── Read-only aggregates computed from the Call table. Every counter is
+   *    accepted under both the `<period>_calls` spelling (contract §3.9) and
+   *    the `calls_<period>` spelling some responses use, so a rename on the
+   *    backend never silently zeroes a column again. Money fields arrive as
+   *    decimal strings or numbers. ── */
   liveCalls?: number;
   hourlyCalls?: number;
-  /** Canonical per-row counter: `calls_today` on the wire. */
-  callsToday?: number;
-  /** Older spelling of the same counter — read as a fallback. */
+  callsHour?: number;
   dailyCalls?: number;
+  callsToday?: number;
   monthlyCalls?: number;
+  callsMonth?: number;
   globalCalls?: number;
+  callsGlobal?: number;
+  hourlyRevenue?: number | string;
+  revenueHour?: number | string;
+  dailyRevenue?: number | string;
+  revenueToday?: number | string;
+  revenue?: number | string;
+  monthlyRevenue?: number | string;
+  revenueMonth?: number | string;
+  globalRevenue?: number | string;
+  revenueGlobal?: number | string;
+  lifetimeRevenue?: number | string;
+  hourlySpend?: number | string;
+  dailySpend?: number | string;
+  spendToday?: number | string;
+  spend?: number | string;
+  monthlySpend?: number | string;
+  spendMonth?: number | string;
+  globalSpend?: number | string;
+  lifetimeSpend?: number | string;
   filterEnabled?: boolean;
   filterGroups?: FilterGroup[];
   businessHoursEnabled?: boolean;
@@ -111,19 +160,40 @@ function forwardTypeToWire(t: DestinationForwardType | undefined): "external" | 
   return undefined; // unknown / empty → omit so backend default kicks in
 }
 
+/** Decimal-string-or-number → number; anything unparseable → 0. */
+function toNum(v: number | string | null | undefined): number {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+/** First defined value among the accepted spellings of one aggregate. */
+function firstOf(...values: Array<number | string | null | undefined>): number {
+  for (const v of values) if (v !== undefined && v !== null) return toNum(v);
+  return 0;
+}
+
 function wireToDestination(w: DestinationWire): Destination {
+  const tfn = w.tfn ?? w.destination ?? "";
   return {
-    id: w.id,
-    buyerId: w.buyerId,
-    tfn: w.tfn,
-    name: w.name,
+    id: String(w.id),
+    buyerId: w.buyerId != null ? String(w.buyerId) : "",
+    buyerName: w.buyerName ?? w.buyer ?? undefined,
+    tfn,
+    // The aggregate row has no separate label — the number is the name.
+    name: w.name ?? tfn,
     // Prefer the canonical `routing_type` field; fall back to legacy
     // `forward_type` if the backend ever echoes it instead.
     forwardType: normalizeForwardType(w.routingType ?? w.forwardType),
-    concurrencyCap: w.concurrencyCap ?? 0,
-    dailyCap: w.dailyCap ?? 0,
-    monthlyCap: w.monthlyCap ?? 0,
-    enabled: !!w.enabled,
+    concurrencyCap: w.concurrencyCap ?? w.maxConcurrency ?? 0,
+    dailyCap: w.dailyCap ?? w.maxCallsDaily ?? 0,
+    monthlyCap: w.monthlyCap ?? w.maxCallsMonthly ?? 0,
+    // `enabled` on the contract shape; `status: "active"` on the aggregate
+    // row. A row with neither is treated as enabled — it was returned.
+    enabled: w.enabled ?? (w.status ? w.status.toLowerCase() === "active" : true),
     ringDurationSec: w.ringDurationSec ?? 25,
     filterEnabled: !!w.filterEnabled,
     filterGroups: Array.isArray(w.filterGroups) ? w.filterGroups : [],
@@ -137,14 +207,23 @@ function wireToDestination(w: DestinationWire): Destination {
     // ringing/in-progress rows (that cache is a completed-call log). Wiring
     // these through is what actually fixes the LIVE column.
     liveCalls: w.liveCalls ?? 0,
-    hourlyCalls: w.hourlyCalls ?? 0,
-    // The dashboard's Destinations table shows this for "today" directly
-    // (no client-side tally of the calls cache, which holds completed
-    // calls only). `calls_today` is the field the backend documents;
-    // `daily_calls` is tolerated from older responses.
-    dailyCalls: w.callsToday ?? w.dailyCalls ?? 0,
-    monthlyCalls: w.monthlyCalls ?? 0,
-    globalCalls: w.globalCalls ?? 0,
+    hourlyCalls: firstOf(w.hourlyCalls, w.callsHour),
+    // The dashboard's Destinations table and the destination detail stats
+    // show these for "today" directly — no client-side tally of the calls
+    // cache, which holds completed calls only.
+    dailyCalls: firstOf(w.dailyCalls, w.callsToday),
+    monthlyCalls: firstOf(w.monthlyCalls, w.callsMonth),
+    globalCalls: firstOf(w.globalCalls, w.callsGlobal),
+    // Money aggregates. These were never read before, which is why every
+    // "Revenue today" figure derived from a destination sat at $0.
+    hourlyRevenue: firstOf(w.hourlyRevenue, w.revenueHour),
+    dailyRevenue: firstOf(w.dailyRevenue, w.revenueToday, w.revenue),
+    monthlyRevenue: firstOf(w.monthlyRevenue, w.revenueMonth),
+    globalRevenue: firstOf(w.globalRevenue, w.revenueGlobal, w.lifetimeRevenue),
+    hourlySpend: toNum(w.hourlySpend),
+    dailySpend: firstOf(w.dailySpend, w.spendToday, w.spend),
+    monthlySpend: firstOf(w.monthlySpend, w.spendMonth),
+    globalSpend: firstOf(w.globalSpend, w.lifetimeSpend),
   };
 }
 

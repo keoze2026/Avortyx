@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { Activity, DollarSign, Gauge, PhoneCall } from "lucide-react";
 
 import { useTranslation } from "@/hooks/use-translation";
-import { useCallsStore } from "@/lib/store/calls-store";
 import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
 import type { Destination } from "@/lib/types";
 
@@ -14,26 +13,17 @@ interface DestinationStatsRowProps {
 
 export function DestinationStatsRow({ destination }: DestinationStatsRowProps) {
   const { t } = useTranslation();
-  const recentCalls = useCallsStore((s) => s.recent);
   const stats = useMemo(() => {
-    // Revenue is still summed from the calls cache (it's the only place the
-    // per-call revenue lives). Call count and the live/concurrent figure come
-    // off the Destination record itself (`dailyCalls` / `liveCalls`,
-    // backend-computed) — the cache is a completed-call log, so counting
-    // `ringing`/`in-progress` rows in it could only ever produce 0.
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const startMs = start.getTime();
-    let revenue = 0;
-    for (const c of recentCalls) {
-      if (c.destinationNumber !== destination.tfn) continue;
-      if (c.startedAt >= startMs) revenue += c.revenue;
-    }
+    // Every tile reads straight off the Destination record — the backend
+    // computes `dailyCalls` / `dailyRevenue` / `liveCalls` from the Call
+    // table. Revenue used to be summed from the shared calls cache (the
+    // most recent N completed calls, account-wide, no date sent), which
+    // rarely held today's calls for this TFN and so showed $0.
     const cc = destination.liveCalls;
     const ccPct =
       destination.concurrencyCap > 0 ? (cc / destination.concurrencyCap) * 100 : 0;
-    return { calls: destination.dailyCalls, revenue, cc, ccPct };
-  }, [destination, recentCalls]);
+    return { calls: destination.dailyCalls, revenue: destination.dailyRevenue, cc, ccPct };
+  }, [destination]);
 
   const tiles = [
     {

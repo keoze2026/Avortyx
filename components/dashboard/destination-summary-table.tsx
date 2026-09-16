@@ -67,30 +67,30 @@ function buildRows(
   buyers: Buyer[],
   useLiveCounters: boolean,
 ): Row[] {
-  // Revenue is summed per destination (keyed by TFN) from the range's calls
-  // the page fetched from the backend for exactly the selected dates — the
-  // destination record carries no revenue figure. This used to read the
-  // shared calls cache (the most recent N calls account-wide, no date sent
-  // to the API) and then filter to *today's* local midnight — so any
-  // historical date showed 0 calls / $0 for every row, because those calls
-  // were never in the cache and the filter would have dropped them anyway.
+  // Two sources, chosen by the selected range:
   //
-  // Call counts are different. For today they come off the Destination
-  // record itself (`dailyCalls` ← the API's `calls_today`), because a call
-  // log only ever holds completed rows and can't reflect calls in flight;
-  // for any historical range the log is the only source, so they're
-  // tallied from it. `cc` (concurrent/live calls) likewise always reads
-  // `destination.liveCalls`.
+  //   • Today → the Destination record's own backend-computed aggregates
+  //     (`dailyCalls` / `dailyRevenue`, from the destinations API). A call
+  //     log only ever holds completed rows, so these are the only figures
+  //     that reflect calls still in flight.
+  //   • Any other range → tallied per TFN from the range's calls the page
+  //     fetched from the backend for exactly the selected dates (the API has
+  //     no per-destination counters for past dates).
+  //
+  // This used to read the shared calls cache (the most recent N calls
+  // account-wide, no date sent to the API) filtered to local midnight — so
+  // any historical date showed 0 calls / $0 for every row. `cc` (concurrent
+  // / live calls) always reads `destination.liveCalls`.
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
-  for (const c of calls) {
-    if (!useLiveCounters) {
+  if (!useLiveCounters) {
+    for (const c of calls) {
       callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
+      revenueByTfn.set(
+        c.destinationNumber,
+        (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
+      );
     }
-    revenueByTfn.set(
-      c.destinationNumber,
-      (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
-    );
   }
 
   const buyerById = new Map<string, Buyer>();
@@ -101,22 +101,27 @@ function buildRows(
     // Only active destinations attached to an active buyer surface here.
     // A paused destination (`enabled === false`) or one whose buyer is paused
     // / capped / pending is hidden so the operator sees live inventory only.
+    // A row whose buyer we can't resolve by id (the API sent only the
+    // buyer's name) is kept — there's nothing to say it's paused.
     .filter((d) => {
       if (!d.enabled) return false;
       const buyer = buyerById.get(d.buyerId);
-      return buyer?.status === "active";
+      return buyer ? buyer.status === "active" : true;
     })
     .map<Row>((destination) => {
       const callsToday = useLiveCounters
         ? destination.dailyCalls
         : (callsByTfn.get(destination.tfn) ?? 0);
+      const revenueToday = useLiveCounters
+        ? destination.dailyRevenue
+        : (revenueByTfn.get(destination.tfn) ?? 0);
       const cap = destination.dailyCap;
       return {
         destination,
         buyer: buyerById.get(destination.buyerId),
         cc: destination.liveCalls,
         callsToday,
-        revenueToday: revenueByTfn.get(destination.tfn) ?? 0,
+        revenueToday,
         capPct: cap > 0 ? Math.min(100, (callsToday / cap) * 100) : 0,
       };
     })
@@ -223,6 +228,8 @@ export function DestinationSummaryTable({
                         >
                           {buyer.name}
                         </Link>
+                      ) : destination.buyerName ? (
+                        <span className="text-xs">{destination.buyerName}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
