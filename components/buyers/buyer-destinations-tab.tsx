@@ -33,27 +33,22 @@ export function BuyerDestinationsTab({ buyer }: BuyerDestinationsTabProps) {
   const [builderOpen, setBuilderOpen] = useState(false);
   const recentCalls = useCallsStore((s) => s.recent);
 
-  // Per-TFN call aggregates from today, recomputed when the calls cache refreshes.
-  const statsByTfn = useMemo(() => {
+  // Per-TFN revenue from today, recomputed when the calls cache refreshes.
+  // Call counts and the live/concurrent figure come straight off each
+  // Destination record (`dailyCalls` / `liveCalls`, backend-computed) — the
+  // calls cache is a completed-call log, so counting `ringing`/`in-progress`
+  // rows in it could only ever produce 0.
+  const revenueByTfn = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const startMs = start.getTime();
-    const callsByTfn = new Map<string, number>();
-    const revenueByTfn = new Map<string, number>();
-    const ccByTfn = new Map<string, number>();
+    const m = new Map<string, number>();
     for (const c of recentCalls) {
       if (c.startedAt >= startMs) {
-        callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
-        revenueByTfn.set(
-          c.destinationNumber,
-          (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
-        );
-      }
-      if (c.status === "ringing" || c.status === "in-progress") {
-        ccByTfn.set(c.destinationNumber, (ccByTfn.get(c.destinationNumber) ?? 0) + 1);
+        m.set(c.destinationNumber, (m.get(c.destinationNumber) ?? 0) + c.revenue);
       }
     }
-    return { callsByTfn, revenueByTfn, ccByTfn };
+    return m;
   }, [recentCalls]);
 
   if (destinations.length === 0) {
@@ -93,9 +88,9 @@ export function BuyerDestinationsTab({ buyer }: BuyerDestinationsTabProps) {
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {destinations.map((d) => {
-          const callsToday = statsByTfn.callsByTfn.get(d.tfn) ?? 0;
-          const revenueToday = statsByTfn.revenueByTfn.get(d.tfn) ?? 0;
-          const cc = statsByTfn.ccByTfn.get(d.tfn) ?? 0;
+          const callsToday = d.dailyCalls;
+          const revenueToday = revenueByTfn.get(d.tfn) ?? 0;
+          const cc = d.liveCalls;
           const capPct = d.dailyCap > 0 ? Math.min(100, (callsToday / d.dailyCap) * 100) : 0;
           const capColor =
             capPct >= 90 ? "bg-destructive" :

@@ -31,6 +31,18 @@ interface BuyerListWire {
   contactName?: string;
   contactEmail?: string;
   payoutModel?: string;
+  /** Read-only usage counters. Not part of the confirmed list schema, but
+   *  read here when present so a backend that includes them on the list
+   *  (the same pattern as campaigns/destinations) lights the table up
+   *  without a second round-trip. `GET /api/buyers/{id}/stats` is the
+   *  authoritative source and is merged in on the detail page. */
+  callsToday?: number;
+  callsMonth?: number;
+  spendToday?: number | string;
+  spendMonth?: number | string;
+  lifetimeSpend?: number | string;
+  acceptRate?: number;
+  conversionRate?: number;
 }
 
 interface BuyerWire extends BuyerListWire {
@@ -54,11 +66,36 @@ interface BuyerWire extends BuyerListWire {
 interface BuyerStatsWire {
   callsToday?: number;
   callsMonth?: number;
-  spendToday?: number;
-  spendMonth?: number;
-  lifetimeSpend?: number;
+  spendToday?: number | string;
+  spendMonth?: number | string;
+  lifetimeSpend?: number | string;
   acceptRate?: number;
   conversionRate?: number;
+}
+
+/** The slice of `Buyer` that `GET /api/buyers/{id}/stats` refreshes. */
+export type BuyerStats = Pick<
+  Buyer,
+  "callsToday" | "callsMonth" | "spendToday" | "spendMonth" | "lifetimeSpend" | "acceptRate" | "conversionRate"
+>;
+
+/** Rates arrive as either a 0..1 fraction or a 0..100 percentage depending
+ *  on the endpoint; normalise to the 0..1 the FE type uses. */
+function toRate(v: number | undefined): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return 0;
+  return v > 1 ? v / 100 : v;
+}
+
+function statsWireToStats(w: BuyerStatsWire): BuyerStats {
+  return {
+    callsToday: w.callsToday ?? 0,
+    callsMonth: w.callsMonth ?? 0,
+    spendToday: toNum(w.spendToday),
+    spendMonth: toNum(w.spendMonth),
+    lifetimeSpend: toNum(w.lifetimeSpend),
+    acceptRate: toRate(w.acceptRate),
+    conversionRate: toRate(w.conversionRate),
+  };
 }
 
 /* ─── Mappers ─────────────────────────────────────────────────────────── */
@@ -99,13 +136,10 @@ function listWireToBuyer(w: BuyerListWire): Buyer {
     concurrencyCap: 0,
     dailyCap: 0,
     monthlyCap: 0,
-    callsToday: 0,
-    callsMonth: 0,
-    spendToday: 0,
-    spendMonth: 0,
-    lifetimeSpend: 0,
-    acceptRate: 0,
-    conversionRate: 0,
+    // Usage counters: read off the list payload when the backend includes
+    // them (0 otherwise) — these used to be hardcoded to 0 regardless of
+    // what the response carried.
+    ...statsWireToStats(w),
     campaignIds: [],
     createdAt: Date.parse(w.createdAt) || Date.now(),
   };
@@ -206,8 +240,8 @@ export const buyersService = {
     await http.patch(`/api/buyers/${id}/cap`, { body: cap });
   },
 
-  async getStats(id: string): Promise<BuyerStatsWire> {
-    return http.get<BuyerStatsWire>(`/api/buyers/${id}/stats`);
+  async getStats(id: string): Promise<BuyerStats> {
+    return statsWireToStats(await http.get<BuyerStatsWire>(`/api/buyers/${id}/stats`));
   },
 
   async assignCampaign(id: string, campaignId: string): Promise<void> {

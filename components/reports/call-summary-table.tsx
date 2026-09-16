@@ -29,10 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Call } from "@/lib/types";
+import type { Call, Campaign, Destination } from "@/lib/types";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTimer, toE164 } from "@/lib/format";
+import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
@@ -680,6 +682,38 @@ function groupCalls(calls: Call[], group: GroupKey): SummaryRow[] {
   return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
 }
 
+/**
+ * Real per-entity live count for the groupings that map onto an entity the
+ * backend reports a `liveCalls` counter for (see BACKEND-CONTRACT.md §3.8 /
+ * §3.9). The call log rows this table is grouped from are a completed-call
+ * record, so `row.live` (a count of `ringing`/`in-progress` rows in the
+ * group) is only nonzero when the backend has started including in-flight
+ * calls in the list — the entity counters are the authoritative figure, and
+ * `row.live` is the fallback for groupings that have no entity behind them
+ * (dates, traffic source, caller identity, …).
+ */
+function liveForGroup(
+  group: GroupKey,
+  key: string,
+  campaignsById: Map<string, Campaign>,
+  destinations: Destination[],
+): number | undefined {
+  switch (group) {
+    case "campaign":
+      return campaignsById.get(key)?.liveCalls;
+    case "dialed":
+    case "destination":
+      return destinations.find((d) => toE164(d.tfn) === key)?.liveCalls;
+    case "buyer": {
+      // A buyer's live calls are the live calls across its destinations.
+      const own = destinations.filter((d) => d.buyerId === key);
+      return own.length ? own.reduce((s, d) => s + d.liveCalls, 0) : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
 function totalsOf(rows: SummaryRow[], totalsLabel: string): SummaryRow {
   const t: SummaryRow = {
     key: "_totals",
@@ -766,13 +800,10 @@ interface CallSummaryTableProps {
    * socket count, falling back to the dashboard KPI snapshot), shown in the
    * Totals row's Live cell instead of summing `calls`.
    *
-   * `calls` here is GET /api/analytics/calls — a call *log*, i.e. completed
-   * call detail records. A CDR only exists once a call has ended, so this
-   * endpoint structurally cannot contain a still-ringing call; summing its
-   * rows for "live" will always read 0, on any backend that honours that
-   * contract. There is no per-campaign live breakdown available anywhere in
-   * the API today, so the per-row Live cells still can't be made accurate —
-   * only the aggregate can, by reading it from where it actually lives.
+   * `calls` here is GET /api/analytics/calls — a call *log*. Per-row Live
+   * figures come from the campaign / destination / buyer entity counters
+   * instead (see `liveForGroup`); this prop covers the aggregate, which the
+   * topbar already has from the dashboard KPI + socket.
    */
   liveNow?: number;
 }
@@ -804,7 +835,29 @@ export function CallSummaryTable({
   const [sortKey, setSortKey] = React.useState<SummarySortKey>("incoming");
   const [sortDir, setSortDir] = React.useState<SortDir>("desc");
 
-  const groupedRows = React.useMemo(() => groupCalls(calls, tab), [calls, tab]);
+  const campaigns = useCampaignsStore((s) => s.campaigns);
+  const destinations = useDestinationsStore((s) => s.destinations);
+  const campaignsById = React.useMemo(
+    () => new Map(campaigns.map((c) => [c.id, c])),
+    [campaigns],
+  );
+
+  const groupedRows = React.useMemo(() => {
+    const grouped = groupCalls(calls, tab);
+    // Merge the per-entity live counters in before sorting / totals / export,
+    // so every consumer of these rows sees the same figure. `max`, not
+    // "prefer the entity": both sources count the same in-flight calls, and
+    // the entity counter can never legitimately be *lower* than the number
+    // of live rows sitting right here in the group — so whichever knows
+    // about more of them is closer to the truth. (Preferring the entity
+    // outright zeroed every row on a backend that hasn't populated the
+    // counter yet, while the totals row beside it still said 6.)
+    for (const row of grouped) {
+      const live = liveForGroup(tab, row.key, campaignsById, destinations);
+      if (live !== undefined) row.live = Math.max(row.live, live);
+    }
+    return grouped;
+  }, [calls, tab, campaignsById, destinations]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.
@@ -1033,16 +1086,13 @@ export function CallSummaryTable({
                     <TableRow key={r.key}>
                       <TableCell className="pl-6 text-left font-medium">{r.label}</TableCell>
                       {visible.live && (
-                        // Not "0 live calls for this campaign" — the call log
-                        // this row is built from only contains calls that
-                        // have already ended, so a per-campaign live count
-                        // isn't something this data can answer. A dash says
-                        // "not tracked here" instead of a confident, wrong 0.
                         <TableCell
-                          className="text-center tabular-nums text-muted-foreground/60"
-                          title={t("toolsUI.reports.summary.liveNotTracked")}
+                          className={cn(
+                            "text-center tabular-nums",
+                            r.live > 0 && "font-semibold text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]",
+                          )}
                         >
-                          —
+                          {formatNumber(r.live)}
                         </TableCell>
                       )}
                       {visible.incoming && (
@@ -1107,14 +1157,15 @@ export function CallSummaryTable({
               {allRows.length > 0 && (
                 <TableRow className="border-t-2 border-border bg-muted/40 hover:bg-muted/40 font-semibold">
                   <TableCell className="pl-6 text-left">{t("toolsUI.reports.summary.totals")}</TableCell>
-                  {/* liveNow, when provided, is the real in-flight count —
-                      the same figure the topbar shows. totals.live (summed
-                      from completed-call log rows) is kept as the fallback
-                      so this component still renders something sane if a
-                      caller doesn't wire liveNow up. */}
+                  {/* liveNow is the account-wide in-flight count (same figure
+                      as the topbar); totals.live is the sum of the rows
+                      above. Same `max` reasoning as the per-row merge — the
+                      column can't add up to more calls than are actually
+                      live, and the global counter can't be lower than the
+                      live rows we can see. */}
                   {visible.live && (
                     <TableCell className="text-center tabular-nums">
-                      {formatNumber(liveNow ?? totals.live)}
+                      {formatNumber(Math.max(liveNow ?? 0, totals.live))}
                     </TableCell>
                   )}
                   {visible.incoming && (

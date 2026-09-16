@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import type { CallLogPage, CallLogQuery } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { callStatusFilterToQuery, matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
+import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { zonedDayKey } from "@/lib/format";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -159,75 +159,24 @@ export default function ReportsPage() {
     return { revenue, payout };
   }, [filtered]);
 
-  // Connected / Qualified query the backend directly (GET /api/analytics/calls
-  // with status=completed or is_qualified=true), same as the base range fetch
-  // above but scoped further by status — a separate request rather than a
-  // client-side re-filter of `rangeCalls` because "Qualified" needs the
-  // backend's own `is_qualified` verdict. Not Connected has no backend param
-  // in the contract yet, so it stays a client-side filter of `filtered`.
-  const [remoteLogCalls, setRemoteLogCalls] = useState<Call[] | null>(null);
-  const [logLoading, setLogLoading] = useState(false);
-
-  useEffect(() => {
-    if (statusFilter !== "connected" && statusFilter !== "qualified") {
-      setRemoteLogCalls(null);
-      setLogLoading(false);
-      return;
-    }
-    if (!fromKey) {
-      setRemoteLogCalls([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLogLoading(true);
-
-    // NOTE: campaign/buyer/publisher and the toolbar's own status multi-select
-    // aren't threaded through here — CallLogQuery only takes one id per field,
-    // not the arrays this page's filter popover collects, so there's no way to
-    // serialize a multi-select into this request without guessing a wire
-    // format the backend hasn't specified. Clicking a total currently searches
-    // the full account within the date range, not "within the campaigns I've
-    // also filtered to" — flagged here rather than silently narrowed wrong.
-    fetchAllCalls(fetchCallsPage, {
-      dateFrom: fromKey,
-      dateTo: toKey,
-      ...callStatusFilterToQuery(statusFilter),
-    })
-      .then((items) => {
-        if (cancelled) return;
-        setRemoteLogCalls(items);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load filtered calls"));
-        setRemoteLogCalls([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLogLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [statusFilter, fromKey, toKey, fetchCallsPage]);
-
   // Narrows the Call Log to whichever Call Summary total was clicked. The
   // summary's own totals keep reading from `filtered` unfiltered by this —
   // clicking "Qualified" shows only qualified calls below, it doesn't shrink
   // the Qualified total itself to match.
+  //
+  // All three filters are applied client-side to the exact same `filtered`
+  // set the Call Summary counted, with the exact same predicate
+  // (`matchesCallStatusFilter`). Connected and Qualified used to fire a
+  // separate backend query instead (`status=completed` / `is_qualified=true`)
+  // — a second definition of the same bucket, on a dataset that ignored the
+  // campaign/buyer/publisher filters the summary respected, and keyed on an
+  // `is_qualified` field the CDR payload doesn't carry. Two definitions meant
+  // the total said 64 and the list underneath it showed something else. One
+  // predicate over one dataset makes that disagreement impossible.
   const logCalls = useMemo(() => {
-    if (statusFilter === "notConnected") {
-      return filtered.filter((c) => matchesCallStatusFilter(c, "notConnected"));
-    }
-    if (statusFilter === "connected" || statusFilter === "qualified") {
-      // While the request is in flight (or hasn't resolved yet), show
-      // nothing rather than flashing the full unfiltered list — `logLoading`
-      // drives the actual loading row in CallLogTable.
-      return remoteLogCalls ?? [];
-    }
-    return filtered;
-  }, [filtered, statusFilter, remoteLogCalls]);
+    if (!statusFilter) return filtered;
+    return filtered.filter((c) => matchesCallStatusFilter(c, statusFilter));
+  }, [filtered, statusFilter]);
 
   // The PIN gate trips when the requested range starts before today's
   // midnight *in the report timezone* — Today-only views always pass
@@ -366,7 +315,7 @@ export default function ReportsPage() {
         {visibility.log && (
           <CallLogTable
             calls={logCalls}
-            loading={logLoading || (!statusFilter && rangeLoading)}
+            loading={rangeLoading}
           />
         )}
       </ReportsPinGate>

@@ -16,23 +16,23 @@ export function DestinationStatsRow({ destination }: DestinationStatsRowProps) {
   const { t } = useTranslation();
   const recentCalls = useCallsStore((s) => s.recent);
   const stats = useMemo(() => {
+    // Revenue is still summed from the calls cache (it's the only place the
+    // per-call revenue lives). Call count and the live/concurrent figure come
+    // off the Destination record itself (`dailyCalls` / `liveCalls`,
+    // backend-computed) — the cache is a completed-call log, so counting
+    // `ringing`/`in-progress` rows in it could only ever produce 0.
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const startMs = start.getTime();
-    let calls = 0;
     let revenue = 0;
-    let cc = 0;
     for (const c of recentCalls) {
       if (c.destinationNumber !== destination.tfn) continue;
-      if (c.startedAt >= startMs) {
-        calls += 1;
-        revenue += c.revenue;
-      }
-      if (c.status === "ringing" || c.status === "in-progress") cc += 1;
+      if (c.startedAt >= startMs) revenue += c.revenue;
     }
+    const cc = destination.liveCalls;
     const ccPct =
       destination.concurrencyCap > 0 ? (cc / destination.concurrencyCap) * 100 : 0;
-    return { calls, revenue, cc, ccPct };
+    return { calls: destination.dailyCalls, revenue, cc, ccPct };
   }, [destination, recentCalls]);
 
   const tiles = [

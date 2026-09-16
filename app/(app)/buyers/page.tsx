@@ -28,6 +28,18 @@ export default function BuyersPage() {
   const buyers = useBuyersStore((s) => s.buyers);
   const setBuyerStatus = useBuyersStore((s) => s.setStatus);
   const remove = useBuyersStore((s) => s.remove);
+  const fetchStats = useBuyersStore((s) => s.fetchStats);
+
+  // The list payload doesn't carry usage counters (spend today / month,
+  // calls), so the HOURLY / DAILY / MONTHLY / GLOBAL columns read $0.00
+  // straight off the list. Pull each buyer's counters from its /stats
+  // endpoint once the list is in — keyed on the id set so a re-fetch of the
+  // same buyers (the store replacing the array) doesn't fan out again.
+  const buyerIdKey = buyers.map((b) => b.id).join(",");
+  useEffect(() => {
+    if (!buyerIdKey) return;
+    for (const id of buyerIdKey.split(",")) void fetchStats(id);
+  }, [buyerIdKey, fetchStats]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);

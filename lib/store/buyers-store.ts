@@ -21,6 +21,10 @@ interface BuyersState {
   hydrated: boolean;
 
   fetch: () => Promise<void>;
+  /** Refresh one buyer's usage counters from `GET /api/buyers/{id}/stats`
+   *  and merge them into the cached record. Silent on failure — the list
+   *  row keeps whatever it had (the stats are nice-to-have, the buyer isn't). */
+  fetchStats: (id: string) => Promise<void>;
   getById: (id: string) => Buyer | undefined;
   add: (input: Omit<Buyer, "id" | "createdAt">) => Promise<Buyer>;
   update: (id: string, patch: Partial<Buyer>) => Promise<void>;
@@ -50,6 +54,17 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
       set({ buyers: page.items, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
+    }
+  },
+
+  fetchStats: async (id) => {
+    try {
+      const stats = await buyersService.getStats(id);
+      set((s) => ({
+        buyers: s.buyers.map((b) => (b.id === id ? { ...b, ...stats } : b)),
+      }));
+    } catch {
+      // Keep the cached counters; don't surface an error for a side-panel stat.
     }
   },
 

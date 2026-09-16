@@ -24,7 +24,19 @@ export default function BuyerDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const buyer = useBuyersStore((s) => s.getById(params.id));
+  const fetchStats = useBuyersStore((s) => s.fetchStats);
   const [tab, setTab] = useState<TabId>("overview");
+
+  // The list payload doesn't carry usage counters; pull this buyer's from
+  // its /stats endpoint on open and keep them fresh while the page is up,
+  // on the same cadence the rest of the app refreshes live figures.
+  useEffect(() => {
+    void fetchStats(params.id);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchStats(params.id);
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, [params.id, fetchStats]);
 
   const TABS: Array<{ id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     { id: "overview", label: t("networkUI.buyers.tabs.overview"), icon: LayoutDashboard },

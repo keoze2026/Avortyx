@@ -61,5 +61,29 @@ export function StoreHydrator() {
     void useWorkspaceMetaStore.getState().fetch();
   }, [isAuthed]);
 
+  // The per-entity live/hourly/daily counters (`liveCalls` on campaigns and
+  // destinations, which buyers roll up from) only ever change server-side,
+  // so a single fetch at login leaves every LIVE column frozen at whatever
+  // it was when the app opened. Re-pull both lists on the same cadence the
+  // topbar refreshes its KPI snapshot. Paused while the tab is hidden —
+  // nobody's looking, and it keeps a backgrounded tab from hammering the API.
+  useEffect(() => {
+    if (!isAuthed) return;
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      void useCampaignsStore.getState().fetch();
+      void useDestinationsStore.getState().fetch();
+      void useDestinationsStore.getState().fetchStats();
+    };
+    const id = window.setInterval(tick, LIVE_COUNTER_POLL_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [isAuthed]);
+
   return null;
 }
+
+const LIVE_COUNTER_POLL_MS = 15_000;

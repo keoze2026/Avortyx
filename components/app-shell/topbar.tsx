@@ -45,7 +45,12 @@ export function Topbar() {
   const totalCalls = kpis?.callsToday ?? 0;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/50 bg-background/85 backdrop-blur-xl">
+    // Solid on phones, glassy from sm up. The 85%-opaque + blur treatment
+    // lets whatever scrolls under the bar bleed through behind the stats
+    // text (which, unlike the icon pill and avatar, has no backing of its
+    // own) — on a phone that's dense table rows and chart gridlines, and the
+    // blurred row borders read as stripes through "Live: 0 / Total: 169".
+    <header className="sticky top-0 z-30 border-b border-border/50 bg-background sm:bg-background/85 sm:backdrop-blur-xl">
       <div className="relative flex h-16 items-center gap-4 px-4 sm:px-6">
         {/* LEFT — sidebar trigger only */}
         <div className="flex items-center">
@@ -60,29 +65,39 @@ export function Topbar() {
         </div>
 
         {/* RIGHT — stats + theme + notifications + identity */}
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+        {/* min-w-0 on this group and on the stats block below is what lets
+            the stats actually shrink and scroll on a phone — a flex child's
+            default min-width is its content width, so without it the whole
+            group overflows the bar and the avatar gets clipped off-screen. */}
+        <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
           {/* Live stats — balance, in-flight, total today.
               Sits open on the bar rather than inside a pill: no frame, no
               dividers, no per-stat icon badges. Label and value read inline
               ("Live: 0") at every width — they used to collapse to an icon
               below sm, which read as the labels being broken/missing rather
               than an intentional space-saving swap. Values stay in full form
-              ("3,016", never "3K"). `overflow-x-auto scrollbar-hide` is a
-              safety net, not the primary fix: the shell layout clips
-              horizontal overflow instead of reflowing it (see
-              app/(app)/layout.tsx), so if page zoom ever still outgrows this
-              block despite the small sizing below, it scrolls internally
-              instead of clipping into invisibility. */}
-          <div className="inline-flex items-center gap-1.5 overflow-x-auto scrollbar-hide sm:gap-6">
+              ("3,016", never "3K").
+
+              Below sm the three figures stack into two lines (balance above,
+              Live + Total below) instead of one row: a five-digit total next
+              to a five-figure balance is wider than a phone can give the bar
+              once the icon pill and avatar have taken their share, and the
+              one-row version answered that by scrolling — which cut "Total:
+              11719" off mid-number, the exact "not visible on phone" report.
+              The 64px bar has the vertical room; it's width that's scarce.
+              `overflow-x-auto scrollbar-hide` stays as a last-resort safety
+              net for extreme page zoom — the shell layout clips horizontal
+              overflow instead of reflowing it (see app/(app)/layout.tsx). */}
+          <div className="flex min-w-0 flex-col items-end gap-1 overflow-x-auto scrollbar-hide sm:flex-row sm:items-center sm:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
             <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border text-muted-foreground sm:h-6 sm:w-6">
-                <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground sm:inline-flex">
+                <Wallet className="h-3.5 w-3.5" />
               </span>
               <span
                 className={cn(
-                  "text-[11px] font-bold leading-none tabular-nums sm:text-[13px]",
+                  "text-[13px] font-bold leading-none tabular-nums",
                   GREEN_TEXT,
                 )}
               >
@@ -108,7 +123,7 @@ export function Topbar() {
           </div>
 
           {/* Language + theme + notifications grouped in a pill */}
-          <div className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-secondary/30 p-1">
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-secondary/30 p-1">
             <LanguageToggle />
             <span aria-hidden className="h-5 w-px bg-border/70" />
             <ThemeToggle variant="icon" />
@@ -119,7 +134,9 @@ export function Topbar() {
           {/* Vertical separator before identity */}
           <span aria-hidden className="hidden h-7 w-px bg-border/70 sm:block" />
 
-          <UserMenu />
+          <span className="shrink-0">
+            <UserMenu />
+          </span>
         </div>
       </div>
 
@@ -190,7 +207,7 @@ function TopStat({ label, value, tone }: TopStatProps) {
     <span className="inline-flex items-center gap-1 whitespace-nowrap sm:gap-1.5">
       <span
         className={cn(
-          "text-[11px] font-bold leading-none sm:text-[12px]",
+          "text-[12px] font-bold leading-none",
           TONE_TEXT[tone],
         )}
       >
@@ -198,7 +215,7 @@ function TopStat({ label, value, tone }: TopStatProps) {
       </span>
       <span
         className={cn(
-          "text-[11px] font-bold leading-none tabular-nums sm:text-[12px]",
+          "text-[12px] font-bold leading-none tabular-nums",
           TONE_TEXT[tone],
         )}
       >

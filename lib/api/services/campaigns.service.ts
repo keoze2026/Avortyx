@@ -61,6 +61,10 @@ interface CampaignListWire {
   callsHour?: number;
   callsMonth?: number;
   callsGlobal?: number;
+  /** Present on the list payload too when the backend serialises the full
+   *  campaign; read here so the table's "live / cap" cell doesn't show
+   *  "N / 0" for every row until the detail page is opened. */
+  cap?: CampaignCapWire;
 }
 
 interface CampaignWire extends CampaignListWire {
@@ -217,8 +221,8 @@ function listWireToCampaign(w: CampaignListWire): Campaign {
     payout: toNum(w.payoutAmount),
     payoutModel: payoutModelFromWire(w.payoutModel),
     qualifyDurationSec: 0,
-    dailyCap: 0,
-    monthlyCap: 0,
+    dailyCap: w.cap?.maxCallsDaily ?? 0,
+    monthlyCap: w.cap?.maxCallsMonthly ?? 0,
     schedule: defaultSchedule(),
     numbersCount: 0,
     buyersCount: 0,

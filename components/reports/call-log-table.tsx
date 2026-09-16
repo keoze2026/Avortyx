@@ -718,7 +718,9 @@ function CallRowActions({ call }: { call: Call }) {
 
   const onCopy = async () => {
     try {
-      await navigator.clipboard.writeText(caller);
+      // Clipboard gets the dialable E.164 form, not the "(323) 624-9499"
+      // display string — it's going into a dialer or a CRM, not a sentence.
+      await navigator.clipboard.writeText(toE164(call.callerNumber));
       toast.success(t("toolsUI.reports.callLog.actions.toastCopied").replace("{number}", caller));
     } catch {
       toast.error(t("toolsUI.reports.callLog.actions.toastCopyError"));
