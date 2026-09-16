@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Lightning } from "@phosphor-icons/react/dist/ssr"
 import { Logo } from "@/components/brand/logo"
+import { BRAND_GRADIENT_TEXT } from "@/components/brand/wordmark"
 import { BRAND, ROUTES } from "@/lib/constants"
 
 export function Header() {
@@ -23,20 +24,26 @@ export function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between px-2.5 sm:px-6 lg:px-12">
-          {/* Logo - always stays at top */}
-          <Link href={ROUTES.home} className="flex items-center gap-3" aria-label={BRAND.name}>
-            <div className="relative">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-baltic-sea-100)]">
-                <Logo tone="dark" uid="mk-header" className="h-5 w-5" />
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--color-baltic-sea-950)] bg-[var(--color-keppel-400)]" />
-            </div>
+          {/* Brand lock-up — the Avortyx mark in its blue ramp with the name
+              beside it (same as the app and the auth pages); the name folds
+              away on scroll and the mark stays. The template's white tile
+              around the logo is gone: the mark carries its own glow. */}
+          <Link href={ROUTES.home} className="group flex items-center gap-2.5" aria-label={BRAND.name}>
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-full opacity-70 blur-md transition-opacity duration-500 group-hover:opacity-100"
+                style={{ background: "var(--vortyx-glow)" }}
+              />
+              <Logo tone="brand" uid="mk-header" className="relative h-9 w-9 drop-shadow-[0_0_12px_var(--vortyx-glow)]" />
+            </span>
             <span
               className={`
-                text-xl font-semibold tracking-tight text-[var(--color-baltic-sea-50)]
+                text-xl font-semibold tracking-tight
                 transition-all duration-500 overflow-hidden whitespace-nowrap
-                ${scrolled ? "max-w-0 opacity-0" : "max-w-[100px] opacity-100"}
+                ${scrolled ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100"}
               `}
+              style={BRAND_GRADIENT_TEXT}
             >
               {BRAND.name}
             </span>

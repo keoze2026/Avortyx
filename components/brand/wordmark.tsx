@@ -45,7 +45,10 @@ const TEXT_COLOR: Record<LogoTone, string | undefined> = {
   current: "currentColor",
 };
 
-const GRADIENT_TEXT = {
+/** Brand-ramp text fill for the product name. Exported so surfaces that
+ *  need to lay the name out themselves (the marketing header collapses it
+ *  on scroll) render it identically. */
+export const BRAND_GRADIENT_TEXT = {
   background:
     "linear-gradient(120deg, var(--vortyx-bright, #3DD68C) 0%, var(--vortyx-teal, #12805C) 55%, var(--vortyx-deep, #0C6647) 100%)",
   WebkitBackgroundClip: "text",
@@ -53,6 +56,8 @@ const GRADIENT_TEXT = {
   WebkitTextFillColor: "transparent",
   color: "transparent",
 } as const;
+
+const GRADIENT_TEXT = BRAND_GRADIENT_TEXT;
 
 export function Wordmark({
   className,

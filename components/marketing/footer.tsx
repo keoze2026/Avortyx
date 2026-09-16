@@ -1,7 +1,6 @@
-import Link from "next/link"
 import { LinkedinLogo, TelegramLogo, XLogo } from "@phosphor-icons/react/dist/ssr"
-import { Logo } from "@/components/brand/logo"
-import { BRAND, ROUTES } from "@/lib/constants"
+import { Wordmark } from "@/components/brand/wordmark"
+import { BRAND } from "@/lib/constants"
 
 const LINK_CLASS =
   "text-sm text-[var(--color-baltic-sea-500)] hover:text-[var(--color-keppel-400)] transition-colors"
@@ -55,12 +54,8 @@ export function Footer() {
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between">
           {/* Brand column */}
           <div className="lg:max-w-xs">
-            <Link href={ROUTES.home} className="flex items-center gap-3" aria-label={BRAND.name}>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-baltic-sea-800)]">
-                <Logo tone="current" uid="mk-footer" className="h-5 w-5 text-[var(--color-baltic-sea-400)]" />
-              </div>
-              <span className="text-xl font-semibold text-[var(--color-baltic-sea-300)]">{BRAND.name}</span>
-            </Link>
+            {/* Same lock-up as the header — brand mark + name in the blue ramp. */}
+            <Wordmark size="md" uid="mk-footer" />
             <p className="mt-4 text-sm text-[var(--color-baltic-sea-500)]">
               Real-time call scoring, routing and analytics for pay-per-call networks.
             </p>
