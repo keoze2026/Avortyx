@@ -2,14 +2,32 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Lightning } from "@phosphor-icons/react/dist/ssr"
 import { Logo } from "@/components/brand/logo"
 import { BRAND_GRADIENT_TEXT } from "@/components/brand/wordmark"
 import { BRAND, ROUTES } from "@/lib/constants"
 
+/** Section anchors are rooted at "/" so they work from any marketing page. */
+const NAV: Array<{ label: string; href: string }> = [
+  { label: "Product", href: "/#product" },
+  { label: "How it works", href: "/#how-it-works" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "Careers", href: ROUTES.careers },
+]
+
+const NAV_ACTIVE = "px-4 py-1.5 text-sm text-[var(--color-baltic-sea-100)] rounded-full bg-[var(--color-baltic-sea-800)]"
+const NAV_IDLE =
+  "px-4 py-1.5 text-sm text-[var(--color-baltic-sea-400)] hover:text-[var(--color-baltic-sea-100)] transition-colors"
+
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
+  const pathname = usePathname()
+  // The home page highlights "Product" (as the template does); any other
+  // marketing page highlights its own entry.
+  const activeHref = pathname === ROUTES.home ? "/#product" : pathname
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,30 +77,11 @@ export function Header() {
               absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2
             `}
           >
-            <a
-              href="#product"
-              className="px-4 py-1.5 text-sm text-[var(--color-baltic-sea-100)] rounded-full bg-[var(--color-baltic-sea-800)]"
-            >
-              Product
-            </a>
-            <a
-              href="#how-it-works"
-              className="px-4 py-1.5 text-sm text-[var(--color-baltic-sea-400)] hover:text-[var(--color-baltic-sea-100)] transition-colors"
-            >
-              How it works
-            </a>
-            <a
-              href="#pricing"
-              className="px-4 py-1.5 text-sm text-[var(--color-baltic-sea-400)] hover:text-[var(--color-baltic-sea-100)] transition-colors"
-            >
-              Pricing
-            </a>
-            <a
-              href="#faq"
-              className="px-4 py-1.5 text-sm text-[var(--color-baltic-sea-400)] hover:text-[var(--color-baltic-sea-100)] transition-colors"
-            >
-              FAQ
-            </a>
+            {NAV.map((item) => (
+              <Link key={item.href} href={item.href} className={item.href === activeHref ? NAV_ACTIVE : NAV_IDLE}>
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
           {/* Actions - hidden once scrolled (the floating CTA takes over) */}

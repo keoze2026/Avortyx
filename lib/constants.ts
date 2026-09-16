@@ -16,6 +16,7 @@ export const BRAND = {
 export const ROUTES = {
   home: "/",
   pricing: "/pricing",
+  careers: "/careers",
 
   // Auth
   login: "/login",

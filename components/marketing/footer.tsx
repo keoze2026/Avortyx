@@ -1,6 +1,6 @@
 import { LinkedinLogo, TelegramLogo, XLogo } from "@phosphor-icons/react/dist/ssr"
 import { Wordmark } from "@/components/brand/wordmark"
-import { BRAND } from "@/lib/constants"
+import { BRAND, ROUTES } from "@/lib/constants"
 
 const LINK_CLASS =
   "text-sm text-[var(--color-baltic-sea-500)] hover:text-[var(--color-keppel-400)] transition-colors"
@@ -9,10 +9,10 @@ const COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string
   {
     title: "Product",
     links: [
-      { label: "Live monitor", href: "#product" },
-      { label: "Routing rules", href: "#how-it-works" },
-      { label: "Marketplace", href: "#product" },
-      { label: "Pricing", href: "#pricing" },
+      { label: "Live monitor", href: "/#product" },
+      { label: "Routing rules", href: "/#how-it-works" },
+      { label: "Marketplace", href: "/#product" },
+      { label: "Pricing", href: "/#pricing" },
     ],
   },
   {
@@ -29,7 +29,7 @@ const COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string
     links: [
       { label: "About", href: "#" },
       { label: "Customers", href: "#" },
-      { label: "Careers", href: "#" },
+      { label: "Careers", href: ROUTES.careers },
       { label: "Contact", href: `mailto:${BRAND.email}` },
     ],
   },
