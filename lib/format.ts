@@ -129,22 +129,19 @@ export function toE164(value: string | null | undefined): string {
 }
 
 /**
- * Caller ID for display — the national number, formatted for reading:
+ * Caller ID for display — the full E.164 digits with the "+" dropped, which
+ * is how the operations team reads caller IDs (and how they're stored):
  *
- *   "+13236249499" → "(323) 624-9499"
- *   "3236249499"   → "(323) 624-9499"
- *   "+442071838750" → "+442071838750"  (non-NANP: left as E.164)
+ *   "+12145467783"      → "12145467783"
+ *   "2145467783"        → "12145467783"   (10-digit US assumed, like toE164)
+ *   "+1 (214) 546-7783" → "12145467783"
  *
- * Dialed/tracking/DID numbers still need the full E.164 form to be dialable,
- * so this is deliberately separate from `toE164` rather than a change to it:
- * only the Caller ID column renders the formatted national number,
- * everywhere else keeps "+1…".
+ * Dialed/tracking/DID numbers keep the "+" (they need to be pasteable into a
+ * dialer), so this is deliberately separate from `toE164` rather than a
+ * change to it: only the Caller ID column renders the bare digits.
  */
 export function formatCallerId(value: string | null | undefined): string {
-  const e164 = toE164(value);
-  if (!e164.startsWith("+1") || e164.length !== 12) return e164;
-  const n = e164.slice(2);
-  return `(${n.slice(0, 3)}) ${n.slice(3, 6)}-${n.slice(6)}`;
+  return toE164(value).replace(/^\+/, "");
 }
 
 /* ─── Timezone-aware timestamp rendering ───────────────────────────────
