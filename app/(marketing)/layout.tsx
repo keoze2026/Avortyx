@@ -9,8 +9,8 @@ import { Header } from "@/components/marketing/header";
  *
  * `.marketing-shell` scopes the landing page's palette and typeface (see
  * app/globals.css) and is what the chat widget's `--m-*` tokens resolve
- * against, so the widget picks up the same colours — and the header's
- * green/blue toggle — without any changes of its own.
+ * against, so the widget picks up the same colours without any changes of
+ * its own.
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (

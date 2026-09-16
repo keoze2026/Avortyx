@@ -19,8 +19,8 @@
  * Visual: a dark, gradient-accented floating panel. Colours come from the
  * `--m-*` tokens defined on `.marketing-shell`, which wraps this widget and
  * resolves them against the landing page's own palette (baltic-sea neutrals,
- * keppel accent); every accent-derived value goes through a var, so the
- * header's green/blue toggle re-skins the widget with no changes here.
+ * keppel accent); every accent-derived value goes through a var, so a
+ * palette change in globals.css re-skins the widget with no changes here.
  */
 
 import * as React from "react";

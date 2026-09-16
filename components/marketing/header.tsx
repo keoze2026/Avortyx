@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Lightning } from "@phosphor-icons/react/dist/ssr"
 import { Logo } from "@/components/brand/logo"
-import { ThemeColorSwitcher } from "@/components/marketing/theme-color-switcher"
 import { BRAND, ROUTES } from "@/lib/constants"
 
 export function Header() {
@@ -79,9 +78,8 @@ export function Header() {
             </a>
           </nav>
 
-          {/* Actions - hide sign-in + CTA when scrolled; the colour toggle stays */}
+          {/* Actions - hidden once scrolled (the floating CTA takes over) */}
           <div className="flex items-center gap-4">
-            <ThemeColorSwitcher />
             <Link
               href={ROUTES.login}
               className={`

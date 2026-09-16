@@ -3,7 +3,7 @@
  *
  * Three concentric arcs sweeping toward a bright core. The mark adapts to the
  * surface it sits on via `tone`:
- *   • "brand"   — theme accent ramp (follows the green/blue accent switcher)
+ *   • "brand"   — theme accent ramp (follows the in-app accent picker)
  *   • "light"   — near-white, for dark backgrounds
  *   • "dark"    — near-black, for light backgrounds
  *   • "current" — inherits `currentColor` from the parent

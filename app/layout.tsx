@@ -49,14 +49,6 @@ export const metadata: Metadata = {
  */
 const themeInitScript = `(function(){try{var r=localStorage.getItem('vortyx.accent');if(!r)return;var id=(JSON.parse(r).state||{}).accent;if(!id||id==='default')return;document.documentElement.classList.add(id==='green'?'theme-green-accent':'theme-'+id);}catch(e){}})();`;
 
-/**
- * Same idea for the landing page's own colour toggle: `site-blue` on <html>
- * before first paint when the visitor chose blue. Reads the persisted
- * `avortyx.site-accent` key that useSiteAccentStore writes. Green is the
- * base palette and needs no class, so a missing/invalid value does nothing.
- */
-const siteAccentInitScript = `(function(){try{var r=localStorage.getItem('avortyx.site-accent');if(!r)return;if((JSON.parse(r).state||{}).accent==='blue')document.documentElement.classList.add('site-blue');}catch(e){}})();`;
-
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
@@ -66,7 +58,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <script dangerouslySetInnerHTML={{ __html: siteAccentInitScript }} />
       </head>
       <body className="font-sans antialiased">
         <AppProviders>{children}</AppProviders>
