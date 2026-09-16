@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { matchesCallStatusFilter } from "@/lib/call-status";
 import { TODAY_HOURLY } from "@/lib/mock/timeseries";
 import { formatNumber } from "@/lib/format";
 import type { Call } from "@/lib/types";
@@ -31,7 +32,10 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
       // re-filtering to "today" here made the headline read 0 for every
       // historical range while the rest of the page showed real data.
       const all = calls.length;
-      const ok = calls.filter((c) => c.status === "completed").length;
+      // Same "connected" definition as the Reports charts and the Call
+      // Summary totals (completed OR in-progress) — a plain `=== "completed"`
+      // check dropped every live call into the red slice.
+      const ok = calls.filter((c) => matchesCallStatusFilter(c, "connected")).length;
       return { total: all, completed: ok, dropped: Math.max(0, all - ok) };
     }
     const all = TODAY_HOURLY.reduce((s, p) => s + p.calls, 0);

@@ -7,6 +7,7 @@
  * and freshly bucketed data without any other changes.
  */
 
+import { zonedHour } from "@/lib/format";
 import type { Call } from "@/lib/types";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -28,17 +29,42 @@ export interface DayBucket {
   revenue: number;
 }
 
-/** 24 buckets, one per hour of today (local time). */
-export function bucketHourly(calls: Call[]): HourBucket[] {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const buckets: HourBucket[] = Array.from({ length: 24 }, (_, h) => ({
+function emptyHours(): HourBucket[] {
+  return Array.from({ length: 24 }, (_, h) => ({
     hour: h,
     label: `${h.toString().padStart(2, "0")}:00`,
     calls: 0,
     conversions: 0,
     revenue: 0,
   }));
+}
+
+/**
+ * 24 buckets, one per hour-of-day, for every call handed in — resolved in
+ * `timeZone` (the report timezone) so the peaks line up with the times the
+ * Call Log shows. The caller is responsible for date scope: this does NOT
+ * drop anything, so pass exactly the day's calls.
+ *
+ * `bucketHourly` below is the older today-only variant kept for the
+ * destination overview tab, which still feeds it the un-dated recent cache.
+ */
+export function bucketHourlyZoned(calls: Call[], timeZone: string): HourBucket[] {
+  const buckets = emptyHours();
+  for (const c of calls) {
+    const h = zonedHour(c.startedAt, timeZone);
+    if (!Number.isFinite(h) || h < 0 || h >= 24) continue;
+    buckets[h].calls += 1;
+    buckets[h].revenue += c.revenue;
+    if (c.status === "completed") buckets[h].conversions += 1;
+  }
+  return buckets;
+}
+
+/** 24 buckets, one per hour of today (local time). */
+export function bucketHourly(calls: Call[]): HourBucket[] {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const buckets = emptyHours();
   for (const c of calls) {
     if (c.startedAt < start.getTime()) continue;
     const h = new Date(c.startedAt).getHours();

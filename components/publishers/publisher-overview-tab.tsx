@@ -1,21 +1,36 @@
 "use client";
 
+import { useMemo } from "react";
 import { DollarSign, Hash, PhoneCall, TrendingUp } from "lucide-react";
 
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { RecentCallsFeed } from "@/components/dashboard/recent-calls-feed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
-import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
+import { formatCompact, formatCurrency, formatPercent, zonedDayKey } from "@/lib/format";
+import { useCallsStore } from "@/lib/store/calls-store";
+import { useUIStore } from "@/lib/store/ui-store";
 import type { Publisher } from "@/lib/types";
 
 export function PublisherOverviewTab({ publisher }: { publisher: Publisher }) {
   const { t } = useTranslation();
+  const recentCalls = useCallsStore((s) => s.recent);
+  const timeZone = useUIStore((s) => s.reportTimezone);
+  // Today's calls for this publisher. This chart used to render with no
+  // calls at all, which fell back to the static seeded mock series — fake
+  // revenue on a real publisher's page.
+  const todayCalls = useMemo(() => {
+    const today = zonedDayKey(Date.now(), timeZone);
+    return recentCalls.filter(
+      (c) => c.publisherId === publisher.id && zonedDayKey(c.startedAt, timeZone) === today,
+    );
+  }, [recentCalls, publisher.id, timeZone]);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <RevenueChart />
+          <RevenueChart calls={todayCalls} dateLabel={t("sharedUI.dateRange.today")} />
         </div>
 
         <Card>

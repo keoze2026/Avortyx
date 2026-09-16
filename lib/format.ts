@@ -202,6 +202,27 @@ export interface ZonedParts {
   second: number;
 }
 
+/**
+ * "YYYY-MM-DD" for a Date that represents a *calendar day* the user picked
+ * (a `react-day-picker` value, local midnight) — read from its local Y/M/D,
+ * never via the instant + a timezone. Doing the latter shifted the day for
+ * any browser ahead of the report zone: local midnight Sept 13 in UTC+9 is
+ * 15:00 UTC on Sept 12, so `zonedDayKey(date.getTime(), "UTC")` said "09-12"
+ * for a Sept 13 pick.
+ */
+export function calendarDayKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Inverse of `calendarDayKey` — local midnight for a "YYYY-MM-DD" key. */
+export function dayKeyToLocalDate(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 /** Break a timestamp (ms) into calendar parts as seen in `timeZone`. */
 export function zonedParts(timestamp: number, timeZone: string): ZonedParts {
   const parts = partsFormatter(timeZone).formatToParts(new Date(timestamp));

@@ -20,37 +20,14 @@ import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
-import type { CallLogPage, CallLogQuery } from "@/lib/api/services/analytics.service";
+import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
-import { zonedDayKey } from "@/lib/format";
+import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-/**
- * Pages through GET /api/analytics/calls until every row in range has been
- * fetched, instead of trusting a single request's `items` — a fixed
- * `pageSize` silently truncates any day whose call volume exceeds it, which
- * is exactly how a real 146-call day was showing up as 113 on this page.
- * Capped at 20 pages (10,000 rows) as a sanity backstop, not an expected
- * ceiling for a single day/range.
- */
-async function fetchAllCalls(
-  fetchPage: (query: CallLogQuery) => Promise<CallLogPage>,
-  query: Omit<CallLogQuery, "page" | "pageSize">,
-): Promise<Call[]> {
-  const PAGE_SIZE = 500;
-  const MAX_PAGES = 20;
-  const all: Call[] = [];
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const res = await fetchPage({ ...query, page, pageSize: PAGE_SIZE });
-    all.push(...res.items);
-    if (all.length >= res.total || res.items.length < PAGE_SIZE) break;
-  }
-  return all;
-}
 
 /** Reuses the Call Summary's own column labels so the reset strip names the
  *  active filter with the exact word the operator just clicked. */
@@ -62,8 +39,12 @@ const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
 
 export default function ReportsPage() {
   const { t } = useTranslation();
+  // Every reporting surface on this page renders in this timezone (the Call
+  // Log's timestamps, the hourly chart's buckets) — "today" has to mean
+  // today in that zone too, or an operator ahead of it opens on tomorrow.
+  const timeZone = useUIStore((s) => s.reportTimezone);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    const today = new Date();
+    const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
     return { from: today, to: today };
   });
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
@@ -77,7 +58,6 @@ export default function ReportsPage() {
   // swaps which chart occupies the main slot.
   const [mobileChart, setMobileChart] = useState<"hourly" | "donut">("hourly");
 
-  const fetchCallsPage = useCallsStore((s) => s.fetchPage);
   // Same precedence the topbar uses: the live socket count when it's
   // actually flowing, the dashboard KPI snapshot otherwise. Needed because
   // the call log (`rangeCalls`, and `filtered` below) is a completed-call
@@ -88,15 +68,11 @@ export default function ReportsPage() {
   const socketLiveCount = useCallsStore((s) => s.liveCount);
   const liveNow = socketLiveCount > 0 ? socketLiveCount : (kpis?.liveCalls ?? 0);
 
-  // Every reporting surface on this page renders in this timezone (the Call
-  // Log's timestamps, the hourly chart's buckets) — the date range needs to
-  // resolve "today" in the same zone, or a call near midnight can fall on
-  // the wrong side of the boundary the backend applies for `dateFrom`/`dateTo`.
-  const timeZone = useUIStore((s) => s.reportTimezone);
-  const fromKey = dateRange?.from ? zonedDayKey(dateRange.from.getTime(), timeZone) : undefined;
-  const toKey = dateRange?.to
-    ? zonedDayKey(dateRange.to.getTime(), timeZone)
-    : fromKey;
+  // The picker's values are calendar days — read their Y-M-D directly.
+  // Converting `getTime()` through the report zone shifted the key a day
+  // earlier for any browser ahead of that zone (see `calendarDayKey`).
+  const fromKey = dateRange?.from ? calendarDayKey(dateRange.from) : undefined;
+  const toKey = dateRange?.to ? calendarDayKey(dateRange.to) : fromKey;
 
   // The page's base dataset — every call in the selected range, fetched
   // directly from the backend. This used to read from the shared calls
@@ -116,7 +92,8 @@ export default function ReportsPage() {
     }
     let cancelled = false;
     setRangeLoading(true);
-    fetchAllCalls(fetchCallsPage, { dateFrom: fromKey, dateTo: toKey })
+    analyticsService
+      .allCalls({ dateFrom: fromKey, dateTo: toKey })
       .then((items) => {
         if (!cancelled) setRangeCalls(items);
       })
@@ -131,7 +108,7 @@ export default function ReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey, fetchCallsPage]);
+  }, [fromKey, toKey]);
 
   const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);
@@ -189,7 +166,7 @@ export default function ReportsPage() {
   }, [fromKey, timeZone]);
 
   const cancelHistorical = () => {
-    const today = new Date();
+    const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
     setDateRange({ from: today, to: today });
   };
 

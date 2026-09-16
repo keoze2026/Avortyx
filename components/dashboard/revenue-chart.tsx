@@ -15,42 +15,37 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { CHART_TOOLTIP_PROPS } from "@/lib/chart-tooltip";
-import { bucketDaily, bucketHourly } from "@/lib/dashboard-buckets";
-import { LAST_14_DAYS, TODAY_HOURLY } from "@/lib/mock/timeseries";
+import { bucketHourlyZoned } from "@/lib/dashboard-buckets";
 import { formatCurrency } from "@/lib/format";
+import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
-import { cn } from "@/lib/utils";
-
-type Range = "24h" | "14d";
-
-const RANGES: Array<{ id: Range; labelKey: string }> = [
-  { id: "24h", labelKey: "dashboard.range.today" },
-  { id: "14d", labelKey: "dashboard.range.fourteenDays" },
-];
 
 interface RevenueChartProps {
-  /** When provided, the chart buckets from these calls instead of TODAY_HOURLY/LAST_14_DAYS. */
-  calls?: Call[];
+  /** The selected day's calls — already date-scoped by the page. */
+  calls: Call[];
+  /** Shown under the title so the figure is never mistaken for "today". */
+  dateLabel: string;
 }
 
-export function RevenueChart({ calls }: RevenueChartProps = {}) {
+/**
+ * Revenue by hour for one selected day.
+ *
+ * This used to bucket through `bucketHourly`, which silently dropped every
+ * call before *today's* local midnight — so any historical date rendered as
+ * a flat $0 line no matter what the page had fetched. It also carried its own
+ * "24h / 14d" toggle, which has nothing to toggle to now that the dashboard
+ * is a single-date view: the page's date picker is the only time control.
+ */
+export function RevenueChart({ calls, dateLabel }: RevenueChartProps) {
   const { t } = useTranslation();
-  const [range, setRange] = React.useState<Range>("24h");
-  const hourly = React.useMemo(
-    () => (calls ? bucketHourly(calls) : TODAY_HOURLY),
-    [calls],
+  const timeZone = useUIStore((s) => s.reportTimezone);
+  const data = React.useMemo(
+    () => bucketHourlyZoned(calls, timeZone).map((p) => ({ x: p.label, revenue: p.revenue })),
+    [calls, timeZone],
   );
-  const daily = React.useMemo(
-    () => (calls ? bucketDaily(calls, 14) : LAST_14_DAYS),
-    [calls],
-  );
-  const data =
-    range === "24h"
-      ? hourly.map((p) => ({ x: p.label, revenue: p.revenue }))
-      : daily.map((p) => ({ x: p.label, revenue: p.revenue }));
 
   const total = data.reduce((s, p) => s + p.revenue, 0);
-  const peak = Math.max(...data.map((p) => p.revenue));
+  const peak = data.length ? Math.max(...data.map((p) => p.revenue)) : 0;
   const avg = Math.round(total / Math.max(data.length, 1));
 
   return (
@@ -67,22 +62,9 @@ export function RevenueChart({ calls }: RevenueChartProps = {}) {
             </span>
           </div>
         </div>
-        <div className="flex gap-1 rounded-md border border-border bg-muted p-0.5">
-          {RANGES.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRange(r.id)}
-              className={cn(
-                "rounded px-2.5 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                range === r.id
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(r.labelKey)}
-            </button>
-          ))}
-        </div>
+        <span className="rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+          {dateLabel}
+        </span>
       </CardHeader>
       <CardContent>
         <div className="h-72 w-full">
@@ -108,7 +90,7 @@ export function RevenueChart({ calls }: RevenueChartProps = {}) {
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v) => `$${Math.round(v / 1000)}k`}
+                tickFormatter={(v: number) => (v >= 1000 ? `$${Math.round(v / 1000)}k` : `$${v}`)}
                 width={48}
               />
               <ReferenceLine

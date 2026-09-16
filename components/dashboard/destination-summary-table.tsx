@@ -17,13 +17,16 @@ import {
 } from "@/components/ui/table";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
-import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { formatCurrency, formatNumber, toE164 } from "@/lib/format";
 import type { Buyer, Call, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface DestinationSummaryTableProps {
+  /** The selected day's calls — already date-scoped by the page. */
+  calls: Call[];
+  /** Shown in the column headers so the figures are never mistaken for "today". */
+  dateLabel: string;
   /** When set, only render the destination matching this TFN. */
   destinationFilter?: string;
   limit?: number;
@@ -52,33 +55,27 @@ function buildRows(
   destinations: Destination[],
   filter: string | undefined,
   limit: number,
-  recentCalls: Call[],
+  calls: Call[],
   buyers: Buyer[],
 ): Row[] {
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const startMs = startOfToday.getTime();
-
-  // Pre-compute per-destination (keyed by TFN) call aggregates from the
-  // shared calls cache. Pass in from the component so the table reactively
-  // updates when fresh calls land.
+  // Per-destination (keyed by TFN) call + revenue aggregates from the day's
+  // calls the page fetched for the selected date. This used to read the
+  // shared calls cache (the most recent N calls account-wide, no date sent
+  // to the API) and then filter to *today's* local midnight — so any
+  // historical date showed 0 calls / $0 for every row, because those calls
+  // were never in the cache and the filter would have dropped them anyway.
   //
-  // `cc` (concurrent/live calls) is NOT derived from this cache — it used to
-  // count `ringing`/`in-progress` rows here, but the cache is backed by
-  // `/api/analytics/calls`, a completed-call log that structurally can't
-  // contain one (the backend's CDR `status` column only ever holds
-  // `no_answer` | `completed` | `failed`). It reads `destination.liveCalls`
-  // instead, straight off the Destination record.
+  // `cc` (concurrent/live calls) is NOT derived from the calls at all — a
+  // call log can't contain a ringing/in-progress row. It reads
+  // `destination.liveCalls`, straight off the Destination record.
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
-  for (const c of recentCalls) {
-    if (c.startedAt >= startMs) {
-      callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
-      revenueByTfn.set(
-        c.destinationNumber,
-        (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
-      );
-    }
+  for (const c of calls) {
+    callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
+    revenueByTfn.set(
+      c.destinationNumber,
+      (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
+    );
   }
 
   const buyerById = new Map<string, Buyer>();
@@ -111,16 +108,17 @@ function buildRows(
 }
 
 export function DestinationSummaryTable({
+  calls,
+  dateLabel,
   destinationFilter,
   limit = 12,
 }: DestinationSummaryTableProps) {
   const { t } = useTranslation();
   const destinations = useDestinationsStore((s) => s.destinations);
-  const recentCalls = useCallsStore((s) => s.recent);
   const buyers = useBuyersStore((s) => s.buyers);
   const rows = useMemo(
-    () => buildRows(destinations, destinationFilter, limit, recentCalls, buyers),
-    [destinations, destinationFilter, limit, recentCalls, buyers],
+    () => buildRows(destinations, destinationFilter, limit, calls, buyers),
+    [destinations, destinationFilter, limit, calls, buyers],
   );
 
   return (
@@ -148,9 +146,18 @@ export function DestinationSummaryTable({
               <TableHead className="w-[160px] !text-left">{t("dashboard.columns.status")}</TableHead>
               <TableHead className="text-left">{t("dashboard.columns.buyer")}</TableHead>
               <TableHead className="text-center">{t("dashboard.columns.live")}</TableHead>
-              <TableHead className="text-right">{t("dashboard.columns.capToday")}</TableHead>
-              <TableHead className="text-center">{t("dashboard.columns.callsToday")}</TableHead>
-              <TableHead className="pr-6 text-center">{t("dashboard.columns.revenueToday")}</TableHead>
+              <TableHead className="text-right">
+                {t("dashboard.columns.cap")}
+                <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">{dateLabel}</span>
+              </TableHead>
+              <TableHead className="text-center">
+                {t("dashboard.calls")}
+                <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">{dateLabel}</span>
+              </TableHead>
+              <TableHead className="pr-6 text-center">
+                {t("dashboard.revenue")}
+                <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">{dateLabel}</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

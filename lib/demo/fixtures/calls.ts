@@ -12,6 +12,22 @@
 
 import { makeRng, pick, intRange, range, chance } from "../rng";
 import { currentBucket, bucketInt, bucketRange } from "../bucket";
+import { seedDestinations } from "./entities";
+
+/**
+ * The TFN each buyer's seeded destination answers on, so a demo call's
+ * `destination_number` is a number that actually exists on the Destinations
+ * page. Calls used to dial a made-up `+1800555xxxx`, which meant nothing on
+ * the dashboard's Destinations table (keyed by TFN) could ever match a call
+ * — every row read 0 calls / $0 no matter the day.
+ */
+const DESTINATION_TFN_BY_BUYER = new Map<string, string>(
+  seedDestinations().map((d) => [d.buyer_id as string, d.tfn as string]),
+);
+
+function destinationFor(buyerId: string, rng: () => number): string {
+  return DESTINATION_TFN_BY_BUYER.get(buyerId) ?? `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`;
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
@@ -308,7 +324,7 @@ function makeLiveCall(idSuffix: string, startedAt: number, rng: () => number): D
   return {
     id: idSuffix,
     caller_number: makePhone(rng),
-    destination_number: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
+    destination_number: destinationFor(buyer.id, rng),
     status: pick(LIVE_STATUSES, rng),
     duration: Math.floor((Date.now() - startedAt) / 1000),
     // Still ringing or in-progress — qualification only applies once a call
@@ -361,7 +377,7 @@ function makeCall(
   return {
     id: `call_${idSuffix}`,
     caller_number: makePhone(rng),
-    destination_number: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
+    destination_number: destinationFor(buyer.id, rng),
     status,
     duration,
     is_qualified: isQualified,

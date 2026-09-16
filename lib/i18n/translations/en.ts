@@ -250,6 +250,7 @@ export const en = {
     revenue: "Revenue",
     topCampaigns: "Top campaigns",
     topCampaignsHint: "Connected calls today, by campaign",
+    topCampaignsHintOn: "Connected calls on {date}, by campaign",
     recentCalls: "Recent calls",
     destinations: "DESTINATIONS",
     destinationsHint: "Active TFNs attached to active buyers — paused destinations drop off automatically.",
@@ -259,6 +260,7 @@ export const en = {
       buyer: "Buyer",
       live: "Live",
       capToday: "Cap (today)",
+      cap: "Cap",
       callsToday: "Calls today",
       revenueToday: "Revenue today",
       campaign: "Campaign",
@@ -4518,6 +4520,10 @@ export const en = {
       portalTimezone: "Portal time zone",
       currentlyScheduled: "Currently scheduled:",
       mustDiffer: "(play and pause times must differ)",
+    },
+    datePicker: {
+      previousDay: "Previous day",
+      nextDay: "Next day",
     },
     dateRange: {
       placeholder: "Select date range",

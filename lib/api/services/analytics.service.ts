@@ -332,6 +332,30 @@ export const analyticsService = {
     };
   },
 
+  /**
+   * Every call matching `query` — pages through `calls()` until the
+   * response's own `total` is fully retrieved, instead of trusting one
+   * request's `items`. A fixed page size silently truncates any day whose
+   * volume exceeds it (a real 146-call day once rendered as 113 for exactly
+   * this reason). Capped at 20 pages / 10,000 rows as a sanity backstop, not
+   * an expected ceiling for a single day or range.
+   *
+   * This is what the Dashboard and Reports pages use for their date-scoped
+   * datasets — never the calls store's `recent` cache, which is the most
+   * recent N calls account-wide with no date applied.
+   */
+  async allCalls(query: Omit<CallLogQuery, "page" | "pageSize">): Promise<Call[]> {
+    const PAGE_SIZE = 500;
+    const MAX_PAGES = 20;
+    const all: Call[] = [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const res = await this.calls({ ...query, page, pageSize: PAGE_SIZE });
+      all.push(...res.items);
+      if (all.length >= res.total || res.items.length < PAGE_SIZE) break;
+    }
+    return all;
+  },
+
   /** Live snapshot — used by Live Monitor as the initial state before the
    *  WebSocket takes over. Returns whatever calls are currently in-flight. */
   async live(): Promise<Call[]> {
