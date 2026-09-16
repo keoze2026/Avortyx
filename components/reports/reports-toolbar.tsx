@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TimezonePicker } from "@/components/shared/timezone-picker";
 import { useTranslation } from "@/hooks/use-translation";
-import { formatNumber } from "@/lib/format";
+import { dayKeyToLocalDate, formatNumber, zonedDayKey } from "@/lib/format";
+import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
 /** Fixed Won-green ramp — matches the topbar's Live figure so the two read
@@ -120,6 +121,10 @@ export function ReportsToolbar({
 }: ReportsToolbarProps) {
   const { t } = useTranslation();
   const [refresh, setRefresh] = useState<RefreshOption>("Auto refresh");
+  // Presets ("Today", "This week", …) are relative to today *in the report
+  // timezone*, the same day the charts and Call Log are drawn in.
+  const timeZone = useUIStore((s) => s.reportTimezone);
+  const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
 
   // Live ticking countdown: seconds remaining until the next auto-refresh fires.
   // 0 whenever the option is "Off" or no interval is active.
@@ -244,6 +249,7 @@ export function ReportsToolbar({
         <DateRangePicker
           value={dateRange}
           onChange={onDateRangeChange}
+          today={today}
           className={TOOLBAR_BTN_HOVER}
         />
 

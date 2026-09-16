@@ -221,7 +221,7 @@ export function toCSV(calls: Call[]): string {
 }
 
 /** Triggers a CSV download in the browser. */
-export function downloadCSV(calls: Call[], filename = "vortyx-calls.csv") {
+export function downloadCSV(calls: Call[], filename = "calls.csv") {
   const csv = toCSV(calls);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

@@ -70,6 +70,9 @@ interface DestinationWire {
   timezone?: string | null;
   liveCalls?: number;
   hourlyCalls?: number;
+  /** Canonical per-row counter: `calls_today` on the wire. */
+  callsToday?: number;
+  /** Older spelling of the same counter — read as a fallback. */
   dailyCalls?: number;
   monthlyCalls?: number;
   globalCalls?: number;
@@ -135,7 +138,11 @@ function wireToDestination(w: DestinationWire): Destination {
     // these through is what actually fixes the LIVE column.
     liveCalls: w.liveCalls ?? 0,
     hourlyCalls: w.hourlyCalls ?? 0,
-    dailyCalls: w.dailyCalls ?? 0,
+    // The dashboard's Destinations table shows this for "today" directly
+    // (no client-side tally of the calls cache, which holds completed
+    // calls only). `calls_today` is the field the backend documents;
+    // `daily_calls` is tolerated from older responses.
+    dailyCalls: w.callsToday ?? w.dailyCalls ?? 0,
     monthlyCalls: w.monthlyCalls ?? 0,
     globalCalls: w.globalCalls ?? 0,
   };

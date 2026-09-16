@@ -99,7 +99,7 @@ export default function CallsPage() {
       format,
       CALL_EXPORT_COLUMNS,
       filtered,
-      dateStamped(`vortyx-calls-${range}`),
+      dateStamped(`calls-${range}`),
       "Calls",
     );
     toast.success(

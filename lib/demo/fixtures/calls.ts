@@ -425,6 +425,25 @@ export function generateLiveCalls(count = liveCallsCount()): DemoCallWire[] {
   return rows;
 }
 
+/* ─── Per-destination counters ───────────────────────────────────────── */
+/* What the backend puts on every `/api/destinations/` row: today's call
+ * count and the number in flight, keyed by the destination's TFN. Today's
+ * count includes live calls — the whole point of the field is that a
+ * completed-call log can't. */
+
+export function destinationCounters(): Map<string, { calls_today: number; live_calls: number }> {
+  const map = new Map<string, { calls_today: number; live_calls: number }>();
+  const bump = (tfn: string, live: boolean) => {
+    const row = map.get(tfn) ?? { calls_today: 0, live_calls: 0 };
+    row.calls_today += 1;
+    if (live) row.live_calls += 1;
+    map.set(tfn, row);
+  };
+  for (const c of todaysCalls()) bump(c.destination_number, false);
+  for (const c of generateLiveCalls()) bump(c.destination_number, true);
+  return map;
+}
+
 /* ─── Dashboard KPI snapshot ──────────────────────────────────────────── */
 /* Returns the wire shape `/api/analytics/dashboard` is supposed to return —
  * derived live from the today corpus so the donut, charts, and KPI tiles

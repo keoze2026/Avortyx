@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Download } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
 import { DestinationSummaryTable } from "@/components/dashboard/destination-summary-table";
@@ -10,7 +11,7 @@ import { TopCampaignsBars } from "@/components/dashboard/top-campaigns-bars";
 import { VerticalDonut } from "@/components/dashboard/vertical-donut";
 import { CallPerfCard } from "@/components/reports/call-perf-card";
 import { HourlyDistribution } from "@/components/reports/hourly-distribution";
-import { DatePicker } from "@/components/shared/date-picker";
+import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { PageHeader } from "@/components/shared/page-header";
 import { TimezonePicker } from "@/components/shared/timezone-picker";
@@ -47,23 +48,31 @@ export default function DashboardPage() {
   const [destinationTfn, setDestinationTfn] = useState<string>(ALL_DEST);
   const allSelected = destinationTfn === ALL_DEST;
 
-  // The dashboard is a single-day view: one exact date, default today.
+  // The dashboard is scoped to one date range — default today — chosen from
+  // the same preset picker as Reports (Today, Yesterday, This week, Last 7
+  // days, …, Custom range). Applying a range is what triggers the backend
+  // query below; nothing is filtered client-side by date.
   //
   // "Today" is today *in the report timezone* (the zone every chart and the
   // Call Log render in), so an operator in Tokyo reporting on New York time
-  // opens on New York's current day. The picked date is a calendar day, and
-  // its "YYYY-MM-DD" key is read straight off the calendar value — never via
-  // `date.getTime()` + a timezone, which shifts the day for any browser
-  // ahead of the report zone (see `calendarDayKey`). That key is what's
-  // sent to the API as dateFrom = dateTo.
+  // opens on New York's current day. The picked dates are calendar days,
+  // and their "YYYY-MM-DD" keys are read straight off the calendar values —
+  // never via `date.getTime()` + a timezone, which shifts the day for any
+  // browser ahead of the report zone (see `calendarDayKey`). Those keys are
+  // what's sent to the API as date_from / date_to.
   const timeZone = useUIStore((s) => s.reportTimezone);
   const todayKey = zonedDayKey(Date.now(), timeZone);
-  const [date, setDate] = useState<Date>(() => dayKeyToLocalDate(todayKey));
-  const dayKey = calendarDayKey(date);
-  const isToday = dayKey === todayKey;
+  const today = useMemo(() => dayKeyToLocalDate(todayKey), [todayKey]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => ({ from: today, to: today }));
+  const fromKey = dateRange?.from ? calendarDayKey(dateRange.from) : todayKey;
+  const toKey = dateRange?.to ? calendarDayKey(dateRange.to) : fromKey;
+  /** The range is exactly today — live counters apply and the view auto-refreshes. */
+  const isToday = fromKey === todayKey && toKey === todayKey;
+  /** The range ends today (or later), so new calls can still land in it. */
+  const includesToday = toKey >= todayKey;
 
-  // The day's calls, fetched from the backend for exactly `dayKey`. This
-  // used to read the calls store's `recent` cache — the most recent 200
+  // The range's calls, fetched from the backend for exactly fromKey..toKey.
+  // This used to read the calls store's `recent` cache — the most recent 200
   // calls account-wide, with no date sent to the API — and filter it
   // client-side to the picked day. Any date older than what happened to be
   // in those 200 rows was empty by construction, which is why every
@@ -76,18 +85,18 @@ export default function DashboardPage() {
     const load = async (showSpinner: boolean) => {
       if (showSpinner) setLoading(true);
       try {
-        const items = await analyticsService.allCalls({ dateFrom: dayKey, dateTo: dayKey });
+        const items = await analyticsService.allCalls({ dateFrom: fromKey, dateTo: toKey });
         if (!cancelled) setDayCalls(items);
       } catch (e) {
         if (cancelled) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this date"));
+        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this date range"));
         setDayCalls([]);
       } finally {
         if (!cancelled && showSpinner) setLoading(false);
       }
     };
     void load(true);
-    if (!isToday) return () => { cancelled = true; };
+    if (!includesToday) return () => { cancelled = true; };
     const id = window.setInterval(() => {
       if (document.visibilityState === "visible") void load(false);
     }, TODAY_REFRESH_MS);
@@ -95,18 +104,25 @@ export default function DashboardPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [dayKey, isToday]);
+  }, [fromKey, toKey, includesToday]);
 
-  // Calls per destination TFN on the selected day — the secondary label in
+  // Calls per destination TFN in the selected range — the secondary label in
   // the destination dropdown, so the operator can see which TFNs were hot
-  // on the day they're looking at.
+  // in the span they're looking at. For today the count comes straight off
+  // the Destination record (`calls_today` from the destinations API), which
+  // includes in-flight calls a completed-call log can't; for any other
+  // range it's tallied from the range's fetched calls.
   const callsByTfn = useMemo(() => {
     const map = new Map<string, number>();
+    if (isToday) {
+      for (const d of destinations) map.set(d.tfn, d.dailyCalls);
+      return map;
+    }
     for (const c of dayCalls) {
       map.set(c.destinationNumber, (map.get(c.destinationNumber) ?? 0) + 1);
     }
     return map;
-  }, [dayCalls]);
+  }, [dayCalls, destinations, isToday]);
 
   // When a destination is selected, scope everything to just its calls.
   const scopedCalls = useMemo(() => {
@@ -119,15 +135,21 @@ export default function DashboardPage() {
     payout: scopedCalls.reduce((s, c) => s + c.payout, 0),
   }), [scopedCalls]);
 
-  const dateLabel = isToday ? t("sharedUI.dateRange.today") : dayKey;
+  const dateLabel = isToday
+    ? t("sharedUI.dateRange.today")
+    : fromKey === toKey
+      ? fromKey
+      : `${fromKey} ~ ${toKey}`;
 
   const onExport = (format: ExportFormat) => {
     const rows = buildDestinationExportRows(
       destinations,
       allSelected ? undefined : destinationTfn,
       dayCalls,
+      isToday,
     );
-    const stem = `vortyx-dashboard-${dayKey}${allSelected ? "" : `-${destinationTfn.replace(/\D/g, "")}`}`;
+    const rangeStem = fromKey === toKey ? fromKey : `${fromKey}_${toKey}`;
+    const stem = `dashboard-${rangeStem}${allSelected ? "" : `-${destinationTfn.replace(/\D/g, "")}`}`;
     downloadRows(format, exportColumns(dateLabel), rows, dateStamped(stem), "Destinations");
     toast.success(`Exported ${rows.length} destinations to ${format.toUpperCase()}`);
   };
@@ -165,7 +187,7 @@ export default function DashboardPage() {
                 })}
               </SelectContent>
             </Select>
-            <DatePicker value={date} onChange={setDate} today={dayKeyToLocalDate(todayKey)} />
+            <DateRangePicker value={dateRange} onChange={setDateRange} today={today} />
             <ExportMenu onExport={onExport}>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4" /> {t("common.export")}
@@ -207,6 +229,7 @@ export default function DashboardPage() {
       <DestinationSummaryTable
         calls={dayCalls}
         dateLabel={dateLabel}
+        useLiveCounters={isToday}
         destinationFilter={allSelected ? undefined : destinationTfn}
       />
     </>
@@ -244,6 +267,7 @@ function buildDestinationExportRows(
   destinations: Destination[],
   filter: string | undefined,
   dayCalls: Call[],
+  useLiveCounters: boolean,
 ): DestinationExportRow[] {
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
@@ -253,6 +277,11 @@ function buildDestinationExportRows(
       c.destinationNumber,
       (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
     );
+  }
+  // Today: the API's own `calls_today` counter, which the on-screen table
+  // also shows (see DestinationSummaryTable).
+  if (useLiveCounters) {
+    for (const d of destinations) callsByTfn.set(d.tfn, d.dailyCalls);
   }
 
   // Buyers are pulled non-hook from the store since this runs at click time.

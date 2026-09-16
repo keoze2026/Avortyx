@@ -92,7 +92,7 @@ export function InvoicesTable() {
                 format,
                 INVOICE_EXPORT_COLUMNS,
                 rows,
-                dateStamped("vortyx-invoices"),
+                dateStamped("invoices"),
                 "Invoices",
               );
               toast.success(t("toolsUI.billing.invoices.toastExported"));

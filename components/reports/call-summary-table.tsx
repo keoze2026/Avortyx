@@ -921,7 +921,7 @@ export function CallSummaryTable({
         value: (r) => summaryCellValue(r, c.id),
       }),
     );
-    const stem = dateStamped(`vortyx-call-summary-${tab}`);
+    const stem = dateStamped(`call-summary-${tab}`);
     // Export the entire filtered result set, not just the current page.
     downloadRows(format, [labelCol, ...dataCols], allRows, stem, "Call summary");
     toast.success(

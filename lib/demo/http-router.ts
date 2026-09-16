@@ -41,6 +41,7 @@ import {
   getDemoCalls,
   generateLiveCalls,
   dashboardSnapshot,
+  destinationCounters,
   type DemoCallWire,
 } from "./fixtures/calls";
 import { bucketRange } from "./bucket";
@@ -544,10 +545,22 @@ route("POST", "/api/numbers/purchase", (req) => {
 
 /* ─── Destinations ──────────────────────────────────────────────────── */
 
-route("GET", "/api/destinations/", (req) => paged(readTable("destinations", seedDestinations), req.query));
+/** Every destination row carries the backend's live counters
+ *  (`calls_today`, `live_calls`), derived here from the demo call corpus. */
+function withDestinationCounters<T extends { tfn?: unknown }>(rows: T[]): T[] {
+  const counters = destinationCounters();
+  return rows.map((d) => {
+    const c = counters.get(String(d.tfn ?? ""));
+    return { ...d, calls_today: c?.calls_today ?? 0, live_calls: c?.live_calls ?? 0 };
+  });
+}
+
+route("GET", "/api/destinations/", (req) =>
+  paged(withDestinationCounters(readTable("destinations", seedDestinations)), req.query),
+);
 route("GET", "/api/destinations/{id}", (req) => {
   const id = paramAt("/api/destinations/{id}", req.path, 2);
-  const rows = readTable("destinations", seedDestinations);
+  const rows = withDestinationCounters(readTable("destinations", seedDestinations));
   const hit = rows.find((r) => r.id === id);
   if (!hit) throw notFound("Destination not found");
   return hit;

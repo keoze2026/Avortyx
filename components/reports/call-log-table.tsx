@@ -389,7 +389,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
       label: t(COLUMN_LABEL_KEYS[c.id]),
       value: (row) => logCellValue(row, c.id, publisherNameById),
     }));
-    downloadRows(format, [dateCol, ...dataCols], visible, dateStamped("vortyx-call-log"), "Call log");
+    downloadRows(format, [dateCol, ...dataCols], visible, dateStamped("call-log"), "Call log");
     toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(visible.length)).replace("{format}", format.toUpperCase()));
   };
 

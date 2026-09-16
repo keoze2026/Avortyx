@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { useTranslation } from "@/hooks/use-translation";
 import { billingService, type ExpensesReport } from "@/lib/api/services/billing.service";
+import { calendarDayKey } from "@/lib/format";
 
 interface CategoryDef {
   key: string;
@@ -85,10 +86,10 @@ export function ExpensesCard() {
   // the endpoint isn't available (older backends or empty orgs).
   React.useEffect(() => {
     let cancelled = false;
-    const fromIso = range?.from ? new Date(range.from).toISOString().slice(0, 10) : undefined;
-    const toIso = range?.to
-      ? new Date(range.to).toISOString().slice(0, 10)
-      : fromIso;
+    // Calendar days go out as their own Y-M-D — `toISOString()` would shift
+    // them to the previous UTC day for any browser east of Greenwich.
+    const fromIso = range?.from ? calendarDayKey(range.from) : undefined;
+    const toIso = range?.to ? calendarDayKey(range.to) : fromIso;
     void (async () => {
       try {
         const res = await billingService.expenses({ dateFrom: fromIso, dateTo: toIso });

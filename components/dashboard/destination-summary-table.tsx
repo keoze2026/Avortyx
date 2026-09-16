@@ -23,10 +23,18 @@ import type { Buyer, Call, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface DestinationSummaryTableProps {
-  /** The selected day's calls — already date-scoped by the page. */
+  /** The selected range's calls — already date-scoped by the page. */
   calls: Call[];
   /** Shown in the column headers so the figures are never mistaken for "today". */
   dateLabel: string;
+  /**
+   * True when the selected range is exactly today. The CALLS column and cap
+   * usage then read `destination.dailyCalls` — the `calls_today` counter the
+   * destinations API returns per row — instead of tallying the call log.
+   * The counter includes ringing / in-progress calls, which a completed-call
+   * log structurally can't, so this is what keeps the column live.
+   */
+  useLiveCounters?: boolean;
   /** When set, only render the destination matching this TFN. */
   destinationFilter?: string;
   limit?: number;
@@ -57,21 +65,28 @@ function buildRows(
   limit: number,
   calls: Call[],
   buyers: Buyer[],
+  useLiveCounters: boolean,
 ): Row[] {
-  // Per-destination (keyed by TFN) call + revenue aggregates from the day's
-  // calls the page fetched for the selected date. This used to read the
+  // Revenue is summed per destination (keyed by TFN) from the range's calls
+  // the page fetched from the backend for exactly the selected dates — the
+  // destination record carries no revenue figure. This used to read the
   // shared calls cache (the most recent N calls account-wide, no date sent
   // to the API) and then filter to *today's* local midnight — so any
   // historical date showed 0 calls / $0 for every row, because those calls
   // were never in the cache and the filter would have dropped them anyway.
   //
-  // `cc` (concurrent/live calls) is NOT derived from the calls at all — a
-  // call log can't contain a ringing/in-progress row. It reads
-  // `destination.liveCalls`, straight off the Destination record.
+  // Call counts are different. For today they come off the Destination
+  // record itself (`dailyCalls` ← the API's `calls_today`), because a call
+  // log only ever holds completed rows and can't reflect calls in flight;
+  // for any historical range the log is the only source, so they're
+  // tallied from it. `cc` (concurrent/live calls) likewise always reads
+  // `destination.liveCalls`.
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
   for (const c of calls) {
-    callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
+    if (!useLiveCounters) {
+      callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
+    }
     revenueByTfn.set(
       c.destinationNumber,
       (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
@@ -92,7 +107,9 @@ function buildRows(
       return buyer?.status === "active";
     })
     .map<Row>((destination) => {
-      const callsToday = callsByTfn.get(destination.tfn) ?? 0;
+      const callsToday = useLiveCounters
+        ? destination.dailyCalls
+        : (callsByTfn.get(destination.tfn) ?? 0);
       const cap = destination.dailyCap;
       return {
         destination,
@@ -110,6 +127,7 @@ function buildRows(
 export function DestinationSummaryTable({
   calls,
   dateLabel,
+  useLiveCounters = false,
   destinationFilter,
   limit = 12,
 }: DestinationSummaryTableProps) {
@@ -117,8 +135,8 @@ export function DestinationSummaryTable({
   const destinations = useDestinationsStore((s) => s.destinations);
   const buyers = useBuyersStore((s) => s.buyers);
   const rows = useMemo(
-    () => buildRows(destinations, destinationFilter, limit, calls, buyers),
-    [destinations, destinationFilter, limit, calls, buyers],
+    () => buildRows(destinations, destinationFilter, limit, calls, buyers, useLiveCounters),
+    [destinations, destinationFilter, limit, calls, buyers, useLiveCounters],
   );
 
   return (
