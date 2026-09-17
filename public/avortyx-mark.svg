@@ -1,14 +1,16 @@
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+  <!-- Brand blue ramp — same stops as --vortyx-* in app/globals.css
+       (deep #1739A8 → #1D4ED8 → bright #60A5FA, ultra #DBEAFE). -->
   <defs>
     <linearGradient id="vortyx-grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#3DD68C" />
-      <stop offset="55%" stop-color="#12805C" />
-      <stop offset="100%" stop-color="#0C6647" />
+      <stop offset="0%" stop-color="#60A5FA" />
+      <stop offset="55%" stop-color="#1D4ED8" />
+      <stop offset="100%" stop-color="#1739A8" />
     </linearGradient>
     <radialGradient id="vortyx-core" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#E6F7EF" stop-opacity="1" />
-      <stop offset="60%" stop-color="#3DD68C" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="#12805C" stop-opacity="0" />
+      <stop offset="0%" stop-color="#DBEAFE" stop-opacity="1" />
+      <stop offset="60%" stop-color="#60A5FA" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#1D4ED8" stop-opacity="0" />
     </radialGradient>
     <filter id="vortyx-glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="0.9" result="b" />
@@ -25,5 +27,5 @@
   <path d="M44.5 32a12.5 12.5 0 1 1-8.9-11.9" stroke="url(#vortyx-grad)" stroke-width="2.5" stroke-linecap="round" filter="url(#vortyx-glow)" opacity="0.92" />
   <path d="M38 32a6 6 0 1 1-4.2-5.7" stroke="url(#vortyx-grad)" stroke-width="2" stroke-linecap="round" filter="url(#vortyx-glow)" opacity="0.9" />
 
-  <circle cx="32" cy="32" r="1.6" fill="#E6F7EF" filter="url(#vortyx-glow)" />
+  <circle cx="32" cy="32" r="1.6" fill="#DBEAFE" filter="url(#vortyx-glow)" />
 </svg>
