@@ -1680,11 +1680,14 @@
    Every landing-page component references these through
    `var(--color-…)`, and every chat-widget / auth colour below maps
    onto them too. The template shipped keppel as a teal-green; Avortyx
-   uses its brand blue instead, so the ramp below keeps the template's
-   lightness / chroma steps with the hue moved to 262. The contrast
-   relationships the design was built on (keppel-950 text on a
-   keppel-400 button, keppel-400 on baltic-950, …) hold exactly, and
-   the 400 stop lands on the #7CA5FF the brand has always used on dark.
+   uses its brand blue instead. The ramp is the SAME blue scale the app
+   is built on (see `--accent` / `--vortyx-*` at the top of this file:
+   #3B82F6 accent, #60A5FA bright, #1D4ED8 deep, #DBEAFE ultra), so the
+   marketing site, login and the dashboard read as one product — the
+   keppel-500 stop *is* the app's dark-mode accent, keppel-400 its
+   bright tone, keppel-700 its deep tone. Contrast relationships the
+   design was built on (keppel-950 text on a keppel-400 button,
+   keppel-400 on baltic-950, …) hold.
    ========================================================= */
 :root {
   --color-baltic-sea-50:  oklch(97.48% 0.0 301.43);
@@ -1699,17 +1702,17 @@
   --color-baltic-sea-900: oklch(17.16% 0.02 294.89);
   --color-baltic-sea-950: oklch(16% 0.0152 296.75);
 
-  --color-keppel-50:  oklch(98% 0.01 262);
-  --color-keppel-100: oklch(94% 0.03 262);
-  --color-keppel-200: oklch(88% 0.07 262);
-  --color-keppel-300: oklch(80% 0.11 262);
-  --color-keppel-400: oklch(72% 0.14 262);
-  --color-keppel-500: oklch(66% 0.17 262);
-  --color-keppel-600: oklch(54% 0.16 262);
-  --color-keppel-700: oklch(46% 0.14 262);
-  --color-keppel-800: oklch(40% 0.11 262);
-  --color-keppel-900: oklch(34% 0.08 262);
-  --color-keppel-950: oklch(25% 0.05 262);
+  --color-keppel-50:  #EFF6FF;
+  --color-keppel-100: #DBEAFE;   /* = --vortyx-ultra */
+  --color-keppel-200: #BFDBFE;
+  --color-keppel-300: #93C5FD;   /* = --vortyx-bright (dark) */
+  --color-keppel-400: #60A5FA;   /* = --vortyx-bright (light) / --vortyx-cyan */
+  --color-keppel-500: #3B82F6;   /* = --accent (dark) / --vortyx-teal (dark) */
+  --color-keppel-600: #2563EB;
+  --color-keppel-700: #1D4ED8;   /* = --vortyx-teal (light) */
+  --color-keppel-800: #1E40AF;
+  --color-keppel-900: #1E3A8A;
+  --color-keppel-950: #172554;
 
   /* The landing page's canvas black and card shadow. */
   --site-canvas: hsl(255, 11.11%, 7.06%);
@@ -1750,14 +1753,17 @@
   --chart-2: var(--color-keppel-500);
   --radius: 0.75rem;
 
-  /* Brand mark + auth vortex read these. */
-  --vortyx-bright: var(--color-keppel-300);
-  --vortyx-teal:   var(--color-keppel-500);
-  --vortyx-deep:   var(--color-keppel-700);
-  --vortyx-ultra:  var(--color-keppel-100);
-  --vortyx-glow:   color-mix(in oklch, var(--color-keppel-400) 18%, transparent);
-  --vortyx-particle: color-mix(in oklch, var(--color-keppel-400) 45%, transparent);
-  --accent-gradient: linear-gradient(135deg, var(--color-keppel-700) 0%, var(--color-keppel-500) 55%, var(--color-keppel-300) 100%);
+  /* Brand mark + auth vortex read these — identical to the app's dark-mode
+     `--vortyx-*` values (see `.dark` at the top of this file), so the logo
+     gradient is the same on the site, at login and in the dashboard. */
+  --vortyx-bright: var(--color-keppel-300);   /* #93C5FD */
+  --vortyx-cyan:   var(--color-keppel-300);
+  --vortyx-teal:   var(--color-keppel-500);   /* #3B82F6 */
+  --vortyx-deep:   #1739A8;
+  --vortyx-ultra:  var(--color-keppel-100);   /* #DBEAFE */
+  --vortyx-glow:   rgba(59, 130, 246, 0.20);
+  --vortyx-particle: rgba(59, 130, 246, 0.50);
+  --accent-gradient: linear-gradient(135deg, #1739A8 0%, #1D4ED8 55%, var(--color-keppel-300) 100%);
 
   color-scheme: dark;
   background: var(--background);
