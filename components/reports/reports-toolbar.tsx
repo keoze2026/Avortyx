@@ -232,7 +232,7 @@ export function ReportsToolbar({
             does when armed; at 0 it just reads as a quiet count. */}
         <span
           className={cn(
-            "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium tabular-nums",
+            "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-sm font-medium tabular-nums",
             liveNow > 0 ? cn("border-current/30 bg-current/10", LIVE_GREEN) : "border-border text-muted-foreground",
           )}
         >
@@ -258,7 +258,7 @@ export function ReportsToolbar({
         <Button
           variant="outline"
           size="icon"
-          className={cn("h-9 w-9", TOOLBAR_BTN_HOVER)}
+          className={cn("h-8 w-8", TOOLBAR_BTN_HOVER)}
           aria-label={t("toolsUI.reports.toolbar.refresh")}
           onClick={onRefresh}
         >

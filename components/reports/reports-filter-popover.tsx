@@ -91,7 +91,7 @@ export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopover
         <Button
           variant="outline"
           size="icon"
-          className={cn("relative h-9 w-9", TOOLBAR_BTN_HOVER)}
+          className={cn("relative h-8 w-8", TOOLBAR_BTN_HOVER)}
           aria-label={t("toolsUI.reports.filter.triggerAria")}
         >
           <Filter className="h-4 w-4" />
