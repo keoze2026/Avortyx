@@ -259,12 +259,14 @@ export function DateRangePicker({
           disabled={{ after: anchor }}
         />
 
-        {/* Action row */}
-        <div className="flex items-center justify-between gap-3 border-t border-border p-3">
-          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+        {/* Footer: the pending selection on its own line, actions beneath.
+            Kept narrower than the calendar so the popover never grows past
+            it and leaves a blank strip beside the month grid. */}
+        <div className="border-t border-border p-3">
+          <div className="mb-2.5 font-mono text-[11px] tabular-nums text-muted-foreground">
             {pending ?? t("sharedUI.dateRange.placeholder")}
-          </span>
-          <div className="flex items-center gap-2">
+          </div>
+          <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={onCancel}>
               {t("sharedUI.dateRange.cancel")}
             </Button>
