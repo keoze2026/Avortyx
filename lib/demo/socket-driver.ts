@@ -12,7 +12,7 @@
 
 import type { CallEvent, CallEventType, CallSocket } from "../api/socket";
 import { snakeToCamel } from "../api/case";
-import { generateLiveCalls } from "./fixtures/calls";
+import { generateLiveCalls, liveCallsCount } from "./fixtures/calls";
 import { seedAuctions, bidsForAuction } from "./fixtures/auctions";
 import { makeRng, pick, intRange, range } from "./rng";
 
@@ -87,7 +87,8 @@ export function createDemoSocket(): CallSocket {
   };
 
   const seedInFlight = () => {
-    const live = generateLiveCalls(4);
+    // Open with the dataset's live figure for this hour already in flight.
+    const live = generateLiveCalls(liveCallsCount());
     for (const c of live) {
       inFlight.push({
         id: c.id,
@@ -226,8 +227,15 @@ export function createDemoSocket(): CallSocket {
         inFlight.splice(i, 1);
       }
     }
-    // Start a fresh call ~70% of ticks (keeps the radar populated)
-    if (Math.random() < 0.7) startCall(rng);
+    // Converge on the dataset's live figure for the current hour: start
+    // enough calls to cover the shortfall (capped so a slot change ramps
+    // over a few ticks rather than jumping), and start none when over it
+    // so settling calls bring the count back down. After hours the target
+    // is 0 and the radar drains on its own.
+    const target = liveCallsCount();
+    const deficit = target - inFlight.length;
+    const toStart = Math.min(Math.max(deficit, 0), 12);
+    for (let i = 0; i < toStart; i++) startCall(rng);
     // Place a couple of bids per tick
     placeBid(rng);
     if (Math.random() < 0.35) placeBid(rng);

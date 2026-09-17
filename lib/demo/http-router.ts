@@ -42,9 +42,12 @@ import {
   generateLiveCalls,
   dashboardSnapshot,
   destinationCounters,
+  campaignCounters,
   type DemoCallWire,
 } from "./fixtures/calls";
 import { bucketRange } from "./bucket";
+import { demoTimeZone } from "./clock";
+import { zonedDayKey } from "@/lib/format";
 import {
   seedAuctions,
   bidsForAuction,
@@ -257,14 +260,32 @@ route("PATCH", "/api/accounts/workspace", (req) => {
 
 /* ─── Campaigns ─────────────────────────────────────────────────────── */
 
+/** Every campaign row carries the backend's read-only call / revenue
+ *  aggregates, derived from the demo call corpus (see `campaignCounters`). */
+function withCampaignCounters<T extends { id?: unknown }>(rows: T[]): T[] {
+  const counters = campaignCounters();
+  return rows.map((c) => {
+    const k = counters.get(String(c.id ?? ""));
+    return {
+      ...c,
+      live_calls: k?.live_calls ?? 0,
+      hourly_calls: k?.hourly_calls ?? 0,
+      daily_calls: k?.daily_calls ?? 0,
+      monthly_calls: k?.monthly_calls ?? 0,
+      global_calls: k?.global_calls ?? 0,
+      daily_revenue: (k?.daily_revenue ?? 0).toFixed(2),
+    };
+  });
+}
+
 route("GET", "/api/campaigns/", (req) => {
-  const rows = readTable("campaigns", seedCampaigns);
+  const rows = withCampaignCounters(readTable("campaigns", seedCampaigns));
   return paged(rows, req.query);
 });
 
 route("GET", "/api/campaigns/{id}", (req) => {
   const id = paramAt("/api/campaigns/{id}", req.path, 2);
-  const rows = readTable("campaigns", seedCampaigns);
+  const rows = withCampaignCounters(readTable("campaigns", seedCampaigns));
   const hit = rows.find((r) => r.id === id);
   if (!hit) throw notFound("Campaign not found");
   return hit;
@@ -854,13 +875,14 @@ route("GET", "/api/analytics/calls", (req) => {
   // to apply its own, browser-timezone client-side date check instead), so
   // picking a historical range in demo mode silently showed every call ever
   // generated. `date_from`/`date_to` are "YYYY-MM-DD" report-timezone day
-  // keys already resolved by the caller; comparing against the UTC slice of
-  // `created_at` is close enough for demo fixture data.
+  // keys in the report timezone, so each row is bucketed in that zone —
+  // the same zone the demo's business day is generated in.
   if (req.query.date_from) {
     const from = req.query.date_from;
     const to = req.query.date_to || from;
+    const tz = demoTimeZone();
     all = all.filter((c) => {
-      const day = c.created_at.slice(0, 10);
+      const day = zonedDayKey(Date.parse(c.created_at), tz);
       return day >= from && day <= to;
     });
   }

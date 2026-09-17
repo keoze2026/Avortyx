@@ -1,18 +1,23 @@
 /**
  * Call CDR generator + analytics fixtures.
  *
- * The demo dashboard needs heavy volume + a clean business-hours bell
- * curve for visual impact (sketched by the client: low overnight, climbing
- * through morning, sharp peak around 3–4pm, taper into evening).
+ * Today follows the client's demo dataset exactly (see `day-profile.ts`):
+ * 6 500 calls between 08:00 and 17:00 with a fixed per-hour volume and a
+ * fixed number of calls in flight per hour. The day is read against the
+ * wall clock, so the portal's "today" totals climb through the day the
+ * way the dataset's cumulative column does, and the Live figure follows
+ * the slot the viewer is in. Each of the past 13 days reuses the same
+ * hourly shape at a lower volume so the 14-day views read full.
  *
- * Today gets ~3,000 calls; each of the past 13 days gets ~200 calls so
- * the 14-day chart reads full. Calls are generated once and cached in
- * module memory — not localStorage — so we don't blow the storage quota.
+ * Calls are generated once per rotation bucket and cached in module
+ * memory — not localStorage — so we don't blow the storage quota.
  */
 
 import { makeRng, pick, intRange, range, chance } from "../rng";
-import { currentBucket, bucketInt, bucketRange } from "../bucket";
+import { currentBucket, bucketRange } from "../bucket";
 import { seedDestinations } from "./entities";
+import { DAY_PROFILE, DAY_TOTAL, hourWeights, liveTargetAt } from "./day-profile";
+import { demoClock } from "../clock";
 
 /**
  * The TFN each buyer's seeded destination answers on, so a demo call's
@@ -120,43 +125,6 @@ function pickAffiliated<T extends { id: string }>(
   return pick(refs, rng);
 }
 
-/**
- * Per-bucket hourly distribution.
- *
- * The chart shape rotates every 2h. Four parameters define each bucket's
- * distribution; together they produce a wide range of believable
- * day-shapes:
- *
- *   center      — hour of the peak (10am–5pm)
- *   leftWidth   — hours of ramp-up before the peak (2–5)
- *   rightWidth  — hours of fade-down after the peak (2–6)
- *   sharpness   — 1.3 flat plateau … 3.5 sharp peak
- *
- * Each hour's weight is `cos(πx/2)^sharpness` where x is the normalized
- * distance from center. Hours outside `[center-leftWidth, center+rightWidth]`
- * are zeroed so we get a clean compact arc, not a noisy 24-hour spread.
- */
-function bucketHourWeights(): number[] {
-  const center = bucketRange(31, 10, 17);
-  const leftWidth = bucketRange(33, 2, 5);
-  const rightWidth = bucketRange(35, 2, 6);
-  const sharpness = bucketRange(37, 1.3, 3.5);
-
-  const weights = new Array(24).fill(0);
-  let sum = 0;
-  for (let h = 0; h < 24; h++) {
-    const dist = h - center;
-    const width = dist < 0 ? leftWidth : rightWidth;
-    if (Math.abs(dist) > width) continue;
-    const x = Math.abs(dist) / width;
-    const w = Math.pow(Math.cos((x * Math.PI) / 2), sharpness);
-    weights[h] = w;
-    sum += w;
-  }
-  // Normalize so weights sum to 1.0 (pickHour expects this).
-  return sum > 0 ? weights.map((w) => w / sum) : weights;
-}
-
 function pickHour(rng: () => number, weights: number[]): number {
   let r = rng();
   for (let h = 0; h < 24; h++) {
@@ -183,11 +151,9 @@ function makePhone(rng: () => number): string {
   return `+1${ac}${tail}`;
 }
 
-/** Snap to local midnight of today. */
+/** Midnight today in the report timezone (the demo's business-day clock). */
 function startOfToday(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+  return demoClock().startOfToday;
 }
 
 export interface DemoCallWire {
@@ -220,39 +186,46 @@ export interface DemoCallWire {
  *  localStorage (would blow the 5–10 MB quota at this volume). */
 
 interface CorpusOptions {
-  todayCount: number;
   pastDays: number;
-  pastDailyAvg: number;
+  /** Past days carry this share of today's 6 500 (varied ±20% per day). */
+  pastDayScale: number;
   /** Convert rate — fraction of calls that complete + actually pay out. */
   convertRate: number;
 }
 
 /**
- * Per-bucket options. Each bucket gets its own headline volume, convert
- * rate, and past-day average so the dashboard reads as a different kind of
- * day every 2 hours — some buckets are quiet (3K, 65% convert), some are
- * peak performance (12K, 92% convert).
+ * Per-bucket options. Today's volume and shape are fixed by the dataset;
+ * what still rotates every 2 hours is the convert rate and the weight of
+ * the history, so the demo doesn't read as a static screenshot.
  */
 function optsForCurrentBucket(): CorpusOptions {
   return {
-    todayCount: bucketInt(7, 3_000, 12_000),
     pastDays: 13,
-    // Past-day average lives in a similar order of magnitude as today so
-    // the 14-day chart doesn't have today as a single skyscraper bar.
-    pastDailyAvg: bucketInt(13, 400, 900),
+    pastDayScale: bucketRange(13, 0.25, 0.4),
     convertRate: bucketRange(11, 0.65, 0.92),
   };
 }
 
 let CACHE: DemoCallWire[] | null = null;
-let CACHE_BUCKET = -1;
+let CACHE_KEY = "";
 
+/**
+ * Every call on the books right now. The full day is generated once per
+ * bucket; what's returned is the slice that has happened by the wall
+ * clock — a call scheduled for 15:20 doesn't exist at 09:00 — so the
+ * cumulative totals grow through the day exactly like the dataset.
+ */
 export function getDemoCalls(): DemoCallWire[] {
-  const bucket = currentBucket();
-  if (CACHE && CACHE_BUCKET === bucket) return CACHE;
-  CACHE = buildCorpus(optsForCurrentBucket());
-  CACHE_BUCKET = bucket;
-  return CACHE;
+  // Rebuilt when the rotation bucket rolls, and whenever the report
+  // timezone (which fixes where "today" starts) or the day changes.
+  const clock = demoClock();
+  const key = `${currentBucket()}|${clock.timeZone}|${clock.dayKey}`;
+  if (!CACHE || CACHE_KEY !== key) {
+    CACHE = buildCorpus(optsForCurrentBucket());
+    CACHE_KEY = key;
+  }
+  const now = Date.now();
+  return CACHE.filter((c) => Date.parse(c.created_at) <= now);
 }
 
 function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
@@ -263,27 +236,28 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
   const start = startOfToday();
   const out: DemoCallWire[] = [];
 
-  // Build today's hour distribution once per bucket; reuse it for past
-  // days so the day-shape stays coherent across the 14-day view.
-  const weights = bucketHourWeights();
+  // The dataset's hour shape, shared by today and the history so the
+  // 14-day view stays coherent.
+  const weights = hourWeights();
 
   // ─── Today ───────────────────────────────────────────────────────────
-  // We intentionally allow timestamps anywhere in today's 24h window —
-  // including hours that haven't happened yet in wall-clock time. This is a
-  // marketing demo: the dashboard should always look like a full active
-  // business day, regardless of when the demo is opened.
-  for (let i = 0; i < opts.todayCount; i++) {
-    const hour = pickHour(rng, weights);
-    const minute = intRange(rng, 0, 59);
-    const second = intRange(rng, 0, 59);
-    const ts = start + hour * HOUR + minute * 60_000 + second * 1000;
-    out.push(makeCall(`today_${i.toString(36)}`, ts, rng, opts.convertRate));
+  // Exactly the dataset: 6 500 calls spread across 08:00–17:00 with each
+  // hour's own count, uniformly placed inside its hour. `getDemoCalls()`
+  // then hides the ones that haven't happened yet.
+  let n = 0;
+  for (const slot of DAY_PROFILE) {
+    for (let i = 0; i < slot.calls; i++, n++) {
+      const minute = intRange(rng, 0, 59);
+      const second = intRange(rng, 0, 59);
+      const ts = start + slot.hour * HOUR + minute * 60_000 + second * 1000;
+      out.push(makeCall(`today_${n.toString(36)}`, ts, rng, opts.convertRate));
+    }
   }
 
   // ─── Past N days ─────────────────────────────────────────────────────
   for (let dayOffset = 1; dayOffset <= opts.pastDays; dayOffset++) {
     // Slight day-to-day variation so the 14-day chart has shape.
-    const dayCount = Math.round(opts.pastDailyAvg * range(rng, 0.7, 1.3));
+    const dayCount = Math.round(DAY_TOTAL * opts.pastDayScale * range(rng, 0.8, 1.2));
     const dayStart = start - dayOffset * DAY;
     for (let i = 0; i < dayCount; i++) {
       const hour = pickHour(rng, weights);
@@ -292,18 +266,6 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
       const ts = dayStart + hour * HOUR + minute * 60_000 + second * 1000;
       out.push(makeCall(`d${dayOffset}_${i.toString(36)}`, ts, rng, opts.convertRate));
     }
-  }
-
-  // A handful of today's calls are still in flight — mirrors what a real
-  // backend's "calls so far today" listing legitimately contains. Without
-  // this, every call in the corpus is already resolved (completed or
-  // failed), so anything reading "live" from this data — the Call Summary
-  // table's Live column — is structurally stuck at 0 no matter what's
-  // happening on the Live Monitor page.
-  const liveNowCount = bucketInt(41, 3, 9);
-  for (let i = 0; i < liveNowCount; i++) {
-    const startedAt = Date.now() - intRange(rng, 5, 240) * 1000;
-    out.push(makeLiveCall(`live_today_${i.toString(36)}`, startedAt, rng));
   }
 
   // Sort newest → oldest.
@@ -409,10 +371,10 @@ function todaysCalls(): DemoCallWire[] {
 
 /* ─── Live (in-flight) call snapshot ──────────────────────────────────── */
 
-/** Number of in-flight calls "right now" — varies per bucket so the topbar
- *  LIVE pill changes across the day. */
+/** Number of in-flight calls "right now" — the dataset's live figure for
+ *  the current hour (0 outside 08:00–17:00). */
 export function liveCallsCount(): number {
-  return bucketInt(3, 3, 25);
+  return liveTargetAt();
 }
 
 export function generateLiveCalls(count = liveCallsCount()): DemoCallWire[] {
@@ -450,6 +412,56 @@ export function destinationCounters(): Map<string, DestinationCounters> {
   };
   for (const c of todaysCalls()) bump(c, false);
   for (const c of generateLiveCalls()) bump(c, true);
+  return map;
+}
+
+/* ─── Per-campaign counters ──────────────────────────────────────────── */
+/* Read-only aggregates the backend puts on every `/api/campaigns/` row,
+ * derived from the same corpus so the Campaigns table's LIVE / DAILY /
+ * MONTHLY / GLOBAL columns and revenue agree with the dashboard. */
+
+export interface CampaignCounters {
+  live_calls: number;
+  hourly_calls: number;
+  daily_calls: number;
+  monthly_calls: number;
+  global_calls: number;
+  daily_revenue: number;
+}
+
+export function campaignCounters(): Map<string, CampaignCounters> {
+  const map = new Map<string, CampaignCounters>();
+  const row = (id: string) => {
+    let r = map.get(id);
+    if (!r) {
+      r = { live_calls: 0, hourly_calls: 0, daily_calls: 0, monthly_calls: 0, global_calls: 0, daily_revenue: 0 };
+      map.set(id, r);
+    }
+    return r;
+  };
+  const clock = demoClock();
+  const dayStart = clock.startOfToday;
+  const hourStart = dayStart + clock.hour * HOUR;
+  const monthStart = clock.startOfMonth;
+  for (const c of getDemoCalls()) {
+    const r = row(c.campaign_id);
+    const ts = Date.parse(c.created_at);
+    r.global_calls += 1;
+    if (ts >= monthStart) r.monthly_calls += 1;
+    if (ts >= dayStart) {
+      r.daily_calls += 1;
+      r.daily_revenue += Number(c.revenue || 0);
+    }
+    if (ts >= hourStart) r.hourly_calls += 1;
+  }
+  for (const c of generateLiveCalls()) {
+    const r = row(c.campaign_id);
+    r.live_calls += 1;
+    r.daily_calls += 1;
+    r.hourly_calls += 1;
+    r.monthly_calls += 1;
+    r.global_calls += 1;
+  }
   return map;
 }
 

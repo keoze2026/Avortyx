@@ -346,7 +346,7 @@ export const analyticsService = {
    */
   async allCalls(query: Omit<CallLogQuery, "page" | "pageSize">): Promise<Call[]> {
     const PAGE_SIZE = 500;
-    const MAX_PAGES = 20;
+    const MAX_PAGES = 40;
     const all: Call[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
       const res = await this.calls({ ...query, page, pageSize: PAGE_SIZE });
