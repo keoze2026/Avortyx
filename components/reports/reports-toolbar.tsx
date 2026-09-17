@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   Eye,
@@ -124,7 +124,8 @@ export function ReportsToolbar({
   // Presets ("Today", "This week", …) are relative to today *in the report
   // timezone*, the same day the charts and Call Log are drawn in.
   const timeZone = useUIStore((s) => s.reportTimezone);
-  const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
+  const todayKey = zonedDayKey(Date.now(), timeZone);
+  const today = useMemo(() => dayKeyToLocalDate(todayKey), [todayKey]);
 
   // Live ticking countdown: seconds remaining until the next auto-refresh fires.
   // 0 whenever the option is "Off" or no interval is active.

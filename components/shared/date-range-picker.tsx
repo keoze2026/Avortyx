@@ -45,7 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
-import { calendarDayKey } from "@/lib/format";
+import { calendarDayKey, dayKeyToLocalDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -161,19 +161,29 @@ export function DateRangePicker({
   const { t } = useTranslation();
   const effectivePlaceholder = placeholder ?? t("sharedUI.dateRange.placeholder");
   const [open, setOpen] = React.useState(false);
-  const anchor = React.useMemo(() => startOfDay(today ?? new Date()), [today]);
+  // Keyed on the calendar day, not the Date object: a parent that builds
+  // `today` inline hands us a new object every render, and anything hung
+  // off it would re-run constantly.
+  const anchorKey = calendarDayKey(today ?? new Date());
+  const anchor = React.useMemo(() => startOfDay(dayKeyToLocalDate(anchorKey)), [anchorKey]);
 
   // Buffered state — edits live here until the operator hits Apply.
   const [buffer, setBuffer] = React.useState<DateRange | undefined>(value);
   const [preset, setPreset] = React.useState<DateRangePresetId>(() => detectPreset(value, anchor));
 
-  // Re-sync the buffer whenever the popover opens (or the parent value changes).
+  // Re-sync the buffer to the committed value at the moment the popover
+  // opens — and only then. Re-running on parent re-renders (the Reports
+  // toolbar re-renders every second for its refresh countdown) wiped the
+  // operator's in-progress selection before they could press Apply.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+  const anchorRef = React.useRef(anchor);
+  anchorRef.current = anchor;
   React.useEffect(() => {
-    if (open) {
-      setBuffer(value);
-      setPreset(detectPreset(value, anchor));
-    }
-  }, [open, value, anchor]);
+    if (!open) return;
+    setBuffer(valueRef.current);
+    setPreset(detectPreset(valueRef.current, anchorRef.current));
+  }, [open]);
 
   const formatRange = React.useCallback(
     (range: DateRange | undefined) => {
