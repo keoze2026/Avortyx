@@ -4245,6 +4245,7 @@ export const zh: TranslationShape = {
       teamOnline: "{count} 位团队成员在线",
       handoffSystem: "正在与 {name} · {role} 对话",
       handoffToast: "正在接通 {name}…",
+      delivered: "已送达团队 — {name} 会在此回复。您可以保持此标签页打开，或稍后再回来。",
       agentIntroTemplate:
         "你好!我是 {name}。接下来由我接手 — 很乐意为你提供{intent}方面的帮助。我能帮你做什么?",
       agentReplyTemplate:

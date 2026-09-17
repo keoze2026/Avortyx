@@ -4254,6 +4254,7 @@ export const ru: TranslationShape = {
       teamOnline: "В сети: {count}",
       handoffSystem: "Теперь вы общаетесь с {name} · {role}",
       handoffToast: "Соединяем с {name}…",
+      delivered: "Доставлено команде — {name} ответит здесь. Можете оставить вкладку открытой или вернуться позже.",
       agentIntroTemplate:
         "Привет! Я {name}. Дальше я. С удовольствием помогу с {intent}. Чем могу помочь?",
       agentReplyTemplate:

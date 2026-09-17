@@ -4306,6 +4306,7 @@ export const en = {
       teamOnline: "{count} teammates online",
       handoffSystem: "You're now chatting with {name} · {role}",
       handoffToast: "Connecting you with {name}…",
+      delivered: "Delivered to the team — {name} will reply here. You can keep this tab open or come back later.",
       agentIntroTemplate:
         "Hi! I'm {name}. I'll take it from here — happy to dive into {intent}. What can I help with?",
       agentReplyTemplate:

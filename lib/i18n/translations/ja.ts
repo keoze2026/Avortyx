@@ -4253,6 +4253,7 @@ export const ja: TranslationShape = {
       teamOnline: "{count} 名がオンライン",
       handoffSystem: "現在 {name} · {role} とチャット中です",
       handoffToast: "{name} につないでいます…",
+      delivered: "チームに送信しました — {name} がここで返信します。このタブを開いたままにするか、後で戻ってきてください。",
       agentIntroTemplate:
         "こんにちは!{name} です。ここから引き継ぎます — {intent} について喜んでお答えします。何かお手伝いできることは?",
       agentReplyTemplate:

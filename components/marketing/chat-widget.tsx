@@ -265,6 +265,17 @@ export function ChatWidget() {
           });
           setSessionId(result.sessionId);
           storeSessionId(activeAgent.id, result.sessionId);
+          // The backend has the session (and pings the team on Telegram
+          // from here). Say so — with nothing on screen after the first
+          // message the panel reads as "not connected", even when it is.
+          setMessages((m) => [
+            ...m,
+            {
+              sender: "system",
+              content: t("marketingUI.chat.delivered").replace("{name}", t(activeAgent.nameKey)),
+              at: Date.now(),
+            },
+          ]);
         } else {
           await supportService.sendMessage(sessionId, { message: trimmed });
         }
