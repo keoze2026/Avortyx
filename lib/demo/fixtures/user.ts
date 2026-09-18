@@ -36,6 +36,9 @@ export interface DemoUserWire {
   organization_id: string;
   organization_name: string;
   avatar_url: string | undefined;
+  /** Telegram link, written by the demo's simulated bot (see http-router). */
+  telegram_chat_id?: string | null;
+  telegram_username?: string | null;
 }
 
 export const DEMO_USER_WIRE: DemoUserWire = {

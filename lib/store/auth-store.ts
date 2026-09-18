@@ -64,7 +64,9 @@ interface AuthState {
    *  why the backend patch currently can't actually clear a stored avatar. */
   setAvatar: (avatarUrl: string | null) => Promise<void>;
   /** Update name + phone via PATCH /api/accounts/me. Throws on failure. */
-  updateProfile: (patch: { name?: string; phone?: string }) => Promise<void>;
+  updateProfile: (patch: { name?: string; phone?: string; telegramUsername?: string }) => Promise<void>;
+  /** Re-read /me and replace the snapshot (used while waiting for a Telegram link). */
+  refreshUser: () => Promise<User | null>;
   /** Multipart-upload a new avatar file. Returns the hosted URL the backend
    *  saved; the auth-store's `user.avatarUrl` is updated to match. */
   uploadAvatar: (file: File) => Promise<void>;
@@ -255,6 +257,12 @@ export const useAuthStore = create<AuthState>()(
         // failure so the caller can surface a toast.
         const user = await authService.updateProfile(patch);
         set({ user });
+      },
+
+      refreshUser: async () => {
+        const user = await authService.me();
+        set({ user });
+        return user;
       },
 
       uploadAvatar: async (file) => {

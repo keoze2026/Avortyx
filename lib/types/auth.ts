@@ -14,6 +14,13 @@ export interface User {
   /** Whether the user has TOTP-based MFA enrolled on the backend. Drives
    *  the Settings → Security 2FA card and the login challenge gating. */
   mfaEnabled?: boolean;
+  /** Telegram link state for notifications. `chatId` is set once the user
+   *  has pressed Start on the bot; `username` is what they typed / what the
+   *  bot reported. Connected ⇔ `chatId` present. */
+  telegram?: {
+    chatId?: string;
+    username?: string;
+  };
 }
 
 export interface AuthSession {

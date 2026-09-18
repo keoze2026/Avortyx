@@ -193,8 +193,39 @@ route("POST", "/api/accounts/refresh", () => ({
   refresh: DEMO_REFRESH_TOKEN,
 }));
 
+/* Telegram link. The real backend hands out a one-time deep link and the
+ * bot writes `telegram_chat_id` when the user presses Start. The demo can't
+ * receive that callback, so it "presses Start" for the user ~6 s after the
+ * link is issued — enough to see the waiting state and the flip. */
+let demoTelegramLinkedAt: number | null = null;
+
 route("GET", "/api/accounts/me", () => {
-  return readObject("user", () => DEMO_USER_WIRE);
+  const user = readObject("user", () => DEMO_USER_WIRE);
+  if (demoTelegramLinkedAt !== null && Date.now() >= demoTelegramLinkedAt && !user.telegram_chat_id) {
+    const next = { ...user, telegram_chat_id: "8123456789", telegram_username: user.telegram_username ?? "avortyx_demo" };
+    writeObject("user", next);
+    demoTelegramLinkedAt = null;
+    return next;
+  }
+  return user;
+});
+
+route("POST", "/api/accounts/me/telegram/link", () => {
+  const code = `AVX-${demoId("tg").slice(-6).toUpperCase()}`;
+  demoTelegramLinkedAt = Date.now() + 6_000;
+  return {
+    url: `https://t.me/AvortyxBot?start=${code}`,
+    code,
+    expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+  };
+});
+
+route("DELETE", "/api/accounts/me/telegram", () => {
+  const user = readObject("user", () => DEMO_USER_WIRE);
+  const next = { ...user, telegram_chat_id: null };
+  writeObject("user", next);
+  demoTelegramLinkedAt = null;
+  return { ok: true };
 });
 
 route("PATCH", "/api/accounts/me", (req) => {
@@ -206,6 +237,7 @@ route("PATCH", "/api/accounts/me", (req) => {
   if (typeof patch.lastName === "string") next.last_name = patch.lastName as string;
   if (typeof patch.phoneNumber === "string") next.phone_number = patch.phoneNumber as string;
   if (typeof patch.avatarUrl === "string") next.avatar_url = patch.avatarUrl as string;
+  if (typeof patch.telegramUsername === "string") next.telegram_username = patch.telegramUsername || null;
   writeObject("user", next);
   return next;
 });

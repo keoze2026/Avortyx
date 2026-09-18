@@ -56,6 +56,27 @@ interface UserOutWire {
   avatarUrl?: string;
   /** Some deployments expose the organization display name — optional. */
   organizationName?: string;
+  /** Telegram link — `telegram_chat_id` is written by the bot on /start,
+   *  `telegram_username` by the user (PATCH /me) or by the bot. */
+  telegramChatId?: string | number | null;
+  telegramUsername?: string | null;
+}
+
+/** `POST /api/accounts/me/telegram/link` — a one-time deep link into the
+ *  workspace bot. Opening it and pressing Start binds the chat to this user. */
+interface TelegramLinkWire {
+  url?: string;
+  link?: string;
+  deepLink?: string;
+  code?: string;
+  token?: string;
+  expiresAt?: string;
+}
+
+export interface TelegramLink {
+  url: string;
+  code?: string;
+  expiresAt?: number;
 }
 
 function isMfaChallenge(res: LoginOrChallenge): res is MfaChallengeResponse {
@@ -85,6 +106,13 @@ function wireToUser(wire: UserOutWire): User {
     phone: wire.phoneNumber,
     isSuperuser: wire.isSuperuser === true,
     mfaEnabled: wire.mfaEnabled === true,
+    telegram:
+      wire.telegramChatId || wire.telegramUsername
+        ? {
+            chatId: wire.telegramChatId ? String(wire.telegramChatId) : undefined,
+            username: wire.telegramUsername ?? undefined,
+          }
+        : undefined,
   };
 }
 
@@ -247,7 +275,9 @@ export const authService = {
   },
 
   /** Update the current user's profile. Returns the updated User. */
-  async updateProfile(patch: Partial<{ name: string; phone: string; avatarUrl: string }>): Promise<User> {
+  async updateProfile(
+    patch: Partial<{ name: string; phone: string; avatarUrl: string; telegramUsername: string }>,
+  ): Promise<User> {
     const body: Record<string, unknown> = {};
     if (patch.name !== undefined) {
       const { firstName, lastName } = splitName(patch.name);
@@ -256,8 +286,32 @@ export const authService = {
     }
     if (patch.phone !== undefined) body.phoneNumber = patch.phone;
     if (patch.avatarUrl !== undefined) body.avatarUrl = patch.avatarUrl;
+    if (patch.telegramUsername !== undefined) {
+      // Stored without the leading "@"; empty string clears it.
+      body.telegramUsername = patch.telegramUsername.replace(/^@/, "").trim();
+    }
     const wire = await http.patch<UserOutWire>("/api/accounts/me", { body });
     return wireToUser(wire);
+  },
+
+  /* ─── Telegram link ─────────────────────────────────────────────────────
+   * A bot can only message a chat that has messaged it first, so linking is
+   * a deep link (t.me/<bot>?start=<code>) the user opens; the bot receives
+   * `/start <code>` and stores the chat id on this account. */
+
+  async telegramLink(): Promise<TelegramLink> {
+    const w = await http.post<TelegramLinkWire>("/api/accounts/me/telegram/link");
+    const url = w.url ?? w.link ?? w.deepLink;
+    if (!url) throw new Error("The server did not return a Telegram link.");
+    return {
+      url,
+      code: w.code ?? w.token,
+      expiresAt: w.expiresAt ? Date.parse(w.expiresAt) : undefined,
+    };
+  },
+
+  async telegramUnlink(): Promise<void> {
+    await http.delete("/api/accounts/me/telegram");
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
