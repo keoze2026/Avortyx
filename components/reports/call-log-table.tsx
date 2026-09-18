@@ -139,6 +139,15 @@ function statusVariant(s: CallStatus): React.ComponentProps<typeof Badge>["varia
 }
 
 
+/**
+ * The Payout figure a customer sees: revenue minus the publisher's share
+ * (what remains for the customer per call). The raw `payout` field is the
+ * publisher's cut, which is internal and never shown in this log.
+ */
+function customerPayout(c: Call): number {
+  return Math.max(0, c.revenue - c.payout);
+}
+
 /** Stable hash so derived fields (TTC, fail reason) don't reshuffle on render. */
 function callHash(id: string): number {
   let h = 0;
@@ -241,7 +250,7 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "revenue":
       return c.revenue;
     case "payout":
-      return c.payout;
+      return customerPayout(c);
     case "ttc":
       return formatHMS(getTTCSeconds(c));
     case "duration":
@@ -530,13 +539,13 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                           {formatCurrency(c.revenue, true)}
                         </TableCell>
                       )}
-                      {/* Payout only. The margin (revenue − payout) used to be
-                          appended here as "(+$0.55)" — that's the platform's
-                          cut, not something a customer looking at their own
-                          call log should be shown. */}
+                      {/* Customer-facing payout: revenue minus the publisher's
+                          share (see `customerPayout`). The publisher's cut
+                          itself (the raw `payout` field) is internal and is
+                          not shown here. */}
                       {columns.payout && (
                         <TableCell className="text-right tabular-nums">
-                          {formatCurrency(c.payout, true)}
+                          {formatCurrency(customerPayout(c), true)}
                         </TableCell>
                       )}
                       {columns.ttc && (
@@ -732,7 +741,7 @@ function CallRowActions({ call }: { call: Call }) {
     if (call.status === "completed" || call.status === "in-progress") {
       toast.success(t("toolsUI.reports.callLog.actions.toastPayoutReview").replace("{number}", caller), {
         description: t("toolsUI.reports.callLog.actions.toastPayoutReviewDesc")
-          .replace("{payout}", formatCurrency(call.payout, true))
+          .replace("{payout}", formatCurrency(customerPayout(call), true))
           .replace("{ttc}", ttc),
       });
     } else {
