@@ -497,7 +497,6 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                 </TableRow>
               ) : (
                 visible.map((c) => {
-                  const profit = c.revenue - c.payout;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="pl-6 whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
@@ -531,20 +530,13 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                           {formatCurrency(c.revenue, true)}
                         </TableCell>
                       )}
+                      {/* Payout only. The margin (revenue − payout) used to be
+                          appended here as "(+$0.55)" — that's the platform's
+                          cut, not something a customer looking at their own
+                          call log should be shown. */}
                       {columns.payout && (
                         <TableCell className="text-right tabular-nums">
                           {formatCurrency(c.payout, true)}
-                          {profit !== 0 && (
-                            <span
-                              className={cn(
-                                "ml-1 text-[10px]",
-                                profit < 0 ? "text-destructive" : "text-[color:var(--success)]",
-                              )}
-                            >
-                              ({profit < 0 ? "" : "+"}
-                              {formatCurrency(profit, true)})
-                            </span>
-                          )}
                         </TableCell>
                       )}
                       {columns.ttc && (

@@ -4,6 +4,7 @@
  * the filtered call universe.
  */
 
+import { zonedDayKey } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
 const DAY = 1000 * 60 * 60 * 24;
@@ -16,9 +17,29 @@ export type DateRange = "today" | "7d" | "14d" | "30d";
 
 const RANGE_DAYS: Record<DateRange, number> = { today: 1, "7d": 7, "14d": 14, "30d": 30 };
 
-export function filterByRange(calls: Call[], range: DateRange, now = Date.now()): Call[] {
-  const since = now - RANGE_DAYS[range] * DAY;
-  return calls.filter((c) => c.startedAt >= since);
+/**
+ * Calendar-day bounds for a range, as "YYYY-MM-DD" keys in `timeZone`:
+ * "today" is the current day in that zone (not a rolling 24 hours — the
+ * old definition let yesterday-evening calls show under "Today"), "7d" is
+ * the last 7 calendar days including today, and so on.
+ */
+export function rangeDayKeys(
+  range: DateRange,
+  timeZone: string,
+  now = Date.now(),
+): { from: string; to: string } {
+  const to = zonedDayKey(now, timeZone);
+  const from = zonedDayKey(now - (RANGE_DAYS[range] - 1) * DAY, timeZone);
+  return { from, to };
+}
+
+/** Keep the calls whose start falls inside `range`'s calendar days in `timeZone`. */
+export function filterByRange(calls: Call[], range: DateRange, timeZone: string, now = Date.now()): Call[] {
+  const { from, to } = rangeDayKeys(range, timeZone, now);
+  return calls.filter((c) => {
+    const day = zonedDayKey(c.startedAt, timeZone);
+    return day >= from && day <= to;
+  });
 }
 
 /* ===========================================================

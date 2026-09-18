@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,10 +11,12 @@ import { CallsTable } from "@/components/calls/calls-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
-import { filterByRange, totals, type DateRange } from "@/lib/analytics";
+import { rangeDayKeys, totals, type DateRange } from "@/lib/analytics";
+import { analyticsService } from "@/lib/api/services/analytics.service";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { useCallsStore } from "@/lib/store/calls-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useUIStore } from "@/lib/store/ui-store";
 import { formatCompact, formatCurrency, formatDuration, formatPercent } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
@@ -48,14 +50,42 @@ export default function CallsPage() {
   const [pageSize, setPageSize] = useState(50);
   const [selected, setSelected] = useState<Call | null>(null);
 
-  // Recent calls hydrated from /api/analytics/calls via <StoreHydrator />.
-  // Heavy date-range / status filtering can be pushed to the backend via
-  // `useCallsStore.fetchPage()` when this surface grows server-side filters.
-  const recentCalls = useCallsStore((s) => s.recent);
   const campaigns = useCampaignsStore((s) => s.campaigns);
 
+  // The selected range, as calendar days in the report timezone — "Today"
+  // is today's date there, not a rolling 24 hours (which let yesterday
+  // evening's calls sit under "Today"). Fetched from the backend for
+  // exactly those days, like the Dashboard and Reports pages; this used to
+  // filter the shared 200-row `recent` cache, which capped every range at
+  // whatever happened to be in it ("102 of 200").
+  const timeZone = useUIStore((s) => s.reportTimezone);
+  const { from: fromKey, to: toKey } = rangeDayKeys(range, timeZone);
+  const [rangeCalls, setRangeCalls] = useState<Call[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    analyticsService
+      .allCalls({ dateFrom: fromKey, dateTo: toKey }, { timeZone })
+      .then((items) => {
+        if (!cancelled) setRangeCalls(items);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        setRangeCalls([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fromKey, toKey, timeZone]);
+
   const filtered = useMemo(() => {
-    let calls = filterByRange(recentCalls, range);
+    let calls = rangeCalls;
     if (campaignFilter !== "all") calls = calls.filter((c) => c.campaignId === campaignFilter);
     if (statuses.size > 0) calls = calls.filter((c) => statuses.has(c.status));
     if (query.trim()) {
@@ -67,7 +97,7 @@ export default function CallsPage() {
       );
     }
     return calls;
-  }, [query, range, campaignFilter, statuses, recentCalls]);
+  }, [query, campaignFilter, statuses, rangeCalls]);
 
   const summary = useMemo(() => totals(filtered), [filtered]);
 
@@ -138,10 +168,10 @@ export default function CallsPage() {
         onToggleColumn={toggleColumn}
         onExport={onExport}
         count={filtered.length}
-        total={recentCalls.length}
+        total={rangeCalls.length}
       />
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && !loading ? (
         <EmptyState
           icon={PhoneCall}
           tone="cyan"
@@ -194,7 +224,6 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 }
 
 /** Tiny hook — resets a page counter when a dependency key changes. */
-import { useEffect } from "react";
 function useMemoResetPage(key: string, setPage: (n: number) => void) {
   useEffect(() => {
     setPage(0);
