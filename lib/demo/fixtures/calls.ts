@@ -273,6 +273,9 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
   return out;
 }
 
+/** Average connected-call length for the current bucket: 17–21 minutes. */
+const ACL_CENTER_SEC = () => Math.round(bucketRange(43, 17 * 60, 21 * 60));
+
 const LIVE_FAILURE_STATUSES = ["missed", "rejected", "failed"];
 const LIVE_STATUSES = ["ringing", "in-progress", "in-progress", "in-progress"];
 
@@ -328,8 +331,12 @@ function makeCall(
   // the duration-only fallback heuristic would otherwise always do here
   // (every completed demo call already runs ≥90s).
   const isQualified = isConverted && chance(rng, 0.7);
+  // Connected calls average 17–21 minutes (the client's target AHT for the
+  // demo). The centre is picked per rotation bucket so the ACL column
+  // reads a slightly different figure every couple of hours, and each
+  // call sits within ±7 minutes of it. Missed / rejected stay short.
   const duration = isConverted
-    ? intRange(rng, 90, 720)
+    ? intRange(rng, ACL_CENTER_SEC() - 420, ACL_CENTER_SEC() + 420)
     : status === "missed"
       ? intRange(rng, 5, 35)
       : intRange(rng, 1, 12);
