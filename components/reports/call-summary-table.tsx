@@ -32,7 +32,8 @@ import {
 import type { Call, Campaign, Destination } from "@/lib/types";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTimer, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTimer, toE164, zonedDayKey, zonedParts } from "@/lib/format";
+import { useUIStore } from "@/lib/store/ui-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useTranslation } from "@/hooks/use-translation";
@@ -299,9 +300,11 @@ interface SummaryRow {
   revenue: number;
 }
 
-function dateKey(ts: number) {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+/** Day key in the report timezone — the same zone the Call Log, the hourly
+ *  chart and the date picker use, so a call near midnight lands on the same
+ *  day everywhere. (Reading `Date#getDate()` used the browser's zone.) */
+function dateKey(ts: number, timeZone: string) {
+  return zonedDayKey(ts, timeZone);
 }
 
 /* ─── Deterministic derivation tables ─────────────────────────────────
@@ -443,7 +446,7 @@ function pickFrom(c: Call, salt: string, list: string[]): string {
 }
 
 /** Translate a (call, group) pair to a {key, label} bucket — or null to skip. */
-function deriveGroup(c: Call, group: GroupKey): { key: string; label: string } | null {
+function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string; label: string } | null {
   switch (group) {
     case "campaign":
       return { key: c.campaignId, label: c.campaignName };
@@ -470,30 +473,31 @@ function deriveGroup(c: Call, group: GroupKey): { key: string; label: string } |
     }
 
     case "date": {
-      const v = dateKey(c.startedAt);
+      const v = dateKey(c.startedAt, timeZone);
       return { key: v, label: v };
     }
     case "date-week": {
-      const d = new Date(c.startedAt);
-      const jan1 = new Date(d.getFullYear(), 0, 1);
+      // Week of the year, computed on the report-zone calendar day.
+      const [y, m, day] = dateKey(c.startedAt, timeZone).split("-").map(Number);
+      const d = new Date(Date.UTC(y, m - 1, day));
+      const jan1 = new Date(Date.UTC(y, 0, 1));
       const week = Math.ceil(
-        ((d.getTime() - jan1.getTime()) / 86_400_000 + jan1.getDay() + 1) / 7,
+        ((d.getTime() - jan1.getTime()) / 86_400_000 + jan1.getUTCDay() + 1) / 7,
       );
-      const v = `${d.getFullYear()}-W${week.toString().padStart(2, "0")}`;
+      const v = `${y}-W${week.toString().padStart(2, "0")}`;
       return { key: v, label: v };
     }
     case "date-month": {
-      const d = new Date(c.startedAt);
-      const v = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+      const v = dateKey(c.startedAt, timeZone).slice(0, 7);
       return { key: v, label: v };
     }
     case "date-hour": {
-      const d = new Date(c.startedAt);
-      const v = `${d.getHours().toString().padStart(2, "0")}:00`;
+      const v = `${zonedParts(c.startedAt, timeZone).hour.toString().padStart(2, "0")}:00`;
       return { key: v, label: v };
     }
     case "date-dow": {
-      const v = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(c.startedAt).getDay()];
+      const [y, m, day] = dateKey(c.startedAt, timeZone).split("-").map(Number);
+      const v = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(Date.UTC(y, m - 1, day)).getUTCDay()];
       return { key: v, label: v };
     }
 
@@ -628,10 +632,10 @@ function labelOf(value: string) {
   return { key: value, label: value };
 }
 
-function groupCalls(calls: Call[], group: GroupKey): SummaryRow[] {
+function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRow[] {
   const m = new Map<string, SummaryRow>();
   for (const c of calls) {
-    const bucket = deriveGroup(c, group);
+    const bucket = deriveGroup(c, group, timeZone);
     if (!bucket || !bucket.key) continue;
     const { key, label } = bucket;
 
@@ -692,13 +696,38 @@ function groupCalls(calls: Call[], group: GroupKey): SummaryRow[] {
  * `row.live` is the fallback for groupings that have no entity behind them
  * (dates, traffic source, caller identity, …).
  */
+/** Groupings whose rows can carry the in-flight count (see `liveForGroup`). */
+const LIVE_ATTRIBUTABLE = new Set<GroupKey>([
+  "campaign",
+  "dialed",
+  "destination",
+  "buyer",
+  "date",
+  "date-month",
+  "date-hour",
+]);
+
 function liveForGroup(
   group: GroupKey,
   key: string,
   campaignsById: Map<string, Campaign>,
   destinations: Destination[],
+  liveNow: number,
+  timeZone: string,
 ): number | undefined {
+  const nowMs = Date.now();
   switch (group) {
+    // A call that's in flight right now is, by definition, on today's
+    // date / in this hour / this week / this month — so the account-wide
+    // live count belongs to that one row, and every other date row is 0.
+    // Without this the Date tab showed 0 on today's row while the Totals
+    // row beneath it carried the global figure.
+    case "date":
+      return key === zonedDayKey(nowMs, timeZone) ? liveNow : 0;
+    case "date-month":
+      return key === zonedDayKey(nowMs, timeZone).slice(0, 7) ? liveNow : 0;
+    case "date-hour":
+      return key === `${zonedParts(nowMs, timeZone).hour.toString().padStart(2, "0")}:00` ? liveNow : 0;
     case "campaign":
       return campaignsById.get(key)?.liveCalls;
     case "dialed":
@@ -842,8 +871,10 @@ export function CallSummaryTable({
     [campaigns],
   );
 
+  const timeZone = useUIStore((s) => s.reportTimezone);
+
   const groupedRows = React.useMemo(() => {
-    const grouped = groupCalls(calls, tab);
+    const grouped = groupCalls(calls, tab, timeZone);
     // Merge the per-entity live counters in before sorting / totals / export,
     // so every consumer of these rows sees the same figure. `max`, not
     // "prefer the entity": both sources count the same in-flight calls, and
@@ -853,11 +884,11 @@ export function CallSummaryTable({
     // outright zeroed every row on a backend that hasn't populated the
     // counter yet, while the totals row beside it still said 6.)
     for (const row of grouped) {
-      const live = liveForGroup(tab, row.key, campaignsById, destinations);
+      const live = liveForGroup(tab, row.key, campaignsById, destinations, liveNow ?? 0, timeZone);
       if (live !== undefined) row.live = Math.max(row.live, live);
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations]);
+  }, [calls, tab, campaignsById, destinations, liveNow, timeZone]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.
@@ -1157,15 +1188,20 @@ export function CallSummaryTable({
               {allRows.length > 0 && (
                 <TableRow className="border-t-2 border-border bg-muted/40 hover:bg-muted/40 font-semibold">
                   <TableCell className="pl-6 text-left">{t("toolsUI.reports.summary.totals")}</TableCell>
-                  {/* liveNow is the account-wide in-flight count (same figure
-                      as the topbar); totals.live is the sum of the rows
-                      above. Same `max` reasoning as the per-row merge — the
-                      column can't add up to more calls than are actually
-                      live, and the global counter can't be lower than the
-                      live rows we can see. */}
+                  {/* The Live total is the sum of the rows above, so the
+                      column always adds up. For groupings whose rows carry
+                      the account-wide figure (campaign, destination, buyer,
+                      date, …) the global counter can't be lower than the live
+                      rows we can see, so it's the floor; for groupings that
+                      can't attribute live calls to a row at all (publisher,
+                      traffic source, caller profile, …) the rows are the only
+                      honest figure — a total the rows don't add up to just
+                      reads as a bug. */}
                   {visible.live && (
                     <TableCell className="text-center tabular-nums">
-                      {formatNumber(Math.max(liveNow ?? 0, totals.live))}
+                      {formatNumber(
+                        LIVE_ATTRIBUTABLE.has(tab) ? Math.max(liveNow ?? 0, totals.live) : totals.live,
+                      )}
                     </TableCell>
                   )}
                   {visible.incoming && (
