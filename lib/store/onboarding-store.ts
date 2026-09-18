@@ -28,6 +28,8 @@ interface OnboardingState {
   hydrated: boolean;
 
   refresh: () => Promise<void>;
+  /** Overwrite the balance from a fresher source (the polled dashboard KPIs). */
+  setBalance: (balance: number) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()((set) => ({
@@ -43,14 +45,18 @@ export const useOnboardingStore = create<OnboardingState>()((set) => ({
         kycService.get().catch(() => null),
         billingService.account().catch(() => null),
       ]);
-      set({
+      set((prev) => ({
         kycStatus: kyc?.status ?? null,
-        balance: account?.balance ?? null,
+        // A failed account fetch must not wipe a balance the dashboard poll
+        // already delivered.
+        balance: account?.balance ?? prev.balance,
         loading: false,
         hydrated: true,
-      });
+      }));
     } catch {
       set({ loading: false, hydrated: true });
     }
   },
+
+  setBalance: (balance) => set({ balance }),
 }));

@@ -3475,6 +3475,13 @@ export const ru: TranslationShape = {
         managePlan: "Управление планом",
         cancel: "Отменить",
         callsUsed: "Звонков использовано",
+        balance: {
+          label: "Баланс счёта",
+          creditLimit: "Кредитный лимит",
+          status: "Статус",
+          topUp: "Пополнить",
+          unavailable: "—",
+        },
       },
       payment: {
         title: "Способ оплаты",

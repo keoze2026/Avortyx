@@ -3474,6 +3474,13 @@ export const ja: TranslationShape = {
         managePlan: "プランを管理",
         cancel: "キャンセル",
         callsUsed: "コール使用",
+        balance: {
+          label: "アカウント残高",
+          creditLimit: "与信限度額",
+          status: "ステータス",
+          topUp: "チャージ",
+          unavailable: "—",
+        },
       },
       payment: {
         title: "お支払い方法",

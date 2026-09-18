@@ -3520,6 +3520,13 @@ export const en = {
         managePlan: "Manage plan",
         cancel: "Cancel",
         callsUsed: "Calls used",
+        balance: {
+          label: "Account balance",
+          creditLimit: "Credit limit",
+          status: "Status",
+          topUp: "Top up",
+          unavailable: "—",
+        },
       },
       payment: {
         title: "Payment method",

@@ -37,10 +37,13 @@ export function Topbar() {
     }, KPI_POLL_MS);
     return () => window.clearInterval(id);
   }, []);
-  // Wallet balance comes from the billing account fetched by the onboarding
-  // store on mount (and refreshed after every recharge). Renders 0 until the
-  // first response lands.
-  const balance = useOnboardingStore((s) => s.balance);
+  // Wallet balance: the dashboard KPI payload polled above carries it
+  // (`balance` on /api/analytics/dashboard), so it's the freshest figure and
+  // needs no extra request. The onboarding store's copy (from
+  // /api/billing/account on mount + after a recharge) is the fallback until
+  // the first poll lands. Renders 0 until either response arrives.
+  const accountBalance = useOnboardingStore((s) => s.balance);
+  const balance = kpis?.balance ?? accountBalance;
   const liveCalls = liveCount > 0 ? liveCount : (kpis?.liveCalls ?? 0);
   const totalCalls = kpis?.callsToday ?? 0;
 

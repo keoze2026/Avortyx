@@ -3475,6 +3475,13 @@ export const zh: TranslationShape = {
         managePlan: "管理计划",
         cancel: "取消",
         callsUsed: "已用通话",
+        balance: {
+          label: "账户余额",
+          creditLimit: "信用额度",
+          status: "状态",
+          topUp: "充值",
+          unavailable: "—",
+        },
       },
       payment: {
         title: "支付方式",

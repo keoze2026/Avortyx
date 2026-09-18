@@ -11,10 +11,11 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Sparkles } from "lucide-react";
+import { Calendar, Sparkles, Wallet } from "lucide-react";
 
 import { billingService, type BillingAccount } from "@/lib/api/services/billing.service";
 import { useCallsStore } from "@/lib/store/calls-store";
+import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { MOCK_PLAN, MOCK_USAGE } from "@/lib/mock/billing";
 import { formatCompact, formatCurrency } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
@@ -40,6 +41,16 @@ export function SubscriptionHero() {
 
   const kpis = useCallsStore((s) => s.kpis);
   const plan = account?.plan;
+
+  // Account balance. The dashboard KPI payload the topbar polls every 15s
+  // carries it (`balance` / `currency`), so that's the live figure; the
+  // billing account fetched above is the fallback and the source for the
+  // credit limit and account status.
+  const onboardingBalance = useOnboardingStore((s) => s.balance);
+  const balance = kpis?.balance ?? account?.balance ?? onboardingBalance;
+  const currency = kpis?.currency ?? account?.currency ?? "USD";
+  const creditLimit = account?.creditLimit;
+  const accountStatus = account?.status;
 
   const tier = plan?.tier ?? MOCK_PLAN.tier;
   const monthlyCost = plan?.monthlyCost ?? MOCK_PLAN.monthlyCost;
@@ -108,6 +119,58 @@ export function SubscriptionHero() {
               Upgrade / downgrade / cancel will return when the subscription
               endpoints ship. Until then, the user can recharge their balance
               via the card below and contact support to change plan. */}
+        </div>
+
+        {/* Middle: account balance — the same figure as the topbar wallet,
+            with the credit limit and account status from the billing
+            account beside it. */}
+        <div className="flex flex-col justify-center gap-4 rounded-xl border border-border/60 bg-background/40 px-5 py-4 backdrop-blur-sm lg:w-64">
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              <Wallet className="h-3 w-3" />
+              {t("toolsUI.billing.subscription.balance.label")}
+              {currency !== "USD" && <span className="ml-auto">{currency}</span>}
+            </div>
+            <div className="mt-1 font-mono text-3xl font-semibold tabular-nums tracking-tight">
+              {balance != null ? formatCurrency(balance) : t("toolsUI.billing.subscription.balance.unavailable")}
+            </div>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <dt className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {t("toolsUI.billing.subscription.balance.creditLimit")}
+              </dt>
+              <dd className="mt-0.5 font-mono tabular-nums">
+                {creditLimit != null ? formatCurrency(creditLimit) : t("toolsUI.billing.subscription.balance.unavailable")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {t("toolsUI.billing.subscription.balance.status")}
+              </dt>
+              <dd className="mt-0.5 capitalize">
+                {accountStatus ? (
+                  <span
+                    className={
+                      accountStatus.toLowerCase() === "active"
+                        ? "text-[color:var(--success)]"
+                        : "text-[color:var(--warning)]"
+                    }
+                  >
+                    {accountStatus}
+                  </span>
+                ) : (
+                  t("toolsUI.billing.subscription.balance.unavailable")
+                )}
+              </dd>
+            </div>
+          </dl>
+          <a
+            href="#recharge-balance"
+            className="inline-flex h-8 w-fit items-center rounded-md border border-accent/40 bg-accent/15 px-3 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
+          >
+            {t("toolsUI.billing.subscription.balance.topUp")}
+          </a>
         </div>
 
         {/* Right: usage ring */}

@@ -927,7 +927,14 @@ route("GET", "/api/routing/calls", (req) => {
   };
 });
 
-route("GET", "/api/analytics/dashboard", () => dashboardSnapshot());
+// The real backend puts the account balance on the dashboard payload too
+// (same request that fills the header's Live / Total), so mirror that here
+// from the same figure /api/billing/account serves.
+route("GET", "/api/analytics/dashboard", () => ({
+  ...dashboardSnapshot(),
+  balance: demoBalance(),
+  currency: "USD",
+}));
 
 route("GET", "/api/analytics/live", () => generateLiveCalls());
 route("GET", "/api/routing/calls/live", () => generateLiveCalls());
@@ -1035,11 +1042,16 @@ route("GET", "/api/dni/pools", () => ({ items: [], total: 0 }));
 const NOW = Date.now();
 const DAY = 24 * 60 * 60 * 1000;
 
+/** Balance drifts $20K–$80K across buckets so the wallet pill in the topbar
+ *  reads like an active operator account, not a fixed default. One source
+ *  for both /api/billing/account and /api/analytics/dashboard. */
+function demoBalance(): string {
+  return bucketRange(101, 20_000, 80_000).toFixed(2);
+}
+
 route("GET", "/api/billing/account", () => ({
   id: "acct_demo",
-  // Balance drifts $20K–$80K across buckets so the wallet pill in the
-  // topbar reads like an active operator account, not a fixed default.
-  balance: bucketRange(101, 20_000, 80_000).toFixed(2),
+  balance: demoBalance(),
   credit_limit: "75000.00",
   low_balance_threshold: "500.00",
   auto_recharge: true,

@@ -12,6 +12,7 @@
 
 import { create } from "zustand";
 
+import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import {
   analyticsService,
   type CallLogPage,
@@ -68,6 +69,14 @@ export const useCallsStore = create<CallsState>()((set) => ({
     try {
       const kpis = await analyticsService.dashboard();
       set({ kpis });
+      // The dashboard payload carries the account balance alongside the
+      // call counters, and the topbar polls it every 15s — so it is the
+      // freshest balance the app has. Mirror it into the onboarding store,
+      // which the header wallet and the balance gate read, instead of
+      // leaving those on the one-shot /api/billing/account fetch.
+      if (kpis.balance !== undefined) {
+        useOnboardingStore.getState().setBalance(kpis.balance);
+      }
     } catch (e) {
       set({ error: messageFromError(e) });
     }

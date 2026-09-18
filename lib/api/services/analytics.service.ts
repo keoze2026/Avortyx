@@ -27,6 +27,10 @@ interface DashboardWire {
   avgCallDuration: number;
   spamBlocked: number;
   duplicateBlocked: number;
+  /** Account balance, on the same response that fills the header's Live /
+   *  Total figures — no second request needed. Decimal string ("10050.00"). */
+  balance?: string | number | null;
+  currency?: string | null;
 }
 
 interface TimeSeriesPointWire {
@@ -111,6 +115,9 @@ export interface DashboardKpis {
   avgCallDurationSec: number;
   spamBlocked: number;
   duplicateBlocked: number;
+  /** Account balance in `currency`; undefined when the backend omits it. */
+  balance?: number;
+  currency?: string;
 }
 
 export interface TimeSeriesPoint {
@@ -263,6 +270,8 @@ function dashboardWireToKpis(w: DashboardWire): DashboardKpis {
     avgCallDurationSec: w.avgCallDuration,
     spamBlocked: w.spamBlocked,
     duplicateBlocked: w.duplicateBlocked,
+    balance: w.balance != null ? toNum(w.balance) : undefined,
+    currency: w.currency ?? undefined,
   };
 }
 
