@@ -20,7 +20,8 @@ import {
   type AlertKind,
   type NotificationItem,
 } from "@/lib/mock/notifications";
-import { anomalyToNotification } from "@/lib/notifications/mappers";
+import { anomalyToNotification, capAlertToNotification } from "@/lib/notifications/mappers";
+import { useCapAlertsStore } from "@/lib/store/cap-alerts-store";
 import { cn } from "@/lib/utils";
 
 type TabId = "all" | "critical" | "insights";
@@ -42,14 +43,17 @@ export function NotificationsMenu() {
   const anomalies = useAiInsightsStore((s) => s.anomalies);
   const readIds = useNotificationsReadStore((s) => s.readIds);
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
-  const items: NotificationItem[] = React.useMemo(
-    () =>
-      anomalies.map((a) => ({
-        ...anomalyToNotification(a),
-        read: !!readIds[a.id],
-      })),
-    [anomalies, readIds],
-  );
+  // Cap alerts come from the live destination / campaign counters (see
+  // lib/cap-watch-runtime.ts); they sit alongside the AI anomalies, newest
+  // first, and share the same read-state store.
+  const capAlerts = useCapAlertsStore((s) => s.alerts);
+  const items: NotificationItem[] = React.useMemo(() => {
+    const fromAnomalies = anomalies.map((a) => ({ item: anomalyToNotification(a), at: a.detectedAt }));
+    const fromCaps = capAlerts.map((a) => ({ item: capAlertToNotification(a, t), at: a.at }));
+    return [...fromCaps, ...fromAnomalies]
+      .sort((x, y) => y.at - x.at)
+      .map(({ item }) => ({ ...item, read: !!readIds[item.id] }));
+  }, [anomalies, capAlerts, readIds, t]);
 
   const tabs: Array<{ id: TabId; label: string }> = [
     { id: "all", label: t("notificationsUI.menu.tabs.all") },

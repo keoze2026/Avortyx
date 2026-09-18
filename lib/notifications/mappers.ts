@@ -17,6 +17,7 @@
 
 import { formatRelativeTime } from "@/lib/format";
 import type { AlertKind, NotificationItem } from "@/lib/mock/notifications";
+import type { CapAlert } from "@/lib/store/cap-alerts-store";
 import type { AiRecommendation, Anomaly } from "@/lib/types";
 
 /**
@@ -68,5 +69,33 @@ export function recommendationToNotification(r: AiRecommendation): NotificationI
     read: false,
     source: r.scope?.name ?? "AI Insights",
     action: r.impact?.value,
+  };
+}
+
+/**
+ * Map a cap-watch alert (destination / campaign at ≥ 90 % or ≥ 100 % of a
+ * cap, from the live counters) to a NotificationItem. `t` resolves the same
+ * title / body strings the banner used, so the bell entry reads identically.
+ */
+export function capAlertToNotification(
+  a: CapAlert,
+  t: (key: string) => string,
+): NotificationItem {
+  const root = `notificationsUI.capWatch.${a.metric}.${a.level}`;
+  return {
+    id: a.id,
+    severity: a.level === "reached" ? "critical" : "warn",
+    alertKind: "cap-over",
+    title: t(`${root}.title`),
+    body: t(`${root}.body`)
+      .replace("{used}", String(a.used))
+      .replace("{cap}", String(a.cap))
+      .replace("{pct}", String(a.pct)),
+    time: formatRelativeTime(a.at),
+    read: false,
+    destination: a.entityType === "destination" ? (a.tfn ? `${a.entityName} · ${a.tfn}` : a.entityName) : undefined,
+    campaign: a.entityType === "campaign" ? a.entityName : undefined,
+    buyer: a.buyer,
+    source: a.entityName,
   };
 }

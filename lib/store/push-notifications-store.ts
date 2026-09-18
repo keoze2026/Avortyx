@@ -29,6 +29,8 @@ export interface PushNotification {
   source?: string;
   /** Optional action label rendered as a chip button at the bottom right. */
   action?: string;
+  /** Where the action chip navigates. Without it the chip just dismisses. */
+  actionHref?: string;
   /** Auto-dismiss after this many ms (default 6000). 0 = sticky. */
   durationMs?: number;
   /** Internal — when the banner was pushed (ms epoch). */

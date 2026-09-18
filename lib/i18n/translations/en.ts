@@ -3635,6 +3635,7 @@ export const en = {
     },
     reports: {
       callLog: {
+        blockedCaller: "Blocked number",
         title: "Call log",
         searchPlaceholder: "Search calls…",
         columnSettings: "Column settings",
@@ -3985,6 +3986,22 @@ export const en = {
 
   /* ─── Notifications system (menu, push, simulator) ───────── */
   notificationsUI: {
+    capWatch: {
+      viewDestinations: "View destinations",
+      viewCampaigns: "View campaigns",
+      daily: {
+        near: { title: "Daily cap almost reached", body: "{used} of {cap} calls today ({pct}%). Routing stops at the cap." },
+        reached: { title: "Daily cap reached", body: "{used} of {cap} calls today. No more calls will route here until the cap resets." },
+      },
+      monthly: {
+        near: { title: "Monthly cap almost reached", body: "{used} of {cap} calls this month ({pct}%)." },
+        reached: { title: "Monthly cap reached", body: "{used} of {cap} calls this month. Routing paused until next month." },
+      },
+      concurrency: {
+        near: { title: "Concurrency almost full", body: "{used} of {cap} lines in use ({pct}%). New calls may queue." },
+        reached: { title: "Concurrency limit reached", body: "All {cap} lines are busy. Incoming calls are being rerouted or queued." },
+      },
+    },
     menu: {
       title: "Notifications",
       bellLabel: "Notifications",

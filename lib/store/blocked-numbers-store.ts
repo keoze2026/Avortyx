@@ -81,7 +81,9 @@ function wireToEntry(w: SpamEntry): BlockedNumberEntry {
   const { scope, campaignId } = decodeScope(w.reason);
   return {
     id: w.id,
-    number: w.number,
+    // The backend echoes E.164 ("+1…"); the store holds digits only (the UI
+    // adds the "+" itself — without this the list rendered "++1…").
+    number: normalizeNumber(w.number),
     scope,
     campaignId,
   };

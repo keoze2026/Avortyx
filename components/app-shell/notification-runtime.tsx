@@ -2,6 +2,7 @@
 
 import { PushNotifications } from "./push-notifications";
 import { useAutoScheduleRuntime } from "@/lib/auto-schedule-runtime";
+import { useCapWatchRuntime } from "@/lib/cap-watch-runtime";
 
 /**
  * Mounted once at the (app) layout level. Boots client-side runtimes:
@@ -15,9 +16,12 @@ import { useAutoScheduleRuntime } from "@/lib/auto-schedule-runtime";
  *
  * The legacy `useNotificationSimulator()` that injected synthetic alerts
  * ("Buyer hit cap", "Acceptance dipped") has been removed — the topbar
- * dropdown now reads real AI anomalies via the AI Insights store.
+ * dropdown reads real AI anomalies via the AI Insights store, plus the
+ * cap-watch alerts below, which come from the live destination / campaign
+ * counters the app polls (see lib/cap-watch-runtime.ts).
  */
 export function NotificationRuntime() {
   useAutoScheduleRuntime();
+  useCapWatchRuntime();
   return <PushNotifications />;
 }

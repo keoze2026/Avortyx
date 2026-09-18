@@ -3590,6 +3590,7 @@ export const ru: TranslationShape = {
     },
     reports: {
       callLog: {
+        blockedCaller: "Заблокированный номер",
         title: "Журнал звонков",
         searchPlaceholder: "Поиск звонков…",
         columnSettings: "Настройка колонок",
@@ -3930,6 +3931,22 @@ export const ru: TranslationShape = {
 
   /* ─── Notifications system (menu, push, simulator) ───────── */
   notificationsUI: {
+    capWatch: {
+      viewDestinations: "Открыть направления",
+      viewCampaigns: "Открыть кампании",
+      daily: {
+        near: { title: "Дневной лимит почти достигнут", body: "{used} из {cap} звонков сегодня ({pct}%). По достижении лимита маршрутизация остановится." },
+        reached: { title: "Дневной лимит достигнут", body: "{used} из {cap} звонков сегодня. Звонки сюда не пойдут до сброса лимита." },
+      },
+      monthly: {
+        near: { title: "Месячный лимит почти достигнут", body: "{used} из {cap} звонков в этом месяце ({pct}%)." },
+        reached: { title: "Месячный лимит достигнут", body: "{used} из {cap} звонков в этом месяце. Маршрутизация приостановлена до следующего месяца." },
+      },
+      concurrency: {
+        near: { title: "Линии почти заняты", body: "Занято {used} из {cap} линий ({pct}%). Новые звонки могут встать в очередь." },
+        reached: { title: "Все линии заняты", body: "Заняты все {cap} линий. Входящие звонки перенаправляются или ставятся в очередь." },
+      },
+    },
     menu: {
       title: "Уведомления",
       bellLabel: "Уведомления",

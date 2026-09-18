@@ -3589,6 +3589,7 @@ export const ja: TranslationShape = {
     },
     reports: {
       callLog: {
+        blockedCaller: "ブロック済みの番号",
         title: "コールログ",
         searchPlaceholder: "通話を検索…",
         columnSettings: "列の設定",
@@ -3929,6 +3930,22 @@ export const ja: TranslationShape = {
 
   /* ─── Notifications system (menu, push, simulator) ───────── */
   notificationsUI: {
+    capWatch: {
+      viewDestinations: "宛先を表示",
+      viewCampaigns: "キャンペーンを表示",
+      daily: {
+        near: { title: "日次上限に近づいています", body: "本日 {cap} 件中 {used} 件（{pct}%）。上限に達するとルーティングが停止します。" },
+        reached: { title: "日次上限に達しました", body: "本日 {cap} 件中 {used} 件。上限がリセットされるまでここへの通話は停止します。" },
+      },
+      monthly: {
+        near: { title: "月次上限に近づいています", body: "今月 {cap} 件中 {used} 件（{pct}%）。" },
+        reached: { title: "月次上限に達しました", body: "今月 {cap} 件中 {used} 件。来月までルーティングを停止します。" },
+      },
+      concurrency: {
+        near: { title: "同時通話数がほぼ上限です", body: "{cap} 回線中 {used} 回線使用中（{pct}%）。新規通話は待機する場合があります。" },
+        reached: { title: "同時通話数の上限に達しました", body: "{cap} 回線すべてが使用中です。着信は転送または待機されます。" },
+      },
+    },
     menu: {
       title: "通知",
       bellLabel: "通知",

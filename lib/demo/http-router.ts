@@ -867,10 +867,14 @@ route("PATCH", "/api/spam/shields/tcpa", (req) => {
 route("GET", "/api/spam/blacklist", (req) => paged(readTable("blocked", seedBlockedNumbers), req.query));
 route("POST", "/api/spam/blacklist", (req) => {
   const body = camelKeyPatch(req.body);
+  // The service sends `phone_number` (the real backend's field); accept the
+  // older `number` too. Stored as E.164 like the backend echoes it.
+  const raw = String(body.phone_number ?? body.number ?? "").replace(/\D/g, "");
+  const number = raw ? `+${raw}` : "+10000000000";
   const created = {
     id: demoId("bn"),
-    number: String(body.number ?? "+10000000000"),
-    formatted: String(body.number ?? "+10000000000"),
+    number,
+    formatted: number,
     reason: String(body.reason ?? "Manual block"),
     scope: String(body.scope ?? "global"),
     added_by: "Alex Morgan",

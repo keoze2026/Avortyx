@@ -10,6 +10,7 @@
  */
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -66,6 +67,7 @@ export function PushNotifications() {
 
 function BannerCard({ banner }: { banner: PushNotification }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const dismiss = usePushNotificationsStore((s) => s.dismiss);
   const Icon: LucideIcon = banner.icon ? ICONS[banner.icon] : ICONS.alert;
   const duration = banner.durationMs ?? DEFAULT_DURATION_MS;
@@ -135,7 +137,10 @@ function BannerCard({ banner }: { banner: PushNotification }) {
           <div className="mt-2 flex justify-end">
             <button
               type="button"
-              onClick={() => dismiss(banner.id)}
+              onClick={() => {
+                dismiss(banner.id);
+                if (banner.actionHref) router.push(banner.actionHref);
+              }}
               className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-accent/45 hover:text-accent"
             >
               {banner.action}

@@ -3590,6 +3590,7 @@ export const zh: TranslationShape = {
     },
     reports: {
       callLog: {
+        blockedCaller: "已屏蔽的号码",
         title: "通话日志",
         searchPlaceholder: "搜索通话…",
         columnSettings: "列设置",
@@ -3928,6 +3929,22 @@ export const zh: TranslationShape = {
   },
 
   notificationsUI: {
+    capWatch: {
+      viewDestinations: "查看目标号码",
+      viewCampaigns: "查看广告系列",
+      daily: {
+        near: { title: "每日上限即将达到", body: "今日 {used} / {cap} 通（{pct}%）。达到上限后将停止路由。" },
+        reached: { title: "已达到每日上限", body: "今日 {used} / {cap} 通。上限重置前不再向此处路由。" },
+      },
+      monthly: {
+        near: { title: "每月上限即将达到", body: "本月 {used} / {cap} 通（{pct}%）。" },
+        reached: { title: "已达到每月上限", body: "本月 {used} / {cap} 通。路由已暂停至下月。" },
+      },
+      concurrency: {
+        near: { title: "并发线路即将占满", body: "{cap} 条线路已占用 {used} 条（{pct}%）。新来电可能需要排队。" },
+        reached: { title: "已达到并发上限", body: "全部 {cap} 条线路均已占用。来电正在被转接或排队。" },
+      },
+    },
     menu: {
       title: "通知",
       bellLabel: "通知",
