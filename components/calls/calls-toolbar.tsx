@@ -37,7 +37,7 @@ const RANGE_KEYS: Array<{ id: DateRange; key: string }> = [
 const STATUS_OPTS: Array<{ id: CallStatus; labelKey: string; tone: string }> = [
   { id: "completed", labelKey: "toolsUI.callLogs.toolbar.statusWon", tone: "text-[color:var(--success)]" },
   { id: "in-progress", labelKey: "toolsUI.callLogs.toolbar.statusLive", tone: "text-accent" },
-  { id: "missed", labelKey: "toolsUI.callLogs.toolbar.statusMissed", tone: "text-[color:var(--warning)]" },
+  { id: "missed", labelKey: "toolsUI.callLogs.toolbar.statusMissed", tone: "text-destructive" },
   { id: "rejected", labelKey: "toolsUI.callLogs.toolbar.statusRejected", tone: "text-destructive" },
   { id: "failed", labelKey: "toolsUI.callLogs.toolbar.statusFailed", tone: "text-destructive" },
 ];

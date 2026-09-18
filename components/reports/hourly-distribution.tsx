@@ -111,10 +111,13 @@ function utcMsToDayKey(ms: number): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
-/** "MM-DD" axis label for a day key. */
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "3. Sep" axis label for a day key ("2026-09-03"). Numeric "09-03" read
+ *  as an ambiguous month/day pair; the month name doesn't. */
 function dayKeyLabel(key: string): string {
-  const [, m, d] = key.split("-");
-  return `${m}-${d}`;
+  const [, m, d] = key.split("-").map(Number);
+  return `${d}. ${MONTH_ABBR[m - 1] ?? m}`;
 }
 
 /**

@@ -41,22 +41,14 @@ interface Bucket {
   commission: number;
 }
 
-/** Format the per-bar X-axis label depending on the window width. */
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Format the per-bar X-axis label depending on the window width — "3. Sep"
+ *  like the other date axes; a bare day number when 30 bars have to fit. */
 function labelFor(ts: number, days: number): string {
   const date = new Date(ts);
-  if (days <= 14) {
-    return `${(date.getMonth() + 1).toString().padStart(2, "0")}-${date
-      .getDate()
-      .toString()
-      .padStart(2, "0")}`;
-  }
-  if (days <= 30) {
-    return `${date.getDate()}`;
-  }
-  return `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date
-    .getDate()
-    .toString()
-    .padStart(2, "0")}`;
+  if (days > 14 && days <= 30) return `${date.getDate()}`;
+  return `${date.getDate()}. ${MONTH_ABBR[date.getMonth()]}`;
 }
 
 export function ReferralSpendChart() {

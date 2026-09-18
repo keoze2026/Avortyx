@@ -129,10 +129,12 @@ const STATUS_LABEL_FALLBACK: Record<CallStatus, string> = {
   failed: "Failed",
 };
 
+/** Completed is green, in-flight is neutral, and every not-connected
+ *  outcome — No Answer, Rejected, Failed — is the same red, so the log
+ *  reads as connected vs. not at a glance. */
 function statusVariant(s: CallStatus): React.ComponentProps<typeof Badge>["variant"] {
   if (s === "completed") return "success";
   if (s === "in-progress" || s === "ringing") return "default";
-  if (s === "missed") return "warning";
   return "destructive";
 }
 

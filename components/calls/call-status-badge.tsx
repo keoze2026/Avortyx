@@ -12,7 +12,7 @@ const META: Record<CallStatus, {
   ringing: { icon: PhoneIncoming, variant: "default", labelKey: "toolsUI.callLogs.statusBadge.ringing" },
   "in-progress": { icon: Phone, variant: "default", labelKey: "toolsUI.callLogs.statusBadge.live" },
   completed: { icon: CheckCircle2, variant: "success", labelKey: "toolsUI.callLogs.statusBadge.won" },
-  missed: { icon: PhoneMissed, variant: "warning", labelKey: "toolsUI.callLogs.statusBadge.missed" },
+  missed: { icon: PhoneMissed, variant: "destructive", labelKey: "toolsUI.callLogs.statusBadge.missed" },
   rejected: { icon: XCircle, variant: "destructive", labelKey: "toolsUI.callLogs.statusBadge.rejected" },
   failed: { icon: XCircle, variant: "destructive", labelKey: "toolsUI.callLogs.statusBadge.failed" },
 };
