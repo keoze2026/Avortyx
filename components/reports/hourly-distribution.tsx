@@ -113,6 +113,15 @@ function utcMsToDayKey(ms: number): string {
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** 1 · 2 · 2.5 · 5 × 10ⁿ rounding for axis tick steps. */
+function niceStep(raw: number): number {
+  if (raw <= 0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / pow;
+  const m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  return m * pow;
+}
+
 /** "3. Sep" axis label for a day key ("2026-09-03"). Numeric "09-03" read
  *  as an ambiguous month/day pair; the month name doesn't. */
 function dayKeyLabel(key: string): string {
@@ -244,6 +253,19 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
     [calls, grain, timeZone],
   );
 
+  // Count axis: round ticks with headroom above the tallest column, so the
+  // total label drawn above that column stays inside the plot. Recharts'
+  // auto domain sits the ceiling exactly on the max, which clipped the top
+  // half of the label; a raw `max * 1.12` gives ugly ticks like "1120".
+  const countAxis = React.useMemo(() => {
+    const max = Math.max(0, ...data.map((d) => d.total));
+    const step = niceStep(Math.max(max, 4) / 4);
+    const top = Math.max(step, Math.ceil((max * 1.12) / step) * step);
+    const ticks: number[] = [];
+    for (let v = 0; v <= top; v += step) ticks.push(v);
+    return { top, ticks };
+  }, [data]);
+
   return (
     <Card className={cn("flex flex-col", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -280,7 +302,7 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={data}
-              margin={{ top: 12, right: 4, left: 4, bottom: 0 }}
+              margin={{ top: 20, right: 4, left: 4, bottom: 0 }}
               // Recharts' default (10%) packs bars nearly edge-to-edge — a
               // modest bump so each column reads as distinct without
               // shrinking the bars so much the chart looks sparse.
@@ -315,6 +337,8 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                 tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                 axisLine={false}
                 tickLine={false}
+                domain={[0, countAxis.top]}
+                ticks={countAxis.ticks}
                 // 3-digit ticks (e.g. 600, 750) need at least ~44px so the
                 // leading digit isn't clipped on narrow mobile viewports.
                 width={44}
