@@ -3067,6 +3067,11 @@ export const zh: TranslationShape = {
         noMatches: "当前筛选下无匹配的故事。",
         featured: "精选",
         readFullStory: "阅读全文",
+        latest: "最新",
+        topStories: "头条",
+        moreStories: "更多报道",
+        storiesCount: "{count} 条",
+        stale: "刷新中…",
       },
       stats: {
         marketCap: "市值",

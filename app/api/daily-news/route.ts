@@ -3,9 +3,14 @@
  * in parallel, normalizes the items into the shared `NewsItem` shape, and
  * returns the freshest 60 entries.
  *
- * Caching:
- *   - 10-minute in-memory cache (server-side) so concurrent requests don't
- *     thunder the upstream feeds.
+ * Speed:
+ *   - Stale-while-revalidate. Whatever batch is in memory is returned
+ *     immediately — even past its 10-minute freshness — and a refresh is
+ *     kicked off in the background (single-flight). A visitor only ever
+ *     waits on the upstream feeds when the server has nothing at all.
+ *   - Every feed has a hard 4 s deadline, so one slow outlet can no longer
+ *     hold the whole response; the fast ones are served and the slow one
+ *     just misses this batch.
  *   - `next: { revalidate: 600 }` on each fetch so Next's data cache also
  *     respects the 10-minute window.
  *
@@ -22,6 +27,8 @@ export const dynamic = "force-dynamic";
 const CACHE_MS = 10 * 60 * 1000; // 10 minutes
 const PER_FEED_LIMIT = 12; // most-recent N per source
 const TOTAL_LIMIT = 60;
+/** Per-feed deadline. Past this a source is skipped for the batch. */
+const FEED_TIMEOUT_MS = 4_000;
 
 interface FeedSource {
   url: string;
@@ -63,57 +70,81 @@ function hashCode(s: string): number {
   return Math.abs(h);
 }
 
-let cache: { items: NewsItem[]; at: number } | null = null;
+let cache: { items: NewsItem[]; at: number; failedSources: string[] } | null = null;
+function readCache() {
+  return cache;
+}
+
+/** Single-flight refresh so a burst of requests fans out to the feeds once. */
+let inflight: Promise<void> | null = null;
+
+async function fetchFeed(feed: FeedSource): Promise<NewsItem[]> {
+  const res = await fetch(feed.url, {
+    next: { revalidate: 600 },
+    signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
+    headers: {
+      // Some feeds (notably TechCrunch) 403 a default-UA fetch.
+      "User-Agent": "Mozilla/5.0 (compatible; AvortyxNewsBot/1.0; +https://avortyx.io)",
+      Accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+    },
+  });
+  if (!res.ok) throw new Error(`${feed.source} HTTP ${res.status}`);
+  return parseFeed(await res.text(), feed);
+}
+
+/** Pull every feed (each on its own deadline) and replace the cache when
+ *  at least one source answered — never overwrite a good batch with nothing. */
+function refresh(): Promise<void> {
+  if (inflight) return inflight;
+  inflight = (async () => {
+    const results = await Promise.allSettled(FEEDS.map(fetchFeed));
+    const items = results
+      .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+      .sort((a, b) => b.publishedAt - a.publishedAt)
+      .slice(0, TOTAL_LIMIT);
+    const failedSources = results
+      .map((r, i) => (r.status === "rejected" ? FEEDS[i].source : null))
+      .filter((x): x is string => x !== null);
+    if (items.length > 0) cache = { items, at: Date.now(), failedSources };
+  })().finally(() => {
+    inflight = null;
+  });
+  return inflight;
+}
 
 export async function GET() {
-  if (cache && Date.now() - cache.at < CACHE_MS) {
+  const age = cache ? Date.now() - cache.at : Infinity;
+
+  if (cache) {
+    // Serve what we have straight away; refresh behind the response when
+    // the batch is past its freshness window.
+    if (age >= CACHE_MS) void refresh();
     return NextResponse.json(
-      { items: cache.items, cached: true, fetchedAt: cache.at },
-      { headers: { "Cache-Control": "public, max-age=600" } },
+      {
+        items: cache.items,
+        cached: true,
+        stale: age >= CACHE_MS,
+        fetchedAt: cache.at,
+        failedSources: cache.failedSources,
+      },
+      { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=600" } },
     );
   }
 
-  const results = await Promise.allSettled(
-    FEEDS.map(async (feed) => {
-      const res = await fetch(feed.url, {
-        next: { revalidate: 600 },
-        headers: {
-          // Some feeds (notably TechCrunch) 403 a default-UA fetch.
-          "User-Agent":
-            "Mozilla/5.0 (compatible; AvortyxNewsBot/1.0; +https://avortyx.io)",
-          Accept:
-            "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
-        },
-      });
-      if (!res.ok) throw new Error(`${feed.source} HTTP ${res.status}`);
-      const xml = await res.text();
-      return parseFeed(xml, feed);
-    }),
-  );
-
-  const items: NewsItem[] = results
-    .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
-    .sort((a, b) => b.publishedAt - a.publishedAt)
-    .slice(0, TOTAL_LIMIT);
-
-  // Only update cache when we actually got results — preserve the previous
-  // batch if every feed fails so the UI never has to render zero items.
-  if (items.length > 0) {
-    cache = { items, at: Date.now() };
-  }
-
-  const failedSources = results
-    .map((r, i) => (r.status === "rejected" ? FEEDS[i].source : null))
-    .filter((x): x is string => x !== null);
-
+  // Cold start — nothing to serve yet, so this request waits (bounded by
+  // the per-feed deadline). Read the cache through a helper: TypeScript
+  // narrowed `cache` to null above and can't see `refresh()` writing it.
+  await refresh();
+  const filled = readCache();
   return NextResponse.json(
     {
-      items: items.length > 0 ? items : (cache?.items ?? []),
+      items: filled?.items ?? [],
       cached: false,
-      fetchedAt: cache?.at ?? Date.now(),
-      failedSources,
+      stale: false,
+      fetchedAt: filled?.at ?? Date.now(),
+      failedSources: filled?.failedSources ?? FEEDS.map((f) => f.source),
     },
-    { headers: { "Cache-Control": "public, max-age=600" } },
+    { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=600" } },
   );
 }
 

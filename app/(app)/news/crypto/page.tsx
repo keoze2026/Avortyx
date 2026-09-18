@@ -1,34 +1,21 @@
-import { fetchTopTokens } from "@/lib/coingecko";
-import { fetchCryptoNews } from "@/lib/cryptocompare";
-
 import { CoinMarketHeader, CoinMarketTabs } from "./coin-market-tabs";
 
 /**
- * Coin Market — server component.
+ * Coin Market.
  *
- * Pulls real-time token + news data from CoinGecko and CryptoCompare on the
- * server, caches the response for 5 minutes (`revalidate: 300` inside each
- * fetcher), and hands the result to the client tab component. If either API
- * fails, the fetchers fall back to local mock data so the page never breaks.
- *
- * Forced dynamic so the build does not depend on third-party endpoints — a
- * 401 or slow upstream on CoinGecko / CryptoCompare / RSS would otherwise
- * hang `next build` until the 60s static-generation timeout fires. At
- * request time the in-fetch ISR cache (300s) still amortizes the work
- * across every visitor, so this is cheap.
+ * Renders the page shell immediately; the client tab component pulls the
+ * token tape and the crypto headlines itself (`/api/tokens`, `/api/news`),
+ * showing skeletons in the meantime and a locally cached snapshot on return
+ * visits. The page used to `await` CoinGecko + CryptoCompare on the server
+ * before sending a single byte, so every visitor sat on a blank screen for
+ * as long as the slowest upstream took — up to the 5 s timeout when one of
+ * them was rate-limited.
  */
-export const dynamic = "force-dynamic";
-
-export default async function CoinMarketPage() {
-  const [tokensResult, news] = await Promise.all([
-    fetchTopTokens(250, 300), // 5-min cache for the initial server render
-    fetchCryptoNews(24),
-  ]);
-
+export default function CoinMarketPage() {
   return (
     <div className="space-y-4">
       <CoinMarketHeader />
-      <CoinMarketTabs tokens={tokensResult.tokens} news={news} />
+      <CoinMarketTabs />
     </div>
   );
 }

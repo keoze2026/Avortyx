@@ -3066,6 +3066,11 @@ export const ja: TranslationShape = {
         noMatches: "このフィルタに一致する記事はありません。",
         featured: "注目",
         readFullStory: "全文を読む",
+        latest: "最新",
+        topStories: "トップ記事",
+        moreStories: "その他の記事",
+        storiesCount: "{count} 件",
+        stale: "更新中…",
       },
       stats: {
         marketCap: "時価総額",

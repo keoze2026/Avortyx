@@ -3112,6 +3112,11 @@ export const en = {
         noMatches: "No stories match the current filter.",
         featured: "Featured",
         readFullStory: "Read full story",
+        latest: "Latest",
+        topStories: "Top stories",
+        moreStories: "More stories",
+        storiesCount: "{count} stories",
+        stale: "Refreshing…",
       },
       stats: {
         marketCap: "Market Cap",

@@ -6,6 +6,7 @@ import { Coins, Newspaper, RefreshCw } from "lucide-react";
 import { MarketStatsRow } from "@/components/coinmarket/market-stats-row";
 import { TokensTable } from "@/components/coinmarket/tokens-table";
 import { NewsFeed } from "@/components/news/news-feed";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import type { NewsCategory, NewsItem } from "@/lib/mock/news";
@@ -58,18 +59,77 @@ const ESTIMATED_MAX_TOKENS = 15_000;
 /** How many news items to keep in memory. */
 const NEWS_LIMIT = 24;
 
-interface Props {
+/** Last good tape + headlines, per browser, so a return visit paints at once. */
+const SNAPSHOT_KEY = "avortyx.news.crypto";
+
+interface Snapshot {
   tokens: TokenEntry[];
   news: NewsItem[];
+  at: number;
 }
 
-/** Client-side tab switcher — the server page hands us the initial data. */
+function readSnapshot(): Snapshot | null {
+  try {
+    const raw = window.localStorage.getItem(SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Snapshot;
+    return Array.isArray(parsed.tokens) && Array.isArray(parsed.news) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSnapshot(snap: Snapshot) {
+  try {
+    // Only the first block of the tape is worth keeping (what is on screen).
+    window.localStorage.setItem(
+      SNAPSHOT_KEY,
+      JSON.stringify({ ...snap, tokens: snap.tokens.slice(0, BLOCK_SIZE) }),
+    );
+  } catch {
+    // Storage blocked: cold start next time, nothing else changes.
+  }
+}
+
+interface Props {
+  /** Optional server-rendered data; when omitted the component fetches on mount. */
+  tokens?: TokenEntry[];
+  news?: NewsItem[];
+}
+
+/** Client-side tab switcher. Fetches its own data (tokens + headlines) so
+ *  the page shell never waits on CoinGecko / CryptoCompare. */
 export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Props) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<TabId>("tokens");
-  const [tokens, setTokens] = React.useState<TokenEntry[]>(initialTokens);
-  const [news, setNews] = React.useState<NewsItem[]>(initialNews);
+  const [tokens, setTokens] = React.useState<TokenEntry[]>(initialTokens ?? []);
+  const [news, setNews] = React.useState<NewsItem[]>(initialNews ?? []);
   const [loading, setLoading] = React.useState(false);
+  // True until the first token block / headline batch is on screen.
+  const [tokensPending, setTokensPending] = React.useState(!initialTokens?.length);
+  const [newsPending, setNewsPending] = React.useState(!initialNews?.length);
+
+  // Paint the last snapshot immediately; the fetches below then update it.
+  React.useEffect(() => {
+    if (initialTokens?.length || initialNews?.length) return;
+    const snap = readSnapshot();
+    if (!snap) return;
+    if (snap.tokens.length > 0) {
+      setTokens(snap.tokens);
+      setTokensPending(false);
+    }
+    if (snap.news.length > 0) {
+      setNews(snap.news);
+      setNewsPending(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist whatever is on screen so the next visit starts from it.
+  React.useEffect(() => {
+    if (tokens.length === 0 && news.length === 0) return;
+    writeSnapshot({ tokens, news, at: Date.now() });
+  }, [tokens, news]);
   // True until we hit a CoinGecko page that returns an empty array.
   const [hasMore, setHasMore] = React.useState(true);
   // Refresh status surfaced in the toolbar so the user can see freshness.
@@ -106,6 +166,7 @@ export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Pro
         /* swallow — keep the last good snapshot on transient errors */
       } finally {
         setRefreshing(false);
+        setTokensPending(false);
       }
     };
   }, []);
@@ -167,10 +228,12 @@ export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Pro
         if (!res.ok) return;
         const payload = (await res.json()) as { news: NewsItem[] };
         const fresh = payload.news;
-        if (cancelled || !Array.isArray(fresh) || fresh.length === 0) return;
-        setNews(fresh);
+        if (cancelled) return;
+        if (Array.isArray(fresh) && fresh.length > 0) setNews(fresh);
       } catch {
         /* keep the last good snapshot on transient errors */
+      } finally {
+        if (!cancelled) setNewsPending(false);
       }
     };
 
@@ -181,6 +244,8 @@ export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Pro
     };
     document.addEventListener("visibilitychange", onVisible);
 
+    // First pull right away: the shell is already on screen.
+    void refresh();
     const id = window.setInterval(refresh, NEWS_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
@@ -301,20 +366,55 @@ export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Pro
             </button>
           </div>
 
-          <MarketStatsRow tokens={tokens.slice(0, BLOCK_SIZE)} />
-          <TokensTable
-            tokens={tokens}
-            estimatedTotal={estimatedTotal}
-            loading={loading}
-            onPageChange={ensureLoadedForPage}
-            pageSize={100}
-          />
+          {tokensPending && tokens.length === 0 ? (
+            <TapeSkeleton />
+          ) : (
+            <>
+              <MarketStatsRow tokens={tokens.slice(0, BLOCK_SIZE)} />
+              <TokensTable
+                tokens={tokens}
+                estimatedTotal={estimatedTotal}
+                loading={loading}
+                onPageChange={ensureLoadedForPage}
+                pageSize={100}
+              />
+            </>
+          )}
         </div>
       )}
 
       {tab === "news" && (
-        <NewsFeed items={news} categories={CRYPTO_CATEGORIES} />
+        <NewsFeed items={news} categories={CRYPTO_CATEGORIES} loading={newsPending} />
       )}
     </>
+  );
+}
+
+/** Placeholder for the stats row + first table rows while block 1 loads. */
+function TapeSkeleton() {
+  const bone = "animate-pulse rounded-md bg-muted";
+  return (
+    <div className="space-y-5" aria-busy>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Card key={i} className="space-y-2 p-4">
+            <div className={`${bone} h-3 w-20`} />
+            <div className={`${bone} h-6 w-28`} />
+          </Card>
+        ))}
+      </div>
+      <Card className="divide-y divide-border p-0">
+        {Array.from({ length: 10 }, (_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3">
+            <div className={`${bone} h-4 w-6`} />
+            <div className={`${bone} h-6 w-6 rounded-full`} />
+            <div className={`${bone} h-4 w-32`} />
+            <div className={`${bone} ml-auto h-4 w-20`} />
+            <div className={`${bone} h-4 w-16`} />
+            <div className={`${bone} hidden h-4 w-24 md:block`} />
+          </div>
+        ))}
+      </Card>
+    </div>
   );
 }

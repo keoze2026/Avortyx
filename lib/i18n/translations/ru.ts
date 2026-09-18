@@ -3067,6 +3067,11 @@ export const ru: TranslationShape = {
         noMatches: "Нет историй по этому фильтру.",
         featured: "Главное",
         readFullStory: "Читать полностью",
+        latest: "Последние",
+        topStories: "Главное",
+        moreStories: "Ещё материалы",
+        storiesCount: "{count} материалов",
+        stale: "Обновляем…",
       },
       stats: {
         marketCap: "Капитализация",
