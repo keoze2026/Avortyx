@@ -340,8 +340,12 @@ function makeCall(
     : status === "missed"
       ? intRange(rng, 5, 35)
       : intRange(rng, 1, 12);
-  const revenue = isConverted ? camp.payout : 0;
-  const publisherPayout = isConverted ? Math.round(camp.payout * 0.58) : 0;
+  // Demo economics (client spec): revenue accrues on every call that comes
+  // in — total calls × the campaign's per-call price — while payout is
+  // only owed on connected calls, at the publisher's share of that price.
+  // That's what makes Profit a real number instead of $0.
+  const revenue = camp.payout;
+  const payout = isConverted ? Math.round(camp.payout * 0.58 * 100) / 100 : 0;
   const areaCode = pick(AREA_CODES, rng);
   return {
     id: `call_${idSuffix}`,
@@ -360,8 +364,8 @@ function makeCall(
     publisher_id: publisher.id,
     publisher_name: publisher.name,
     revenue: revenue.toFixed(2),
-    buyer_payout: revenue.toFixed(2),
-    publisher_payout: publisherPayout.toFixed(2),
+    buyer_payout: payout.toFixed(2),
+    publisher_payout: payout.toFixed(2),
     recording_url: isConverted ? `https://demo.avortyx.io/rec/${idSuffix}.mp3` : "",
     created_at: new Date(startedAt).toISOString(),
     tags: isConverted ? ["converted"] : [],

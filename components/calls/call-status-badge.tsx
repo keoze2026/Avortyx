@@ -23,7 +23,7 @@ export function CallStatusBadge({ status }: { status: CallStatus }) {
   const Icon = meta.icon;
   const live = status === "ringing" || status === "in-progress";
   return (
-    <Badge variant={meta.variant} className="gap-1">
+    <Badge variant={meta.variant} className="w-24 justify-center gap-1">
       {live ? (
         <span className="relative inline-flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />

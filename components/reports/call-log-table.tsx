@@ -570,7 +570,11 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                       )}
                       {columns.status && (
                         <TableCell>
-                          <Badge variant={statusVariant(c.status)}>{t(STATUS_LABEL_KEYS[c.status])}</Badge>
+                          {/* Fixed width so Live / Completed / No Answer are
+                              identical pills rather than sized to their text. */}
+                          <Badge variant={statusVariant(c.status)} className="w-24 justify-center">
+                            {t(STATUS_LABEL_KEYS[c.status])}
+                          </Badge>
                         </TableCell>
                       )}
                       {columns.failReason && (
