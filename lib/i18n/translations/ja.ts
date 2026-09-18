@@ -3068,6 +3068,7 @@ export const ja: TranslationShape = {
         readFullStory: "全文を読む",
         latest: "最新",
         topStories: "トップ記事",
+        topStory: "トップ記事",
         moreStories: "その他の記事",
         storiesCount: "{count} 件",
         stale: "更新中…",

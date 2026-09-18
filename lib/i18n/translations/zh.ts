@@ -3069,6 +3069,7 @@ export const zh: TranslationShape = {
         readFullStory: "阅读全文",
         latest: "最新",
         topStories: "头条",
+        topStory: "头条",
         moreStories: "更多报道",
         storiesCount: "{count} 条",
         stale: "刷新中…",

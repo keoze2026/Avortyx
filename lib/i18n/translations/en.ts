@@ -3114,6 +3114,7 @@ export const en = {
         readFullStory: "Read full story",
         latest: "Latest",
         topStories: "Top stories",
+        topStory: "Top story",
         moreStories: "More stories",
         storiesCount: "{count} stories",
         stale: "Refreshing…",

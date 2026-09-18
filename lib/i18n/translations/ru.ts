@@ -3069,6 +3069,7 @@ export const ru: TranslationShape = {
         readFullStory: "Читать полностью",
         latest: "Последние",
         topStories: "Главное",
+        topStory: "Главная новость",
         moreStories: "Ещё материалы",
         storiesCount: "{count} материалов",
         stale: "Обновляем…",
