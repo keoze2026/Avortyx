@@ -10,6 +10,7 @@
  */
 
 import { http } from "@/lib/api/http";
+import { zonedDayKey } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
 /* ─── Wire shapes (post case-adapter) ─────────────────────────────────── */
@@ -353,7 +354,10 @@ export const analyticsService = {
    * datasets — never the calls store's `recent` cache, which is the most
    * recent N calls account-wide with no date applied.
    */
-  async allCalls(query: Omit<CallLogQuery, "page" | "pageSize">): Promise<Call[]> {
+  async allCalls(
+    query: Omit<CallLogQuery, "page" | "pageSize">,
+    options: { timeZone?: string } = {},
+  ): Promise<Call[]> {
     const PAGE_SIZE = 500;
     const MAX_PAGES = 40;
     const all: Call[] = [];
@@ -361,6 +365,23 @@ export const analyticsService = {
       const res = await this.calls({ ...query, page, pageSize: PAGE_SIZE });
       all.push(...res.items);
       if (all.length >= res.total || res.items.length < PAGE_SIZE) break;
+    }
+    // Enforce the requested day range on the client as well. The backend is
+    // asked for `date_from` / `date_to`, but a server that ignores the
+    // params, treats `date_to` as an exclusive midnight, or buckets days in
+    // a different zone would hand back rows outside the range — and every
+    // date-scoped surface (dashboard tables, Reports) would then look like
+    // the date filter does nothing. Day keys are compared in the report
+    // timezone the caller renders in, so this is the same bucketing the
+    // charts use, not a browser-local re-check.
+    if (options.timeZone && (query.dateFrom || query.dateTo)) {
+      const from = query.dateFrom ?? "0000-00-00";
+      const to = query.dateTo ?? query.dateFrom ?? "9999-99-99";
+      const tz = options.timeZone;
+      return all.filter((c) => {
+        const day = zonedDayKey(c.startedAt, tz);
+        return day >= from && day <= to;
+      });
     }
     return all;
   },

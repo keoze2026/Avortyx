@@ -83,13 +83,13 @@ function buildRows(
   // / live calls) always reads `destination.liveCalls`.
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
+  // Keyed by E.164 so a CDR that spells the number "18779641530" still
+  // matches a destination stored as "+18779641530".
   if (!useLiveCounters) {
     for (const c of calls) {
-      callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
-      revenueByTfn.set(
-        c.destinationNumber,
-        (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
-      );
+      const k = toE164(c.destinationNumber);
+      callsByTfn.set(k, (callsByTfn.get(k) ?? 0) + 1);
+      revenueByTfn.set(k, (revenueByTfn.get(k) ?? 0) + c.revenue);
     }
   }
 
@@ -97,7 +97,7 @@ function buildRows(
   for (const b of buyers) buyerById.set(b.id, b);
 
   return destinations
-    .filter((d) => !filter || d.tfn === filter)
+    .filter((d) => !filter || toE164(d.tfn) === toE164(filter))
     // Only active destinations attached to an active buyer surface here.
     // A paused destination (`enabled === false`) or one whose buyer is paused
     // / capped / pending is hidden so the operator sees live inventory only.
@@ -109,12 +109,13 @@ function buildRows(
       return buyer ? buyer.status === "active" : true;
     })
     .map<Row>((destination) => {
+      const tfnKey = toE164(destination.tfn);
       const callsToday = useLiveCounters
         ? destination.dailyCalls
-        : (callsByTfn.get(destination.tfn) ?? 0);
+        : (callsByTfn.get(tfnKey) ?? 0);
       const revenueToday = useLiveCounters
         ? destination.dailyRevenue
-        : (revenueByTfn.get(destination.tfn) ?? 0);
+        : (revenueByTfn.get(tfnKey) ?? 0);
       const cap = destination.dailyCap;
       return {
         destination,

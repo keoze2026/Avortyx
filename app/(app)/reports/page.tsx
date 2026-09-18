@@ -93,7 +93,7 @@ export default function ReportsPage() {
     let cancelled = false;
     setRangeLoading(true);
     analyticsService
-      .allCalls({ dateFrom: fromKey, dateTo: toKey })
+      .allCalls({ dateFrom: fromKey, dateTo: toKey }, { timeZone })
       .then((items) => {
         if (!cancelled) setRangeCalls(items);
       })
@@ -108,7 +108,7 @@ export default function ReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey]);
+  }, [fromKey, toKey, timeZone]);
 
   const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);

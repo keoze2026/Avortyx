@@ -27,7 +27,7 @@ import {
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
-import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
+import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -85,7 +85,7 @@ export default function DashboardPage() {
     const load = async (showSpinner: boolean) => {
       if (showSpinner) setLoading(true);
       try {
-        const items = await analyticsService.allCalls({ dateFrom: fromKey, dateTo: toKey });
+        const items = await analyticsService.allCalls({ dateFrom: fromKey, dateTo: toKey }, { timeZone });
         if (!cancelled) setDayCalls(items);
       } catch (e) {
         if (cancelled) return;
@@ -104,7 +104,7 @@ export default function DashboardPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [fromKey, toKey, includesToday]);
+  }, [fromKey, toKey, includesToday, timeZone]);
 
   // Calls per destination TFN in the selected range — the secondary label in
   // the destination dropdown, so the operator can see which TFNs were hot
@@ -114,12 +114,15 @@ export default function DashboardPage() {
   // range it's tallied from the range's fetched calls.
   const callsByTfn = useMemo(() => {
     const map = new Map<string, number>();
+    // Keyed by E.164 so a CDR that spells the number "18779641530" still
+    // matches a destination stored as "+18779641530".
     if (isToday) {
-      for (const d of destinations) map.set(d.tfn, d.dailyCalls);
+      for (const d of destinations) map.set(toE164(d.tfn), d.dailyCalls);
       return map;
     }
     for (const c of dayCalls) {
-      map.set(c.destinationNumber, (map.get(c.destinationNumber) ?? 0) + 1);
+      const k = toE164(c.destinationNumber);
+      map.set(k, (map.get(k) ?? 0) + 1);
     }
     return map;
   }, [dayCalls, destinations, isToday]);
@@ -127,7 +130,8 @@ export default function DashboardPage() {
   // When a destination is selected, scope everything to just its calls.
   const scopedCalls = useMemo(() => {
     if (allSelected) return dayCalls;
-    return dayCalls.filter((c) => c.destinationNumber === destinationTfn);
+    const wanted = toE164(destinationTfn);
+    return dayCalls.filter((c) => toE164(c.destinationNumber) === wanted);
   }, [destinationTfn, allSelected, dayCalls]);
 
   const summary = useMemo(() => ({
@@ -170,7 +174,7 @@ export default function DashboardPage() {
                 <SelectItem value={ALL_DEST}>{t("dashboard.allDestinations")}</SelectItem>
                 {destinations.map((d) => {
                   const buyer = buyerById.get(d.buyerId);
-                  const calls = callsByTfn.get(d.tfn) ?? 0;
+                  const calls = callsByTfn.get(toE164(d.tfn)) ?? 0;
                   return (
                     <SelectItem key={d.id} value={d.tfn}>
                       <span className="flex items-center gap-2">
@@ -272,18 +276,16 @@ function buildDestinationExportRows(
   const callsByTfn = new Map<string, number>();
   const revenueByTfn = new Map<string, number>();
   for (const c of dayCalls) {
-    callsByTfn.set(c.destinationNumber, (callsByTfn.get(c.destinationNumber) ?? 0) + 1);
-    revenueByTfn.set(
-      c.destinationNumber,
-      (revenueByTfn.get(c.destinationNumber) ?? 0) + c.revenue,
-    );
+    const k = toE164(c.destinationNumber);
+    callsByTfn.set(k, (callsByTfn.get(k) ?? 0) + 1);
+    revenueByTfn.set(k, (revenueByTfn.get(k) ?? 0) + c.revenue);
   }
   // Today: the destination record's own backend-computed aggregates, which
   // the on-screen table also shows (see DestinationSummaryTable).
   if (useLiveCounters) {
     for (const d of destinations) {
-      callsByTfn.set(d.tfn, d.dailyCalls);
-      revenueByTfn.set(d.tfn, d.dailyRevenue);
+      callsByTfn.set(toE164(d.tfn), d.dailyCalls);
+      revenueByTfn.set(toE164(d.tfn), d.dailyRevenue);
     }
   }
 
@@ -293,15 +295,15 @@ function buildDestinationExportRows(
   );
 
   return destinations
-    .filter((d) => !filter || d.tfn === filter)
+    .filter((d) => !filter || toE164(d.tfn) === toE164(filter))
     .map<DestinationExportRow>((d) => {
-      const calls = callsByTfn.get(d.tfn) ?? 0;
+      const calls = callsByTfn.get(toE164(d.tfn)) ?? 0;
       return {
         destination: d.name,
         tfn: d.tfn,
         buyer: buyerById.get(d.buyerId)?.name ?? d.buyerName ?? "—",
         calls,
-        revenue: revenueByTfn.get(d.tfn) ?? 0,
+        revenue: revenueByTfn.get(toE164(d.tfn)) ?? 0,
         // Live/concurrent comes off the destination record — a call log
         // can't contain an in-flight row, so it was always 0 from the cache.
         concurrent: d.liveCalls,
