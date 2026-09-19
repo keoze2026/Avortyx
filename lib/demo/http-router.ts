@@ -931,9 +931,11 @@ route("GET", "/api/analytics/calls", (req) => {
   if (req.query.status) {
     all = all.filter((c) => c.status === req.query.status!.toLowerCase());
   }
-  if (req.query.is_qualified === "true") {
-    all = all.filter((c) => c.is_qualified);
-  }
+  // Verdict filters — same flags the real backend accepts.
+  if (req.query.is_qualified === "true") all = all.filter((c) => c.is_qualified);
+  if (req.query.is_converted === "true") all = all.filter((c) => c.is_converted);
+  if (req.query.is_duplicate === "true") all = all.filter((c) => c.is_duplicate);
+  if (req.query.is_spam === "true") all = all.filter((c) => c.is_spam);
 
   const limit = Number(req.query.limit ?? req.query.page_size ?? req.query.pageSize ?? "25") || 25;
   if (limit >= 100) {
@@ -975,33 +977,124 @@ route("GET", "/api/analytics/dashboard", () => ({
 route("GET", "/api/analytics/live", () => generateLiveCalls());
 route("GET", "/api/routing/calls/live", () => generateLiveCalls());
 
-route("GET", "/api/analytics/campaigns", () => ({
-  items: readTable("campaigns", seedCampaigns).map((c: Record<string, unknown>) => ({
-    campaign_id: c.id,
-    campaign_name: c.name,
-    calls: c.total_calls,
-    revenue: c.revenue_today,
-    conversion_rate: c.conversion_rate,
-  })),
-}));
-route("GET", "/api/analytics/buyers", () => ({
-  items: readTable("buyers", seedBuyers).map((b: Record<string, unknown>) => ({
-    buyer_id: b.id,
-    buyer_name: b.name,
-    calls: b.calls_today,
-    spend: b.spend_today,
-    accept_rate: b.accept_rate,
-  })),
-}));
-route("GET", "/api/analytics/publishers", () => ({
-  items: readTable("publishers", seedPublishers).map((p: Record<string, unknown>) => ({
-    publisher_id: p.id,
-    publisher_name: p.name,
-    calls: p.calls_today,
-    revenue: p.revenue_today,
-    conversion_rate: p.conversion_rate,
-  })),
-}));
+/**
+ * Per-entity aggregates for a date range — the same shape the real backend
+ * returns from /api/analytics/campaigns | /buyers | /publishers
+ * (`total_calls`, `connected_calls`, `not_connected_calls`,
+ * `qualified_calls`, `converted_calls`, `paid_calls`, `duplicate_calls`,
+ * `live_calls`, `total_duration_sec`, `total_revenue`, …). Derived from
+ * the same call corpus the call log serves, so the Reports Call Summary
+ * reads identical figures whichever source it uses.
+ *
+ * Backend definitions mirrored here: connected = completed | in-progress;
+ * not_connected = everything else; paid = converted with a payout;
+ * live = ringing | in-progress; duplicate = the record's `is_duplicate`.
+ */
+function entitySummary(
+  req: { query: Record<string, string> },
+  key: (c: DemoCallWire) => { id: string; name: string },
+  idField: string,
+  nameField: string,
+) {
+  let all = getDemoCalls();
+  if (req.query.date_from) {
+    const from = req.query.date_from;
+    const to = req.query.date_to || from;
+    const tz = demoTimeZone();
+    all = all.filter((c) => {
+      const day = zonedDayKey(Date.parse(c.created_at), tz);
+      return day >= from && day <= to;
+    });
+  }
+  interface Agg {
+    id: string;
+    name: string;
+    total_calls: number;
+    connected_calls: number;
+    not_connected_calls: number;
+    qualified_calls: number;
+    converted_calls: number;
+    paid_calls: number;
+    duplicate_calls: number;
+    live_calls: number;
+    total_duration_sec: number;
+    total_revenue: number;
+    total_payout: number;
+  }
+  const rows = new Map<string, Agg>();
+  const rowFor = (id: string, name: string) => {
+    let a = rows.get(id);
+    if (!a) {
+      a = {
+        id,
+        name,
+        total_calls: 0,
+        connected_calls: 0,
+        not_connected_calls: 0,
+        qualified_calls: 0,
+        converted_calls: 0,
+        paid_calls: 0,
+        duplicate_calls: 0,
+        live_calls: 0,
+        total_duration_sec: 0,
+        total_revenue: 0,
+        total_payout: 0,
+      };
+      rows.set(id, a);
+    }
+    return a;
+  };
+  for (const c of all) {
+    const k = key(c);
+    if (!k.id) continue;
+    const a = rowFor(k.id, k.name);
+    const connected = c.status === "completed" || c.status === "in-progress";
+    const payout = Number(c.publisher_payout || 0);
+    a.total_calls += 1;
+    if (connected) a.connected_calls += 1;
+    else a.not_connected_calls += 1;
+    if (c.is_qualified) a.qualified_calls += 1;
+    if (c.is_converted) {
+      a.converted_calls += 1;
+      if (payout > 0) a.paid_calls += 1;
+    }
+    if (c.is_duplicate) a.duplicate_calls += 1;
+    a.total_duration_sec += c.duration;
+    a.total_revenue += Number(c.revenue || 0);
+    a.total_payout += payout;
+  }
+  // In-flight calls count toward total / connected / live, like the backend.
+  for (const c of generateLiveCalls()) {
+    const k = key(c);
+    if (!k.id) continue;
+    const a = rowFor(k.id, k.name);
+    a.total_calls += 1;
+    a.live_calls += 1;
+    if (c.status === "in-progress") a.connected_calls += 1;
+    else a.not_connected_calls += 1;
+  }
+  return {
+    items: [...rows.values()].map(({ id, name, ...a }) => ({
+      [idField]: id,
+      [nameField]: name,
+      ...a,
+      conversion_rate: a.total_calls > 0 ? Math.round((a.converted_calls / a.total_calls) * 10_000) / 100 : 0,
+      total_revenue: a.total_revenue.toFixed(2),
+      total_payout: a.total_payout.toFixed(2),
+      total_profit: (a.total_revenue - a.total_payout).toFixed(2),
+    })),
+  };
+}
+
+route("GET", "/api/analytics/campaigns", (req) =>
+  entitySummary(req, (c) => ({ id: c.campaign_id, name: c.campaign_name }), "campaign_id", "campaign_name"),
+);
+route("GET", "/api/analytics/buyers", (req) =>
+  entitySummary(req, (c) => ({ id: c.buyer_id, name: c.buyer_name }), "buyer_id", "buyer_name"),
+);
+route("GET", "/api/analytics/publishers", (req) =>
+  entitySummary(req, (c) => ({ id: c.publisher_id, name: c.publisher_name }), "publisher_id", "publisher_name"),
+);
 route("GET", "/api/analytics/time-series", () => ({ items: [] }));
 route("GET", "/api/analytics/reports/", () => ({ items: [], total: 0 }));
 route("GET", "/api/analytics/calls/export", () => ({ ok: true }));

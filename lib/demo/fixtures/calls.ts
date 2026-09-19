@@ -152,6 +152,19 @@ function makePhone(rng: () => number): string {
   return `+1${ac}${tail}`;
 }
 
+/** A small pool of callers who ring back — about one call in twelve comes
+ *  from one of these, which is what puts real numbers in the Call Summary's
+ *  Dupe column (a repeat caller to the same campaign within the range). */
+const REPEAT_CALLERS: string[] = (() => {
+  const rng = makeRng(4_242);
+  return Array.from({ length: 60 }, () => makePhone(rng));
+})();
+const REPEAT_CALLER_RATE = 0.08;
+
+function makeCallerNumber(rng: () => number): string {
+  return chance(rng, REPEAT_CALLER_RATE) ? pick(REPEAT_CALLERS, rng) : makePhone(rng);
+}
+
 /** Midnight today in the report timezone (the demo's business-day clock). */
 function startOfToday(): number {
   return demoClock().startOfToday;
@@ -164,6 +177,12 @@ export interface DemoCallWire {
   status: string;
   duration: number;
   is_qualified: boolean;
+  /** Repeat caller to the same campaign earlier in the day (set once the
+   *  day's corpus is built — see `flagDuplicates`). */
+  is_duplicate?: boolean;
+  /** Backend's converted / spam verdicts (filterable on the call log). */
+  is_converted?: boolean;
+  is_spam?: boolean;
   caller_area_code: string;
   caller_state: string;
   caller_country: string;
@@ -272,7 +291,20 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
 
   // Sort newest → oldest.
   out.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  flagDuplicates(out);
   return out;
+}
+
+/** Mark every call whose caller already rang the same campaign earlier the
+ *  same day. Walks oldest → newest so the first call is the original. */
+function flagDuplicates(calls: DemoCallWire[]): void {
+  const seen = new Set<string>();
+  for (let i = calls.length - 1; i >= 0; i--) {
+    const c = calls[i];
+    const key = `${c.campaign_id}|${c.caller_number}|${c.created_at.slice(0, 10)}`;
+    c.is_duplicate = seen.has(key);
+    seen.add(key);
+  }
 }
 
 /** Demo-only price: every call bills $1 of revenue; every connected call
@@ -301,6 +333,8 @@ function makeLiveCall(idSuffix: string, startedAt: number, rng: () => number): D
     // Still ringing or in-progress — qualification only applies once a call
     // has actually completed.
     is_qualified: false,
+    is_converted: false,
+    is_spam: false,
     caller_area_code: pick(AREA_CODES, rng),
     caller_state: pick(STATES, rng),
     caller_country: "US",
@@ -355,11 +389,13 @@ function makeCall(
   const areaCode = pick(AREA_CODES, rng);
   return {
     id: `call_${idSuffix}`,
-    caller_number: makePhone(rng),
+    caller_number: makeCallerNumber(rng),
     destination_number: destinationFor(buyer.id, rng),
     status,
     duration,
     is_qualified: isQualified,
+    is_converted: isConverted,
+    is_spam: false,
     caller_area_code: areaCode,
     caller_state: pick(STATES, rng),
     caller_country: "US",

@@ -27,6 +27,15 @@ export interface Call {
    *  matchesCallStatusFilter() in lib/call-status.ts for how this is used
    *  and what happens when a record doesn't carry it. */
   isQualified?: boolean;
+  /** Backend's duplicate-caller verdict (`is_duplicate`), when it sends one.
+   *  Counted into the Call Summary "Dupe" column; absent = not counted. */
+  isDuplicate?: boolean;
+  /** Backend's converted verdict (`is_converted`). When present it decides
+   *  the Call Summary's Converted / Paid columns; otherwise
+   *  "completed with a payout" is used. */
+  isConverted?: boolean;
+  /** Backend's spam verdict (`is_spam`). */
+  isSpam?: boolean;
 }
 
 /** Real-time event emitted by the (mock) socket. */

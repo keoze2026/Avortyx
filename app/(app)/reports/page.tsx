@@ -20,7 +20,7 @@ import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
-import { analyticsService } from "@/lib/api/services/analytics.service";
+import { analyticsService, type EntitySummary, type SummaryEntity } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
@@ -84,6 +84,59 @@ export default function ReportsPage() {
   // says 146, portal shows 113" gap this replaces.
   const [rangeCalls, setRangeCalls] = useState<Call[]>([]);
   const [rangeLoading, setRangeLoading] = useState(false);
+  // The backend's per-entity aggregates for the same range — the Call
+  // Summary's Campaign / Buyer / Publisher tabs read their counters from
+  // these rather than re-deriving them from the call log (the two disagreed
+  // on Qualified, and Dupe only exists server-side).
+  const [summaries, setSummaries] = useState<Record<SummaryEntity, EntitySummary[]>>({
+    campaign: [],
+    buyer: [],
+    publisher: [],
+  });
+
+  useEffect(() => {
+    if (!fromKey) {
+      setSummaries({ campaign: [], buyer: [], publisher: [] });
+      return;
+    }
+    let cancelled = false;
+    const range = { dateFrom: fromKey, dateTo: toKey };
+    // Each one is independent — a failing endpoint just leaves its tab on
+    // the call-log derivation instead of blanking the others.
+    Promise.all(
+      (["campaign", "buyer", "publisher"] as const).map((entity) =>
+        analyticsService.entitySummary(entity, range).catch(() => [] as EntitySummary[]),
+      ),
+    ).then(([campaign, buyer, publisher]) => {
+      if (!cancelled) setSummaries({ campaign, buyer, publisher });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fromKey, toKey]);
+
+  // An aggregate is per entity for the whole range; it can't be narrowed by
+  // the other filters. So a tab only gets its aggregate when the only active
+  // entity filter (if any) is its own — then it just picks the matching
+  // rows — and no status filter is set.
+  const summariesForTable = useMemo(() => {
+    if (filters.statuses.length > 0) return undefined;
+    const active: Record<SummaryEntity, string[]> = {
+      campaign: filters.campaignIds,
+      buyer: filters.buyerIds,
+      publisher: filters.publisherIds,
+    };
+    const out: Partial<Record<SummaryEntity, EntitySummary[]>> = {};
+    for (const entity of ["campaign", "buyer", "publisher"] as const) {
+      const othersActive = (Object.keys(active) as SummaryEntity[]).some(
+        (k) => k !== entity && active[k].length > 0,
+      );
+      if (othersActive) continue;
+      const own = new Set(active[entity]);
+      out[entity] = own.size > 0 ? summaries[entity].filter((r) => own.has(r.entityId)) : summaries[entity];
+    }
+    return out;
+  }, [filters, summaries]);
 
   useEffect(() => {
     if (!fromKey) {
@@ -263,6 +316,7 @@ export default function ReportsPage() {
             activeStatusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
             liveNow={liveNow}
+            summaries={summariesForTable}
           />
         )}
 

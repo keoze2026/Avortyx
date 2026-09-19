@@ -29,6 +29,7 @@
    - C1 — `/api/dni/pools/{id}` detail-page editable fields
    - C2 — `/api/webhooks/` secret + custom headers
    - C3 — `/api/campaigns/{id}` advanced settings persistence
+   - C4 — `/api/analytics/{campaigns,buyers,publishers}` Call Summary counters (shipped)
 5. [Group D — Cleanup / decisions](#group-d--cleanup--decisions)
    - D1 — `POST /api/numbers/search`
 6. [Suggested priority order](#suggested-priority-order)
@@ -368,6 +369,38 @@ UI surfaces at once.**
 **Alternative if you prefer typed columns:** we can split each setting into
 its own typed field, but the JSON blob is the smallest diff for you. Let
 us know your preference.
+
+---
+
+### C4 — `GET /api/analytics/campaigns` | `/buyers` | `/publishers` — Call Summary counters
+
+**Status: shipped (2026-09-20).** All three endpoints return the full row
+for a `date_from` / `date_to` range and the Reports → Call Summary
+Campaign / Buyer / Publisher tabs read every counter from them:
+
+| Column | Field | Backend definition |
+|---|---|---|
+| Incoming | `total_calls` | |
+| Connected | `connected_calls` | completed or in-progress |
+| Not Connected | `not_connected_calls` | everything else (sums with Connected to `total_calls`) |
+| Qualified | `qualified_calls` | |
+| Paid | `paid_calls` | converted on a campaign with a payout set |
+| Converted | `converted_calls` | |
+| Dupe | `duplicate_calls` | |
+| Live | `live_calls` | ringing or in-progress |
+| TCL | `total_duration_sec` | Σ duration across all calls |
+| ACL | *(frontend: TCL / Connected)* | |
+| Revenue / Payout | `total_revenue` / `total_payout` | |
+
+The other tabs (Destination, Date, Traffic source, …) still sum the call
+log, using the per-record `is_qualified`, `is_converted`, `is_duplicate`
+flags (all present on `/api/analytics/calls` since 2026-09-20; the
+`is_qualified` / `is_converted` / `is_duplicate` / `is_spam` query filters
+also work now).
+
+Frontend caveat: an aggregate is per entity for the whole range, so a tab
+only uses it when no *other* entity filter or status filter is active on
+the page — otherwise that tab falls back to the call-log sum.
 
 ---
 

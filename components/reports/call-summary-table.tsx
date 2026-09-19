@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Call, Campaign, Destination } from "@/lib/types";
+import type { EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.service";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTimer, toE164, zonedDayKey, zonedParts } from "@/lib/format";
@@ -668,11 +669,13 @@ function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRo
     // Log to (see lib/call-status.ts).
     if (matchesCallStatusFilter(c, "connected")) row.connected += 1;
     if (matchesCallStatusFilter(c, "qualified")) row.qualified += 1;
-    if (c.status === "completed" && c.payout > 0) {
+    // Prefer the backend's own converted verdict when the record carries it.
+    if (c.isConverted ?? (c.status === "completed" && c.payout > 0)) {
       row.paid += 1;
       row.converted += 1;
     }
     if (matchesCallStatusFilter(c, "notConnected")) row.noConnect += 1;
+    if (c.isDuplicate) row.dupe += 1;
     row.tcl += c.durationSec;
     row.payout += c.payout;
     row.revenue += c.revenue;
@@ -684,6 +687,66 @@ function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRo
   }
 
   return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
+}
+
+/**
+ * Overlay the backend's per-entity aggregate (GET /api/analytics/campaigns
+ * | /buyers | /publishers) onto the rows the call log produced for that
+ * tab.
+ *
+ * The call log is a per-call record and this table sums it client-side;
+ * the backend's aggregate is the figure the customer is billed on, so
+ * where the two disagree the aggregate wins. Every counter the aggregate
+ * carries replaces the client-side sum; anything it leaves out (older
+ * backends) keeps the call-log derivation so the column stays populated.
+ *
+ * Entities the aggregate lists but the call log didn't return (calls that
+ * fell outside the paged fetch) are added as rows so the table matches
+ * the backend's list for the range.
+ */
+function applyEntitySummary(rows: SummaryRow[], summary: EntitySummary[]): SummaryRow[] {
+  if (summary.length === 0) return rows;
+  const byId = new Map(rows.map((r) => [r.key, r]));
+  for (const c of summary) {
+    let row = byId.get(c.entityId);
+    if (!row) {
+      if (c.totalCalls === 0) continue;
+      row = {
+        key: c.entityId,
+        label: c.entityName || c.entityId,
+        live: 0,
+        incoming: 0,
+        connected: 0,
+        qualified: 0,
+        paid: 0,
+        converted: 0,
+        noConnect: 0,
+        dupe: 0,
+        conversionRate: 0,
+        tcl: 0,
+        acl: 0,
+        payout: 0,
+        revenue: 0,
+      };
+      byId.set(row.key, row);
+      rows.push(row);
+    }
+    row.incoming = c.totalCalls;
+    row.qualified = c.qualifiedCalls;
+    row.converted = c.convertedCalls;
+    row.dupe = c.duplicateCalls;
+    row.revenue = c.revenue;
+    row.payout = c.payout;
+    row.conversionRate = c.conversionRate;
+    if (c.connectedCalls !== undefined) row.connected = c.connectedCalls;
+    if (c.paidCalls !== undefined) row.paid = c.paidCalls;
+    if (c.notConnectedCalls !== undefined) row.noConnect = c.notConnectedCalls;
+    if (c.liveCalls !== undefined) row.live = c.liveCalls;
+    if (c.totalDurationSec !== undefined) row.tcl = c.totalDurationSec;
+    // ACL stays ours: TCL / Connected.
+    row.acl = row.connected > 0 ? Math.round(row.tcl / row.connected) : 0;
+  }
+  return rows;
 }
 
 /**
@@ -835,6 +898,14 @@ interface CallSummaryTableProps {
    * topbar already has from the dashboard KPI + socket.
    */
   liveNow?: number;
+  /**
+   * GET /api/analytics/campaigns | /buyers | /publishers for the same date
+   * range — the backend's own per-entity totals, keyed by tab. When a tab
+   * has an entry here its counters come from it rather than from summing
+   * `calls` (see `applyEntitySummary`). Leave a tab out when the page has
+   * filters active that the aggregate can't be narrowed by.
+   */
+  summaries?: Partial<Record<SummaryEntity, EntitySummary[]>>;
 }
 
 type SummarySortKey = "label" | ColumnKey;
@@ -853,6 +924,7 @@ export function CallSummaryTable({
   activeStatusFilter = null,
   onStatusFilterChange,
   liveNow,
+  summaries,
 }: CallSummaryTableProps) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
@@ -874,7 +946,11 @@ export function CallSummaryTable({
   const timeZone = useUIStore((s) => s.reportTimezone);
 
   const groupedRows = React.useMemo(() => {
-    const grouped = groupCalls(calls, tab, timeZone);
+    const summary =
+      tab === "campaign" || tab === "buyer" || tab === "publisher" ? summaries?.[tab] : undefined;
+    const grouped = summary
+      ? applyEntitySummary(groupCalls(calls, tab, timeZone), summary)
+      : groupCalls(calls, tab, timeZone);
     // Merge the per-entity live counters in before sorting / totals / export,
     // so every consumer of these rows sees the same figure. `max`, not
     // "prefer the entity": both sources count the same in-flight calls, and
@@ -888,7 +964,7 @@ export function CallSummaryTable({
       if (live !== undefined) row.live = Math.max(row.live, live);
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations, liveNow, timeZone]);
+  }, [calls, tab, campaignsById, destinations, liveNow, timeZone, summaries]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.

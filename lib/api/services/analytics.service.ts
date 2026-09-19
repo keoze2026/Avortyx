@@ -63,6 +63,13 @@ interface CallRecordWire {
    *  send it yet; callers fall back to a local heuristic in that case (see
    *  matchesCallStatusFilter in lib/call-status.ts). */
   isQualified?: boolean;
+  /** Backend's duplicate-caller verdict. Some rows spell it `duplicate`. */
+  isDuplicate?: boolean;
+  duplicate?: boolean;
+  /** Backend's converted / spam verdicts (same flags `is_converted=true` /
+   *  `is_spam=true` filter by on this endpoint). */
+  isConverted?: boolean;
+  isSpam?: boolean;
   /* Call length. The contract (§3.13 Call Record) names this `duration_sec`;
      some CDR rows still ship the legacy `duration` / `duration_seconds`.
      Read all three — picking only one leaves the column at 00:00:00. */
@@ -92,6 +99,47 @@ interface CallRecordWire {
   updatedAt?: string;
   tags?: unknown[];
   notes?: string;
+}
+
+/**
+ * One row of GET /api/analytics/campaigns | /buyers | /publishers — the
+ * backend's per-entity aggregate for a date range. All three share the
+ * same counters; only the id / name key differs. Spelling has varied
+ * across backend versions, so every counter is read through `firstOf`.
+ *
+ * Backend definitions (2026-09-20):
+ *   connected_calls      completed or in-progress
+ *   not_connected_calls  everything else (connected + not_connected = total)
+ *   paid_calls           converted on a campaign with a payout set
+ *   live_calls           ringing or in-progress
+ *   total_duration_sec   Σ duration across all calls
+ */
+interface EntitySummaryWire {
+  campaignId?: string | number;
+  campaignName?: string;
+  buyerId?: string | number;
+  buyerName?: string;
+  publisherId?: string | number;
+  publisherName?: string;
+  totalCalls?: number;
+  calls?: number;
+  qualifiedCalls?: number;
+  convertedCalls?: number;
+  conversionRate?: number | string;
+  totalRevenue?: number | string;
+  revenue?: number | string;
+  totalPayout?: number | string;
+  payout?: number | string;
+  spend?: number | string;
+  totalProfit?: number | string;
+  duplicateCalls?: number;
+  dupe?: number;
+  duplicates?: number;
+  connectedCalls?: number;
+  paidCalls?: number;
+  notConnectedCalls?: number;
+  liveCalls?: number;
+  totalDurationSec?: number;
 }
 
 interface CallLogListWire {
@@ -130,6 +178,34 @@ export interface TimeSeriesPoint {
   profit: number;
   avgDurationSec: number;
 }
+
+/** Per-entity aggregate (campaign / buyer / publisher) for the Call
+ *  Summary. `undefined` on an optional counter means the backend didn't
+ *  send that figure and the table falls back to deriving it from the call
+ *  log. */
+export interface EntitySummary {
+  /** Campaign / buyer / publisher id — matches the Call Summary row key. */
+  entityId: string;
+  entityName: string;
+  totalCalls: number;
+  qualifiedCalls: number;
+  convertedCalls: number;
+  /** 0..1 */
+  conversionRate: number;
+  revenue: number;
+  payout: number;
+  duplicateCalls: number;
+  connectedCalls?: number;
+  paidCalls?: number;
+  notConnectedCalls?: number;
+  liveCalls?: number;
+  totalDurationSec?: number;
+}
+
+export type SummaryEntity = "campaign" | "buyer" | "publisher";
+
+/** @deprecated alias — the Campaign tab used to have its own type. */
+export type CampaignSummary = EntitySummary;
 
 export interface CallLogPage {
   total: number;
@@ -247,6 +323,9 @@ function callRecordToCall(w: CallRecordWire): Call {
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),
     isQualified: w.isQualified,
+    isDuplicate: w.isDuplicate ?? w.duplicate,
+    isConverted: w.isConverted,
+    isSpam: w.isSpam,
     payout: firstNum(w.payout, w.buyerPayout),
     revenue: toNum(w.revenue),
     geo: {
@@ -256,6 +335,42 @@ function callRecordToCall(w: CallRecordWire): Call {
     recordingUrl: w.recordingUrl || w.recordingUri || undefined,
   };
 }
+
+/** First defined value among the accepted spellings of one counter. */
+function firstOf(...values: Array<number | string | null | undefined>): number | undefined {
+  for (const v of values) if (v !== undefined && v !== null) return toNum(v);
+  return undefined;
+}
+
+function entitySummaryWireToSummary(w: EntitySummaryWire, entity: SummaryEntity): EntitySummary {
+  const id = entity === "campaign" ? w.campaignId : entity === "buyer" ? w.buyerId : w.publisherId;
+  const name = entity === "campaign" ? w.campaignName : entity === "buyer" ? w.buyerName : w.publisherName;
+  const rate = firstOf(w.conversionRate);
+  return {
+    entityId: id === undefined || id === null ? "" : String(id),
+    entityName: name ?? "",
+    totalCalls: firstOf(w.totalCalls, w.calls) ?? 0,
+    qualifiedCalls: firstOf(w.qualifiedCalls) ?? 0,
+    convertedCalls: firstOf(w.convertedCalls) ?? 0,
+    // The backend reports a percentage ("63.97"); the table works in 0..1.
+    conversionRate: rate === undefined ? 0 : rate > 1 ? rate / 100 : rate,
+    revenue: firstOf(w.totalRevenue, w.revenue) ?? 0,
+    // A buyer's "spend" is the payout from the customer's point of view.
+    payout: firstOf(w.totalPayout, w.payout, w.spend) ?? 0,
+    duplicateCalls: firstOf(w.duplicateCalls, w.dupe, w.duplicates) ?? 0,
+    connectedCalls: firstOf(w.connectedCalls),
+    paidCalls: firstOf(w.paidCalls),
+    notConnectedCalls: firstOf(w.notConnectedCalls),
+    liveCalls: firstOf(w.liveCalls),
+    totalDurationSec: firstOf(w.totalDurationSec),
+  };
+}
+
+const SUMMARY_PATH: Record<SummaryEntity, string> = {
+  campaign: "/api/analytics/campaigns",
+  buyer: "/api/analytics/buyers",
+  publisher: "/api/analytics/publishers",
+};
 
 function dashboardWireToKpis(w: DashboardWire): DashboardKpis {
   return {
@@ -393,6 +508,30 @@ export const analyticsService = {
     return wire.map(callRecordToCall);
   },
 
+  /**
+   * Per-entity aggregates for a date range — the source of truth for the
+   * Call Summary's Campaign / Buyer / Publisher tabs (Incoming, Connected,
+   * Qualified, Paid, Converted, Not Connected, Dupe, TCL, Live, Revenue,
+   * Payout). Accepts either a bare array or `{ items }`.
+   */
+  async entitySummary(
+    entity: SummaryEntity,
+    query: { dateFrom?: string; dateTo?: string } = {},
+  ): Promise<EntitySummary[]> {
+    const wire = await http.get<EntitySummaryWire[] | { items?: EntitySummaryWire[] | null }>(
+      SUMMARY_PATH[entity],
+      { query: { dateFrom: query.dateFrom, dateTo: query.dateTo } },
+    );
+    const rows = Array.isArray(wire) ? wire : (wire?.items ?? []);
+    return rows.map((w) => entitySummaryWireToSummary(w, entity)).filter((r) => r.entityId);
+  },
+
+  /** Campaign tab aggregate — see `entitySummary`. */
+  async campaignSummary(query: { dateFrom?: string; dateTo?: string } = {}): Promise<EntitySummary[]> {
+    return this.entitySummary("campaign", query);
+  },
+
+  /** @deprecated use `campaignSummary` — kept for callers that read the raw shape. */
   async campaigns(): Promise<unknown> {
     return http.get("/api/analytics/campaigns");
   },
