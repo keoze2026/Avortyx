@@ -95,7 +95,7 @@ export function capAlertToNotification(
     read: false,
     destination: a.entityType === "destination" ? (a.tfn ? `${a.entityName} · ${a.tfn}` : a.entityName) : undefined,
     campaign: a.entityType === "campaign" ? a.entityName : undefined,
-    buyer: a.buyer,
+    buyer: a.entityType === "buyer" ? a.entityName : a.buyer,
     source: a.entityName,
   };
 }

@@ -264,7 +264,7 @@ export const ja: TranslationShape = {
       total: "合計",
       callsSuffix: "件",
       totalCalls: "総通話数",
-      notConnected: "未接続",
+      notConnected: "応答なし",
       completed: "完了",
     },
     tooltips: {
@@ -3934,6 +3934,8 @@ export const ja: TranslationShape = {
     capWatch: {
       viewDestinations: "宛先を表示",
       viewCampaigns: "キャンペーンを表示",
+      viewBuyers: "バイヤーを表示",
+      viewInsights: "インサイトを表示",
       daily: {
         near: { title: "日次上限に近づいています", body: "本日 {cap} 件中 {used} 件（{pct}%）。上限に達するとルーティングが停止します。" },
         reached: { title: "日次上限に達しました", body: "本日 {cap} 件中 {used} 件。上限がリセットされるまでここへの通話は停止します。" },
@@ -3945,6 +3947,22 @@ export const ja: TranslationShape = {
       concurrency: {
         near: { title: "同時通話数がほぼ上限です", body: "{cap} 回線中 {used} 回線使用中（{pct}%）。新規通話は待機する場合があります。" },
         reached: { title: "同時通話数の上限に達しました", body: "{cap} 回線すべてが使用中です。着信は転送または待機されます。" },
+      },
+    },
+    popupPrefs: {
+      button: "ポップアップ通知",
+      title: "ポップアップ通知",
+      description: "画面上部にバナーとして表示するアラートを選択します。すべてのアラートはこの一覧にも表示されます。",
+      allOn: "すべてオン",
+      allOff: "すべてオフ",
+      kinds: {
+        capNear: { label: "上限間近", hint: "宛先・バイヤー・キャンペーンが上限の90%に到達。" },
+        destinationCapOver: { label: "宛先の上限到達", hint: "宛先が日次・月次・回線数の上限に到達。" },
+        buyerCapOver: { label: "バイヤーの上限到達", hint: "バイヤーが日次・月次・同時接続の上限に到達。" },
+        campaignCapOver: { label: "キャンペーンの上限到達", hint: "キャンペーンが日次・月次の上限に到達。" },
+        lowAht: { label: "AHT低下", hint: "平均処理時間が通常の範囲を下回りました。" },
+        buyerMissed: { label: "バイヤーの応答なし多発", hint: "バイヤーが多くの通話に応答していません。" },
+        other: { label: "その他の異常", hint: "通話量の減少、遅延の急増、拒否率など。" },
       },
     },
     menu: {

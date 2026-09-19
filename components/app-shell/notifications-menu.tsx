@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell, CheckCheck, ChevronRight, Inbox } from "lucide-react";
+import { Bell, BellRing, CheckCheck, ChevronRight, Inbox } from "lucide-react";
 
 import { NotificationRow } from "@/components/app-shell/notification-row";
+import { PopupAlertSettings } from "@/components/app-shell/popup-alert-settings";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,6 +36,8 @@ export function NotificationsMenu() {
   const [tab, setTab] = React.useState<TabId>("all");
   // Sub-filter for the Alerts tab — split alerts by missed / cap / AHT.
   const [alertFilter, setAlertFilter] = React.useState<AlertFilter>("all");
+  // "Pop-up alerts" panel — which alert kinds may pop a banner on top.
+  const [showPopupPrefs, setShowPopupPrefs] = React.useState(false);
   // Live anomalies from /api/ai/anomalies become the topbar dropdown's source.
   // Each anomaly is mapped to the NotificationItem shape via the shared
   // mappers module (same code path as the /notifications page). Read-state
@@ -115,7 +118,7 @@ export function NotificationsMenu() {
     })
     .slice(0, POPUP_LIMIT);
 
-  const markAllRead = () => markAllReadStore(anomalies.map((a) => a.id));
+  const markAllRead = () => markAllReadStore(items.map((n) => n.id));
 
   return (
     <DropdownMenu>
@@ -194,6 +197,23 @@ export function NotificationsMenu() {
               category they're filtering at a glance. */}
           {tab === "critical" && (
             <div className="mt-2 flex flex-wrap items-center gap-1">
+              {/* Pop-up alerts toggle — opens the switch list for which
+                  alert kinds may pop a banner at the top of the screen. */}
+              <button
+                type="button"
+                onClick={() => setShowPopupPrefs((v) => !v)}
+                aria-pressed={showPopupPrefs}
+                title={t("notificationsUI.popupPrefs.button")}
+                className={cn(
+                  "order-last ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  showPopupPrefs
+                    ? "border-accent/50 bg-accent/15 text-accent"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <BellRing className="h-3 w-3" />
+                {t("notificationsUI.popupPrefs.button")}
+              </button>
               {alertChips.map((chip) => {
                 const isActive = alertFilter === chip.id;
                 const count = alertKindCounts[chip.id];
@@ -224,9 +244,11 @@ export function NotificationsMenu() {
           )}
         </div>
 
-        {/* List */}
+        {/* List — or, on the Alerts tab, the pop-up alert switches */}
         <div className="max-h-[420px] overflow-y-auto border-t border-border/60">
-          {filtered.length === 0 ? (
+          {tab === "critical" && showPopupPrefs ? (
+            <PopupAlertSettings />
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <Inbox className="h-6 w-6 text-muted-foreground/60" />
               <p className="text-xs text-muted-foreground">{t("notificationsUI.menu.empty")}</p>

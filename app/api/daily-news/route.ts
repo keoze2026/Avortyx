@@ -102,6 +102,7 @@ function refresh(): Promise<void> {
       .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
       .sort((a, b) => b.publishedAt - a.publishedAt)
       .slice(0, TOTAL_LIMIT);
+    await fillMissingImages(items);
     const failedSources = results
       .map((r, i) => (r.status === "rejected" ? FEEDS[i].source : null))
       .filter((x): x is string => x !== null);
@@ -149,6 +150,106 @@ export async function GET() {
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
+/*  Picture enrichment — feeds that ship no image (TechCrunch)            */
+/* ────────────────────────────────────────────────────────────────────── */
+
+/** Article pages we already looked at, url → og:image (or null when the
+ *  page had none). Bounded; refreshes reuse it so each article is fetched
+ *  at most once for the life of the process. */
+const IMAGE_LOOKUPS = new Map<string, string | null>();
+const IMAGE_LOOKUP_MAX = 500;
+/** Article pages fetched per refresh — keeps a cold start bounded. */
+const PAGE_LOOKUPS_PER_REFRESH = 12;
+const PAGE_TIMEOUT_MS = 3_500;
+const BOT_UA = "Mozilla/5.0 (compatible; AvortyxNewsBot/1.0; +https://avortyx.io)";
+
+function rememberImage(url: string, image: string | null) {
+  if (IMAGE_LOOKUPS.size >= IMAGE_LOOKUP_MAX) {
+    const first = IMAGE_LOOKUPS.keys().next().value;
+    if (first !== undefined) IMAGE_LOOKUPS.delete(first);
+  }
+  IMAGE_LOOKUPS.set(url, image);
+}
+
+/**
+ * Give every story a picture where the feed didn't carry one:
+ *
+ *   1. TechCrunch — its RSS is text-only, but the WordPress REST API returns
+ *      the featured image for a batch of post ids in a single request.
+ *   2. Anything else still missing — read `og:image` off the article page,
+ *      a bounded number per refresh, remembered across refreshes so the
+ *      list fills in over successive polls without re-fetching.
+ */
+async function fillMissingImages(items: NewsItem[]): Promise<void> {
+  const missing = items.filter((i) => !i.imageUrl);
+  if (missing.length === 0) return;
+
+  // Anything we've already resolved (or know has no picture).
+  for (const item of missing) {
+    const known = IMAGE_LOOKUPS.get(item.url);
+    if (known) item.imageUrl = known;
+  }
+
+  await fillTechCrunchImages(missing.filter((i) => !i.imageUrl && i.source === "TechCrunch"));
+
+  const pending = missing
+    .filter((i) => !i.imageUrl && !IMAGE_LOOKUPS.has(i.url))
+    .slice(0, PAGE_LOOKUPS_PER_REFRESH);
+  await Promise.allSettled(
+    pending.map(async (item) => {
+      const image = await fetchOgImage(item.url);
+      rememberImage(item.url, image);
+      if (image) item.imageUrl = image;
+    }),
+  );
+}
+
+async function fillTechCrunchImages(items: NewsItem[]): Promise<void> {
+  if (items.length === 0) return;
+  // The feed's <guid> is `https://techcrunch.com/?p=<post id>`; parseFeed
+  // keeps it on the item as `wpPostId`.
+  const ids = items.map((i) => i.wpPostId).filter((n): n is number => typeof n === "number");
+  if (ids.length === 0) return;
+  try {
+    const res = await fetch(
+      `https://techcrunch.com/wp-json/wp/v2/posts?include=${ids.join(",")}&per_page=${ids.length}&_fields=id,jetpack_featured_media_url`,
+      { signal: AbortSignal.timeout(PAGE_TIMEOUT_MS), headers: { "User-Agent": BOT_UA } },
+    );
+    if (!res.ok) return;
+    const rows = (await res.json()) as Array<{ id: number; jetpack_featured_media_url?: string }>;
+    const byId = new Map(rows.map((r) => [r.id, r.jetpack_featured_media_url || null]));
+    for (const item of items) {
+      const image = item.wpPostId !== undefined ? (byId.get(item.wpPostId) ?? null) : null;
+      rememberImage(item.url, image);
+      if (image) item.imageUrl = image;
+    }
+  } catch {
+    // Fall through — the og:image pass picks these up.
+  }
+}
+
+/** First `og:image` / `twitter:image` on an article page, or null. Reads
+ *  only the head of the document. */
+async function fetchOgImage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
+      headers: { "User-Agent": BOT_UA, Accept: "text/html" },
+    });
+    if (!res.ok) return null;
+    const head = (await res.text()).slice(0, 120_000);
+    const m =
+      head.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i) ??
+      head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i) ??
+      head.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+    const image = m ? decode(m[1]) : null;
+    return image && /^https?:\/\//.test(image) ? image : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────── */
 /*  RSS / Atom parser — regex-based, handles both feed flavors            */
 /* ────────────────────────────────────────────────────────────────────── */
 
@@ -177,16 +278,24 @@ function parseFeed(xml: string, feed: FeedSource): NewsItem[] {
     const publishedAt = pubDateRaw ? Date.parse(pubDateRaw) : NaN;
 
     // Try `<media:thumbnail url="..."/>`, `<media:content url="..."/>`,
-    // `<enclosure url="..."/>`, and lastly an `<img src="...">` embedded
-    // in the HTML description.
+    // `<enclosure url="..."/>`, and lastly the first `<img src="...">` in
+    // any HTML the entry carries (description, or the full `<content>` /
+    // `<content:encoded>` body — The Verge only puts its picture there).
     const imageUrl =
-      extractAttr(block, "media:thumbnail", "url") ??
-      extractAttr(block, "media:content", "url") ??
-      extractAttr(block, "enclosure", "url") ??
-      extractImgSrc(description) ??
-      undefined;
+      decode(
+        extractAttr(block, "media:thumbnail", "url") ??
+          extractAttr(block, "media:content", "url") ??
+          extractAttr(block, "enclosure", "url") ??
+          extractImgSrc(description) ??
+          extractImgSrc(block),
+      ) ?? undefined;
 
     if (!title || !link || !Number.isFinite(publishedAt)) continue;
+
+    // WordPress feeds expose the post id in <guid> (`…/?p=123`) — used to
+    // look up the featured image when the feed itself carries none.
+    const guid = extractFirst(block, "guid") ?? "";
+    const wpPostId = guid.match(/[?&]p=(\d+)/)?.[1];
 
     const id = `${feed.source}-${hashCode(link)}`;
     const tint = TINTS[hashCode(title) % TINTS.length];
@@ -201,6 +310,7 @@ function parseFeed(xml: string, feed: FeedSource): NewsItem[] {
       url: link.trim(),
       tint,
       ...(imageUrl ? { imageUrl } : {}),
+      ...(wpPostId ? { wpPostId: Number(wpPostId) } : {}),
     });
   }
   return items;

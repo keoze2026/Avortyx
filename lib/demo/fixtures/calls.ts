@@ -13,11 +13,12 @@
  * memory — not localStorage — so we don't blow the storage quota.
  */
 
-import { makeRng, pick, intRange, range, chance } from "../rng";
+import { makeRng, pick, intRange, chance } from "../rng";
 import { currentBucket, bucketRange } from "../bucket";
 import { seedDestinations } from "./entities";
-import { DAY_PROFILE, DAY_TOTAL, hourWeights, liveTargetAt } from "./day-profile";
+import { daySlotsFor, dayTotalFor, hourWeights, liveTargetAt } from "./day-profile";
 import { demoClock } from "../clock";
+import { zonedDayKey } from "@/lib/format";
 
 /**
  * The TFN each buyer's seeded destination answers on, so a demo call's
@@ -187,21 +188,19 @@ export interface DemoCallWire {
 
 interface CorpusOptions {
   pastDays: number;
-  /** Past days carry this share of today's 6 500 (varied ±20% per day). */
-  pastDayScale: number;
   /** Convert rate — fraction of calls that complete + actually pay out. */
   convertRate: number;
 }
 
 /**
- * Per-bucket options. Today's volume and shape are fixed by the dataset;
- * what still rotates every 2 hours is the convert rate and the weight of
- * the history, so the demo doesn't read as a static screenshot.
+ * Per-bucket options. Each day's volume and shape are fixed by the dataset
+ * (5 000–6 500 calls on the profile's hour curve, picked per date); what
+ * still rotates every 2 hours is the convert rate, so the demo doesn't
+ * read as a static screenshot.
  */
 function optsForCurrentBucket(): CorpusOptions {
   return {
     pastDays: 13,
-    pastDayScale: bucketRange(13, 0.25, 0.4),
     convertRate: bucketRange(11, 0.65, 0.92),
   };
 }
@@ -241,11 +240,13 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
   const weights = hourWeights();
 
   // ─── Today ───────────────────────────────────────────────────────────
-  // Exactly the dataset: 6 500 calls spread across 08:00–17:00 with each
-  // hour's own count, uniformly placed inside its hour. `getDemoCalls()`
-  // then hides the ones that haven't happened yet.
+  // The dataset's curve scaled to today's total (5 000–6 500, fixed per
+  // date): 08:00–17:00 with each hour's own count, uniformly placed inside
+  // its hour. `getDemoCalls()` then hides the ones that haven't happened
+  // yet.
+  const clock = demoClock();
   let n = 0;
-  for (const slot of DAY_PROFILE) {
+  for (const slot of daySlotsFor(clock.dayKey)) {
     for (let i = 0; i < slot.calls; i++, n++) {
       const minute = intRange(rng, 0, 59);
       const second = intRange(rng, 0, 59);
@@ -256,9 +257,10 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
 
   // ─── Past N days ─────────────────────────────────────────────────────
   for (let dayOffset = 1; dayOffset <= opts.pastDays; dayOffset++) {
-    // Slight day-to-day variation so the 14-day chart has shape.
-    const dayCount = Math.round(DAY_TOTAL * opts.pastDayScale * range(rng, 0.8, 1.2));
+    // Each past day ends on its own figure inside the 5 000–6 500 band, so
+    // yesterday never matches today and the 14-day chart has shape.
     const dayStart = start - dayOffset * DAY;
+    const dayCount = dayTotalFor(zonedDayKey(dayStart + 12 * HOUR, clock.timeZone));
     for (let i = 0; i < dayCount; i++) {
       const hour = pickHour(rng, weights);
       const minute = intRange(rng, 0, 59);
@@ -272,6 +274,10 @@ function buildCorpus(opts: CorpusOptions): DemoCallWire[] {
   out.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   return out;
 }
+
+/** Demo-only price: every call bills $1 of revenue; every connected call
+ *  pays out $1 (client spec — "revenue = total calls, payout = connected"). */
+const DEMO_PRICE_PER_CALL = 1;
 
 /** Average connected-call length for the current bucket: 17–21 minutes. */
 const ACL_CENTER_SEC = () => Math.round(bucketRange(43, 17 * 60, 21 * 60));
@@ -340,12 +346,12 @@ function makeCall(
     : status === "missed"
       ? intRange(rng, 5, 35)
       : intRange(rng, 1, 12);
-  // Demo economics (client spec): revenue accrues on every call that comes
-  // in — total calls × the campaign's per-call price — while payout is
-  // only owed on connected calls, at the publisher's share of that price.
-  // That's what makes Profit a real number instead of $0.
-  const revenue = camp.payout;
-  const payout = isConverted ? Math.round(camp.payout * 0.58 * 100) / 100 : 0;
+  // Demo economics (client spec): a flat $1 per call. Revenue accrues on
+  // every call that comes in (total calls × $1); payout is only owed on
+  // connected calls (connected calls × $1). Profit is therefore the
+  // no-answer count in dollars.
+  const revenue = DEMO_PRICE_PER_CALL;
+  const payout = isConverted ? DEMO_PRICE_PER_CALL : 0;
   const areaCode = pick(AREA_CODES, rng);
   return {
     id: `call_${idSuffix}`,

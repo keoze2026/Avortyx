@@ -264,7 +264,7 @@ export const zh: TranslationShape = {
       total: "合计",
       callsSuffix: "通话",
       totalCalls: "总通话",
-      notConnected: "未接通",
+      notConnected: "无应答",
       completed: "已完成",
     },
     tooltips: {
@@ -3933,6 +3933,8 @@ export const zh: TranslationShape = {
     capWatch: {
       viewDestinations: "查看目标号码",
       viewCampaigns: "查看广告系列",
+      viewBuyers: "查看买家",
+      viewInsights: "查看洞察",
       daily: {
         near: { title: "每日上限即将达到", body: "今日 {used} / {cap} 通（{pct}%）。达到上限后将停止路由。" },
         reached: { title: "已达到每日上限", body: "今日 {used} / {cap} 通。上限重置前不再向此处路由。" },
@@ -3944,6 +3946,22 @@ export const zh: TranslationShape = {
       concurrency: {
         near: { title: "并发线路即将占满", body: "{cap} 条线路已占用 {used} 条（{pct}%）。新来电可能需要排队。" },
         reached: { title: "已达到并发上限", body: "全部 {cap} 条线路均已占用。来电正在被转接或排队。" },
+      },
+    },
+    popupPrefs: {
+      button: "弹窗提醒",
+      title: "弹窗提醒",
+      description: "选择哪些提醒以横幅形式弹出在屏幕顶部。所有提醒仍会显示在此列表中。",
+      allOn: "全部开启",
+      allOff: "全部关闭",
+      kinds: {
+        capNear: { label: "上限即将用完", hint: "目的地、买家或广告系列达到上限的90%。" },
+        destinationCapOver: { label: "目的地已达上限", hint: "目的地达到每日、每月或线路上限。" },
+        buyerCapOver: { label: "买家已达上限", hint: "买家达到每日、每月或并发上限。" },
+        campaignCapOver: { label: "广告系列已达上限", hint: "广告系列达到每日或每月上限。" },
+        lowAht: { label: "AHT 偏低", hint: "平均处理时长低于正常范围。" },
+        buyerMissed: { label: "买家漏接较多", hint: "买家有大量来电未接听。" },
+        other: { label: "其他异常", hint: "话务量下降、延迟激增、拒绝率等。" },
       },
     },
     menu: {

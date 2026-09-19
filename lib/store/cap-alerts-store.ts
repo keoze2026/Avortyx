@@ -19,7 +19,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-export type CapEntityType = "destination" | "campaign";
+export type CapEntityType = "destination" | "buyer" | "campaign";
 export type CapMetric = "daily" | "monthly" | "concurrency";
 export type CapLevel = "near" | "reached";
 

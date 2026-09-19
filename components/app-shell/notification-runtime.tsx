@@ -2,6 +2,7 @@
 
 import { PushNotifications } from "./push-notifications";
 import { useAutoScheduleRuntime } from "@/lib/auto-schedule-runtime";
+import { useAnomalyPopupRuntime } from "@/lib/anomaly-popup-runtime";
 import { useCapWatchRuntime } from "@/lib/cap-watch-runtime";
 
 /**
@@ -18,10 +19,13 @@ import { useCapWatchRuntime } from "@/lib/cap-watch-runtime";
  * ("Buyer hit cap", "Acceptance dipped") has been removed — the topbar
  * dropdown reads real AI anomalies via the AI Insights store, plus the
  * cap-watch alerts below, which come from the live destination / campaign
- * counters the app polls (see lib/cap-watch-runtime.ts).
+ * counters the app polls (see lib/cap-watch-runtime.ts). Both the cap
+ * watch and the anomaly runtime only pop a banner for the kinds the
+ * operator switched on under "Pop-up alerts" in the bell menu.
  */
 export function NotificationRuntime() {
   useAutoScheduleRuntime();
   useCapWatchRuntime();
+  useAnomalyPopupRuntime();
   return <PushNotifications />;
 }

@@ -15,7 +15,10 @@
  *   17:00            end of day — 0 live, total holds at 6 500
  *
  * "Total calls" in the source table is cumulative, so `calls` here is the
- * per-hour increment. The day is read against the clock of the report
+ * per-hour increment. The table is the *shape* and the ceiling: each
+ * calendar day lands somewhere between 5 000 and 6 500 calls (see
+ * `dayTotalFor`), with every hour scaled by the same factor, so
+ * consecutive days never end on the same figure. The day is read against the clock of the report
  * timezone (see `../clock.ts`): before 08:00 nothing has happened yet,
  * during the day the totals grow through each hour, after 17:00 the full
  * day is on the books.
@@ -45,8 +48,48 @@ export const DAY_PROFILE: readonly DaySlot[] = [
   { hour: 16, live: [130, 130], calls: 1_000 },
 ];
 
-/** Calls in a full day: 6 500. */
+/** Calls in a full day at the profile's ceiling: 6 500. */
 export const DAY_TOTAL = DAY_PROFILE.reduce((s, slot) => s + slot.calls, 0);
+
+/** A day's total falls in this band (client spec: "between 5k and 6.5k"). */
+export const DAY_TOTAL_MIN = 5_000;
+export const DAY_TOTAL_MAX = DAY_TOTAL;
+
+/** 0–1 from a date string. FNV-1a over the characters, then a murmur3
+ *  finaliser — consecutive dates differ in one character, and without the
+ *  mix they'd all land within a few percent of each other. */
+function hashDayKey(dayKey: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < dayKey.length; i++) h = Math.imul(h ^ dayKey.charCodeAt(i), 16777619);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/**
+ * How many calls a given calendar day ("YYYY-MM-DD") ends on — a stable
+ * pick inside 5 000–6 500 that depends only on the date, so today's figure
+ * doesn't move between reloads and each day differs from the last.
+ */
+export function dayTotalFor(dayKey: string): number {
+  const span = DAY_TOTAL_MAX - DAY_TOTAL_MIN;
+  // Round to a "reported" figure (tens) so it reads like a real count.
+  return DAY_TOTAL_MIN + Math.round((hashDayKey(dayKey) * span) / 10) * 10;
+}
+
+/** Per-hour call counts for a day: the profile's shape scaled to that
+ *  day's total (the last slot absorbs rounding so the sum is exact). */
+export function daySlotsFor(dayKey: string): Array<{ hour: number; calls: number }> {
+  const total = dayTotalFor(dayKey);
+  const scale = total / DAY_TOTAL;
+  const slots = DAY_PROFILE.map((s) => ({ hour: s.hour, calls: Math.round(s.calls * scale) }));
+  const sum = slots.reduce((a, s) => a + s.calls, 0);
+  slots[slots.length - 1].calls += total - sum;
+  return slots;
+}
 
 export const DAY_OPEN_HOUR = DAY_PROFILE[0].hour;
 export const DAY_CLOSE_HOUR = DAY_PROFILE[DAY_PROFILE.length - 1].hour + 1;
@@ -72,9 +115,9 @@ export function liveTargetAt(now: number = Date.now()): number {
 
 /** Calls started so far today, pro-rated inside the current hour. */
 export function callsExpectedAt(now: number = Date.now()): number {
-  const { hour, minute, second } = demoClock(now);
+  const { hour, minute, second, dayKey } = demoClock(now);
   let total = 0;
-  for (const slot of DAY_PROFILE) {
+  for (const slot of daySlotsFor(dayKey)) {
     if (slot.hour < hour) total += slot.calls;
     else if (slot.hour === hour) total += Math.round((slot.calls * (minute * 60 + second)) / 3600);
   }

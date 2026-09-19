@@ -285,7 +285,7 @@ export const en = {
       total: "Total",
       callsSuffix: "calls",
       totalCalls: "Total calls",
-      notConnected: "Not connected",
+      notConnected: "No Answer",
       completed: "Completed",
     },
     tooltips: {
@@ -3990,6 +3990,8 @@ export const en = {
     capWatch: {
       viewDestinations: "View destinations",
       viewCampaigns: "View campaigns",
+      viewBuyers: "View buyers",
+      viewInsights: "View insights",
       daily: {
         near: { title: "Daily cap almost reached", body: "{used} of {cap} calls today ({pct}%). Routing stops at the cap." },
         reached: { title: "Daily cap reached", body: "{used} of {cap} calls today. No more calls will route here until the cap resets." },
@@ -4001,6 +4003,22 @@ export const en = {
       concurrency: {
         near: { title: "Concurrency almost full", body: "{used} of {cap} lines in use ({pct}%). New calls may queue." },
         reached: { title: "Concurrency limit reached", body: "All {cap} lines are busy. Incoming calls are being rerouted or queued." },
+      },
+    },
+    popupPrefs: {
+      button: "Pop-up alerts",
+      title: "Pop-up alerts",
+      description: "Choose which alerts pop up as a banner at the top of the screen. Every alert still lands in this list.",
+      allOn: "Turn all on",
+      allOff: "Turn all off",
+      kinds: {
+        capNear: { label: "Cap almost full", hint: "Any destination, buyer or campaign at 90% of a cap." },
+        destinationCapOver: { label: "Destination cap reached", hint: "A destination hit its daily, monthly or line cap." },
+        buyerCapOver: { label: "Buyer cap reached", hint: "A buyer hit its daily, monthly or concurrency cap." },
+        campaignCapOver: { label: "Campaign cap reached", hint: "A campaign hit its daily or monthly cap." },
+        lowAht: { label: "Low AHT", hint: "Average handle time dropped below its normal range." },
+        buyerMissed: { label: "Buyer missing calls", hint: "A buyer is not answering a lot of calls." },
+        other: { label: "Other anomalies", hint: "Volume drops, latency spikes, reject rate and similar." },
       },
     },
     menu: {

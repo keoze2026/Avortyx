@@ -39,6 +39,9 @@ export interface NewsItem {
   tint: [string, string];
   /** Real-source thumbnail URL. Renders in place of the tint gradient when set. */
   imageUrl?: string;
+  /** WordPress post id from the feed's <guid> — lets the server look up a
+   *  featured image for feeds that ship none (TechCrunch). */
+  wpPostId?: number;
 }
 
 /* ─── Cryptocurrency feed ────────────────────────────────────────────── */

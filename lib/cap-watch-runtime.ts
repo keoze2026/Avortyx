@@ -13,6 +13,8 @@
  *
  * Each (entity, metric, level, period) fires once — see the cap-alerts
  * store — so the operator hears about it when it happens, not every tick.
+ * The bell entry is always written; the banner only pops when the operator
+ * has that kind switched on under "Pop-up alerts" (alert-preferences store).
  */
 
 "use client";
@@ -28,6 +30,7 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { pushNotification } from "@/lib/store/push-notifications-store";
 import { useCapAlertsStore, type CapAlert, type CapLevel, type CapMetric } from "@/lib/store/cap-alerts-store";
+import { popupAllowed, type PopupAlertKind } from "@/lib/store/alert-preferences-store";
 
 /** "About to hit" threshold. */
 export const CAP_NEAR_PCT = 90;
@@ -54,6 +57,26 @@ function levelFor(used: number, cap: number): CapLevel | null {
 /** The period an alert belongs to — a day, a month, or (for concurrency,
  *  which resets as calls end) the current hour, so a sustained ceiling
  *  re-announces at most hourly. */
+/** Which "Pop-up alerts" switch governs this alert. */
+function popupKindFor(entityType: CapAlert["entityType"], level: CapLevel): PopupAlertKind {
+  if (level === "near") return "capNear";
+  if (entityType === "destination") return "destinationCapOver";
+  if (entityType === "buyer") return "buyerCapOver";
+  return "campaignCapOver";
+}
+
+const ENTITY_ROUTE: Record<CapAlert["entityType"], string> = {
+  destination: ROUTES.destinations,
+  buyer: ROUTES.buyers,
+  campaign: ROUTES.campaigns,
+};
+
+const ENTITY_ACTION_KEY: Record<CapAlert["entityType"], string> = {
+  destination: "notificationsUI.capWatch.viewDestinations",
+  buyer: "notificationsUI.capWatch.viewBuyers",
+  campaign: "notificationsUI.capWatch.viewCampaigns",
+};
+
 function periodKey(metric: CapMetric, timeZone: string): string {
   const day = zonedDayKey(Date.now(), timeZone);
   if (metric === "monthly") return day.slice(0, 7);
@@ -86,6 +109,13 @@ export function useCapWatchRuntime() {
       candidates.push({ ...base, metric: "monthly", used: d.monthlyCalls, cap: d.monthlyCap });
       candidates.push({ ...base, metric: "concurrency", used: d.liveCalls, cap: d.concurrencyCap });
     }
+    for (const b of buyers) {
+      if (b.status !== "active") continue;
+      const base = { entityType: "buyer" as const, entityId: b.id, entityName: b.name };
+      candidates.push({ ...base, metric: "daily", used: b.callsToday, cap: b.dailyCap });
+      candidates.push({ ...base, metric: "monthly", used: b.callsMonth, cap: b.monthlyCap });
+      candidates.push({ ...base, metric: "concurrency", used: b.liveCalls, cap: b.concurrencyCap });
+    }
     for (const c of campaigns) {
       if (c.status !== "active") continue;
       const base = { entityType: "campaign" as const, entityId: c.id, entityName: c.name };
@@ -112,6 +142,8 @@ export function useCapWatchRuntime() {
         at: Date.now(),
       };
       if (!record(alert)) continue;
+      // Logged to the bell either way; the banner is the operator's choice.
+      if (!popupAllowed(popupKindFor(cand.entityType, level))) continue;
 
       const root = `notificationsUI.capWatch.${cand.metric}.${level}`;
       pushNotification({
@@ -123,12 +155,8 @@ export function useCapWatchRuntime() {
           .replace("{cap}", String(cand.cap))
           .replace("{pct}", String(pct)),
         source: cand.tfn ? `${cand.entityName} · ${cand.tfn}` : cand.entityName,
-        action: t(
-          cand.entityType === "destination"
-            ? "notificationsUI.capWatch.viewDestinations"
-            : "notificationsUI.capWatch.viewCampaigns",
-        ),
-        actionHref: cand.entityType === "destination" ? ROUTES.destinations : ROUTES.campaigns,
+        action: t(ENTITY_ACTION_KEY[cand.entityType]),
+        actionHref: ENTITY_ROUTE[cand.entityType],
         // Cap alerts stay up until dismissed — they're actionable, not FYI.
         durationMs: level === "reached" ? 0 : 12_000,
       });
