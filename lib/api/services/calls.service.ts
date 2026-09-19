@@ -65,6 +65,24 @@ function wireToCallDetail(w: RoutingCallWire): CallDetail {
   return detail;
 }
 
+/** `POST /api/routing/calls/{id}/hangup` response. */
+interface HangupWire {
+  id: string;
+  status: string;
+  duration?: number;
+  converted?: boolean;
+  /** Amount billed for the call, or null when it never connected. */
+  charged?: string | number | null;
+  endedAt?: string;
+  message?: string;
+}
+
+export interface HangupResult {
+  /** Fields to merge into the row the operator hung up. */
+  patch: Partial<Call>;
+  message?: string;
+}
+
 /* ─── Public service ──────────────────────────────────────────────────── */
 
 export const callsService = {
@@ -82,6 +100,23 @@ export const callsService = {
       ...res,
       items: res.items.map((w) => ({ ...callRecordToCall(w) })),
     };
+  },
+
+  /**
+   * Manually end a call that's still live. The backend closes the record
+   * and answers with its final state — `no_answer` / 0 s / not charged if
+   * it never connected, otherwise the real duration and what was billed.
+   * Calling it on a call that already ended is a 400.
+   */
+  async hangup(id: string): Promise<HangupResult> {
+    const w = await http.post<HangupWire>(`/api/routing/calls/${id}/hangup`);
+    const patch: Partial<Call> = {
+      status: normalizeStatus(w.status),
+      durationSec: typeof w.duration === "number" ? w.duration : 0,
+      isConverted: w.converted ?? false,
+    };
+    if (w.charged !== undefined && w.charged !== null) patch.revenue = toNum(w.charged);
+    return { patch, message: w.message };
   },
 
   /** Live in-flight calls (REST snapshot used before the WebSocket connects). */

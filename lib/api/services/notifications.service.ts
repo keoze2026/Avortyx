@@ -17,6 +17,43 @@ export interface NotificationRule {
   updatedAt: number;
 }
 
+/** One entry of GET /api/notifications/events — an alert type the user
+ *  can choose to see as a pop-up banner. */
+export interface AlertEvent {
+  /** Stable name, e.g. "campaign.cap_reached". */
+  event: string;
+  label: string;
+  defaultPopup: boolean;
+}
+
+/** GET / PATCH /api/notifications/preferences — per user, not per org. */
+export interface AlertPreferences {
+  popupsEnabled: boolean;
+  /** Events that pop a banner. PATCH replaces the whole list. */
+  popupEvents: string[];
+  soundEnabled: boolean;
+}
+
+interface AlertEventWire {
+  event: string;
+  label?: string;
+  defaultPopup?: boolean;
+}
+
+interface AlertPreferencesWire {
+  popupsEnabled?: boolean;
+  popupEvents?: string[] | null;
+  soundEnabled?: boolean;
+}
+
+function wireToPreferences(w: AlertPreferencesWire): AlertPreferences {
+  return {
+    popupsEnabled: w.popupsEnabled ?? true,
+    popupEvents: Array.isArray(w.popupEvents) ? w.popupEvents : [],
+    soundEnabled: w.soundEnabled ?? false,
+  };
+}
+
 export interface NotificationLog {
   id: string;
   event: string;
@@ -83,6 +120,26 @@ function wireToLog(w: LogWire): NotificationLog {
 }
 
 export const notificationsService = {
+  /** The catalogue of alert types — rendered as the "Pop-up alerts" list. */
+  async events(): Promise<AlertEvent[]> {
+    const wire = await http.get<AlertEventWire[] | { items?: AlertEventWire[] | null }>("/api/notifications/events");
+    const rows = Array.isArray(wire) ? wire : (wire?.items ?? []);
+    return rows
+      .filter((r) => typeof r.event === "string" && r.event)
+      .map((r) => ({ event: r.event, label: r.label || r.event, defaultPopup: r.defaultPopup ?? false }));
+  },
+
+  async preferences(): Promise<AlertPreferences> {
+    return wireToPreferences(await http.get<AlertPreferencesWire>("/api/notifications/preferences"));
+  },
+
+  /** Any subset of the three fields; `popupEvents` replaces the whole list. */
+  async updatePreferences(patch: Partial<AlertPreferences>): Promise<AlertPreferences> {
+    return wireToPreferences(
+      await http.patch<AlertPreferencesWire>("/api/notifications/preferences", { body: patch }),
+    );
+  },
+
   async listRules(query: { page?: number; pageSize?: number } = {}): Promise<Paginated<NotificationRule>> {
     const res = await http.get<Paginated<RuleWire>>("/api/notifications/rules", { query });
     return { ...res, items: res.items.map(wireToRule) };

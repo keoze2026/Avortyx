@@ -351,6 +351,12 @@ export default function ReportsPage() {
           <CallLogTable
             calls={logCalls}
             loading={rangeLoading}
+            // Manual hang-up: refresh the row in place from the backend's
+            // final state (status / duration / charged) rather than waiting
+            // for the next poll.
+            onCallPatched={(id, patch) =>
+              setRangeCalls((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+            }
           />
         )}
       </ReportsPinGate>

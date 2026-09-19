@@ -2,8 +2,11 @@
 
 import { PushNotifications } from "./push-notifications";
 import { useAutoScheduleRuntime } from "@/lib/auto-schedule-runtime";
+import * as React from "react";
+
 import { useAnomalyPopupRuntime } from "@/lib/anomaly-popup-runtime";
 import { useCapWatchRuntime } from "@/lib/cap-watch-runtime";
+import { useAlertPreferencesStore } from "@/lib/store/alert-preferences-store";
 
 /**
  * Mounted once at the (app) layout level. Boots client-side runtimes:
@@ -24,6 +27,12 @@ import { useCapWatchRuntime } from "@/lib/cap-watch-runtime";
  * operator switched on under "Pop-up alerts" in the bell menu.
  */
 export function NotificationRuntime() {
+  // Pop-up preferences come from the backend (per user) — load them once
+  // so the runtimes below gate banners on the operator's real choices.
+  const fetchPrefs = useAlertPreferencesStore((s) => s.fetch);
+  React.useEffect(() => {
+    void fetchPrefs();
+  }, [fetchPrefs]);
   useAutoScheduleRuntime();
   useCapWatchRuntime();
   useAnomalyPopupRuntime();

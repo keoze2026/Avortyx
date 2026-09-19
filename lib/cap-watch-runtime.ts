@@ -30,7 +30,7 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { pushNotification } from "@/lib/store/push-notifications-store";
 import { useCapAlertsStore, type CapAlert, type CapLevel, type CapMetric } from "@/lib/store/cap-alerts-store";
-import { popupAllowed, type PopupAlertKind } from "@/lib/store/alert-preferences-store";
+import { popupAllowed } from "@/lib/store/alert-preferences-store";
 
 /** "About to hit" threshold. */
 export const CAP_NEAR_PCT = 90;
@@ -57,12 +57,11 @@ function levelFor(used: number, cap: number): CapLevel | null {
 /** The period an alert belongs to — a day, a month, or (for concurrency,
  *  which resets as calls end) the current hour, so a sustained ceiling
  *  re-announces at most hourly. */
-/** Which "Pop-up alerts" switch governs this alert. */
-function popupKindFor(entityType: CapAlert["entityType"], level: CapLevel): PopupAlertKind {
-  if (level === "near") return "capNear";
-  if (entityType === "destination") return "destinationCapOver";
-  if (entityType === "buyer") return "buyerCapOver";
-  return "campaignCapOver";
+/** The backend event name whose "Pop-up alerts" switch governs this alert
+ *  (`campaign.cap_reached` / `buyer.cap_reached` / `destination.cap_reached`).
+ *  "Almost reached" banners follow the same switch as "reached". */
+function popupEventFor(entityType: CapAlert["entityType"]): string {
+  return `${entityType}.cap_reached`;
 }
 
 const ENTITY_ROUTE: Record<CapAlert["entityType"], string> = {
@@ -143,7 +142,7 @@ export function useCapWatchRuntime() {
       };
       if (!record(alert)) continue;
       // Logged to the bell either way; the banner is the operator's choice.
-      if (!popupAllowed(popupKindFor(cand.entityType, level))) continue;
+      if (!popupAllowed(popupEventFor(cand.entityType))) continue;
 
       const root = `notificationsUI.capWatch.${cand.metric}.${level}`;
       pushNotification({

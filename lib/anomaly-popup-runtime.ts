@@ -7,10 +7,13 @@
  * an anomaly shows up each day — but only for the kinds the operator has
  * switched on under "Pop-up alerts" (alert-preferences store).
  *
- *   missed   → "buyerMissed"   a buyer is missing / not answering calls
- *   low-aht  → "lowAht"        AHT below its normal range
+ *   missed   → "buyer.missed"   a buyer is missing / not answering calls
+ *   low-aht  → "aht.low"        AHT below its normal range
  *   cap-over → handled by the cap-watch runtime (live counters); skipped
- *   other    → "other"         only when the anomaly is warning / critical
+ *   other    → "anomaly.<kind>" only when the anomaly is warning / critical
+ *
+ * The event names are the backend's (GET /api/notifications/events); an
+ * event the catalogue doesn't list follows the master pop-ups switch.
  */
 
 "use client";
@@ -24,7 +27,7 @@ import { ROUTES } from "@/lib/constants";
 import { zonedDayKey } from "@/lib/format";
 import { anomalyToNotification } from "@/lib/notifications/mappers";
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
-import { popupAllowed, type PopupAlertKind } from "@/lib/store/alert-preferences-store";
+import { popupAllowed } from "@/lib/store/alert-preferences-store";
 import { pushNotification } from "@/lib/store/push-notifications-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { NotificationItem } from "@/lib/mock/notifications";
@@ -58,17 +61,17 @@ const useAnomalyPopupLedger = create<LedgerState>()(
   ),
 );
 
-function popupKindFor(item: NotificationItem): PopupAlertKind | null {
+function popupEventFor(item: NotificationItem, kind: string): string | null {
   switch (item.alertKind) {
     case "missed":
-      return "buyerMissed";
+      return "buyer.missed";
     case "low-aht":
-      return "lowAht";
+      return "aht.low";
     case "cap-over":
       return null;
     default:
       // Generic anomalies only interrupt when the backend flags them.
-      return item.severity === "critical" || item.severity === "warn" ? "other" : null;
+      return item.severity === "critical" || item.severity === "warn" ? `anomaly.${kind}` : null;
   }
 }
 
@@ -83,15 +86,15 @@ export function useAnomalyPopupRuntime() {
     const day = zonedDayKey(Date.now(), timeZone);
     for (const a of anomalies) {
       const item = anomalyToNotification(a);
-      const kind = popupKindFor(item);
-      if (!kind) continue;
+      const event = popupEventFor(item, a.kind);
+      if (!event) continue;
       // Dedupe before the preference check so switching a kind on later
       // doesn't replay everything that was suppressed earlier today.
       if (!mark(`${a.id}|${day}`)) continue;
-      if (!popupAllowed(kind)) continue;
+      if (!popupAllowed(event)) continue;
       pushNotification({
         severity: item.severity === "critical" ? "critical" : "warn",
-        icon: kind === "buyerMissed" ? "phone" : "alert",
+        icon: event === "buyer.missed" ? "phone" : "alert",
         title: item.title,
         body: item.body,
         source: item.source,

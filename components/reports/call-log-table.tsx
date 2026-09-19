@@ -38,7 +38,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 import { analyticsService } from "@/lib/api/services/analytics.service";
+import { callsService } from "@/lib/api/services/calls.service";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
@@ -306,6 +308,9 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
 
 interface CallLogTableProps {
   calls: Call[];
+  /** Called after a manual hang-up with the backend's final state for the
+   *  row, so the owner of `calls` can refresh that record in place. */
+  onCallPatched?: (id: string, patch: Partial<Call>) => void;
   /** Optional limit for the visible rows (default 50). */
   limit?: number;
   /** True while `calls` reflects a backend request in flight (e.g. the
@@ -316,7 +321,7 @@ interface CallLogTableProps {
   loading?: boolean;
 }
 
-export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTableProps) {
+export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched }: CallLogTableProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const publishers = usePublishersStore((s) => s.publishers);
@@ -641,7 +646,7 @@ export function CallLogTable({ calls, limit = 50, loading = false }: CallLogTabl
                         </TableCell>
                       )}
                       <TableCell className="pr-6">
-                        <CallRowActions call={c} />
+                        <CallRowActions call={c} onCallPatched={onCallPatched} />
                       </TableCell>
                     </TableRow>
                   );
@@ -766,10 +771,46 @@ function TagCell({ call }: { call: Call }) {
   );
 }
 
-/** Three inline icon actions per row: copy caller, block caller, bill/adjust. */
-function CallRowActions({ call }: { call: Call }) {
+/** Inline icon actions per row: copy caller, block caller, bill/adjust —
+ *  plus hang-up while the call is still live. */
+function CallRowActions({
+  call,
+  onCallPatched,
+}: {
+  call: Call;
+  onCallPatched?: (id: string, patch: Partial<Call>) => void;
+}) {
   const { t } = useTranslation();
   const caller = formatCallerId(call.callerNumber);
+  const isLive = call.status === "in-progress" || call.status === "ringing";
+  const [hangupArmed, setHangupArmed] = React.useState(false);
+  const [hangingUp, setHangingUp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!hangupArmed) return;
+    const id = window.setTimeout(() => setHangupArmed(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [hangupArmed]);
+
+  const onHangup = async () => {
+    if (!hangupArmed) {
+      setHangupArmed(true);
+      return;
+    }
+    setHangingUp(true);
+    try {
+      const { patch, message } = await callsService.hangup(call.id);
+      onCallPatched?.(call.id, patch);
+      toast.success(t("toolsUI.reports.callLog.actions.toastHungUp").replace("{number}", caller), {
+        description: message,
+      });
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.actions.toastHangupError")));
+    } finally {
+      setHangingUp(false);
+      setHangupArmed(false);
+    }
+  };
 
   const onCopy = async () => {
     try {
@@ -807,6 +848,22 @@ function CallRowActions({ call }: { call: Call }) {
 
   return (
     <div className="inline-flex items-center gap-0.5">
+      {/* Hang up — only offered while the call is live; the backend
+          answers 400 for anything that has already ended. Two clicks:
+          the first arms it, the second (within 4 s) sends. */}
+      {isLive && (
+        <Button
+          variant={hangupArmed ? "destructive" : "ghost"}
+          size="sm"
+          className={cn("h-7 gap-1 px-2 text-[11px]", !hangupArmed && "text-muted-foreground hover:text-destructive")}
+          aria-label={t("toolsUI.reports.callLog.actions.hangup")}
+          disabled={hangingUp}
+          onClick={onHangup}
+        >
+          <PhoneOff className="h-3.5 w-3.5" />
+          {hangupArmed ? t("toolsUI.reports.callLog.actions.hangupConfirm") : t("toolsUI.reports.callLog.actions.hangup")}
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"

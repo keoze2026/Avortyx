@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, MapPin, Phone, PhoneIncoming, PhoneMissed, XCircle } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, PhoneIncoming, PhoneMissed, PhoneOff, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 import { CallWaveform } from "@/components/live/call-waveform";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/use-translation";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 import { formatCallerId, formatTimer } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -65,11 +67,14 @@ const STATUS_META: Record<
 interface LiveCallCardProps {
   call: Call;
   isLive: boolean;
+  /** When given, live cards get a hang-up control (POST …/hangup). */
+  onHangup?: (id: string) => Promise<string | undefined>;
 }
 
-export function LiveCallCard({ call, isLive }: LiveCallCardProps) {
+export function LiveCallCard({ call, isLive, onHangup }: LiveCallCardProps) {
   const { t } = useTranslation();
   const now = useNow(1000);
+  const hangupControl = isLive && onHangup ? <HangupButton callId={call.id} onHangup={onHangup} /> : null;
   const live = isLive ? Math.max(0, Math.floor((now - call.startedAt) / 1000)) : call.durationSec;
   const meta = STATUS_META[call.status];
   const Icon = meta.icon;
@@ -136,10 +141,69 @@ export function LiveCallCard({ call, isLive }: LiveCallCardProps) {
             <span className={cn("font-mono text-base font-semibold tabular-nums", isLive && "text-accent")}>
               {formatTimer(live)}
             </span>
+            {hangupControl}
           </div>
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t(meta.labelKey)}</span>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * Two-step hang-up: first click arms it ("Confirm?"), second click within
+ * 4 s sends the request. A stray click on a live card never ends a call.
+ */
+function HangupButton({
+  callId,
+  onHangup,
+}: {
+  callId: string;
+  onHangup: (id: string) => Promise<string | undefined>;
+}) {
+  const { t } = useTranslation();
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!armed) return;
+    const id = window.setTimeout(() => setArmed(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [armed]);
+
+  const onClick = async () => {
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      const message = await onHangup(callId);
+      toast.success(t("liveUI.card.hangup.done"), { description: message });
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, t("liveUI.card.hangup.failed")));
+    } finally {
+      setBusy(false);
+      setArmed(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      aria-label={t("liveUI.card.hangup.label")}
+      title={t("liveUI.card.hangup.label")}
+      className={cn(
+        "inline-flex h-7 items-center gap-1 rounded-md border px-2 text-[11px] font-medium transition-colors disabled:opacity-60",
+        armed
+          ? "border-destructive bg-destructive text-destructive-foreground"
+          : "border-border text-muted-foreground hover:border-destructive/60 hover:text-destructive",
+      )}
+    >
+      <PhoneOff className="h-3.5 w-3.5" />
+      {armed ? t("liveUI.card.hangup.confirm") : t("liveUI.card.hangup.label")}
+    </button>
   );
 }

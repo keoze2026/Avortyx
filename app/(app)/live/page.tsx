@@ -16,7 +16,7 @@ import { useTranslation } from "@/hooks/use-translation";
 export default function LivePage() {
   const { t, locale } = useTranslation();
   const [paused, setPaused] = useState(false);
-  const { inFlight, history, totals } = useLiveSocket({ paused });
+  const { inFlight, history, totals, hangup } = useLiveSocket({ paused });
 
   // Today's date chip — defer formatting to after mount so SSR and the
   // first client paint don't disagree about the locale string.
@@ -63,7 +63,7 @@ export default function LivePage() {
       {/* Bento — 12 col */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          <LiveStreamPanel inFlight={inFlight} history={history} />
+          <LiveStreamPanel inFlight={inFlight} history={history} onHangup={hangup} />
         </div>
         <div className="space-y-4 lg:col-span-4">
           <RoutingPath call={featured} />

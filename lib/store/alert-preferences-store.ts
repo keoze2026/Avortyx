@@ -1,12 +1,18 @@
 /**
- * Alert preferences — which alert kinds are allowed to pop up as a banner
- * at the top of the screen.
+ * Alert preferences — which alert types may pop up as a banner at the top
+ * of the screen. Backed by the backend, per user:
+ *
+ *   GET   /api/notifications/events        the catalogue (label + default)
+ *   GET   /api/notifications/preferences   { popups_enabled, popup_events, sound_enabled }
+ *   PATCH /api/notifications/preferences   any subset; popup_events replaces the list
  *
  * Every alert still lands in the bell menu and on /notifications; this
  * only decides whether it *also* interrupts the operator with a banner.
  * Set from the "Pop-up alerts" panel under the bell's Alerts tab.
  *
- * Persisted per browser so the choice survives a refresh.
+ * The last known catalogue + preferences are cached in localStorage so the
+ * runtimes can answer `popupAllowed()` before the first fetch resolves and
+ * the panel doesn't flash empty on a reload.
  */
 
 "use client";
@@ -14,76 +20,121 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-/**
- * The kinds an operator can switch on / off. Kept coarse on purpose — each
- * one maps to a question the operator actually asks ("do I want to be
- * interrupted when a buyer stops answering?"), not to a backend metric.
- */
-export type PopupAlertKind =
-  /** Any cap ≥ 90 % (destination, buyer or campaign; daily / monthly / lines). */
-  | "capNear"
-  /** A destination hit 100 % of a cap. */
-  | "destinationCapOver"
-  /** A buyer hit 100 % of a cap. */
-  | "buyerCapOver"
-  /** A campaign hit 100 % of a cap. */
-  | "campaignCapOver"
-  /** AHT dropped below its normal range. */
-  | "lowAht"
-  /** A buyer is missing / not answering a lot of calls. */
-  | "buyerMissed"
-  /** Any other AI anomaly (volume drop, latency spike, reject rate, …). */
-  | "other";
-
-export const POPUP_ALERT_KINDS: PopupAlertKind[] = [
-  "capNear",
-  "destinationCapOver",
-  "buyerCapOver",
-  "campaignCapOver",
-  "lowAht",
-  "buyerMissed",
-  "other",
-];
-
-const DEFAULT_POPUPS: Record<PopupAlertKind, boolean> = {
-  capNear: true,
-  destinationCapOver: true,
-  buyerCapOver: true,
-  campaignCapOver: true,
-  lowAht: true,
-  buyerMissed: true,
-  other: true,
-};
+import {
+  notificationsService,
+  type AlertEvent,
+  type AlertPreferences,
+} from "@/lib/api/services/notifications.service";
 
 interface AlertPreferencesState {
-  popups: Record<PopupAlertKind, boolean>;
-  setPopup: (kind: PopupAlertKind, on: boolean) => void;
-  setAllPopups: (on: boolean) => void;
+  events: AlertEvent[];
+  popupsEnabled: boolean;
+  popupEvents: string[];
+  soundEnabled: boolean;
+  hydrated: boolean;
+  loading: boolean;
+  error: string | null;
+
+  fetch: () => Promise<void>;
+  setPopupsEnabled: (on: boolean) => Promise<void>;
+  setEvent: (event: string, on: boolean) => Promise<void>;
+  setAllEvents: (on: boolean) => Promise<void>;
+  setSoundEnabled: (on: boolean) => Promise<void>;
+}
+
+function messageFromError(e: unknown): string {
+  return e instanceof Error ? e.message : "Couldn't save alert preferences";
 }
 
 export const useAlertPreferencesStore = create<AlertPreferencesState>()(
   persist(
-    (set) => ({
-      popups: DEFAULT_POPUPS,
-      setPopup: (kind, on) => set((s) => ({ popups: { ...s.popups, [kind]: on } })),
-      setAllPopups: (on) =>
-        set({
-          popups: Object.fromEntries(POPUP_ALERT_KINDS.map((k) => [k, on])) as Record<PopupAlertKind, boolean>,
-        }),
-    }),
+    (set, get) => {
+      /** Optimistic PATCH: apply locally, send, roll back on failure. */
+      const save = async (patch: Partial<AlertPreferences>) => {
+        const before = {
+          popupsEnabled: get().popupsEnabled,
+          popupEvents: get().popupEvents,
+          soundEnabled: get().soundEnabled,
+        };
+        set({ ...patch, error: null });
+        try {
+          const saved = await notificationsService.updatePreferences(patch);
+          set({ ...saved });
+        } catch (e) {
+          set({ ...before, error: messageFromError(e) });
+          throw e;
+        }
+      };
+
+      return {
+        events: [],
+        popupsEnabled: true,
+        popupEvents: [],
+        soundEnabled: false,
+        hydrated: false,
+        loading: false,
+        error: null,
+
+        fetch: async () => {
+          if (get().loading) return;
+          set({ loading: true, error: null });
+          try {
+            const [events, prefs] = await Promise.all([
+              notificationsService.events(),
+              notificationsService.preferences(),
+            ]);
+            set({ events, ...prefs, hydrated: true, loading: false });
+          } catch (e) {
+            // Keep whatever was cached; the panel shows the error inline.
+            set({ loading: false, error: messageFromError(e) });
+          }
+        },
+
+        setPopupsEnabled: (on) => save({ popupsEnabled: on }),
+
+        setEvent: (event, on) => {
+          const current = new Set(get().popupEvents);
+          if (on) current.add(event);
+          else current.delete(event);
+          return save({ popupEvents: [...current] });
+        },
+
+        setAllEvents: (on) =>
+          save({ popupEvents: on ? get().events.map((e) => e.event) : [] }),
+
+        setSoundEnabled: (on) => save({ soundEnabled: on }),
+      };
+    },
     {
       name: "avortyx.alert-prefs",
       storage: createJSONStorage(() => localStorage),
-      // New kinds added later default to "on" instead of vanishing.
-      merge: (persisted, current) => {
-        const p = (persisted as Partial<AlertPreferencesState> | undefined)?.popups ?? {};
-        return { ...current, popups: { ...DEFAULT_POPUPS, ...p } };
+      version: 1,
+      // Only the data is cached — never the transient flags.
+      partialize: (s) => ({
+        events: s.events,
+        popupsEnabled: s.popupsEnabled,
+        popupEvents: s.popupEvents,
+        soundEnabled: s.soundEnabled,
+      }),
+      migrate: (persisted, version) => {
+        // v0 was the local-only store with a different shape; start clean.
+        if (version < 1) return undefined as unknown as AlertPreferencesState;
+        return persisted as AlertPreferencesState;
       },
     },
   ),
 );
 
-/** Non-hook read for runtimes that fire outside React render. */
-export function popupAllowed(kind: PopupAlertKind): boolean {
-  return useAlertPreferencesStore.getState().popups[kind] !== false;
+/**
+ * Non-hook read for runtimes that fire outside React render.
+ *
+ * An event the backend's catalogue doesn't list can't be switched off by
+ * the operator, so it follows the master switch only.
+ */
+export function popupAllowed(event: string): boolean {
+  const s = useAlertPreferencesStore.getState();
+  if (!s.popupsEnabled) return false;
+  const known = s.events.some((e) => e.event === event);
+  if (!known) return true;
+  return s.popupEvents.includes(event);
 }

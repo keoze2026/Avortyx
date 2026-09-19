@@ -49,6 +49,7 @@ import {
   type DemoCallWire,
 } from "./fixtures/calls";
 import { demoTimeZone } from "./clock";
+import { liveEntry, markHungUp, wasHungUp } from "./live-registry";
 import { zonedDayKey } from "@/lib/format";
 import {
   seedAuctions,
@@ -977,8 +978,46 @@ route("GET", "/api/analytics/dashboard", () => ({
   currency: "USD",
 }));
 
-route("GET", "/api/analytics/live", () => generateLiveCalls());
-route("GET", "/api/routing/calls/live", () => generateLiveCalls());
+route("GET", "/api/analytics/live", () => generateLiveCalls().filter((c) => !wasHungUp(c.id)));
+route("GET", "/api/routing/calls/live", () => generateLiveCalls().filter((c) => !wasHungUp(c.id)));
+
+/**
+ * Manual hang-up. Mirrors the backend: a live call closes as `no_answer`
+ * with zero duration and no charge if it never connected (ringing), or
+ * `completed` with its real duration and the per-call charge if it had.
+ * Anything that already ended is a 400 with its current status.
+ */
+route("POST", "/api/routing/calls/{id}/hangup", (req) => {
+  const id = trimSlash(req.path).split("/").at(-2) ?? "";
+  // The Live Monitor's cards come from the demo socket (tracked in the
+  // live registry); the call log's Live rows from the REST snapshot.
+  const live =
+    liveEntry(id) ??
+    (() => {
+      const c = generateLiveCalls().find((x) => x.id === id);
+      return c ? { startedAt: Date.parse(c.created_at), status: c.status as "ringing" | "in-progress" } : undefined;
+    })();
+  if (!live || wasHungUp(id)) {
+    const settled = getDemoCalls().find((c) => c.id === id);
+    throw new ApiError({
+      status: 400,
+      message: settled ? `Call already ended (${settled.status}).` : wasHungUp(id) ? "Call already ended (completed)." : "Call not found.",
+      code: "call_not_live",
+    });
+  }
+  markHungUp(id);
+  const connected = live.status === "in-progress";
+  const duration = connected ? Math.max(1, Math.floor((Date.now() - live.startedAt) / 1000)) : 0;
+  return {
+    id,
+    status: connected ? "completed" : "no_answer",
+    duration,
+    converted: connected,
+    charged: connected ? LEDGER_COST_PER_CALL.toFixed(2) : null,
+    ended_at: new Date().toISOString(),
+    message: "Call record closed. Live audio, if any, is not affected.",
+  };
+});
 
 /**
  * Per-entity aggregates for a date range — the same shape the real backend
@@ -1367,6 +1406,58 @@ route("GET", "/api/accounts/api-keys/", () => []);
 
 // Notifications — both list endpoints.
 route("GET", "/api/notifications/logs", (req) => paged([], req.query));
+/* ─── Pop-up alert preferences (per user) ─────────────────────────────── */
+
+/** The catalogue the "Pop-up alerts" panel renders — same shape as the
+ *  backend's GET /api/notifications/events. */
+const ALERT_EVENTS = [
+  { event: "campaign.cap_reached", label: "Campaign Cap Reached", default_popup: true },
+  { event: "buyer.cap_reached", label: "Buyer Cap Reached", default_popup: true },
+  { event: "destination.cap_reached", label: "Destination Cap Reached", default_popup: true },
+  { event: "buyer.missed", label: "Buyer Missed Call", default_popup: false },
+  { event: "aht.low", label: "Average Handle Time Dropped", default_popup: false },
+  { event: "low.balance", label: "Low Balance", default_popup: true },
+  { event: "destination.concurrency_full", label: "Destination Lines Full", default_popup: true },
+  { event: "campaign.no_buyers", label: "Campaign Has No Active Buyers", default_popup: true },
+  { event: "buyer.no_answer_rate", label: "Buyer No-Answer Rate High", default_popup: false },
+  { event: "call.spam_blocked", label: "Spam Call Blocked", default_popup: false },
+  { event: "volume.drop", label: "Call Volume Dropped", default_popup: false },
+  { event: "latency.spike", label: "Routing Latency Spike", default_popup: false },
+];
+
+function alertPreferences() {
+  return readObject("alert_preferences", () => ({
+    popups_enabled: true,
+    popup_events: ALERT_EVENTS.filter((e) => e.default_popup).map((e) => e.event),
+    sound_enabled: false,
+  }));
+}
+
+route("GET", "/api/notifications/events", () => ALERT_EVENTS);
+route("GET", "/api/notifications/preferences", () => alertPreferences());
+route("PATCH", "/api/notifications/preferences", (req) => {
+  const patch = camelKeyPatch(req.body) as Record<string, unknown>;
+  const current = alertPreferences();
+  if (Array.isArray(patch.popup_events)) {
+    const valid = new Set(ALERT_EVENTS.map((e) => e.event));
+    const unknown = (patch.popup_events as string[]).filter((e) => !valid.has(e));
+    if (unknown.length > 0) {
+      throw new ApiError({
+        status: 400,
+        message: `Unknown event(s): ${unknown.join(", ")}. Valid: ${[...valid].join(", ")}`,
+        code: "invalid_event",
+      });
+    }
+  }
+  const next = {
+    popups_enabled: typeof patch.popups_enabled === "boolean" ? patch.popups_enabled : current.popups_enabled,
+    popup_events: Array.isArray(patch.popup_events) ? (patch.popup_events as string[]) : current.popup_events,
+    sound_enabled: typeof patch.sound_enabled === "boolean" ? patch.sound_enabled : current.sound_enabled,
+  };
+  writeObject("alert_preferences", next);
+  return next;
+});
+
 route("GET", "/api/notifications/rules", () => []);
 
 // Integrations — list endpoint.

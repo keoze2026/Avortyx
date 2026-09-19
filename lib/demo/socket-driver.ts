@@ -11,6 +11,7 @@
  */
 
 import type { CallEvent, CallEventType, CallSocket } from "../api/socket";
+import { trackLive, untrackLive, wasHungUp } from "./live-registry";
 import { snakeToCamel } from "../api/case";
 import { generateLiveCalls, liveCallsCount } from "./fixtures/calls";
 import { seedAuctions, bidsForAuction } from "./fixtures/auctions";
@@ -102,6 +103,7 @@ export function createDemoSocket(): CallSocket {
         status: c.status as InFlight["status"],
         ttl: intRange(makeRng(c.id.length), 30, 180),
       });
+      trackLive(c.id, { startedAt: Date.parse(c.created_at), status: c.status as InFlight["status"] });
     }
   };
 
@@ -123,6 +125,7 @@ export function createDemoSocket(): CallSocket {
       ttl: intRange(rng, 30, 240),
     };
     inFlight.push(call);
+    trackLive(call.id, { startedAt: call.startedAt, status: "ringing" });
     emit("call.created", liveWire(call));
   };
 
@@ -212,10 +215,16 @@ export function createDemoSocket(): CallSocket {
   const runTick = () => {
     const rng = Math.random;
     const now = Date.now();
+    // Calls the operator hung up (POST …/hangup) leave quietly — the hook
+    // already settled the card from the router's response.
+    for (let i = inFlight.length - 1; i >= 0; i--) {
+      if (wasHungUp(inFlight[i].id)) inFlight.splice(i, 1);
+    }
     // Promote ringing → in-progress after 4s
     for (const c of inFlight) {
       if (c.status === "ringing" && now - c.startedAt > 4_000) {
         c.status = "in-progress";
+        trackLive(c.id, { startedAt: c.startedAt, status: "in-progress" });
         emit("call.connected", liveWire(c));
       }
     }
@@ -224,6 +233,7 @@ export function createDemoSocket(): CallSocket {
       const c = inFlight[i];
       if (now - c.startedAt >= c.ttl * 1000) {
         settleCall(c, rng);
+        untrackLive(c.id);
         inFlight.splice(i, 1);
       }
     }

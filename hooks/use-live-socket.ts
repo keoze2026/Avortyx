@@ -15,7 +15,7 @@
  * the floor — the existing pause UX.
  */
 
-import { useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import { callsService } from "@/lib/api/services/calls.service";
 import { useCallsStore } from "@/lib/store/calls-store";
@@ -116,6 +116,9 @@ interface UseLiveSocketReturn extends State {
   hydrated: boolean;
   /** True while the WebSocket is open. */
   connected: boolean;
+  /** Manually end an in-flight call (POST …/hangup) and settle its card
+   *  from the backend's final state. Resolves with the backend's message. */
+  hangup: (id: string) => Promise<string | undefined>;
 }
 
 /** Inferred from arbitrary event payload — accepts a wide range of shapes. */
@@ -261,9 +264,16 @@ export function useLiveSocket({ paused }: UseLiveSocketOptions): UseLiveSocketRe
     setLiveCount(state.inFlight.length);
   }, [state.inFlight.length, setLiveCount]);
 
+  const hangup = useCallback(async (id: string) => {
+    const { patch, message } = await callsService.hangup(id);
+    dispatch({ kind: "settle", id, final: patch });
+    return message;
+  }, []);
+
   return {
     ...state,
     hydrated: hydratedRef.current,
     connected: connectedRef.current,
+    hangup,
   };
 }

@@ -18,9 +18,11 @@ import type { Call } from "@/lib/types";
 interface LiveStreamPanelProps {
   inFlight: Call[];
   history: Call[];
+  /** Manual hang-up for an in-flight card (see useLiveSocket().hangup). */
+  onHangup?: (id: string) => Promise<string | undefined>;
 }
 
-export function LiveStreamPanel({ inFlight, history }: LiveStreamPanelProps) {
+export function LiveStreamPanel({ inFlight, history, onHangup }: LiveStreamPanelProps) {
   const { t } = useTranslation();
   return (
     <div className="space-y-4">
@@ -46,7 +48,7 @@ export function LiveStreamPanel({ inFlight, history }: LiveStreamPanelProps) {
           <div className="space-y-2">
             <AnimatePresence initial={false}>
               {inFlight.map((c) => (
-                <LiveCallCard key={c.id} call={c} isLive />
+                <LiveCallCard key={c.id} call={c} isLive onHangup={onHangup} />
               ))}
             </AnimatePresence>
           </div>
