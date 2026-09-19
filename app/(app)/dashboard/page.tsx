@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
@@ -12,10 +11,8 @@ import { VerticalDonut } from "@/components/dashboard/vertical-donut";
 import { CallPerfCard } from "@/components/reports/call-perf-card";
 import { HourlyDistribution } from "@/components/reports/hourly-distribution";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
-import { ExportMenu } from "@/components/shared/export-menu";
 import { PageHeader } from "@/components/shared/page-header";
 import { TimezonePicker } from "@/components/shared/timezone-picker";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import {
   Select,
@@ -26,12 +23,11 @@ import {
 } from "@/components/ui/select";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
-import type { Call, Destination } from "@/lib/types";
+import type { Call } from "@/lib/types";
 
 const ALL_DEST = "all";
 
@@ -145,19 +141,6 @@ export default function DashboardPage() {
       ? fromKey
       : `${fromKey} ~ ${toKey}`;
 
-  const onExport = (format: ExportFormat) => {
-    const rows = buildDestinationExportRows(
-      destinations,
-      allSelected ? undefined : destinationTfn,
-      dayCalls,
-      isToday,
-    );
-    const rangeStem = fromKey === toKey ? fromKey : `${fromKey}_${toKey}`;
-    const stem = `dashboard-${rangeStem}${allSelected ? "" : `-${destinationTfn.replace(/\D/g, "")}`}`;
-    downloadRows(format, exportColumns(dateLabel), rows, dateStamped(stem), "Destinations");
-    toast.success(`Exported ${rows.length} destinations to ${format.toUpperCase()}`);
-  };
-
   return (
     <>
       <PageHeader
@@ -192,11 +175,6 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
             <DateRangePicker value={dateRange} onChange={setDateRange} today={today} />
-            <ExportMenu onExport={onExport}>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4" /> {t("common.export")}
-              </Button>
-            </ExportMenu>
           </>
         }
       />
@@ -238,78 +216,4 @@ export default function DashboardPage() {
       />
     </>
   );
-}
-
-/* ─── Export support ─── */
-
-interface DestinationExportRow {
-  destination: string;
-  tfn: string;
-  buyer: string;
-  calls: number;
-  revenue: number;
-  concurrent: number;
-  dailyCap: number;
-  capPct: number;
-}
-
-function exportColumns(dateLabel: string): ExportColumn<DestinationExportRow>[] {
-  return [
-    { label: "Destination", value: (r) => r.destination },
-    { label: "TFN", value: (r) => r.tfn },
-    { label: "Buyer", value: (r) => r.buyer },
-    { label: `Calls (${dateLabel})`, value: (r) => r.calls },
-    { label: `Revenue (${dateLabel})`, value: (r) => Number(r.revenue.toFixed(2)) },
-    { label: "Concurrent", value: (r) => r.concurrent },
-    { label: "Daily cap", value: (r) => r.dailyCap },
-    { label: "Cap %", value: (r) => Number(r.capPct.toFixed(1)) },
-  ];
-}
-
-/** Mirror the on-screen Destinations card, scoped to the selected TFN if any. */
-function buildDestinationExportRows(
-  destinations: Destination[],
-  filter: string | undefined,
-  dayCalls: Call[],
-  useLiveCounters: boolean,
-): DestinationExportRow[] {
-  const callsByTfn = new Map<string, number>();
-  const revenueByTfn = new Map<string, number>();
-  for (const c of dayCalls) {
-    const k = toE164(c.destinationNumber);
-    callsByTfn.set(k, (callsByTfn.get(k) ?? 0) + 1);
-    revenueByTfn.set(k, (revenueByTfn.get(k) ?? 0) + c.revenue);
-  }
-  // Today: the destination record's own backend-computed aggregates, which
-  // the on-screen table also shows (see DestinationSummaryTable).
-  if (useLiveCounters) {
-    for (const d of destinations) {
-      callsByTfn.set(toE164(d.tfn), d.dailyCalls);
-      revenueByTfn.set(toE164(d.tfn), d.dailyRevenue);
-    }
-  }
-
-  // Buyers are pulled non-hook from the store since this runs at click time.
-  const buyerById = new Map(
-    useBuyersStore.getState().buyers.map((b) => [b.id, b]),
-  );
-
-  return destinations
-    .filter((d) => !filter || toE164(d.tfn) === toE164(filter))
-    .map<DestinationExportRow>((d) => {
-      const calls = callsByTfn.get(toE164(d.tfn)) ?? 0;
-      return {
-        destination: d.name,
-        tfn: d.tfn,
-        buyer: buyerById.get(d.buyerId)?.name ?? d.buyerName ?? "—",
-        calls,
-        revenue: revenueByTfn.get(toE164(d.tfn)) ?? 0,
-        // Live/concurrent comes off the destination record — a call log
-        // can't contain an in-flight row, so it was always 0 from the cache.
-        concurrent: d.liveCalls,
-        dailyCap: d.dailyCap,
-        capPct: d.dailyCap > 0 ? Math.min(100, (calls / d.dailyCap) * 100) : 0,
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
 }
