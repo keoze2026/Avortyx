@@ -1451,6 +1451,13 @@ function SortHeader({
  * works standalone if it's ever used somewhere the page-level filter state
  * doesn't apply.
  */
+/** Hover colour per tone — static class strings so Tailwind can see them. */
+const HOVER_TONE = {
+  neutral: "hover:text-accent",
+  success: "hover:text-[color:var(--success)]",
+  destructive: "hover:text-destructive",
+} as const;
+
 function TotalsFilterCell({
   count,
   tone,
@@ -1484,12 +1491,12 @@ function TotalsFilterCell({
         onClick={onClick}
         aria-pressed={active}
         className={cn(
-          // The row itself is already font-semibold — active steps up to
-          // font-bold plus the status's own colour, so the selected total
-          // reads as pressed, not just hovered.
+          // Only the digits change — no background tint on hover or when
+          // pressed (client request). Active = the status's own colour plus
+          // font-bold on top of the row's font-semibold; hover previews it.
           "w-full cursor-pointer px-4 py-3 text-center tabular-nums transition-colors",
-          "hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-          active && cn("bg-accent/10 font-bold", toneText),
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          active ? cn("font-bold", toneText) : cn("hover:font-bold", HOVER_TONE[tone]),
         )}
       >
         {formatNumber(count)}
