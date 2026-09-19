@@ -55,15 +55,7 @@ type GroupKey =
   | "date-hour"
   | "date-dow"
   // Parameters sub-options
-  | "param-source"
-  | "param-medium"
-  | "param-campaign"
-  | "param-term"
-  | "param-content"
   // Custom Parameters sub-options
-  | "custom-vertical"
-  | "custom-lead-id"
-  | "custom-partner-id"
   // Caller Profile sub-options
   | "profile-carrier"
   | "profile-linetype"
@@ -74,15 +66,7 @@ type GroupKey =
   | "profile-timezone"
   | "profile-fraudscore"
   // Caller Identity sub-options
-  | "identity-age"
-  | "identity-gender"
   | "identity-city"
-  | "identity-email"
-  | "identity-emails"
-  | "identity-firstname"
-  | "identity-lastname"
-  | "identity-address1"
-  | "identity-address2"
   | "identity-carrier"
   | "identity-linetype"
   | "identity-phone"
@@ -132,26 +116,6 @@ const TABS: TabConfig[] = [
   },
   { id: "trafficSource", labelKey: "toolsUI.reports.summary.tabs.trafficSource" },
   {
-    id: "param-source",
-    labelKey: "toolsUI.reports.summary.tabs.parameters",
-    sub: [
-      { id: "param-source", labelKey: "toolsUI.reports.summary.subOptions.utmSource" },
-      { id: "param-medium", labelKey: "toolsUI.reports.summary.subOptions.utmMedium" },
-      { id: "param-campaign", labelKey: "toolsUI.reports.summary.subOptions.utmCampaign" },
-      { id: "param-term", labelKey: "toolsUI.reports.summary.subOptions.utmTerm" },
-      { id: "param-content", labelKey: "toolsUI.reports.summary.subOptions.utmContent" },
-    ],
-  },
-  {
-    id: "custom-vertical",
-    labelKey: "toolsUI.reports.summary.tabs.customParameters",
-    sub: [
-      { id: "custom-vertical", labelKey: "toolsUI.reports.summary.subOptions.vertical" },
-      { id: "custom-lead-id", labelKey: "toolsUI.reports.summary.subOptions.leadId" },
-      { id: "custom-partner-id", labelKey: "toolsUI.reports.summary.subOptions.partnerId" },
-    ],
-  },
-  {
     id: "profile-carrier",
     labelKey: "toolsUI.reports.summary.tabs.callerProfile",
     sub: [
@@ -166,18 +130,10 @@ const TABS: TabConfig[] = [
     ],
   },
   {
-    id: "identity-age",
+    id: "identity-city",
     labelKey: "toolsUI.reports.summary.tabs.callerIdentity",
     sub: [
-      { id: "identity-age", labelKey: "toolsUI.reports.summary.subOptions.ageRange" },
-      { id: "identity-gender", labelKey: "toolsUI.reports.summary.subOptions.gender" },
       { id: "identity-city", labelKey: "toolsUI.reports.summary.subOptions.city" },
-      { id: "identity-email", labelKey: "toolsUI.reports.summary.subOptions.email" },
-      { id: "identity-emails", labelKey: "toolsUI.reports.summary.subOptions.emails" },
-      { id: "identity-firstname", labelKey: "toolsUI.reports.summary.subOptions.firstName" },
-      { id: "identity-lastname", labelKey: "toolsUI.reports.summary.subOptions.lastName" },
-      { id: "identity-address1", labelKey: "toolsUI.reports.summary.subOptions.address1" },
-      { id: "identity-address2", labelKey: "toolsUI.reports.summary.subOptions.address2" },
       { id: "identity-carrier", labelKey: "toolsUI.reports.summary.subOptions.carrier" },
       { id: "identity-linetype", labelKey: "toolsUI.reports.summary.subOptions.lineType" },
       { id: "identity-phone", labelKey: "toolsUI.reports.summary.subOptions.phoneNumber" },
@@ -313,25 +269,6 @@ function dateKey(ts: number, timeZone: string) {
  *  call's id is hashed with a salt to pick a stable value from the list,
  *  so groupings are reproducible across renders and exports. */
 
-const UTM_SOURCES = ["google", "facebook", "bing", "tiktok", "direct"];
-const UTM_MEDIUMS = ["cpc", "organic", "social", "email", "referral"];
-const UTM_CAMPAIGNS = ["spring2026", "rebrand", "awareness", "retargeting", "remarketing"];
-const UTM_TERMS = ["insurance quote", "auto warranty", "solar quote", "legal help", "medicare"];
-const UTM_CONTENTS = ["banner_a", "banner_b", "video_short", "video_long", "carousel"];
-const VERTICALS = ["Health", "Auto", "Legal", "Solar", "Finance", "Insurance"];
-const PARTNERS = ["P-001", "P-002", "P-003", "P-004", "P-005"];
-const AGE_RANGES = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"];
-const GENDERS = ["Male", "Female", "Unknown"];
-const INCOME_RANGES = ["<$25K", "$25K-$50K", "$50K-$75K", "$75K-$100K", "$100K+"];
-const NAMES = [
-  "John Smith",
-  "Mary Johnson",
-  "Robert Brown",
-  "Patricia Davis",
-  "Michael Wilson",
-  "Linda Martinez",
-];
-const EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "icloud.com"];
 const ZIP_PREFIXES = ["10", "20", "30", "40", "50", "60", "70", "80", "90"];
 const DEVICES = ["Mobile", "Desktop", "Tablet"];
 const BROWSERS = ["Chrome", "Safari", "Firefox", "Edge"];
@@ -371,40 +308,6 @@ const PROFILE_TIMEZONES = [
 ];
 const FRAUD_BANDS = ["Low (0-30)", "Medium (31-70)", "High (71-100)"];
 
-const FIRST_NAMES = [
-  "John",
-  "Mary",
-  "Robert",
-  "Patricia",
-  "Michael",
-  "Linda",
-  "James",
-  "Susan",
-  "David",
-  "Karen",
-];
-const LAST_NAMES = [
-  "Smith",
-  "Johnson",
-  "Brown",
-  "Davis",
-  "Wilson",
-  "Martinez",
-  "Anderson",
-  "Thompson",
-  "Garcia",
-  "Lee",
-];
-const ADDRESS_STREETS = [
-  "100 Main St",
-  "200 Oak Ave",
-  "300 Park Rd",
-  "400 Elm St",
-  "500 Pine Ln",
-  "600 Cedar Dr",
-];
-const ADDRESS_UNITS = ["—", "Apt 1A", "Apt 2B", "Suite 100", "Floor 3", "Unit 7"];
-const EMAIL_FIRST_HALVES = ["alex", "sam", "jordan", "casey", "riley", "morgan", "taylor"];
 
 /* Session-data derivations. */
 const CONTINENTS = [
@@ -502,26 +405,6 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       return { key: v, label: v };
     }
 
-    case "param-source":
-      return labelOf(pickFrom(c, "src", UTM_SOURCES));
-    case "param-medium":
-      return labelOf(pickFrom(c, "med", UTM_MEDIUMS));
-    case "param-campaign":
-      return labelOf(pickFrom(c, "cmp", UTM_CAMPAIGNS));
-    case "param-term":
-      return labelOf(pickFrom(c, "trm", UTM_TERMS));
-    case "param-content":
-      return labelOf(pickFrom(c, "cnt", UTM_CONTENTS));
-
-    case "custom-vertical":
-      return labelOf(pickFrom(c, "vrt", VERTICALS));
-    case "custom-lead-id": {
-      const v = `L-${(hashOf(c.id + "lid") % 9999).toString().padStart(4, "0")}`;
-      return { key: v, label: v };
-    }
-    case "custom-partner-id":
-      return labelOf(pickFrom(c, "ptr", PARTNERS));
-
     /* ── Caller Profile ──────────────────────────────────────────────── */
     case "profile-carrier":
       return labelOf(pickFrom(c, "p-car", CARRIERS));
@@ -544,34 +427,8 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       return labelOf(pickFrom(c, "p-fr", FRAUD_BANDS));
 
     /* ── Caller Identity ─────────────────────────────────────────────── */
-    case "identity-age":
-      return labelOf(pickFrom(c, "i-age", AGE_RANGES));
-    case "identity-gender":
-      return labelOf(pickFrom(c, "i-gnd", GENDERS));
     case "identity-city":
       return labelOf(pickFrom(c, "i-cty", CITIES));
-    case "identity-email": {
-      const dom = EMAIL_DOMAINS[hashOf(c.callerNumber + "i-eml") % EMAIL_DOMAINS.length];
-      const local = `user${(hashOf(c.id + "i-eml") % 999).toString().padStart(3, "0")}`;
-      const v = `${local}@${dom}`;
-      return { key: v, label: v };
-    }
-    case "identity-emails": {
-      // Multiple known emails per caller — comma-separated for the table cell.
-      const dom1 = EMAIL_DOMAINS[hashOf(c.callerNumber + "i-em1") % EMAIL_DOMAINS.length];
-      const dom2 = EMAIL_DOMAINS[hashOf(c.callerNumber + "i-em2") % EMAIL_DOMAINS.length];
-      const local = EMAIL_FIRST_HALVES[hashOf(c.id + "i-em") % EMAIL_FIRST_HALVES.length];
-      const v = `${local}@${dom1}, ${local}.alt@${dom2}`;
-      return { key: v, label: v };
-    }
-    case "identity-firstname":
-      return labelOf(pickFrom(c, "i-fn", FIRST_NAMES));
-    case "identity-lastname":
-      return labelOf(pickFrom(c, "i-ln", LAST_NAMES));
-    case "identity-address1":
-      return labelOf(pickFrom(c, "i-a1", ADDRESS_STREETS));
-    case "identity-address2":
-      return labelOf(pickFrom(c, "i-a2", ADDRESS_UNITS));
     case "identity-carrier":
       return labelOf(pickFrom(c, "i-car", CARRIERS));
     case "identity-linetype":
