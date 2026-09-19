@@ -18,7 +18,7 @@ import { currentBucket, bucketRange } from "../bucket";
 import { seedDestinations } from "./entities";
 import { daySlotsFor, dayTotalFor, hourWeights, liveTargetAt } from "./day-profile";
 import { demoClock } from "../clock";
-import { zonedDayKey } from "@/lib/format";
+import { dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 
 /**
  * The TFN each buyer's seeded destination answers on, so a demo call's
@@ -584,5 +584,107 @@ export function dashboardSnapshot() {
     total_missed: today.filter((c) => c.status === "missed").length,
     total_rejected: today.filter((c) => c.status === "rejected").length,
     not_connected: dropped,
+  };
+}
+
+/* ─── Account balance ledger (demo economics, client spec) ─────────────
+ *
+ *   • The account opens with a $50 000 recharge.
+ *   • Every call that comes in deducts $0.40.
+ *   • Whenever the balance falls below $1 000, an auto-recharge tops it up
+ *     by a random $30 000–$60 000 (stable per recharge, so the figure
+ *     doesn't change between refreshes).
+ *
+ * Replayed over the call corpus in time order, so the balance the topbar
+ * shows ticks down by $0.40 per call through the day and jumps on the
+ * recharge, exactly like a real prepaid account would.
+ */
+
+export const LEDGER_OPENING_RECHARGE = 50_000;
+export const LEDGER_COST_PER_CALL = 0.4;
+export const LEDGER_RECHARGE_BELOW = 1_000;
+export const LEDGER_RECHARGE_MIN = 30_000;
+export const LEDGER_RECHARGE_MAX = 60_000;
+
+export interface LedgerRecharge {
+  /** 0 = the opening recharge. */
+  index: number;
+  amount: number;
+  at: number;
+  balanceBefore: number;
+  balanceAfter: number;
+}
+
+export interface DemoLedger {
+  balance: number;
+  callsCharged: number;
+  recharges: LedgerRecharge[];
+  /** The most recent recharge — what the Billing page shows. */
+  lastRecharge: LedgerRecharge;
+}
+
+/** Recharge n (n ≥ 1) always tops up by the same amount: $30k–$60k, in $500 steps. */
+function rechargeAmount(index: number): number {
+  const r = makeRng(9_100 + index)();
+  const span = LEDGER_RECHARGE_MAX - LEDGER_RECHARGE_MIN;
+  return LEDGER_RECHARGE_MIN + Math.round((r * span) / 500) * 500;
+}
+
+/** The account's first day. Fixed (not "14 days ago") so the ledger keeps
+ *  running forward and actually cycles through recharges over time. */
+export const LEDGER_EPOCH_DAY = "2026-09-01";
+
+let LEDGER_MEMO: { key: string; ledger: DemoLedger } | null = null;
+
+export function demoLedger(): DemoLedger {
+  const calls = getDemoCalls(); // newest → oldest, everything up to "now"
+  const clock = demoClock();
+  // The replay only changes when a call lands (or the corpus rolls), so a
+  // 15 s poll normally gets the memo back instead of a 100k-step replay.
+  const memoKey = `${CACHE_KEY}|${calls.length}`;
+  if (LEDGER_MEMO && LEDGER_MEMO.key === memoKey) return LEDGER_MEMO.ledger;
+  const ledger = computeLedger(calls, clock);
+  LEDGER_MEMO = { key: memoKey, ledger };
+  return ledger;
+}
+
+function computeLedger(calls: DemoCallWire[], clock: ReturnType<typeof demoClock>): DemoLedger {
+  const firstCorpusDay = calls.length ? zonedDayKey(Date.parse(calls[calls.length - 1].created_at), clock.timeZone) : clock.dayKey;
+
+  const recharges: LedgerRecharge[] = [];
+  let balance = 0;
+  let callsCharged = 0;
+  const recharge = (at: number) => {
+    const amount = recharges.length === 0 ? LEDGER_OPENING_RECHARGE : rechargeAmount(recharges.length);
+    recharges.push({ index: recharges.length, amount, at, balanceBefore: balance, balanceAfter: balance + amount });
+    balance += amount;
+  };
+  const charge = (at: number) => {
+    balance -= LEDGER_COST_PER_CALL;
+    callsCharged += 1;
+    if (balance < LEDGER_RECHARGE_BELOW) recharge(at);
+  };
+
+  // Opening recharge the morning the account went live.
+  const epochStart = dayKeyToLocalDate(LEDGER_EPOCH_DAY).getTime();
+  recharge(epochStart + 7 * HOUR);
+
+  // Days before the call corpus begins: each one had its own 5 000–6 500
+  // calls (same rule the corpus uses), spread across the business day.
+  for (let day = epochStart; ; day += DAY) {
+    const key = zonedDayKey(day + 12 * HOUR, clock.timeZone);
+    if (key >= firstCorpusDay) break;
+    const n = dayTotalFor(key);
+    for (let i = 0; i < n; i++) charge(day + 8 * HOUR + Math.round((i / n) * 9 * HOUR));
+  }
+
+  // Then every call actually on the books, oldest first.
+  for (let i = calls.length - 1; i >= 0; i--) charge(Date.parse(calls[i].created_at));
+
+  return {
+    balance: Math.round(balance * 100) / 100,
+    callsCharged,
+    recharges,
+    lastRecharge: recharges[recharges.length - 1],
   };
 }

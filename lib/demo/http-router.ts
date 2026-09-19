@@ -43,9 +43,11 @@ import {
   dashboardSnapshot,
   destinationCounters,
   campaignCounters,
+  demoLedger,
+  LEDGER_COST_PER_CALL,
+  LEDGER_RECHARGE_BELOW,
   type DemoCallWire,
 } from "./fixtures/calls";
-import { bucketRange } from "./bucket";
 import { demoTimeZone } from "./clock";
 import { zonedDayKey } from "@/lib/format";
 import {
@@ -1179,18 +1181,20 @@ const DAY = 24 * 60 * 60 * 1000;
 /** Balance drifts $20K–$80K across buckets so the wallet pill in the topbar
  *  reads like an active operator account, not a fixed default. One source
  *  for both /api/billing/account and /api/analytics/dashboard. */
+/** Account balance from the demo ledger — $50k opening recharge, $0.40 per
+ *  call, auto-recharge $30k–$60k under $1k (see fixtures/calls.ts). */
 function demoBalance(): string {
-  return bucketRange(101, 20_000, 80_000).toFixed(2);
+  return demoLedger().balance.toFixed(2);
 }
 
 route("GET", "/api/billing/account", () => ({
   id: "acct_demo",
   balance: demoBalance(),
   credit_limit: "75000.00",
-  low_balance_threshold: "500.00",
+  low_balance_threshold: LEDGER_RECHARGE_BELOW.toFixed(2),
   auto_recharge: true,
-  auto_recharge_amount: "5000.00",
-  auto_recharge_threshold: "500.00",
+  auto_recharge_amount: demoLedger().lastRecharge.amount.toFixed(2),
+  auto_recharge_threshold: LEDGER_RECHARGE_BELOW.toFixed(2),
   currency: "USD",
   status: "active",
   plan_tier: "Pro",
@@ -1264,11 +1268,39 @@ route("GET", "/api/billing/invoices", (req) => {
 });
 
 route("GET", "/api/billing/transactions", (req) => {
-  const tx = [
-    { id: "tx_001", transaction_type: "deposit", amount: "500.00", balance_before: "784.50", balance_after: "1284.50", description: "Card deposit — Visa ••4242", reference_id: "pi_demo_1", call_sid: "", created_at: new Date(NOW - 2 * DAY).toISOString() },
-    { id: "tx_002", transaction_type: "call_charge", amount: "-12.40", balance_before: "796.90", balance_after: "784.50", description: "Call charge — Medicare Open Enrollment", reference_id: "", call_sid: "CA_demo_42", created_at: new Date(NOW - 3 * DAY).toISOString() },
-    { id: "tx_003", transaction_type: "deposit", amount: "250.00", balance_before: "546.90", balance_after: "796.90", description: "Auto-recharge", reference_id: "pi_demo_2", call_sid: "", created_at: new Date(NOW - 6 * DAY).toISOString() },
-  ];
+  // Recharges from the ledger (newest first) plus the most recent call
+  // charges, so the statement reconciles with the balance in the topbar.
+  const ledger = demoLedger();
+  const tx: Array<Record<string, unknown>> = [];
+  let running = ledger.balance;
+  for (const c of getDemoCalls().slice(0, 25)) {
+    tx.push({
+      id: `tx_call_${c.id}`,
+      transaction_type: "call_charge",
+      amount: (-LEDGER_COST_PER_CALL).toFixed(2),
+      balance_before: (running + LEDGER_COST_PER_CALL).toFixed(2),
+      balance_after: running.toFixed(2),
+      description: `Call charge — ${c.campaign_name}`,
+      reference_id: "",
+      call_sid: c.id,
+      created_at: c.created_at,
+    });
+    running += LEDGER_COST_PER_CALL;
+  }
+  for (const r of [...ledger.recharges].reverse()) {
+    tx.push({
+      id: `tx_recharge_${r.index}`,
+      transaction_type: "deposit",
+      amount: r.amount.toFixed(2),
+      balance_before: r.balanceBefore.toFixed(2),
+      balance_after: r.balanceAfter.toFixed(2),
+      description: r.index === 0 ? "Card deposit — Visa ••4242" : "Auto-recharge",
+      reference_id: `pi_demo_${r.index}`,
+      call_sid: "",
+      created_at: new Date(r.at).toISOString(),
+    });
+  }
+  tx.sort((a, b) => Date.parse(b.created_at as string) - Date.parse(a.created_at as string));
   return paged(tx, req.query);
 });
 
