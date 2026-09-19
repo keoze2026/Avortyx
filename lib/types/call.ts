@@ -36,6 +36,8 @@ export interface Call {
   isConverted?: boolean;
   /** Backend's spam verdict (`is_spam`). */
   isSpam?: boolean;
+  /** Caller's carrier as the backend resolved it ("Verizon", "AT&T", …). */
+  carrier?: string;
 }
 
 /** Real-time event emitted by the (mock) socket. */

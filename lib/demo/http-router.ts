@@ -936,6 +936,7 @@ route("GET", "/api/analytics/calls", (req) => {
   if (req.query.is_converted === "true") all = all.filter((c) => c.is_converted);
   if (req.query.is_duplicate === "true") all = all.filter((c) => c.is_duplicate);
   if (req.query.is_spam === "true") all = all.filter((c) => c.is_spam);
+  if (req.query.carrier) all = all.filter((c) => c.carrier === req.query.carrier);
 
   const limit = Number(req.query.limit ?? req.query.page_size ?? req.query.pageSize ?? "25") || 25;
   if (limit >= 100) {
@@ -1094,6 +1095,10 @@ route("GET", "/api/analytics/buyers", (req) =>
 );
 route("GET", "/api/analytics/publishers", (req) =>
   entitySummary(req, (c) => ({ id: c.publisher_id, name: c.publisher_name }), "publisher_id", "publisher_name"),
+);
+// Carrier rows have no id — the carrier name is the key, as in production.
+route("GET", "/api/analytics/carriers", (req) =>
+  entitySummary(req, (c) => ({ id: c.carrier, name: c.carrier }), "carrier", "carrier"),
 );
 route("GET", "/api/analytics/time-series", () => ({ items: [] }));
 route("GET", "/api/analytics/reports/", () => ({ items: [], total: 0 }));

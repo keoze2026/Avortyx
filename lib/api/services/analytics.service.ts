@@ -70,6 +70,8 @@ interface CallRecordWire {
    *  `is_spam=true` filter by on this endpoint). */
   isConverted?: boolean;
   isSpam?: boolean;
+  /** Caller's carrier, as the backend resolved it (also a filter). */
+  carrier?: string | null;
   /* Call length. The contract (§3.13 Call Record) names this `duration_sec`;
      some CDR rows still ship the legacy `duration` / `duration_seconds`.
      Read all three — picking only one leaves the column at 00:00:00. */
@@ -121,6 +123,8 @@ interface EntitySummaryWire {
   buyerName?: string;
   publisherId?: string | number;
   publisherName?: string;
+  /** /api/analytics/carriers — the carrier name is the row's only key. */
+  carrier?: string;
   totalCalls?: number;
   calls?: number;
   qualifiedCalls?: number;
@@ -184,7 +188,9 @@ export interface TimeSeriesPoint {
  *  send that figure and the table falls back to deriving it from the call
  *  log. */
 export interface EntitySummary {
-  /** Campaign / buyer / publisher id — matches the Call Summary row key. */
+  /** Campaign / buyer / publisher id, or the carrier name — matches the
+   *  Call Summary row key. Falls back to the name when the backend sends
+   *  no id (production /campaigns rows carry only `campaign_name`). */
   entityId: string;
   entityName: string;
   totalCalls: number;
@@ -202,7 +208,7 @@ export interface EntitySummary {
   totalDurationSec?: number;
 }
 
-export type SummaryEntity = "campaign" | "buyer" | "publisher";
+export type SummaryEntity = "campaign" | "buyer" | "publisher" | "carrier";
 
 /** @deprecated alias — the Campaign tab used to have its own type. */
 export type CampaignSummary = EntitySummary;
@@ -326,6 +332,7 @@ function callRecordToCall(w: CallRecordWire): Call {
     isDuplicate: w.isDuplicate ?? w.duplicate,
     isConverted: w.isConverted,
     isSpam: w.isSpam,
+    carrier: w.carrier || undefined,
     payout: firstNum(w.payout, w.buyerPayout),
     revenue: toNum(w.revenue),
     geo: {
@@ -343,11 +350,19 @@ function firstOf(...values: Array<number | string | null | undefined>): number |
 }
 
 function entitySummaryWireToSummary(w: EntitySummaryWire, entity: SummaryEntity): EntitySummary {
-  const id = entity === "campaign" ? w.campaignId : entity === "buyer" ? w.buyerId : w.publisherId;
-  const name = entity === "campaign" ? w.campaignName : entity === "buyer" ? w.buyerName : w.publisherName;
+  const id =
+    entity === "campaign" ? w.campaignId : entity === "buyer" ? w.buyerId : entity === "publisher" ? w.publisherId : undefined;
+  const name =
+    entity === "campaign"
+      ? w.campaignName
+      : entity === "buyer"
+        ? w.buyerName
+        : entity === "publisher"
+          ? w.publisherName
+          : w.carrier;
   const rate = firstOf(w.conversionRate);
   return {
-    entityId: id === undefined || id === null ? "" : String(id),
+    entityId: id === undefined || id === null || id === "" ? (name ?? "") : String(id),
     entityName: name ?? "",
     totalCalls: firstOf(w.totalCalls, w.calls) ?? 0,
     qualifiedCalls: firstOf(w.qualifiedCalls) ?? 0,
@@ -370,6 +385,7 @@ const SUMMARY_PATH: Record<SummaryEntity, string> = {
   campaign: "/api/analytics/campaigns",
   buyer: "/api/analytics/buyers",
   publisher: "/api/analytics/publishers",
+  carrier: "/api/analytics/carriers",
 };
 
 function dashboardWireToKpis(w: DashboardWire): DashboardKpis {

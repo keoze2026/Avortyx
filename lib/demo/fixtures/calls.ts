@@ -161,6 +161,31 @@ const REPEAT_CALLERS: string[] = (() => {
 })();
 const REPEAT_CALLER_RATE = 0.08;
 
+/** US carriers with a rough market-share weighting. */
+const CARRIERS: Array<[string, number]> = [
+  ["Verizon", 30],
+  ["AT&T", 28],
+  ["T-Mobile", 26],
+  ["US Cellular", 5],
+  ["Cricket", 5],
+  ["Metro by T-Mobile", 3],
+  ["Google Fi", 2],
+  ["Comcast", 1],
+];
+const CARRIER_TOTAL = CARRIERS.reduce((s, [, w]) => s + w, 0);
+
+/** Stable carrier per caller number, so a repeat caller keeps theirs. */
+function carrierFor(callerNumber: string): string {
+  let h = 0;
+  for (let i = 0; i < callerNumber.length; i++) h = (h * 31 + callerNumber.charCodeAt(i)) | 0;
+  let r = Math.abs(h) % CARRIER_TOTAL;
+  for (const [name, w] of CARRIERS) {
+    if (r < w) return name;
+    r -= w;
+  }
+  return CARRIERS[0][0];
+}
+
 function makeCallerNumber(rng: () => number): string {
   return chance(rng, REPEAT_CALLER_RATE) ? pick(REPEAT_CALLERS, rng) : makePhone(rng);
 }
@@ -183,6 +208,8 @@ export interface DemoCallWire {
   /** Backend's converted / spam verdicts (filterable on the call log). */
   is_converted?: boolean;
   is_spam?: boolean;
+  /** Caller's carrier (the backend resolves it from the number). */
+  carrier: string;
   caller_area_code: string;
   caller_state: string;
   caller_country: string;
@@ -324,9 +351,11 @@ function makeLiveCall(idSuffix: string, startedAt: number, rng: () => number): D
   const camp = pickCampaign(rng);
   const buyer = pickAffiliated(rng, BUYER_REFS, CAMPAIGN_BUYERS, camp.id);
   const publisher = pickAffiliated(rng, PUBLISHER_REFS, CAMPAIGN_PUBLISHERS, camp.id);
+  const liveCaller = makePhone(rng);
   return {
     id: idSuffix,
-    caller_number: makePhone(rng),
+    caller_number: liveCaller,
+    carrier: carrierFor(liveCaller),
     destination_number: destinationFor(buyer.id, rng),
     status: pick(LIVE_STATUSES, rng),
     duration: Math.floor((Date.now() - startedAt) / 1000),
@@ -387,9 +416,11 @@ function makeCall(
   const revenue = DEMO_PRICE_PER_CALL;
   const payout = isConverted ? DEMO_PRICE_PER_CALL : 0;
   const areaCode = pick(AREA_CODES, rng);
+  const callerNumber = makeCallerNumber(rng);
   return {
     id: `call_${idSuffix}`,
-    caller_number: makeCallerNumber(rng),
+    caller_number: callerNumber,
+    carrier: carrierFor(callerNumber),
     destination_number: destinationFor(buyer.id, rng),
     status,
     duration,

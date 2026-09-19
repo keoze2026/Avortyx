@@ -276,7 +276,6 @@ const REFERRERS = ["google.com", "facebook.com", "direct", "twitter.com", "tikto
 const TRAFFIC_SOURCES = ["Search", "Display", "Social", "Email", "Affiliate"];
 
 /* Caller profile / identity derivations — added per Ringba-style sub-options. */
-const CARRIERS = ["AT&T", "Verizon", "T-Mobile", "Sprint", "US Cellular", "Cricket"];
 const LINE_TYPES = ["Mobile", "Landline", "VoIP", "Toll-free"];
 const COUNTRIES = ["United States", "Canada", "Mexico", "United Kingdom", "Australia"];
 const CITIES = [
@@ -407,7 +406,7 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
 
     /* ── Caller Profile ──────────────────────────────────────────────── */
     case "profile-carrier":
-      return labelOf(pickFrom(c, "p-car", CARRIERS));
+      return labelOf(c.carrier || "Unknown");
     case "profile-linetype":
       return labelOf(pickFrom(c, "p-lt", LINE_TYPES));
     case "profile-country":
@@ -430,7 +429,7 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
     case "identity-city":
       return labelOf(pickFrom(c, "i-cty", CITIES));
     case "identity-carrier":
-      return labelOf(pickFrom(c, "i-car", CARRIERS));
+      return labelOf(c.carrier || "Unknown");
     case "identity-linetype":
       return labelOf(pickFrom(c, "i-lt", LINE_TYPES));
     case "identity-phone": {
@@ -546,6 +545,17 @@ function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRo
   return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
 }
 
+/** Which backend aggregate (if any) feeds a grouping tab. Carrier rows are
+ *  keyed by carrier name on both the Caller Profile and Caller Identity
+ *  menus, so both read /api/analytics/carriers. */
+const SUMMARY_ENTITY_FOR_TAB: Partial<Record<GroupKey, SummaryEntity>> = {
+  campaign: "campaign",
+  buyer: "buyer",
+  publisher: "publisher",
+  "profile-carrier": "carrier",
+  "identity-carrier": "carrier",
+};
+
 /**
  * Overlay the backend's per-entity aggregate (GET /api/analytics/campaigns
  * | /buyers | /publishers) onto the rows the call log produced for that
@@ -564,8 +574,11 @@ function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRo
 function applyEntitySummary(rows: SummaryRow[], summary: EntitySummary[]): SummaryRow[] {
   if (summary.length === 0) return rows;
   const byId = new Map(rows.map((r) => [r.key, r]));
+  // Production /campaigns rows carry only `campaign_name` (no id), so fall
+  // back to matching the row label when the id doesn't hit.
+  const byName = new Map(rows.map((r) => [r.label.trim().toLowerCase(), r]));
   for (const c of summary) {
-    let row = byId.get(c.entityId);
+    let row = byId.get(c.entityId) ?? byName.get(c.entityName.trim().toLowerCase());
     if (!row) {
       if (c.totalCalls === 0) continue;
       row = {
@@ -762,7 +775,7 @@ interface CallSummaryTableProps {
    * `calls` (see `applyEntitySummary`). Leave a tab out when the page has
    * filters active that the aggregate can't be narrowed by.
    */
-  summaries?: Partial<Record<SummaryEntity, EntitySummary[]>>;
+  summaries?: Partial<Record<SummaryEntity | "none", EntitySummary[]>>;
 }
 
 type SummarySortKey = "label" | ColumnKey;
@@ -803,8 +816,7 @@ export function CallSummaryTable({
   const timeZone = useUIStore((s) => s.reportTimezone);
 
   const groupedRows = React.useMemo(() => {
-    const summary =
-      tab === "campaign" || tab === "buyer" || tab === "publisher" ? summaries?.[tab] : undefined;
+    const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
     const grouped = summary
       ? applyEntitySummary(groupCalls(calls, tab, timeZone), summary)
       : groupCalls(calls, tab, timeZone);

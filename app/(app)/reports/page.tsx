@@ -92,11 +92,12 @@ export default function ReportsPage() {
     campaign: [],
     buyer: [],
     publisher: [],
+    carrier: [],
   });
 
   useEffect(() => {
     if (!fromKey) {
-      setSummaries({ campaign: [], buyer: [], publisher: [] });
+      setSummaries({ campaign: [], buyer: [], publisher: [], carrier: [] });
       return;
     }
     let cancelled = false;
@@ -104,11 +105,11 @@ export default function ReportsPage() {
     // Each one is independent — a failing endpoint just leaves its tab on
     // the call-log derivation instead of blanking the others.
     Promise.all(
-      (["campaign", "buyer", "publisher"] as const).map((entity) =>
+      (["campaign", "buyer", "publisher", "carrier"] as const).map((entity) =>
         analyticsService.entitySummary(entity, range).catch(() => [] as EntitySummary[]),
       ),
-    ).then(([campaign, buyer, publisher]) => {
-      if (!cancelled) setSummaries({ campaign, buyer, publisher });
+    ).then(([campaign, buyer, publisher, carrier]) => {
+      if (!cancelled) setSummaries({ campaign, buyer, publisher, carrier });
     });
     return () => {
       cancelled = true;
@@ -125,9 +126,12 @@ export default function ReportsPage() {
       campaign: filters.campaignIds,
       buyer: filters.buyerIds,
       publisher: filters.publisherIds,
+      // There's no carrier filter on the page, so the carrier aggregate is
+      // used whenever no entity filter at all is active.
+      carrier: [],
     };
     const out: Partial<Record<SummaryEntity, EntitySummary[]>> = {};
-    for (const entity of ["campaign", "buyer", "publisher"] as const) {
+    for (const entity of ["campaign", "buyer", "publisher", "carrier"] as const) {
       const othersActive = (Object.keys(active) as SummaryEntity[]).some(
         (k) => k !== entity && active[k].length > 0,
       );
