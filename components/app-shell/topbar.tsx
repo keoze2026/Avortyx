@@ -186,11 +186,11 @@ function CommandSearch({ placeholder }: { placeholder: string }) {
 const GREEN_TEXT = "text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]";
 
 /**
- * Fixed blue for Total. Deliberately not `text-accent`: these two figures sit
- * side by side and the colour is what separates them, so under the green theme
- * an accent-driven Total would go green too and the pair would read as one.
+ * Total follows the workspace colour theme (client request: "it should
+ * change according to theme"). Live stays on the fixed green ramp so the
+ * pair still reads as two figures under every accent but green.
  */
-const BLUE_TEXT = "text-[oklch(0.52_0.19_262)] dark:text-[oklch(0.74_0.15_258)]";
+const BLUE_TEXT = "text-accent";
 
 const TONE_TEXT = {
   green: GREEN_TEXT,

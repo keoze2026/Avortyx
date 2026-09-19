@@ -1364,7 +1364,9 @@ function TotalsFilterCell({
           // pressed (client request). Active = the status's own colour plus
           // font-bold on top of the row's font-semibold; hover previews it.
           "w-full cursor-pointer px-4 py-3 text-center tabular-nums transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          // No ring / outline box either (client request) — keyboard focus
+          // is shown by underlining the figure instead.
+          "focus:outline-none focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4",
           active ? cn("font-bold", toneText) : cn("hover:font-bold", HOVER_TONE[tone]),
         )}
       >

@@ -131,7 +131,7 @@ export default async function CoinDetailPage({
       </Card>
 
       {/* TradingView candle chart — live from the public widget. */}
-      <TradingViewChart symbol={coin.symbol} interval="60" height={540} />
+      <TradingViewChart symbol={coin.symbol} interval="60" />
 
       {/* Key stats grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
