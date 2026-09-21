@@ -186,8 +186,7 @@ type ColumnKey =
   | "acl"
   | "payout"
   | "revenue"
-  | "profit"
-  | "cost";
+  | "profit";
 
 const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "live", label: "Live" },
@@ -204,7 +203,6 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "payout", label: "Payout" },
   { id: "revenue", label: "Revenue" },
   { id: "profit", label: "Profit" },
-  { id: "cost", label: "Cost" },
 ];
 
 const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
@@ -222,17 +220,8 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   payout: "toolsUI.reports.summary.columns.payout",
   revenue: "toolsUI.reports.summary.columns.revenue",
   profit: "toolsUI.reports.summary.columns.profit",
-  cost: "toolsUI.reports.summary.columns.cost",
 };
 
-/* Cost is publisher payout plus a small operational/carrier surcharge:
- *   $0.05 per incoming call (routing + queuing infra)
- *   $0.003 per second of call time (carrier minutes) */
-const COST_PER_CALL = 0.05;
-const COST_PER_SECOND = 0.003;
-function computeCost(row: { payout: number; incoming: number; tcl: number }) {
-  return row.payout + row.incoming * COST_PER_CALL + row.tcl * COST_PER_SECOND;
-}
 
 const ALL_VISIBLE: Record<ColumnKey, boolean> = COLUMNS.reduce(
   (acc, c) => ({ ...acc, [c.id]: true }),
@@ -744,8 +733,6 @@ function summaryCellValue(row: SummaryRow, key: ColumnKey): number | string {
       return row.revenue;
     case "profit":
       return row.revenue - row.payout;
-    case "cost":
-      return Number(computeCost(row).toFixed(2));
   }
 }
 
@@ -785,7 +772,6 @@ type SortDir = "asc" | "desc";
 function sortValue(r: SummaryRow, key: SummarySortKey): number | string {
   if (key === "label") return r.label.toLowerCase();
   if (key === "profit") return r.revenue - r.payout;
-  if (key === "cost") return computeCost(r);
   return r[key];
 }
 
@@ -1045,7 +1031,6 @@ export function CallSummaryTable({
                 {visible.payout && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {visible.revenue && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {visible.profit && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.cost && <TableHead className="pr-6 text-right"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1117,11 +1102,6 @@ export function CallSummaryTable({
                           )}
                         >
                           {formatCurrency(profit, true)}
-                        </TableCell>
-                      )}
-                      {visible.cost && (
-                        <TableCell className="pr-6 text-right tabular-nums">
-                          {formatCurrency(computeCost(r), true)}
                         </TableCell>
                       )}
                     </TableRow>
@@ -1236,11 +1216,6 @@ export function CallSummaryTable({
                       )}
                     >
                       {formatCurrency(totals.revenue - totals.payout, true)}
-                    </TableCell>
-                  )}
-                  {visible.cost && (
-                    <TableCell className="pr-6 text-right tabular-nums">
-                      {formatCurrency(computeCost(totals), true)}
                     </TableCell>
                   )}
                 </TableRow>
