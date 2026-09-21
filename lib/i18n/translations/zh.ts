@@ -597,6 +597,7 @@ export const zh: TranslationShape = {
       description: "他们会通过邮件收到设置链接。",
       nameLabel: "姓名",
       emailLabel: "邮箱",
+      invalidEmail: "请输入有效的电子邮箱地址(不能包含空格)。",
       roleLabel: "角色",
       cancel: "取消",
       sending: "发送中…",
@@ -1920,6 +1921,7 @@ export const zh: TranslationShape = {
           label: "买家",
           description: "将通话交付给买家(终端)。",
           pickBuyer: "选择买家",
+        noBuyers: "还没有买家,请先创建买家;目的地需要买家才能接听来电。",
         },
         deadEnd: {
           label: "死端",

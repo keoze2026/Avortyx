@@ -11,6 +11,10 @@ export interface User {
   /** Backend `is_superuser` flag. Superusers (and any user with role === "admin")
    *  bypass the onboarding gates (KYC + balance) — they always have full access. */
   isSuperuser?: boolean;
+  /** Backend `is_staff` — platform staff (Avortyx operators), as opposed
+   *  to a customer org's admin. Gates platform-only screens such as the
+   *  access-request queue. */
+  isStaff?: boolean;
   /** Whether the user has TOTP-based MFA enrolled on the backend. Drives
    *  the Settings → Security 2FA card and the login challenge gating. */
   mfaEnabled?: boolean;

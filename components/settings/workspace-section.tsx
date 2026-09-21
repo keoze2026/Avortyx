@@ -54,6 +54,11 @@ const TABS: Array<{ id: TabId; labelKey: string; fallbackLabel: string; icon: Re
 export function WorkspaceSection() {
   const { t } = useTranslation();
   const orgName = useAuthStore((s) => s.user?.organization ?? "");
+  // The access-request queue is platform-wide: GET /api/accounts/access-
+  // requests/ and approve/reject answer 401 to a customer org admin, so the
+  // tab only exists for platform staff.
+  const isPlatformStaff = useAuthStore((s) => s.user?.isStaff === true || s.user?.isSuperuser === true);
+  const visibleTabs = isPlatformStaff ? TABS : TABS.filter((tab_) => tab_.id !== "access-requests");
 
   // Workspace is loaded once on mount. Until it arrives, the display name
   // falls back to the user's `organization` field (cached from /me) so the
@@ -132,7 +137,7 @@ export function WorkspaceSection() {
     <div className="space-y-4">
       {/* Underline-style tab strip — matches the Campaign Settings + Call Summary tabs. */}
       <div className="no-scrollbar flex overflow-x-auto border-b border-border">
-        {TABS.map((tab_) => {
+        {visibleTabs.map((tab_) => {
           const Icon = tab_.icon;
           const active = tab === tab_.id;
           // If the i18n key is missing, t() returns the key itself — fall back
@@ -257,7 +262,7 @@ export function WorkspaceSection() {
 
       {tab === "roles" && <WorkspaceRolesTable members={members} />}
 
-      {tab === "access-requests" && <WorkspaceAccessRequestsTable />}
+      {tab === "access-requests" && isPlatformStaff && <WorkspaceAccessRequestsTable />}
 
       {tab === "activity" && <WorkspaceActivityLog />}
 

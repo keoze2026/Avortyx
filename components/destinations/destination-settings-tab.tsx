@@ -273,12 +273,14 @@ export function DestinationSettingsTab({ destination }: DestinationSettingsTabPr
               {t("networkUI.destinations.settings.buyerHint")}
             </p>
           </div>
+          {/* Existing rows can arrive with no buyer (created before the
+              backend required one); PATCH buyer_id is how they get fixed. */}
           <Select
-            value={draft.buyerId}
+            value={draft.buyerId || undefined}
             onValueChange={(v) => patch({ buyerId: v })}
           >
-            <SelectTrigger className="w-64">
-              <SelectValue />
+            <SelectTrigger className={cn("w-64", !draft.buyerId && "border-destructive/60")}>
+              <SelectValue placeholder={t("networkUI.destinations.builder.pickBuyer")} />
             </SelectTrigger>
             <SelectContent>
               {buyers.map((b) => (

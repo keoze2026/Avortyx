@@ -633,6 +633,16 @@ route("GET", "/api/destinations/{id}", (req) => {
 });
 route("POST", "/api/destinations/", (req) => {
   const body = camelKeyPatch(req.body);
+  // Same rule as the backend: a destination with no buyer can never
+  // receive calls, so the create is refused.
+  if (!body.buyer_id) {
+    throw new ApiError({
+      status: 400,
+      message: "buyer_id is required, a destination with no buyer can never receive calls",
+      code: "buyer_required",
+      fieldErrors: [{ field: "buyerId", message: "Pick a buyer." }],
+    });
+  }
   const created = {
     id: demoId("d"),
     name: String(body.name ?? "New Destination"),

@@ -634,6 +634,7 @@ export const en = {
       description: "They’ll receive a setup link by email.",
       nameLabel: "Name",
       emailLabel: "Email",
+      invalidEmail: "Enter a valid email address (no spaces).",
       roleLabel: "Role",
       cancel: "Cancel",
       sending: "Sending…",
@@ -1958,6 +1959,7 @@ export const en = {
           label: "Buyer",
           description: "Hand the call off to a buyer (terminal).",
           pickBuyer: "Pick a buyer",
+        noBuyers: "No buyers yet — create a buyer first; a destination needs one to receive calls.",
         },
         deadEnd: {
           label: "Dead end",

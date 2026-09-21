@@ -25,6 +25,7 @@ import {
 import { INTERNAL_ROLES_IN_ORDER } from "@/lib/mock/settings";
 import type { MemberRole } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -48,12 +49,23 @@ export function InviteMemberDialog({ open, onOpenChange, onInvite }: Props) {
     if (!next) setTimeout(reset, 200);
   };
 
+  // Normalised address: trimmed, lower-cased. Anything that still isn't a
+  // plausible address (inner spaces, no @, no domain) is refused here — the
+  // backend now rejects those too, but a member that was created from
+  // "x example@mail.com" could never receive an invite, so stop it early.
+  const address = email.trim().toLowerCase();
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address);
+
   const onSubmit = async () => {
-    if (!name.trim() || !email.trim()) return;
+    if (!name.trim() || !address) return;
+    if (!emailValid) {
+      toast.error(t("workspaceUI.invite.invalidEmail"));
+      return;
+    }
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 300));
-    onInvite({ name: name.trim(), email: email.trim(), role });
-    toast.success(t("workspaceUI.invite.toastTitle").replace("{email}", email), {
+    onInvite({ name: name.trim(), email: address, role });
+    toast.success(t("workspaceUI.invite.toastTitle").replace("{email}", address), {
       description: t("workspaceUI.invite.toastDescription").replace("{role}", t(`workspaceUI.members.role.${role}`)),
     });
     onClose(false);
@@ -82,7 +94,17 @@ export function InviteMemberDialog({ open, onOpenChange, onInvite }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="im-email">{t("workspaceUI.invite.emailLabel")}</Label>
-              <Input id="im-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                id="im-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={address.length > 0 && !emailValid}
+                className={cn(address.length > 0 && !emailValid && "border-destructive")}
+              />
+              {address.length > 0 && !emailValid && (
+                <p className="text-xs text-destructive">{t("workspaceUI.invite.invalidEmail")}</p>
+              )}
             </div>
           </div>
           <div className="space-y-2">
@@ -107,7 +129,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInvite }: Props) {
           <Button variant="outline" onClick={() => onClose(false)}>
             {t("workspaceUI.invite.cancel")}
           </Button>
-          <Button onClick={onSubmit} disabled={submitting || !name.trim() || !email.trim()}>
+          <Button onClick={onSubmit} disabled={submitting || !name.trim() || !address}>
             {submitting ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("workspaceUI.invite.sending")}
