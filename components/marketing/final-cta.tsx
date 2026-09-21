@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, PhoneCall } from "@phosphor-icons/react/dist/ssr"
 import { BRAND, ROUTES } from "@/lib/constants"
+import { PORTAL_CTA, PUBLIC_PORTAL_LINKS } from "@/lib/portal-access"
 
 /**
  * Final CTA — the ask sits beside proof. The left half carries the copy and
@@ -199,8 +200,8 @@ export function FinalCTA() {
                   size="lg"
                   className="bg-[var(--color-keppel-400)] text-[var(--color-keppel-950)] hover:bg-[var(--color-keppel-300)] rounded-full h-12 px-8 font-semibold transition-all duration-500 hover:shadow-[0_0_30px_-5px_var(--color-keppel-400)]"
                 >
-                  <Link href={ROUTES.signup}>
-                    Start routing
+                  <Link href={PUBLIC_PORTAL_LINKS ? ROUTES.signup : PORTAL_CTA.href}>
+                    {PUBLIC_PORTAL_LINKS ? "Start routing" : PORTAL_CTA.label}
                     <ArrowRight weight="bold" className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>

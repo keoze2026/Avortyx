@@ -8,6 +8,7 @@ import { Lightning } from "@phosphor-icons/react/dist/ssr"
 import { Logo } from "@/components/brand/logo"
 import { BRAND_GRADIENT_TEXT } from "@/components/brand/wordmark"
 import { BRAND, ROUTES } from "@/lib/constants"
+import { PORTAL_CTA, PUBLIC_PORTAL_LINKS } from "@/lib/portal-access"
 
 /** Section anchors are rooted at "/" so they work from any marketing page. */
 const NAV: Array<{ label: string; href: string }> = [
@@ -86,15 +87,19 @@ export function Header() {
 
           {/* Actions - hidden once scrolled (the floating CTA takes over) */}
           <div className="flex items-center gap-4">
-            <Link
-              href={ROUTES.login}
-              className={`
-                hidden text-sm text-[var(--color-baltic-sea-400)] hover:text-[var(--color-baltic-sea-100)] transition-all duration-500 md:block
-                ${scrolled ? "opacity-0 pointer-events-none" : "opacity-100"}
-              `}
-            >
-              Sign in
-            </Link>
+            {/* Sign in only when portal links are public — otherwise the
+                public site gives no hint that a portal exists. */}
+            {PUBLIC_PORTAL_LINKS && (
+              <Link
+                href={ROUTES.login}
+                className={`
+                  hidden text-sm text-[var(--color-baltic-sea-400)] hover:text-[var(--color-baltic-sea-100)] transition-all duration-500 md:block
+                  ${scrolled ? "opacity-0 pointer-events-none" : "opacity-100"}
+                `}
+              >
+                Sign in
+              </Link>
+            )}
             <Button
               asChild
               className={`
@@ -104,9 +109,9 @@ export function Header() {
                 ${scrolled ? "opacity-0 pointer-events-none" : "opacity-100"}
               `}
             >
-              <Link href={ROUTES.signup}>
+              <Link href={PORTAL_CTA.href}>
                 <Lightning weight="fill" className="mr-1.5 h-4 w-4" />
-                Get started
+                {PORTAL_CTA.label}
               </Link>
             </Button>
           </div>
@@ -127,9 +132,9 @@ export function Header() {
           className="bg-[var(--color-keppel-400)] text-[var(--color-keppel-950)] hover:bg-[var(--color-keppel-300)]
             rounded-full px-6 py-3 h-auto text-sm shadow-lg shadow-[var(--color-keppel-400)]/20"
         >
-          <Link href={ROUTES.signup}>
+          <Link href={PORTAL_CTA.href}>
             <Lightning weight="fill" className="mr-1.5 h-4 w-4" />
-            Get started
+            {PORTAL_CTA.label}
           </Link>
         </Button>
       </div>

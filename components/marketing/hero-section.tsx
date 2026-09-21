@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight } from "@phosphor-icons/react"
 import { useCallback, useRef, useState } from "react"
 import { ROUTES } from "@/lib/constants"
+import { PORTAL_CTA, PUBLIC_PORTAL_LINKS } from "@/lib/portal-access"
 import { RoutingEngine } from "./routing-engine"
 
 /** Background grid cells that light up as the routing engine advances —
@@ -91,8 +92,8 @@ export function HeroSection() {
                 size="lg"
                 className="bg-[var(--color-keppel-500)] hover:bg-[var(--color-keppel-600)] text-[var(--color-keppel-950)] font-semibold px-6"
               >
-                <Link href={ROUTES.signup}>
-                  Start routing
+                <Link href={PUBLIC_PORTAL_LINKS ? ROUTES.signup : PORTAL_CTA.href}>
+                  {PUBLIC_PORTAL_LINKS ? "Start routing" : PORTAL_CTA.label}
                   <ArrowRight className="ml-2 h-4 w-4" weight="bold" />
                 </Link>
               </Button>

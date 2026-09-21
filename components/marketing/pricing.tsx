@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Check, Lightning } from "@phosphor-icons/react/dist/ssr"
-import { BRAND, ROUTES } from "@/lib/constants"
+import { BRAND } from "@/lib/constants"
+import { PORTAL_CTA } from "@/lib/portal-access"
 
 const PLANS = [
   {
@@ -19,8 +20,8 @@ const PLANS = [
       "Call log & basic reporting",
       "Email support",
     ],
-    cta: "Get started",
-    href: ROUTES.signup,
+    cta: PORTAL_CTA.label,
+    href: PORTAL_CTA.href,
     highlighted: false,
   },
   {
@@ -37,8 +38,8 @@ const PLANS = [
       "Automated publisher payouts",
       "Priority support",
     ],
-    cta: "Get started",
-    href: ROUTES.signup,
+    cta: PORTAL_CTA.label,
+    href: PORTAL_CTA.href,
     highlighted: true,
   },
   {
