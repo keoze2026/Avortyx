@@ -5,17 +5,13 @@
  */
 
 import { makeRng, pick, intRange, range, chance } from "../rng";
+import { DEMO_CAMPAIGN } from "./account";
 
 const NOW = Date.now();
 
-const CAMPAIGNS_FOR_AUCTION = [
-  "Medicare Open Enrollment 2026",
-  "Auto Insurance — High Intent",
-  "Solar — Homeowner 700+ FICO",
-  "Roofing Storm Damage",
-  "Mass Tort Intake — Talc",
-  "Debt Relief Consultation",
-];
+// Auctions run on the account's one campaign; the bidders are outside buyers.
+const CAMPAIGNS_FOR_AUCTION = [DEMO_CAMPAIGN.name];
+
 
 const BUYER_NAMES = [
   "Apex Insurance Group",
@@ -71,7 +67,7 @@ export function seedAuctions(): DemoAuctionWire[] {
     const winningBuyer = winner ? pick(BUYER_NAMES, rng) : undefined;
     rows.push({
       id: `auction_demo_open_${i}`,
-      campaign_id: `c_${i}`,
+      campaign_id: DEMO_CAMPAIGN.id,
       campaign_name: camp,
       caller_number: makePhone(rng),
       status: "open",
@@ -91,7 +87,7 @@ export function seedAuctions(): DemoAuctionWire[] {
     const settledAt = NOW - intRange(rng, 60, 8 * 60 * 60) * 1000;
     rows.push({
       id: `auction_demo_settled_${i}`,
-      campaign_id: `c_${i}`,
+      campaign_id: DEMO_CAMPAIGN.id,
       campaign_name: camp,
       caller_number: makePhone(rng),
       status: "settled",

@@ -11,6 +11,7 @@
  */
 
 import type { CallEvent, CallEventType, CallSocket } from "../api/socket";
+import { DEMO_BUYER, DEMO_CAMPAIGN, DEMO_DESTINATION_TFN, DEMO_PUBLISHER } from "./fixtures/account";
 import { trackLive, untrackLive, wasHungUp } from "./live-registry";
 import { snakeToCamel } from "../api/case";
 import { generateLiveCalls, liveCallsCount } from "./fixtures/calls";
@@ -19,26 +20,10 @@ import { makeRng, pick, intRange, range } from "./rng";
 
 type Listener<T = unknown> = (data: T) => void;
 
-const CAMPAIGNS = [
-  "Medicare Open Enrollment 2026",
-  "Auto Insurance — High Intent",
-  "Solar — Homeowner 700+ FICO",
-  "Roofing Storm Damage",
-  "Mass Tort Intake — Talc",
-  "Debt Relief Consultation",
-];
-const BUYERS = [
-  { id: "b_apex", name: "Apex Insurance Group" },
-  { id: "b_solar_united", name: "Solar United" },
-  { id: "b_pinnacle_legal", name: "Pinnacle Legal Partners" },
-  { id: "b_meridian_auto", name: "Meridian Auto Insurance" },
-  { id: "b_hearthside", name: "Hearthside Roofing Network" },
-];
-const PUBLISHERS = [
-  { id: "p_redline", name: "Redline Media Group" },
-  { id: "p_blueprint", name: "Blueprint Lead Network" },
-  { id: "p_apex_dial", name: "Apex Dialer Partners" },
-];
+// The live account runs one campaign / buyer / publisher; so does the demo.
+const CAMPAIGNS = [DEMO_CAMPAIGN.name];
+const BUYERS = [{ id: DEMO_BUYER.id, name: DEMO_BUYER.name }];
+const PUBLISHERS = [{ id: DEMO_PUBLISHER.id, name: DEMO_PUBLISHER.name }];
 const AREA_CODES = ["212", "415", "713", "404", "305", "303", "617", "773", "206", "619", "512"];
 const STATES = ["TX", "CA", "FL", "NY", "PA", "OH", "IL", "GA", "NC", "MI"];
 
@@ -120,7 +105,7 @@ export function createDemoSocket(): CallSocket {
       publisher,
       caller: makePhone(rng),
       state: pick(STATES, rng),
-      destination: `+1800${String(intRange(rng, 5_550_000, 5_559_999))}`,
+      destination: DEMO_DESTINATION_TFN,
       status: "ringing",
       ttl: intRange(rng, 30, 240),
     };
@@ -138,7 +123,7 @@ export function createDemoSocket(): CallSocket {
     caller_area_code: c.caller.slice(2, 5),
     caller_state: c.state,
     caller_country: "US",
-    campaign_id: "c_" + c.campaign.slice(0, 6).toLowerCase(),
+    campaign_id: DEMO_CAMPAIGN.id,
     campaign_name: c.campaign,
     buyer_id: c.buyer.id,
     buyer_name: c.buyer.name,
@@ -192,7 +177,7 @@ export function createDemoSocket(): CallSocket {
     const floor = Math.round(range(rng, 12, 70) * 100) / 100;
     const a = {
       id: `auction_${Date.now().toString(36)}`,
-      campaign_id: "c_" + camp.slice(0, 6).toLowerCase(),
+      campaign_id: DEMO_CAMPAIGN.id,
       campaign_name: camp,
       caller_number: makePhone(rng),
       status: "open" as const,

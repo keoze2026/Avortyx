@@ -16,6 +16,7 @@
 import { makeRng, pick, intRange, chance } from "../rng";
 import { currentBucket, bucketRange } from "../bucket";
 import { seedDestinations } from "./entities";
+import { DEMO_BUYER, DEMO_CAMPAIGN, DEMO_PUBLISHER } from "./account";
 import { daySlotsFor, dayTotalFor, hourWeights, liveTargetAt } from "./day-profile";
 import { demoClock } from "../clock";
 import { dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
@@ -45,36 +46,13 @@ const AREA_CODES = [
 ];
 const STATES = ["TX", "CA", "FL", "NY", "PA", "OH", "IL", "GA", "NC", "MI", "WA", "AZ", "MA", "VA", "NJ", "CO"];
 
-const CAMPAIGN_REFS = [
-  { id: "c_health_001", name: "Medicare Open Enrollment 2026", payout: 65, weight: 16 },
-  { id: "c_health_002", name: "ACA Subsidy Verification", payout: 55, weight: 12 },
-  { id: "c_auto_001", name: "Auto Insurance — High Intent", payout: 42, weight: 18 },
-  { id: "c_home_001", name: "Roofing Storm Damage", payout: 92, weight: 8 },
-  { id: "c_home_002", name: "HVAC Installation Leads", payout: 75, weight: 10 },
-  { id: "c_solar_001", name: "Solar — Homeowner 700+ FICO", payout: 110, weight: 7 },
-  { id: "c_legal_001", name: "Mass Tort Intake — Talc", payout: 320, weight: 3 },
-  { id: "c_legal_002", name: "Personal Injury Auto", payout: 180, weight: 5 },
-  { id: "c_fin_001", name: "Debt Relief Consultation", payout: 58, weight: 11 },
-];
+// One campaign / buyer / publisher — the live account's setup.
+const CAMPAIGN_REFS = [{ id: DEMO_CAMPAIGN.id, name: DEMO_CAMPAIGN.name, payout: 1, weight: 1 }];
 const TOTAL_CAMPAIGN_WEIGHT = CAMPAIGN_REFS.reduce((s, c) => s + c.weight, 0);
 
-const BUYER_REFS = [
-  { id: "b_apex", name: "Apex Insurance Group" },
-  { id: "b_solar_united", name: "Solar United" },
-  { id: "b_pinnacle_legal", name: "Pinnacle Legal Partners" },
-  { id: "b_meridian_auto", name: "Meridian Auto Insurance" },
-  { id: "b_hearthside", name: "Hearthside Roofing Network" },
-  { id: "b_clearpath_debt", name: "Clearpath Debt Solutions" },
-  { id: "b_lighthouse_aca", name: "Lighthouse ACA Verification" },
-];
+const BUYER_REFS = [{ id: DEMO_BUYER.id, name: DEMO_BUYER.name }];
 
-const PUBLISHER_REFS = [
-  { id: "p_redline", name: "Redline Media Group" },
-  { id: "p_blueprint", name: "Blueprint Lead Network" },
-  { id: "p_apex_dial", name: "Apex Dialer Partners" },
-  { id: "p_summit_traffic", name: "Summit Traffic Inc." },
-  { id: "p_northstar", name: "Northstar Digital" },
-];
+const PUBLISHER_REFS = [{ id: DEMO_PUBLISHER.id, name: DEMO_PUBLISHER.name }];
 
 /**
  * Which publishers/buyers actually work each campaign. Both used to be
@@ -85,29 +63,9 @@ const PUBLISHER_REFS = [
  * this is that specialization. A small wildcard chance (see
  * `pickAffiliated`) keeps the mix from looking too rigid.
  */
-const CAMPAIGN_PUBLISHERS: Record<string, string[]> = {
-  c_health_001: ["p_redline"],
-  c_health_002: ["p_redline", "p_northstar"],
-  c_auto_001: ["p_blueprint", "p_apex_dial"],
-  c_home_001: ["p_blueprint", "p_summit_traffic"],
-  c_home_002: ["p_blueprint", "p_summit_traffic"],
-  c_solar_001: ["p_apex_dial"],
-  c_legal_001: ["p_northstar"],
-  c_legal_002: ["p_northstar"],
-  c_fin_001: ["p_redline", "p_summit_traffic"],
-};
+const CAMPAIGN_PUBLISHERS: Record<string, string[]> = { [DEMO_CAMPAIGN.id]: [DEMO_PUBLISHER.id] };
 
-const CAMPAIGN_BUYERS: Record<string, string[]> = {
-  c_health_001: ["b_apex"],
-  c_health_002: ["b_apex", "b_lighthouse_aca"],
-  c_auto_001: ["b_meridian_auto"],
-  c_home_001: ["b_hearthside"],
-  c_home_002: ["b_hearthside"],
-  c_solar_001: ["b_solar_united"],
-  c_legal_001: ["b_pinnacle_legal"],
-  c_legal_002: ["b_pinnacle_legal"],
-  c_fin_001: ["b_clearpath_debt"],
-};
+const CAMPAIGN_BUYERS: Record<string, string[]> = { [DEMO_CAMPAIGN.id]: [DEMO_BUYER.id] };
 
 const WILDCARD_CHANCE = 0.1;
 
@@ -478,24 +436,49 @@ export function generateLiveCalls(count = liveCallsCount()): DemoCallWire[] {
  * completed-call log can't. */
 
 export interface DestinationCounters {
-  daily_calls: number;
   live_calls: number;
+  hourly_calls: number;
+  daily_calls: number;
+  monthly_calls: number;
+  global_calls: number;
   daily_revenue: number;
   daily_spend: number;
 }
 
 export function destinationCounters(): Map<string, DestinationCounters> {
   const map = new Map<string, DestinationCounters>();
-  const bump = (c: DemoCallWire, live: boolean) => {
-    const row = map.get(c.destination_number) ?? { daily_calls: 0, live_calls: 0, daily_revenue: 0, daily_spend: 0 };
-    row.daily_calls += 1;
-    if (live) row.live_calls += 1;
-    row.daily_revenue += Number(c.revenue || 0);
-    row.daily_spend += Number(c.publisher_payout || 0);
-    map.set(c.destination_number, row);
+  const row = (tfn: string) => {
+    let r = map.get(tfn);
+    if (!r) {
+      r = { live_calls: 0, hourly_calls: 0, daily_calls: 0, monthly_calls: 0, global_calls: 0, daily_revenue: 0, daily_spend: 0 };
+      map.set(tfn, r);
+    }
+    return r;
   };
-  for (const c of todaysCalls()) bump(c, false);
-  for (const c of generateLiveCalls()) bump(c, true);
+  const clock = demoClock();
+  const dayStart = clock.startOfToday;
+  const hourStart = dayStart + clock.hour * HOUR;
+  const monthStart = clock.startOfMonth;
+  for (const c of getDemoCalls()) {
+    const r = row(c.destination_number);
+    const ts = Date.parse(c.created_at);
+    r.global_calls += 1;
+    if (ts >= monthStart) r.monthly_calls += 1;
+    if (ts >= dayStart) {
+      r.daily_calls += 1;
+      r.daily_revenue += Number(c.revenue || 0);
+      r.daily_spend += Number(c.publisher_payout || 0);
+    }
+    if (ts >= hourStart) r.hourly_calls += 1;
+  }
+  for (const c of generateLiveCalls()) {
+    const r = row(c.destination_number);
+    r.live_calls += 1;
+    r.hourly_calls += 1;
+    r.daily_calls += 1;
+    r.monthly_calls += 1;
+    r.global_calls += 1;
+  }
   return map;
 }
 

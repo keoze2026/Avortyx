@@ -611,7 +611,10 @@ function withDestinationCounters<T extends { tfn?: unknown }>(rows: T[]): T[] {
     return {
       ...d,
       live_calls: c?.live_calls ?? 0,
+      hourly_calls: c?.hourly_calls ?? 0,
       daily_calls: c?.daily_calls ?? 0,
+      monthly_calls: c?.monthly_calls ?? 0,
+      global_calls: c?.global_calls ?? 0,
       daily_revenue: (c?.daily_revenue ?? 0).toFixed(2),
       daily_spend: (c?.daily_spend ?? 0).toFixed(2),
     };
