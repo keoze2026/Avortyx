@@ -22,7 +22,7 @@
 
 import * as React from "react";
 import {
-  ArrowLeft,
+  ArrowRight,
   ChevronRight,
   ContactRound,
   ListTree,
@@ -39,7 +39,6 @@ import {
   callsService,
   hasRoutingTrace,
   type CallActivity,
-  type CallActivityEvent,
   type CallerProfile,
   type RoutingTrace,
   type TraceDestination,
@@ -146,41 +145,48 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
     <Sheet open={!!call} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl"
+        // `[&>button]:hidden` drops the Sheet's built-in X: it landed on top
+        // of the caller chip in the corner. Close is the labelled control at
+        // the top-left, as in the reference.
+        className="w-full gap-0 overflow-y-auto p-0 [&>button]:hidden sm:max-w-xl"
       >
         <SheetHeader className="space-y-0 border-b border-border/60 p-0">
-          <div className="flex items-center justify-between px-5 pt-5">
+          <div className="px-5 pt-4">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" />
               {t("toolsUI.reports.activity.close")}
             </button>
-            <span className="rounded-md bg-accent/15 px-2.5 py-1 font-mono text-xs text-accent">
-              {data?.callerProfile?.number ?? caller}
-            </span>
           </div>
           <SheetTitle className="sr-only">
             {t("toolsUI.reports.activity.title").replace("{caller}", caller)}
           </SheetTitle>
-          <div className="flex gap-5 px-5">
-            {(["activity", "parameters"] as const).map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTab(id)}
-                className={cn(
-                  "-mb-px border-b-2 py-3 text-xs font-semibold uppercase tracking-wider transition-colors",
-                  tab === id
-                    ? "border-accent text-accent"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t(`toolsUI.reports.activity.tabs.${id}`)}
-              </button>
-            ))}
+          {/* Tabs and the caller chip share a row — the chip used to sit up
+              on the Close line, leaving a block of empty space beside it. */}
+          <div className="flex items-center justify-between gap-3 px-5">
+            <div className="flex gap-5">
+              {(["activity", "parameters"] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTab(id)}
+                  className={cn(
+                    "-mb-px border-b-2 py-3 text-xs font-semibold uppercase tracking-wider transition-colors",
+                    tab === id
+                      ? "border-accent text-accent"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {t(`toolsUI.reports.activity.tabs.${id}`)}
+                </button>
+              ))}
+            </div>
+            <span className="shrink-0 rounded-md bg-accent/15 px-2.5 py-1 font-mono text-xs text-accent">
+              {data?.callerProfile?.number ?? caller}
+            </span>
           </div>
         </SheetHeader>
 
@@ -189,9 +195,9 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
         ) : error ? (
           <p className="p-6 text-sm text-destructive">{error}</p>
         ) : !data ? null : tab === "activity" ? (
-          <div className="p-5">
+          <div>
             {header && (
-              <p className="pb-4 text-center text-xs font-medium text-muted-foreground">
+              <p className="py-4 text-center text-xs font-medium text-muted-foreground">
                 {dayOf(header, timeZone)}
               </p>
             )}
@@ -207,6 +213,15 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
 
 /* ─── Activity timeline ─────────────────────────────────────────────── */
 
+interface TimelineItem {
+  key: string;
+  icon: React.ElementType;
+  tint: string;
+  title: string;
+  at?: string;
+  body: React.ReactNode;
+}
+
 function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) {
   const { t } = useTranslation();
   const trace = data.routingTrace;
@@ -216,58 +231,119 @@ function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) 
   // goes last so the trace is still visible on a blocked call.
   const dialIndex = data.timeline.findIndex((e) => e.event === "destination_dialed");
 
-  const blocks: React.ReactNode[] = [];
-  data.timeline.forEach((event, i) => {
-    if (i === dialIndex) {
-      blocks.push(
-        <CallPlanBlock key="plan" trace={trace} at={event.at} timeZone={timeZone} />,
-      );
-    }
-    blocks.push(
-      <EventBlock key={`${event.event}-${i}`} event={event} data={data} timeZone={timeZone} />,
-    );
+  const items: TimelineItem[] = [];
+  const planItem = (at?: string): TimelineItem => ({
+    key: "plan",
+    icon: ListTree,
+    tint: "bg-accent/15 text-accent",
+    title: t("toolsUI.reports.activity.callPlan"),
+    at,
+    body: <CallPlanBody trace={trace} />,
   });
-  if (dialIndex === -1) {
-    blocks.push(<CallPlanBlock key="plan" trace={trace} timeZone={timeZone} />);
-  }
 
-  if (blocks.length === 0) {
+  data.timeline.forEach((event, i) => {
+    if (i === dialIndex) items.push(planItem(event.at));
+    const meta = EVENT_META[event.event] ?? { icon: PhoneIncoming, tint: "bg-muted text-muted-foreground" };
+    // The backend's own label wins; the fallback keeps unknown events
+    // readable so a new event type needs no frontend release.
+    const fallbackKey = `toolsUI.reports.activity.events.${event.event}`;
+    const translated = t(fallbackKey);
+    items.push({
+      key: `${event.event}-${i}`,
+      icon: meta.icon,
+      tint: meta.tint,
+      title:
+        event.label ??
+        (translated === fallbackKey
+          ? event.event.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
+          : translated),
+      at: event.at,
+      body:
+        event.event === "caller_lookup" ? (
+          <ProfileFields profile={data.callerProfile} />
+        ) : (
+          <FieldList rows={detailRows(event.detail)} />
+        ),
+    });
+  });
+  if (dialIndex === -1) items.push(planItem());
+
+  if (items.length === 0) {
     return <p className="py-8 text-center text-sm text-muted-foreground">{t("toolsUI.reports.activity.noEvents")}</p>;
   }
-  return <div className="space-y-2">{blocks}</div>;
+
+  return (
+    <div>
+      {items.map((item, i) => (
+        <Row
+          key={item.key}
+          item={item}
+          timeZone={timeZone}
+          first={i === 0}
+          last={i === items.length - 1}
+          striped={i % 2 === 1}
+        />
+      ))}
+    </div>
+  );
 }
 
-/** One timeline row: icon rail, title, timestamp, and whatever body the
- *  event carries. */
+/**
+ * One timeline entry: a rail segment, the event icon, then the title with
+ * its timestamp and whatever body the event carries.
+ *
+ * The rail is drawn per row rather than as one line behind everything —
+ * the segment above the icon and the segment below it meet exactly at the
+ * row boundary, so no piece of line has to be masked out from under an
+ * icon that sits on a tinted background.
+ */
 function Row({
-  icon: Icon,
-  tint,
-  title,
-  at,
+  item,
   timeZone,
-  children,
+  first,
+  last,
+  striped,
 }: {
-  icon: React.ElementType;
-  tint: string;
-  title: string;
-  at?: string;
+  item: TimelineItem;
   timeZone: string;
-  children?: React.ReactNode;
+  first: boolean;
+  last: boolean;
+  striped: boolean;
 }) {
+  const Icon = item.icon;
   return (
-    <div className="flex gap-3 rounded-lg bg-secondary/25 p-4">
-      <span className={cn("inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tint)}>
-        <Icon className="h-4 w-4" />
-      </span>
+    <div className={cn("flex gap-4 px-5 py-4", striped && "bg-secondary/20")}>
+      <div className="relative w-8 shrink-0">
+        {!first && (
+          <span aria-hidden className="absolute -top-4 left-1/2 h-4 w-px -translate-x-1/2 bg-border" />
+        )}
+        <span className={cn("relative flex h-8 w-8 items-center justify-center rounded-lg", item.tint)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        {!last && (
+          <span aria-hidden className="absolute -bottom-4 left-1/2 top-8 w-px -translate-x-1/2 bg-border" />
+        )}
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-sm font-semibold">{title}</h3>
+          <h3 className="text-sm font-semibold">{item.title}</h3>
           <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-            {timeOf(at, timeZone)}
+            {timeOf(item.at, timeZone)}
           </span>
         </div>
-        {children && <div className="mt-2">{children}</div>}
+        {item.body && <div className="mt-2">{item.body}</div>}
       </div>
+    </div>
+  );
+}
+
+function FieldList({ rows }: { rows: Array<[string, string]> }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      {rows.map(([label, value]) => (
+        <Field key={label} label={label} value={value} />
+      ))}
     </div>
   );
 }
@@ -275,46 +351,9 @@ function Row({
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex gap-3 text-xs">
-      <span className="w-28 shrink-0 text-muted-foreground">{label}:</span>
+      <span className="w-24 shrink-0 text-muted-foreground">{label}:</span>
       <span className="min-w-0 break-words">{value}</span>
     </div>
-  );
-}
-
-function EventBlock({
-  event,
-  data,
-  timeZone,
-}: {
-  event: CallActivityEvent;
-  data: CallActivity;
-  timeZone: string;
-}) {
-  const { t } = useTranslation();
-  const meta = EVENT_META[event.event] ?? { icon: PhoneIncoming, tint: "bg-muted text-muted-foreground" };
-  // Backend's own label wins; the fallback keeps unknown events readable.
-  const fallback = t(`toolsUI.reports.activity.events.${event.event}`);
-  const title =
-    event.label ??
-    (fallback === `toolsUI.reports.activity.events.${event.event}`
-      ? event.event.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
-      : fallback);
-
-  const body =
-    event.event === "caller_lookup" ? (
-      <ProfileFields profile={data.callerProfile} />
-    ) : (
-      <div className="space-y-1">
-        {detailRows(event.detail).map(([label, value]) => (
-          <Field key={label} label={label} value={value} />
-        ))}
-      </div>
-    );
-
-  return (
-    <Row icon={meta.icon} tint={meta.tint} title={title} at={event.at} timeZone={timeZone}>
-      {body}
-    </Row>
   );
 }
 
@@ -358,86 +397,66 @@ function ProfileFields({ profile }: { profile: CallerProfile | undefined }) {
 
 /* ─── Call plan / routing trace ─────────────────────────────────────── */
 
-function CallPlanBlock({
-  trace,
-  at,
-  timeZone,
-}: {
-  trace: RoutingTrace | undefined;
-  at?: string;
-  timeZone: string;
-}) {
+function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
   const { t } = useTranslation();
   const present = hasRoutingTrace(trace);
   const s = trace?.summary ?? {};
 
+  // Calls placed before the trace was recorded come back as `{}`.
+  if (!present) {
+    return <p className="text-xs text-muted-foreground">{t("toolsUI.reports.activity.traceNotRecorded")}</p>;
+  }
+
   return (
-    <Row
-      icon={ListTree}
-      tint="bg-accent/15 text-accent"
-      title={t("toolsUI.reports.activity.callPlan")}
-      at={at}
-      timeZone={timeZone}
-    >
-      {!present ? (
-        // Calls placed before the trace was recorded come back as `{}`.
-        <p className="text-xs text-muted-foreground">{t("toolsUI.reports.activity.traceNotRecorded")}</p>
-      ) : (
-        <div className="space-y-1.5">
-          <Disclosure
-            label={t("toolsUI.reports.activity.totalDestinations")}
-            count={s.totalDestinations}
-            plain
-          />
-          <Disclosure
-            label={t("toolsUI.reports.activity.eligibleDestinations")}
-            count={s.eligible ?? trace?.eligibleDestinations?.length}
-          >
-            <DestinationList items={trace?.eligibleDestinations} numbered />
-          </Disclosure>
-          <Disclosure
-            label={t("toolsUI.reports.activity.ineligibleDestinations")}
-            count={s.rejected ?? trace?.rejectedDestinations?.length}
-          >
-            <DestinationList items={trace?.rejectedDestinations} showReason />
-          </Disclosure>
-          {/* Not the same as rejected: routing stops at the first
-              destination that passes, so these were never examined. */}
-          {s.notReached !== undefined && s.notReached > 0 && (
-            <Disclosure label={t("toolsUI.reports.activity.notReached")} count={s.notReached} plain />
-          )}
-          <Disclosure
-            label={t("toolsUI.reports.activity.filteringBreakdown")}
-            count={trace?.filteringBreakdown?.reduce((a, b) => a + (b.count ?? 0), 0)}
-          >
-            <ul className="space-y-1 pt-1">
-              {(trace?.filteringBreakdown ?? []).map((b) => (
-                <li key={b.reason} className="flex justify-between gap-3 text-xs">
-                  <span className="text-muted-foreground">{b.reason}</span>
-                  <span className="tabular-nums">{b.count}</span>
-                </li>
-              ))}
-            </ul>
-          </Disclosure>
-          {(trace?.steps?.length ?? 0) > 0 && (
-            <Disclosure label={t("toolsUI.reports.activity.checks")} count={trace?.steps?.length}>
-              <ul className="space-y-1 pt-1">
-                {(trace?.steps ?? []).map((step) => (
-                  <li key={step.step} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="text-muted-foreground">{step.step.replace(/_/g, " ")}</span>
-                    <span className={step.passed ? "text-[color:var(--success)]" : "text-destructive"}>
-                      {step.passed
-                        ? t("toolsUI.reports.activity.passed")
-                        : step.detail || t("toolsUI.reports.activity.failed")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Disclosure>
-          )}
-        </div>
+    <div className="space-y-1.5">
+      <Disclosure label={t("toolsUI.reports.activity.totalDestinations")} count={s.totalDestinations} plain />
+      <Disclosure
+        label={t("toolsUI.reports.activity.eligibleDestinations")}
+        count={s.eligible ?? trace?.eligibleDestinations?.length}
+      >
+        <DestinationList items={trace?.eligibleDestinations} numbered />
+      </Disclosure>
+      <Disclosure
+        label={t("toolsUI.reports.activity.ineligibleDestinations")}
+        count={s.rejected ?? trace?.rejectedDestinations?.length}
+      >
+        <DestinationList items={trace?.rejectedDestinations} showReason />
+      </Disclosure>
+      {/* Not the same as rejected: routing stops at the first destination
+          that passes, so these were never examined. */}
+      {s.notReached !== undefined && s.notReached > 0 && (
+        <Disclosure label={t("toolsUI.reports.activity.notReached")} count={s.notReached} plain />
       )}
-    </Row>
+      <Disclosure
+        label={t("toolsUI.reports.activity.filteringBreakdown")}
+        count={trace?.filteringBreakdown?.reduce((a, b) => a + (b.count ?? 0), 0)}
+      >
+        <ul className="space-y-1 pt-1">
+          {(trace?.filteringBreakdown ?? []).map((b) => (
+            <li key={b.reason} className="flex justify-between gap-3 text-xs">
+              <span className="text-muted-foreground">{b.reason}</span>
+              <span className="tabular-nums">{b.count}</span>
+            </li>
+          ))}
+        </ul>
+      </Disclosure>
+      {(trace?.steps?.length ?? 0) > 0 && (
+        <Disclosure label={t("toolsUI.reports.activity.checks")} count={trace?.steps?.length}>
+          <ul className="space-y-1 pt-1">
+            {(trace?.steps ?? []).map((step) => (
+              <li key={step.step} className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-muted-foreground">{step.step.replace(/_/g, " ")}</span>
+                <span className={step.passed ? "text-[color:var(--success)]" : "text-destructive"}>
+                  {step.passed
+                    ? t("toolsUI.reports.activity.passed")
+                    : step.detail || t("toolsUI.reports.activity.failed")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      )}
+    </div>
   );
 }
 
