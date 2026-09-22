@@ -199,19 +199,11 @@ export function AutoRecordCard({ campaignId }: { campaignId: string }) {
       enabled={s.enabled}
       onEnabledChange={(enabled) => patch({ enabled })}
     >
-      {/* Retention (days) and Quality were removed at the client's request
-          (2026-09-23): the platform they're migrating from exposes the
-          recording toggle only, and neither field was acted on server-side.
-          Recording length and codec are a platform-level concern. */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <ToggleRow
-            label={t("trafficUI.campaigns.settings.cards.autoRecord.notifyBuyer")}
-            checked={s.notifyBuyer}
-            onChange={(notifyBuyer) => patch({ notifyBuyer })}
-          />
-        </div>
-      </div>
+      {/* Nothing but the toggle, at the client's request (2026-09-23):
+          Retention (days), Quality and the buyer notification were all
+          removed to match the platform they're migrating from, and none of
+          them was acted on server-side. Recording length, codec and
+          notification are platform-level concerns. */}
     </AdvancedSettingShell>
   );
 }

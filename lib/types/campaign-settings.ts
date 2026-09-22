@@ -19,8 +19,6 @@ export interface CallQueueSettings {
 
 export interface AutoRecordSettings {
   enabled: boolean;
-  /** Notify the buyer when a recording is available. */
-  notifyBuyer: boolean;
 }
 
 export interface SpamFilterSettings {
@@ -200,7 +198,7 @@ export interface CampaignAdvancedSettings {
 /** Empty/disabled defaults used when a campaign hasn't been touched yet. */
 export const DEFAULT_CAMPAIGN_SETTINGS: CampaignAdvancedSettings = {
   callQueue: { enabled: false, maxQueueSize: 25, maxWaitSec: 90, musicUrl: "" },
-  autoRecord: { enabled: false, notifyBuyer: false },
+  autoRecord: { enabled: false },
   spamFilter: { enabled: false, blockedNumbers: "", blockedStates: [], blockCarrierSpam: true },
   filter: {
     enabled: false,
