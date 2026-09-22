@@ -114,6 +114,14 @@ function utcMsToDayKey(ms: number): string {
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** 1 · 2 · 2.5 · 5 × 10ⁿ rounding for axis tick steps. */
+/** Axis ticks and the line's own value labels read from one formatter, so
+ *  a point sitting on a gridline shows the same figure as that gridline. */
+function compactMoney(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
+  return `$${Math.round(v)}`;
+}
+
 function niceStep(raw: number): number {
   if (raw <= 0) return 1;
   const pow = Math.pow(10, Math.floor(Math.log10(raw)));
@@ -266,6 +274,21 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
     return { top, ticks };
   }, [data]);
 
+  // Revenue axis: the SAME number of divisions as the count axis, so both
+  // axes land on the same horizontal gridlines. Recharts' auto domain put
+  // the $ ticks at their own heights, so the right-hand numbers floated
+  // between the gridlines the left-hand numbers sat on — the "line and bar
+  // are not in sync" report. Sharing the divisions also means the line's
+  // height can be read against the same rules as the columns.
+  const revAxis = React.useMemo(() => {
+    const max = Math.max(0, ...data.map((d) => d.revenue));
+    const divisions = Math.max(1, countAxis.ticks.length - 1);
+    const step = niceStep(Math.max(max, 1) * 1.12 / divisions);
+    const ticks: number[] = [];
+    for (let i = 0; i <= divisions; i++) ticks.push(step * i);
+    return { top: step * divisions, ticks };
+  }, [data, countAxis.ticks.length]);
+
   return (
     <Card className={cn("flex flex-col", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -353,11 +376,9 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                 axisLine={false}
                 tickLine={false}
                 width={48}
-                tickFormatter={(v: number) => {
-                  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-                  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
-                  return `$${v}`;
-                }}
+                domain={[0, revAxis.top]}
+                ticks={revAxis.ticks}
+                tickFormatter={compactMoney}
               />
               <Tooltip
                 cursor={false}
@@ -402,17 +423,20 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                 fill={COLOR_CONVERTED}
                 radius={[3, 3, 0, 0]}
               >
-                {/* Total-count label above each stacked column. Lives on the
-                    topmost bar (converted) so the label sits above the full
-                    stack height. `total` is the pre-computed sum of all
-                    three segments; hidden when 0 so empty hours stay clean. */}
+                {/* Total-count label INSIDE the top of the stack, not above
+                    it: the revenue line rides along the column tops, so the
+                    space above each column belongs to that line's own value
+                    label. `total` is the pre-computed sum of the segments;
+                    hidden when 0 so empty hours stay clean. */}
                 <LabelList
                   dataKey="total"
-                  position="top"
-                  offset={6}
-                  fill="var(--foreground)"
+                  position="insideTop"
+                  // Pushed a little further down so the revenue line, which
+                  // runs along the column tops, doesn't cross the digits.
+                  offset={12}
+                  fill="#fff"
                   fontSize={10}
-                  fontWeight={600}
+                  fontWeight={700}
                   formatter={(v: number) => (v > 0 ? formatNumber(v) : "")}
                 />
               </Bar>
@@ -426,7 +450,22 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                 activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
                 isAnimationActive
                 animationDuration={500}
-              />
+              >
+                {/* The line carried no number of its own — only the columns
+                    were labelled — so the revenue series could be seen but
+                    not read. Labels sit above the point, drawn in the line's colour
+                    so it's obvious which series they belong to. The column
+                    totals moved inside the bars to make room. */}
+                <LabelList
+                  dataKey="revenue"
+                  position="top"
+                  offset={10}
+                  fill={COLOR_REVENUE}
+                  fontSize={10}
+                  fontWeight={600}
+                  formatter={(v: number) => (v > 0 ? compactMoney(v) : "")}
+                />
+              </Line>
             </ComposedChart>
           </ResponsiveContainer>
         </div>
