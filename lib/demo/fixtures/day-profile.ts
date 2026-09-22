@@ -92,6 +92,8 @@ export function daySlotsFor(dayKey: string): Array<{ hour: number; calls: number
 }
 
 export const DAY_OPEN_HOUR = DAY_PROFILE[0].hour;
+/** Calls stop being *started* after the last slot; the floor keeps a
+ *  dwindling number of them in flight until 17:30 (see LIVE_TAIL). */
 export const DAY_CLOSE_HOUR = DAY_PROFILE[DAY_PROFILE.length - 1].hour + 1;
 
 export function slotForHour(hour: number): DaySlot | undefined {
@@ -99,12 +101,33 @@ export function slotForHour(hour: number): DaySlot | undefined {
 }
 
 /**
+ * End-of-day wind-down, at half-hour resolution (client spec 2026-09-23):
+ *
+ *   16:30  150 live
+ *   17:00   30 live
+ *   17:30   0 — end of day
+ *
+ * The hourly slots above only reach whole hours, so these override them
+ * from 16:30 onward. Ordered latest-first for the lookup below.
+ */
+const LIVE_TAIL: Array<{ atMinute: number; live: number }> = [
+  { atMinute: 17 * 60 + 30, live: 0 },
+  { atMinute: 17 * 60, live: 30 },
+  { atMinute: 16 * 60 + 30, live: 150 },
+];
+
+/**
  * Live (in-flight) calls right now. A ranged slot ("230–260") resolves to
  * one stable value inside the range for the duration of the hour, so the
- * counter doesn't flicker between renders. Outside business hours: 0.
+ * counter doesn't flicker between renders. From 16:30 the wind-down above
+ * takes over. Outside business hours: 0.
  */
 export function liveTargetAt(now: number = Date.now()): number {
-  const { hour } = demoClock(now);
+  const { hour, minute } = demoClock(now);
+  const sinceMidnight = hour * 60 + minute;
+  for (const step of LIVE_TAIL) {
+    if (sinceMidnight >= step.atMinute) return step.live;
+  }
   const slot = slotForHour(hour);
   if (!slot) return 0;
   const [lo, hi] = slot.live;

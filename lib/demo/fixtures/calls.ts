@@ -117,7 +117,14 @@ const REPEAT_CALLERS: string[] = (() => {
   const rng = makeRng(4_242);
   return Array.from({ length: 60 }, () => makePhone(rng));
 })();
-const REPEAT_CALLER_RATE = 0.08;
+/**
+ * Share of calls drawn from the repeat pool. Duplicates are counted as
+ * "this caller already rang this campaign today", so the first draw for
+ * each pool member isn't a duplicate — the dupe ratio lands at roughly
+ * (rate − pool/dayTotal). 0.16 against a 60-caller pool and a 5 000–6 500
+ * call day gives the 15% of total the client asked for.
+ */
+const REPEAT_CALLER_RATE = 0.16;
 
 /** US carriers with a rough market-share weighting. */
 const CARRIERS: Array<[string, number]> = [
