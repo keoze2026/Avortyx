@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import {
+  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
   LabelList,
-  Legend,
-  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -44,7 +43,10 @@ const GRAIN_NOUN_KEYS: Record<Grain, string> = {
 const COLOR_CONVERTED = "var(--accent)";
 const COLOR_NOTCONV = "var(--destructive)";
 const COLOR_NOANS = "var(--destructive)";
-const COLOR_REVENUE = "var(--accent)";
+// Revenue is money, not calls — it gets the app's money-green, NOT the
+// accent. Sharing the accent with the Connected bars put two identical
+// blue squares in the legend and made the line read as part of the stack.
+const COLOR_REVENUE = "var(--success)";
 
 interface HourlyDistributionProps {
   calls: Call[];
@@ -120,6 +122,19 @@ function compactMoney(v: number): string {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
   return `$${Math.round(v)}`;
+}
+
+/** Both panels reserve the same gutter for their Y axis, which is what
+ *  keeps a column sitting exactly above its revenue point. */
+const AXIS_WIDTH = 46;
+
+function LegendKey({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
+      <span aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: color }} />
+      {label}
+    </span>
+  );
 }
 
 function niceStep(raw: number): number {
@@ -274,20 +289,21 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
     return { top, ticks };
   }, [data]);
 
-  // Revenue axis: the SAME number of divisions as the count axis, so both
-  // axes land on the same horizontal gridlines. Recharts' auto domain put
-  // the $ ticks at their own heights, so the right-hand numbers floated
-  // between the gridlines the left-hand numbers sat on — the "line and bar
-  // are not in sync" report. Sharing the divisions also means the line's
-  // height can be read against the same rules as the columns.
+  // Revenue panel ceiling — rounded up with headroom so the area never
+  // touches the top edge and its value labels stay inside the strip.
   const revAxis = React.useMemo(() => {
     const max = Math.max(0, ...data.map((d) => d.revenue));
-    const divisions = Math.max(1, countAxis.ticks.length - 1);
-    const step = niceStep(Math.max(max, 1) * 1.12 / divisions);
-    const ticks: number[] = [];
-    for (let i = 0; i <= divisions; i++) ticks.push(step * i);
-    return { top: step * divisions, ticks };
-  }, [data, countAxis.ticks.length]);
+    const step = niceStep(Math.max(max, 1) * 1.25 / 2);
+    return { top: Math.max(step * 2, step), ticks: [0, Math.max(step * 2, step)] };
+  }, [data]);
+
+  // Value labels on the revenue area, but only while the points are sparse
+  // enough to read. A day with revenue in every hour would otherwise stack
+  // 24 figures into an 86px strip; there the axis + tooltip carry it.
+  const showRevenueLabels = React.useMemo(
+    () => data.filter((d) => d.revenue > 0).length <= 12,
+    [data],
+  );
 
   return (
     <Card className={cn("flex flex-col", className)}>
@@ -321,153 +337,159 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
           two rows line up exactly regardless of chart vs. donut proportions
           above them. Centering would leave that alignment to chance. */}
       <CardContent className="flex flex-1 flex-col justify-end">
-        <div ref={containerRef} className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={data}
-              margin={{ top: 20, right: 4, left: 4, bottom: 0 }}
-              // Recharts' default (10%) packs bars nearly edge-to-edge — a
-              // modest bump so each column reads as distinct without
-              // shrinking the bars so much the chart looks sparse.
-              barCategoryGap="28%"
-            >
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                axisLine={false}
-                tickLine={false}
-                // Responsive hour-grain ticks driven by the *chart container*
-                // width (not viewport) so the labels adapt even when the
-                // sidebar + donut squeeze the chart card down to ~600px on a
-                // wide screen. See `useCompactLabel` / `tickInterval` above
-                // for the three-tier rules.
-                interval={grain === "H" ? tickInterval : "preserveStartEnd"}
-                minTickGap={grain === "H" ? 0 : 12}
-                tickMargin={8}
-                tickFormatter={(label: string) => {
-                  if (grain !== "H" || !useCompactLabel) return label;
-                  // Collapse "08:00 am" → "8am" / "12:00 pm" → "12pm" so the
-                  // axis fits inside a narrow chart card without dropping
-                  // the readable am/pm suffix.
-                  const m = label.match(/^(\d{2}):00 (am|pm)$/);
-                  if (!m) return label;
-                  return `${parseInt(m[1], 10)}${m[2]}`;
-                }}
-              />
-              <YAxis
-                yAxisId="count"
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                axisLine={false}
-                tickLine={false}
-                domain={[0, countAxis.top]}
-                ticks={countAxis.ticks}
-                // 3-digit ticks (e.g. 600, 750) need at least ~44px so the
-                // leading digit isn't clipped on narrow mobile viewports.
-                width={44}
-                allowDecimals={false}
-                tickMargin={4}
-              />
-              {/* Right-side revenue axis — $ ticks for the Revenue line. */}
-              <YAxis
-                yAxisId="rev"
-                orientation="right"
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                axisLine={false}
-                tickLine={false}
-                width={48}
-                domain={[0, revAxis.top]}
-                ticks={revAxis.ticks}
-                tickFormatter={compactMoney}
-              />
-              <Tooltip
-                cursor={false}
-                content={<HourlyTooltipWrapper grain={grain} />}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 8 }}
-                iconSize={8}
-                // Filter out the now-hidden `notConverted` entry — only show
-                // Converted, No Answer, and Revenue in the legend so it
-                // matches the simplified 2-category donut.
-                payload={[
-                  { value: "converted",  type: "square", color: COLOR_CONVERTED },
-                  { value: "noAnswer",   type: "square", color: COLOR_NOANS },
-                  { value: "revenue",    type: "square", color: COLOR_REVENUE },
-                ]}
-                formatter={(v) =>
-                  v === "converted"
-                    ? t("toolsUI.reports.hourly.legend.converted")
-                    : v === "noAnswer"
-                      ? t("toolsUI.reports.hourly.legend.noAnswer")
-                      : t("toolsUI.reports.hourly.legend.revenue")
-                }
-              />
-              {/* Stack order — bottom to top:
-                   1. noAnswer    (red sliver at bottom)
-                   2. converted   (purple, dominant, top of stack)
-                  The old `notConverted` (yellow) segment was removed
-                  entirely so the chart matches the 2-category donut:
-                  Total = Converted + No Answer. */}
-              <Bar
-                yAxisId="count"
-                dataKey="noAnswer"
-                stackId="calls"
-                fill={COLOR_NOANS}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                yAxisId="count"
-                dataKey="converted"
-                stackId="calls"
-                fill={COLOR_CONVERTED}
-                radius={[3, 3, 0, 0]}
+        {/* Two panels, one x-axis.
+            Calls and revenue are different units, so overlaying them meant
+            the line rode along the column tops: neither series could carry
+            a readable value, and the right-hand $ ticks sat between the
+            gridlines the left-hand counts sat on. Stacking them — columns
+            above, a revenue strip below, both driven by the same buckets —
+            keeps every hour aligned vertically while giving each series its
+            own scale, its own labels and its own colour. */}
+        <div ref={containerRef} className="flex h-72 w-full flex-col">
+          {/* ── Calls ──────────────────────────────────────────────── */}
+          <div className="min-h-0 flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={data}
+                // bottom: room for the baseline "0" tick, which sat half
+                // outside the panel with the x-axis hidden.
+                margin={{ top: 18, right: 14, left: 4, bottom: 8 }}
+                // Recharts' default (10%) packs bars nearly edge-to-edge — a
+                // modest bump so each column reads as distinct without
+                // shrinking the bars so much the chart looks sparse.
+                barCategoryGap="28%"
               >
-                {/* Total-count label INSIDE the top of the stack, not above
-                    it: the revenue line rides along the column tops, so the
-                    space above each column belongs to that line's own value
-                    label. `total` is the pre-computed sum of the segments;
-                    hidden when 0 so empty hours stay clean. */}
-                <LabelList
-                  dataKey="total"
-                  position="insideTop"
-                  // Pushed a little further down so the revenue line, which
-                  // runs along the column tops, doesn't cross the digits.
-                  offset={12}
-                  fill="#fff"
-                  fontSize={10}
-                  fontWeight={700}
-                  formatter={(v: number) => (v > 0 ? formatNumber(v) : "")}
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                {/* Hidden here — the revenue strip below owns the shared
+                    x-axis, so the two panels line up on one set of labels. */}
+                <XAxis dataKey="label" hide />
+                <YAxis
+                  yAxisId="count"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, countAxis.top]}
+                  ticks={countAxis.ticks}
+                  // Matches the revenue axis width exactly so both plot
+                  // areas start at the same x and the columns sit directly
+                  // above their revenue point.
+                  width={AXIS_WIDTH}
+                  allowDecimals={false}
+                  tickMargin={4}
                 />
-              </Bar>
-              <Line
-                yAxisId="rev"
-                type="monotone"
-                dataKey="revenue"
-                stroke={COLOR_REVENUE}
-                strokeWidth={2}
-                dot={{ r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
-                activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
-                isAnimationActive
-                animationDuration={500}
-              >
-                {/* The line carried no number of its own — only the columns
-                    were labelled — so the revenue series could be seen but
-                    not read. Labels sit above the point, drawn in the line's colour
-                    so it's obvious which series they belong to. The column
-                    totals moved inside the bars to make room. */}
-                <LabelList
+                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
+                {/* Stack order — bottom to top:
+                     1. noAnswer    (red sliver at bottom)
+                     2. converted   (accent, dominant, top of stack) */}
+                <Bar
+                  yAxisId="count"
+                  dataKey="noAnswer"
+                  stackId="calls"
+                  fill={COLOR_NOANS}
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  yAxisId="count"
+                  dataKey="converted"
+                  stackId="calls"
+                  fill={COLOR_CONVERTED}
+                  radius={[3, 3, 0, 0]}
+                >
+                  {/* Total above each column — the space above is the
+                      columns' own again now that the revenue line has
+                      moved to its own panel. */}
+                  <LabelList
+                    dataKey="total"
+                    position="top"
+                    offset={6}
+                    fill="var(--foreground)"
+                    fontSize={10}
+                    fontWeight={600}
+                    formatter={(v: number) => (v > 0 ? formatNumber(v) : "")}
+                  />
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* ── Revenue ────────────────────────────────────────────── */}
+          <div className="h-[86px] min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 14, right: 14, left: 4, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="hourlyRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLOR_REVENUE} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={COLOR_REVENUE} stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  // Responsive hour-grain ticks driven by the *chart container*
+                  // width (not viewport) so the labels adapt even when the
+                  // sidebar + donut squeeze the chart card down to ~600px on a
+                  // wide screen. See `useCompactLabel` / `tickInterval` above.
+                  interval={grain === "H" ? tickInterval : "preserveStartEnd"}
+                  minTickGap={grain === "H" ? 0 : 12}
+                  tickMargin={8}
+                  tickFormatter={(label: string) => {
+                    if (grain !== "H" || !useCompactLabel) return label;
+                    // "08:00 am" → "8am" / "12:00 pm" → "12pm" so the axis
+                    // fits a narrow card without dropping the am/pm suffix.
+                    const m = label.match(/^(\d{2}):00 (am|pm)$/);
+                    if (!m) return label;
+                    return `${parseInt(m[1], 10)}${m[2]}`;
+                  }}
+                />
+                <YAxis
+                  yAxisId="rev"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, revAxis.top]}
+                  ticks={revAxis.ticks}
+                  width={AXIS_WIDTH}
+                  tickFormatter={compactMoney}
+                  tickMargin={4}
+                />
+                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
+                <Area
+                  yAxisId="rev"
+                  type="monotone"
                   dataKey="revenue"
-                  position="top"
-                  offset={10}
-                  fill={COLOR_REVENUE}
-                  fontSize={10}
-                  fontWeight={600}
-                  formatter={(v: number) => (v > 0 ? compactMoney(v) : "")}
-                />
-              </Line>
-            </ComposedChart>
-          </ResponsiveContainer>
+                  stroke={COLOR_REVENUE}
+                  strokeWidth={2}
+                  fill="url(#hourlyRevenueFill)"
+                  dot={false}
+                  activeDot={{ r: 3.5, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
+                  isAnimationActive
+                  animationDuration={500}
+                >
+                  {showRevenueLabels && (
+                    <LabelList
+                      dataKey="revenue"
+                      position="top"
+                      offset={6}
+                      fill={COLOR_REVENUE}
+                      fontSize={10}
+                      fontWeight={600}
+                      formatter={(v: number) => (v > 0 ? compactMoney(v) : "")}
+                    />
+                  )}
+                </Area>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* ── Legend ─────────────────────────────────────────────── */}
+          <div className="flex items-center justify-center gap-5 pt-2">
+            <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
+            <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
+            <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.legend.revenue")} />
+          </div>
         </div>
       </CardContent>
     </Card>

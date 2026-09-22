@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bell, Mail, MessageSquare, Smartphone } from "lucide-react";
+import { Bell, Mail, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 import { SectionShell } from "./profile-section";
@@ -14,8 +14,14 @@ import {
   useNotificationsRulesStore,
 } from "@/lib/store/notifications-rules-store";
 
-/** Canonical event catalog the settings UI surfaces. The backend accepts any
- *  event string; this list is what the user can toggle via this screen. */
+/**
+ * The events the backend accepts on a notification rule. Creating a rule
+ * validates both `event` and `channel` and answers 400 with the valid list
+ * for anything else — so this is the full set, not a suggestion. Events we
+ * used to offer that don't exist (`publisher.spike`, `webhook.failing`,
+ * `billing.invoice`, `ai.recommendation`, `buyer.capped`) were accepted
+ * silently by the old API and delivered nothing.
+ */
 const EVENT_CATALOG: Array<{
   key: string;
   fallbackLabel: string;
@@ -24,6 +30,13 @@ const EVENT_CATALOG: Array<{
   descKey: string;
 }> = [
   {
+    key: "call.started",
+    fallbackLabel: "Call started",
+    fallbackDesc: "When a call begins routing.",
+    labelKey: "workspaceUI.notifications.events.callStarted",
+    descKey: "workspaceUI.notifications.events.callStartedDesc",
+  },
+  {
     key: "call.completed",
     fallbackLabel: "Call completed",
     fallbackDesc: "When a call settles and pays out.",
@@ -31,39 +44,74 @@ const EVENT_CATALOG: Array<{
     descKey: "workspaceUI.notifications.events.callCompletedDesc",
   },
   {
-    key: "buyer.capped",
+    key: "call.missed",
+    fallbackLabel: "Call missed",
+    fallbackDesc: "When a call isn't answered.",
+    labelKey: "workspaceUI.notifications.events.callMissed",
+    descKey: "workspaceUI.notifications.events.callMissedDesc",
+  },
+  {
+    key: "campaign.cap_reached",
+    fallbackLabel: "Campaign reached cap",
+    fallbackDesc: "At 80% and again at 100% of a campaign cap.",
+    labelKey: "workspaceUI.notifications.events.campaignCap",
+    descKey: "workspaceUI.notifications.events.campaignCapDesc",
+  },
+  {
+    key: "buyer.cap_reached",
     fallbackLabel: "Buyer reached cap",
-    fallbackDesc: "When a buyer hits their daily / monthly cap.",
-    labelKey: "workspaceUI.notifications.events.buyerCapped",
-    descKey: "workspaceUI.notifications.events.buyerCappedDesc",
+    fallbackDesc: "At 80% and again at 100% of a buyer cap.",
+    labelKey: "workspaceUI.notifications.events.buyerCap",
+    descKey: "workspaceUI.notifications.events.buyerCapDesc",
   },
   {
-    key: "publisher.spike",
-    fallbackLabel: "Publisher traffic spike",
-    fallbackDesc: "Volume up >50% vs trailing 24h average.",
-    labelKey: "workspaceUI.notifications.events.publisherSpike",
-    descKey: "workspaceUI.notifications.events.publisherSpikeDesc",
+    key: "publisher.cap_reached",
+    fallbackLabel: "Publisher reached cap",
+    fallbackDesc: "At 80% and again at 100% of a publisher cap.",
+    labelKey: "workspaceUI.notifications.events.publisherCap",
+    descKey: "workspaceUI.notifications.events.publisherCapDesc",
   },
   {
-    key: "webhook.failing",
-    fallbackLabel: "Webhook failing",
-    fallbackDesc: "5+ consecutive delivery failures.",
-    labelKey: "workspaceUI.notifications.events.webhookFailing",
-    descKey: "workspaceUI.notifications.events.webhookFailingDesc",
+    key: "destination.cap_reached",
+    fallbackLabel: "Destination reached cap",
+    fallbackDesc: "At 80% and again at 100% of a destination cap.",
+    labelKey: "workspaceUI.notifications.events.destinationCap",
+    descKey: "workspaceUI.notifications.events.destinationCapDesc",
   },
   {
-    key: "billing.invoice",
-    fallbackLabel: "Invoice ready",
-    fallbackDesc: "Monthly invoice or receipt.",
-    labelKey: "workspaceUI.notifications.events.billingInvoice",
-    descKey: "workspaceUI.notifications.events.billingInvoiceDesc",
+    key: "buyer.missed",
+    fallbackLabel: "Buyer missing calls",
+    fallbackDesc: "When a buyer stops answering routed calls.",
+    labelKey: "workspaceUI.notifications.events.buyerMissed",
+    descKey: "workspaceUI.notifications.events.buyerMissedDesc",
   },
   {
-    key: "ai.recommendation",
-    fallbackLabel: "AI recommendation",
-    fallbackDesc: "New optimization suggestion.",
-    labelKey: "workspaceUI.notifications.events.aiRecommendation",
-    descKey: "workspaceUI.notifications.events.aiRecommendationDesc",
+    key: "aht.low",
+    fallbackLabel: "Handle time dropped",
+    fallbackDesc: "Average handle time below its normal range.",
+    labelKey: "workspaceUI.notifications.events.ahtLow",
+    descKey: "workspaceUI.notifications.events.ahtLowDesc",
+  },
+  {
+    key: "low.balance",
+    fallbackLabel: "Low balance",
+    fallbackDesc: "When the account balance runs low.",
+    labelKey: "workspaceUI.notifications.events.lowBalance",
+    descKey: "workspaceUI.notifications.events.lowBalanceDesc",
+  },
+  {
+    key: "campaign.paused",
+    fallbackLabel: "Campaign paused",
+    fallbackDesc: "When a campaign stops taking traffic.",
+    labelKey: "workspaceUI.notifications.events.campaignPaused",
+    descKey: "workspaceUI.notifications.events.campaignPausedDesc",
+  },
+  {
+    key: "daily.summary",
+    fallbackLabel: "Daily summary",
+    fallbackDesc: "End-of-day totals for the account.",
+    labelKey: "workspaceUI.notifications.events.dailySummary",
+    descKey: "workspaceUI.notifications.events.dailySummaryDesc",
   },
 ];
 
@@ -101,9 +149,12 @@ export function NotificationsSection() {
       description={t("settings.notificationsSection.description")}
     >
       <Card className="overflow-hidden">
-        <div className="hidden border-b border-border/60 bg-secondary/30 px-4 py-2.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground sm:grid sm:grid-cols-[1fr_5rem_5rem_5rem]">
+        {/* Email and SMS only — `in_app` is not a delivery channel the
+            backend accepts (rules saved against it were stored and then
+            delivered nothing). In-app banners are configured separately,
+            under the bell menu's "Pop-up alerts". */}
+        <div className="hidden border-b border-border/60 bg-secondary/30 px-4 py-2.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground sm:grid sm:grid-cols-[1fr_5rem_5rem]">
           <span>{t("workspaceUI.notifications.columnEvent")}</span>
-          <span className="text-center">{t("workspaceUI.notifications.columnInApp")}</span>
           <span className="text-center">{t("workspaceUI.notifications.columnEmail")}</span>
           <span className="text-center">{t("workspaceUI.notifications.columnSms")}</span>
         </div>
@@ -124,7 +175,7 @@ export function NotificationsSection() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.04, duration: 0.25 }}
-                className="grid items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_5rem_5rem_5rem]"
+                className="grid items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_5rem_5rem]"
               >
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium">
@@ -133,7 +184,6 @@ export function NotificationsSection() {
                   </div>
                   <div className="mt-0.5 text-[11px] text-muted-foreground">{description}</div>
                 </div>
-                <Cell label={t("workspaceUI.notifications.columnInApp")} icon={MessageSquare} on={isOn(p.key, "in_app")} onToggle={() => toggle(p.key, "in_app")} />
                 <Cell label={t("workspaceUI.notifications.columnEmail")} icon={Mail} on={isOn(p.key, "email")} onToggle={() => toggle(p.key, "email")} />
                 <Cell label={t("workspaceUI.notifications.columnSms")} icon={Smartphone} on={isOn(p.key, "sms")} onToggle={() => toggle(p.key, "sms")} />
               </motion.div>

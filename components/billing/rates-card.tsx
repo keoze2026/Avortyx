@@ -1,188 +1,145 @@
 "use client";
 
 /**
- * Rates — per-country price card.
+ * Rates — what this client is actually billed at.
  *
- * Shows the tariff Avortyx charges for each metered line item (number rentals,
- * per-minute usage, recording, shield checks, etc.) for the selected country.
- * Switching the country in the dropdown swaps the rate tiles below.
+ * Read straight from `GET /api/billing/account` (`per_minute_rate`,
+ * `markup_percent`, `tfn_purchase_fee`, `monthly_portal_fee`, plus the
+ * portal fee's charged / next-due dates).
  *
- * Numbers are mocked but realistic; the structure mirrors what an admin would
- * see on a real billing portal.
+ * This card used to render a hardcoded per-country tariff table — eight
+ * line items with invented amounts and a country selector that mapped to
+ * nothing on the backend. None of it was this client's pricing.
  */
 
 import * as React from "react";
-import {
-  AudioLines,
-  Cable,
-  Mic,
-  PhoneIncoming,
-  PhoneOff,
-  ShieldCheck,
-  UserCheck,
-} from "lucide-react";
+import { AudioLines, CalendarClock, Percent, PhoneIncoming, Wallet } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { billingService, type BillingAccount } from "@/lib/api/services/billing.service";
+import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
-const PhoneStop = PhoneOff;
-
-interface RateRow {
+interface Tile {
   key: string;
-  label: string;
-  amount: number;
-  /** Suffix — "/number", "/minute", "/call". */
-  unit: string;
   icon: React.ElementType;
-  decimals: number;
+  label: string;
+  value: string;
+  /** Small line under the figure — units, or the fee's next due date. */
+  hint?: string;
 }
 
-const COUNTRIES = [
-  { code: "US", label: "United States" },
-  { code: "CA", label: "Canada" },
-  { code: "UK", label: "United Kingdom" },
-  { code: "AU", label: "Australia" },
-];
+/** Per-minute and per-call money needs more than 2 decimals to be meaningful
+ *  at these magnitudes ($0.0035 is not "$0.00"). */
+function preciseMoney(n: number): string {
+  return `$${n.toFixed(4)}`;
+}
 
-/** Tariff lookup keyed by ISO code. Values are the displayed dollar amount. */
-const RATES_BY_COUNTRY: Record<string, RateRow[]> = {
-  US: [
-    { key: "rent-local", label: "Rent Local Number", amount: 3.0, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "rent-tf", label: "Rent Toll Free Number", amount: 1.0, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "min-local", label: "Minute Local Number", amount: 0.04, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-tf", label: "Minute Toll Free Number", amount: 0.035, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-byoc", label: "Minute BYOC Number", amount: 0.045, unit: "/minute", icon: Cable, decimals: 4 },
-    { key: "rec", label: "Minute Call Recording", amount: 0.0025, unit: "/minute", icon: Mic, decimals: 4 },
-    { key: "voip", label: "VoIP Shield", amount: 0.01, unit: "/call", icon: ShieldCheck, decimals: 4 },
-    { key: "reject", label: "Rejected Call", amount: 0.015, unit: "/call", icon: PhoneStop, decimals: 4 },
-    { key: "identity", label: "Caller Identity", amount: 0.14, unit: "/call", icon: UserCheck, decimals: 4 },
-  ],
-  CA: [
-    { key: "rent-local", label: "Rent Local Number", amount: 3.5, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "rent-tf", label: "Rent Toll Free Number", amount: 1.25, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "min-local", label: "Minute Local Number", amount: 0.045, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-tf", label: "Minute Toll Free Number", amount: 0.04, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-byoc", label: "Minute BYOC Number", amount: 0.05, unit: "/minute", icon: Cable, decimals: 4 },
-    { key: "rec", label: "Minute Call Recording", amount: 0.0025, unit: "/minute", icon: Mic, decimals: 4 },
-    { key: "voip", label: "VoIP Shield", amount: 0.012, unit: "/call", icon: ShieldCheck, decimals: 4 },
-    { key: "reject", label: "Rejected Call", amount: 0.018, unit: "/call", icon: PhoneStop, decimals: 4 },
-    { key: "identity", label: "Caller Identity", amount: 0.15, unit: "/call", icon: UserCheck, decimals: 4 },
-  ],
-  UK: [
-    { key: "rent-local", label: "Rent Local Number", amount: 4.0, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "rent-tf", label: "Rent Toll Free Number", amount: 1.5, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "min-local", label: "Minute Local Number", amount: 0.05, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-tf", label: "Minute Toll Free Number", amount: 0.045, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-byoc", label: "Minute BYOC Number", amount: 0.055, unit: "/minute", icon: Cable, decimals: 4 },
-    { key: "rec", label: "Minute Call Recording", amount: 0.003, unit: "/minute", icon: Mic, decimals: 4 },
-    { key: "voip", label: "VoIP Shield", amount: 0.014, unit: "/call", icon: ShieldCheck, decimals: 4 },
-    { key: "reject", label: "Rejected Call", amount: 0.02, unit: "/call", icon: PhoneStop, decimals: 4 },
-    { key: "identity", label: "Caller Identity", amount: 0.17, unit: "/call", icon: UserCheck, decimals: 4 },
-  ],
-  AU: [
-    { key: "rent-local", label: "Rent Local Number", amount: 3.75, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "rent-tf", label: "Rent Toll Free Number", amount: 1.4, unit: "/number", icon: PhoneIncoming, decimals: 4 },
-    { key: "min-local", label: "Minute Local Number", amount: 0.048, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-tf", label: "Minute Toll Free Number", amount: 0.042, unit: "/minute", icon: AudioLines, decimals: 4 },
-    { key: "min-byoc", label: "Minute BYOC Number", amount: 0.052, unit: "/minute", icon: Cable, decimals: 4 },
-    { key: "rec", label: "Minute Call Recording", amount: 0.0028, unit: "/minute", icon: Mic, decimals: 4 },
-    { key: "voip", label: "VoIP Shield", amount: 0.013, unit: "/call", icon: ShieldCheck, decimals: 4 },
-    { key: "reject", label: "Rejected Call", amount: 0.017, unit: "/call", icon: PhoneStop, decimals: 4 },
-    { key: "identity", label: "Caller Identity", amount: 0.16, unit: "/call", icon: UserCheck, decimals: 4 },
-  ],
-};
+function formatDate(ms?: number): string | undefined {
+  if (!ms) return undefined;
+  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
 
 export function RatesCard() {
   const { t } = useTranslation();
-  const [country, setCountry] = React.useState("US");
-  const rates = RATES_BY_COUNTRY[country] ?? RATES_BY_COUNTRY.US;
+  const [account, setAccount] = React.useState<BillingAccount | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    billingService
+      .account()
+      .then((a) => {
+        if (!cancelled) setAccount(a);
+      })
+      .catch(() => {
+        // Non-fatal — the card simply doesn't render without rates.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const rates = account?.rates;
+  // Nothing invented: a backend that doesn't send rates gets no card.
+  if (!rates) return null;
+
+  const tiles: Tile[] = [
+    {
+      key: "perMinute",
+      icon: AudioLines,
+      label: t("billing.rateRows.perMinute"),
+      value: preciseMoney(rates.perMinute),
+      hint: t("billing.rateRows.perMinuteUnit"),
+    },
+    {
+      key: "markup",
+      icon: Percent,
+      label: t("billing.rateRows.markup"),
+      value: `${rates.markupPercent}%`,
+    },
+    {
+      key: "tfnFee",
+      icon: PhoneIncoming,
+      label: t("billing.rateRows.tfnFee"),
+      value: formatCurrency(rates.tfnPurchaseFee, true),
+      hint: t("billing.rateRows.tfnFeeUnit"),
+    },
+    {
+      key: "portalFee",
+      icon: Wallet,
+      label: t("billing.rateRows.portalFee"),
+      value: formatCurrency(rates.monthlyPortalFee, true),
+      hint: t("billing.rateRows.portalFeeUnit"),
+    },
+  ];
+
+  const charged = formatDate(rates.portalFeeChargedAt);
+  const nextDue = formatDate(rates.portalFeeNextDue);
 
   return (
     <Card className="p-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">{t("billing.rates")}</h2>
-        <Select value={country} onValueChange={setCountry}>
-          <SelectTrigger className="w-[12rem]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {COUNTRIES.map((c) => {
-              const key = `billing.countries.${c.code}`;
-              const resolved = t(key);
-              return (
-                <SelectItem key={c.code} value={c.code}>
-                  {resolved === key ? c.label : resolved}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      </div>
+      <h2 className="mb-5 text-xl font-semibold tracking-tight">{t("billing.rates")}</h2>
 
       <div className="overflow-hidden rounded-lg border border-border">
         <ul className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
-          {rates.map((r, i) => (
-            <RateTile
-              key={r.key}
-              row={r}
-              borderClass={borderFor(i, rates.length)}
-              t={t}
-            />
+          {tiles.map((tile, i) => (
+            <RateTile key={tile.key} tile={tile} last={i === tiles.length - 1} />
           ))}
         </ul>
       </div>
+
+      {(charged || nextDue) && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+          <CalendarClock className="h-3.5 w-3.5" />
+          {charged && (
+            <span>
+              {t("billing.rateRows.lastCharged")}: <span className="text-foreground">{charged}</span>
+            </span>
+          )}
+          {nextDue && (
+            <span>
+              {t("billing.rateRows.nextDue")}: <span className="text-foreground">{nextDue}</span>
+            </span>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
 
-/* ─── Per-tile presentation ──────────────────────────────────────────── */
-
-function RateTile({
-  row,
-  borderClass,
-  t,
-}: {
-  row: RateRow;
-  borderClass: string;
-  t: (key: string) => string;
-}) {
-  const Icon = row.icon;
-  const key = `billing.rateRows.${row.key}`;
-  const resolved = t(key);
-  const label = resolved === key ? row.label : resolved;
+function RateTile({ tile, last }: { tile: Tile; last: boolean }) {
+  const Icon = tile.icon;
   return (
-    <li className={`flex flex-col gap-1 p-4 ${borderClass}`}>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-accent" />
-        {label}
-      </div>
-      <div className="flex items-baseline gap-0.5 font-mono text-lg font-semibold tabular-nums">
-        ${row.amount.toFixed(row.decimals)}
-        <span className="text-xs font-normal text-muted-foreground">
-          {row.unit}
-        </span>
+    <li className={cn("flex items-start gap-3 p-4", !last && "sm:border-r sm:border-border")}>
+      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{tile.label}</div>
+        <div className="mt-0.5 text-lg font-semibold tabular-nums">{tile.value}</div>
+        {tile.hint && <div className="text-[11px] text-muted-foreground">{tile.hint}</div>}
       </div>
     </li>
   );
-}
-
-/* Pick the right inner-border classes for the responsive grid so tiles read
- * as a clean matrix on every breakpoint (1 / 2 / 4 columns). */
-function borderFor(index: number, total: number): string {
-  // 4-col grid on lg: right border except last col + bottom border except last row.
-  const lg = `lg:border-r lg:border-border ${
-    (index + 1) % 4 === 0 ? "lg:!border-r-0" : ""
-  } ${index < total - (total % 4 === 0 ? 4 : total % 4) ? "lg:border-b" : ""}`;
-  // 2-col grid on sm: right border on left column + bottom border except last row.
-  const sm = `sm:border-r sm:border-border ${
-    (index + 1) % 2 === 0 ? "sm:!border-r-0" : ""
-  } ${index < total - (total % 2 === 0 ? 2 : 1) ? "sm:border-b" : ""}`;
-  return `${sm} ${lg}`;
 }

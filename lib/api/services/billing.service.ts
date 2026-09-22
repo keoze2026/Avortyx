@@ -18,6 +18,17 @@ export interface BillingAccount {
   autoRechargeThreshold: number;
   currency?: string;
   status?: string;
+  /** The rates this client is actually billed at, from the same endpoint.
+   *  Optional — a deployment that predates them simply has none. */
+  rates?: {
+    perMinute: number;
+    markupPercent: number;
+    tfnPurchaseFee: number;
+    monthlyPortalFee: number;
+    /** When the portal fee was last charged / falls due next (ms epoch). */
+    portalFeeChargedAt?: number;
+    portalFeeNextDue?: number;
+  };
   /** Plan-tier fields exposed via the same endpoint. Optional because not
    *  every organization is on a paid plan. */
   plan?: {
@@ -116,6 +127,12 @@ interface BillingAccountWire {
   planCallsIncluded?: number;
   planOverageRatePerCall?: string | number;
   planRenewsAt?: string;
+  perMinuteRate?: string | number;
+  markupPercent?: string | number;
+  tfnPurchaseFee?: string | number;
+  monthlyPortalFee?: string | number;
+  portalFeeChargedAt?: string;
+  portalFeeNextDue?: string;
 }
 
 interface ExpensesWire {
@@ -196,9 +213,27 @@ function wireToAccount(w: BillingAccountWire): BillingAccount {
         renewsAt: w.planRenewsAt ? toTs(w.planRenewsAt) : undefined,
       }
     : undefined;
+  // Present only when the backend sends at least one of them, so an older
+  // deployment shows no rates card rather than a card full of zeros.
+  const hasRates =
+    w.perMinuteRate !== undefined ||
+    w.markupPercent !== undefined ||
+    w.tfnPurchaseFee !== undefined ||
+    w.monthlyPortalFee !== undefined;
+  const rates: BillingAccount["rates"] | undefined = hasRates
+    ? {
+        perMinute: toNum(w.perMinuteRate),
+        markupPercent: toNum(w.markupPercent),
+        tfnPurchaseFee: toNum(w.tfnPurchaseFee),
+        monthlyPortalFee: toNum(w.monthlyPortalFee),
+        portalFeeChargedAt: w.portalFeeChargedAt ? toTs(w.portalFeeChargedAt) : undefined,
+        portalFeeNextDue: w.portalFeeNextDue ? toTs(w.portalFeeNextDue) : undefined,
+      }
+    : undefined;
   return {
     id: w.id,
     balance: toNum(w.balance),
+    rates,
     creditLimit: toNum(w.creditLimit),
     lowBalanceThreshold: toNum(w.lowBalanceThreshold),
     autoRecharge: !!w.autoRecharge,

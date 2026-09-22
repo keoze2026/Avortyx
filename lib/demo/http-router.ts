@@ -1253,6 +1253,13 @@ route("GET", "/api/billing/account", () => ({
   plan_monthly_cost: "299.00",
   plan_calls_included: 25_000,
   plan_overage_rate_per_call: "0.012",
+  // The client's own rates, as the backend now returns them.
+  per_minute_rate: "0.0035",
+  markup_percent: 20,
+  tfn_purchase_fee: "2.00",
+  monthly_portal_fee: "49.99",
+  portal_fee_charged_at: new Date(NOW - 12 * DAY).toISOString(),
+  portal_fee_next_due: new Date(NOW + 18 * DAY).toISOString(),
   plan_renews_at: new Date(NOW + 18 * DAY).toISOString(),
 }));
 

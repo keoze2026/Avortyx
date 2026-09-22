@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   Ban,
+  Check,
   Copy,
   DollarSign,
   Download,
@@ -38,6 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
+import { matchesCallStatusFilter } from "@/lib/call-status";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { callsService } from "@/lib/api/services/calls.service";
@@ -61,7 +63,10 @@ type ColumnKey =
   | "ttc"
   | "duration"
   | "hangUp"
-  | "tag"
+  | "qualified"
+  | "converted"
+  | "duplicate"
+  | "carrier"
   | "status"
   | "failReason"
   | "recording";
@@ -77,7 +82,14 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "ttc", label: "TTC" },
   { id: "duration", label: "Duration" },
   { id: "hangUp", label: "Hang up" },
-  { id: "tag", label: "Tag" },
+  // Real per-call verdicts from the backend record. These replaced a "Tag"
+  // column whose values ("Qualified", "Repeat", "VIP", …) were invented
+  // client-side from a hash of the call id — decoration that reached the
+  // export and got counted as if it meant something.
+  { id: "qualified", label: "Qualified" },
+  { id: "converted", label: "Converted" },
+  { id: "duplicate", label: "Duplicate" },
+  { id: "carrier", label: "Carrier" },
   { id: "status", label: "Status" },
   { id: "failReason", label: "Fail reason" },
   { id: "recording", label: "Recording" },
@@ -94,7 +106,10 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   ttc: "toolsUI.reports.callLog.columns.ttc",
   duration: "toolsUI.reports.callLog.columns.duration",
   hangUp: "toolsUI.reports.callLog.columns.hangUp",
-  tag: "toolsUI.reports.callLog.columns.tag",
+  qualified: "toolsUI.reports.callLog.columns.qualified",
+  converted: "toolsUI.reports.callLog.columns.converted",
+  duplicate: "toolsUI.reports.callLog.columns.duplicate",
+  carrier: "toolsUI.reports.callLog.columns.carrier",
   status: "toolsUI.reports.callLog.columns.status",
   failReason: "toolsUI.reports.callLog.columns.failReason",
   recording: "toolsUI.reports.callLog.columns.recording",
@@ -242,19 +257,15 @@ const HANG_UP_LABEL: Record<HangUpSide, string> = {
   open: "—",
 };
 
-/** Predefined tag pool — the per-call set is a deterministic 0-2 slice. */
-const TAG_POOL = ["High intent", "Qualified", "Spanish", "Repeat", "VIP", "New lead"];
+/** Per-call verdicts, read from the backend record. `isQualified` falls
+ *  back to the shared predicate so this column always agrees with the Call
+ *  Summary's Qualified total and with what clicking it filters to. */
+function isQualified(c: Call): boolean {
+  return matchesCallStatusFilter(c, "qualified");
+}
 
-function getTags(c: Call): string[] {
-  const h = callHash(c.id);
-  const count = h % 4; // 0..3 tags, biased toward 0-1
-  if (count === 0) return [];
-  const out: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const t = TAG_POOL[(h + i * 7) % TAG_POOL.length];
-    if (!out.includes(t)) out.push(t);
-  }
-  return out;
+function isConverted(c: Call): boolean {
+  return c.isConverted ?? (c.status === "completed" && c.payout > 0);
 }
 
 /**
@@ -292,8 +303,14 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
       return formatHMS(c.durationSec);
     case "hangUp":
       return HANG_UP_LABEL[getHangUpSide(c)];
-    case "tag":
-      return getTags(c).join(", ");
+    case "qualified":
+      return isQualified(c) ? "Yes" : "No";
+    case "converted":
+      return isConverted(c) ? "Yes" : "No";
+    case "duplicate":
+      return c.isDuplicate ? "Yes" : "No";
+    case "carrier":
+      return c.carrier || "—";
     case "status":
       return STATUS_LABEL_FALLBACK[c.status];
     case "failReason":
@@ -524,7 +541,10 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
                 {columns.ttc && <TableHead>{t("toolsUI.reports.callLog.columns.ttc")}</TableHead>}
                 {columns.duration && <TableHead>{t("toolsUI.reports.callLog.columns.duration")}</TableHead>}
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
-                {columns.tag && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.tag")}</TableHead>}
+                {columns.qualified && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.qualified")}</TableHead>}
+                {columns.converted && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.converted")}</TableHead>}
+                {columns.duplicate && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.duplicate")}</TableHead>}
+                {columns.carrier && <TableHead>{t("toolsUI.reports.callLog.columns.carrier")}</TableHead>}
                 {columns.status && <TableHead>{t("toolsUI.reports.callLog.columns.status")}</TableHead>}
                 {columns.failReason && <TableHead>{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
@@ -616,9 +636,24 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
                           <HangUpCell call={c} />
                         </TableCell>
                       )}
-                      {columns.tag && (
+                      {columns.qualified && (
                         <TableCell className="text-center">
-                          <TagCell call={c} />
+                          <YesNo on={isQualified(c)} />
+                        </TableCell>
+                      )}
+                      {columns.converted && (
+                        <TableCell className="text-center">
+                          <YesNo on={isConverted(c)} />
+                        </TableCell>
+                      )}
+                      {columns.duplicate && (
+                        <TableCell className="text-center">
+                          <YesNo on={!!c.isDuplicate} />
+                        </TableCell>
+                      )}
+                      {columns.carrier && (
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {c.carrier || "—"}
                         </TableCell>
                       )}
                       {columns.status && (
@@ -750,24 +785,13 @@ function HangUpCell({ call }: { call: Call }) {
   );
 }
 
-/**
- * Tag cell — just the add-tag affordance. The chips that used to render here
- * are gone; tags still travel with the row in exports (see the "tag" column
- * in the export mapping), they're simply not shown in the table.
- */
-function TagCell({ call }: { call: Call }) {
-  const { t } = useTranslation();
-  return (
-    <div className="inline-flex items-center gap-1">
-      <button
-        type="button"
-        aria-label={t("toolsUI.reports.callLog.actions.addTagAria").replace("{id}", call.id)}
-        onClick={() => toast.info(t("toolsUI.reports.callLog.actions.tagSoon"))}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent"
-      >
-        <Plus className="h-3 w-3" />
-      </button>
-    </div>
+/** Compact yes/no mark for the verdict columns — a tick reads faster than
+ *  the word "Yes" down a long column, and an em dash keeps "no" quiet. */
+function YesNo({ on }: { on: boolean }) {
+  return on ? (
+    <Check className="mx-auto h-3.5 w-3.5 text-[color:var(--success)]" aria-label="Yes" />
+  ) : (
+    <span className="text-muted-foreground/50" aria-label="No">—</span>
   );
 }
 

@@ -22,7 +22,10 @@ import {
   type NotificationRule,
 } from "@/lib/api/services/notifications.service";
 
-export type NotificationChannel = "in_app" | "email" | "sms";
+/** Delivery channels the backend accepts on a rule. `in_app` was rejected
+ *  as of 2026-09-22 — in-app banners come from the pop-up alert
+ *  preferences instead (see lib/store/alert-preferences-store.ts). */
+export type NotificationChannel = "email" | "sms";
 
 interface NotificationsRulesState {
   rules: NotificationRule[];
