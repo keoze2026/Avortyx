@@ -115,7 +115,13 @@ function utcMsToDayKey(ms: number): string {
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** 1 · 2 · 2.5 · 5 × 10ⁿ rounding for axis tick steps. */
+/**
+ * Rounding for axis tick steps. The ladder is deliberately fine: each rung
+ * is the smallest tick the axis may round up to, and a coarse ladder
+ * overshoots badly here — with only 1 · 2 · 2.5 · 5 available, a step of
+ * 270 rounded to 500, doubling the axis ceiling and squashing the columns
+ * to a third of their height.
+ */
 /** Axis ticks and the line's own value labels read from one formatter, so
  *  a point sitting on a gridline shows the same figure as that gridline. */
 function compactMoney(v: number): string {
@@ -139,13 +145,29 @@ function LegendKey({ color, label }: { color: string; label: string }) {
 
 /** Gridline count on both axes. Shared so the $ ticks on the right land on
  *  the same lines as the call counts on the left. */
-const DIVISIONS = 5;
+const DIVISIONS = 6;
+
+/** How far above a column the revenue line rides, as a multiple of the
+ *  column's height — enough to clear the call-count label printed on top
+ *  of the column with a little air either side. */
+const LABEL_GAP = 1.3;
 
 function niceStep(raw: number): number {
   if (raw <= 0) return 1;
   const pow = Math.pow(10, Math.floor(Math.log10(raw)));
   const f = raw / pow;
-  const m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  const m =
+    f <= 1 ? 1
+    : f <= 1.2 ? 1.2
+    : f <= 1.5 ? 1.5
+    : f <= 2 ? 2
+    : f <= 2.5 ? 2.5
+    : f <= 3 ? 3
+    : f <= 4 ? 4
+    : f <= 5 ? 5
+    : f <= 6 ? 6
+    : f <= 8 ? 8
+    : 10;
   return m * pow;
 }
 
@@ -306,8 +328,9 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
     for (const d of data) {
       if (d.revenue > 0 && d.total > 0) callsPerDollar = Math.max(callsPerDollar, d.total / d.revenue);
     }
-    // 1.18 = the visible gap between the column top and the line.
-    const needed = revTop * callsPerDollar * 1.18;
+    // The line sits above the column *and* above the count label printed
+    // on top of it, so the gap has to cover both.
+    const needed = revTop * callsPerDollar * LABEL_GAP;
 
     const countStep = niceStep(Math.max(maxCalls * 1.12, needed, 4) / DIVISIONS);
     const countTop = countStep * DIVISIONS;
@@ -321,14 +344,6 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
       revTicks: ticksFor(revStep),
     };
   }, [data]);
-
-  // Value labels on the line, but only while the points are sparse enough
-  // to read — a day with revenue in every hour would stack 24 figures
-  // across the plot; there the axis and tooltip carry it.
-  const showRevenueLabels = React.useMemo(
-    () => data.filter((d) => d.revenue > 0).length <= 12,
-    [data],
-  );
 
   return (
     <Card className={cn("flex flex-col", className)}>
@@ -373,9 +388,9 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
               <ComposedChart
                 data={data}
                 margin={{ top: 20, right: 14, left: 4, bottom: 0 }}
-                // Solid columns rather than thin sticks; the default (10%)
-                // packs them edge-to-edge, the old 28% left them spindly.
-                barCategoryGap="20%"
+                // The reference build's spacing — columns read as distinct
+                // sticks rather than a solid block.
+                barCategoryGap="28%"
               >
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -443,21 +458,16 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
                 >
-                  {/* Inside the column's own top — the space above it
-                      belongs to the revenue line now. */}
+                  {/* Above the column, as in the reference layout. The
+                      revenue line clears these too — see LABEL_GAP. */}
                   <LabelList
                     dataKey="total"
-                    position="insideTop"
-                    offset={8}
-                    fill="#fff"
+                    position="top"
+                    offset={6}
+                    fill="var(--foreground)"
                     fontSize={10}
-                    fontWeight={700}
-                    // A column shorter than ~7% of the plot can't hold a
-                    // label inside it — the digits would spill past the
-                    // baseline onto the hour labels.
-                    formatter={(v: number) =>
-                      v > 0 && v / axes.countTop >= 0.07 ? formatNumber(v) : ""
-                    }
+                    fontWeight={600}
+                    formatter={(v: number) => (v > 0 ? formatNumber(v) : "")}
                   />
                 </Bar>
                 <Line
@@ -471,19 +481,12 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                   isAnimationActive
                   animationDuration={500}
                 >
-                  {/* The line's own figure, above the line — it had none
-                      before, so the series could be seen but not read. */}
-                  {showRevenueLabels && (
-                    <LabelList
-                      dataKey="revenue"
-                      position="top"
-                      offset={8}
-                      fill={COLOR_REVENUE}
-                      fontSize={10}
-                      fontWeight={600}
-                      formatter={(v: number) => (v > 0 ? compactMoney(v) : "")}
-                    />
-                  )}
+                  {/* No value labels on the line: the reference layout
+                      prints numbers above the sticks only. Stacking a
+                      second figure above the line collided with the count
+                      on every short column, where the proportional gap
+                      between the two is only a few pixels. The line's
+                      value is on the right axis and in the tooltip. */}
                 </Line>
               </ComposedChart>
             </ResponsiveContainer>
