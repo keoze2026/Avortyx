@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import {
-  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
   LabelList,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -136,6 +136,10 @@ function LegendKey({ color, label }: { color: string; label: string }) {
     </span>
   );
 }
+
+/** Gridline count on both axes. Shared so the $ ticks on the right land on
+ *  the same lines as the call counts on the left. */
+const DIVISIONS = 5;
 
 function niceStep(raw: number): number {
   if (raw <= 0) return 1;
@@ -276,30 +280,51 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
     [calls, grain, timeZone],
   );
 
-  // Count axis: round ticks with headroom above the tallest column, so the
-  // total label drawn above that column stays inside the plot. Recharts'
-  // auto domain sits the ceiling exactly on the max, which clipped the top
-  // half of the label; a raw `max * 1.12` gives ugly ticks like "1120".
-  const countAxis = React.useMemo(() => {
-    const max = Math.max(0, ...data.map((d) => d.total));
-    const step = niceStep(Math.max(max, 4) / 4);
-    const top = Math.max(step, Math.ceil((max * 1.12) / step) * step);
-    const ticks: number[] = [];
-    for (let v = 0; v <= top; v += step) ticks.push(v);
-    return { top, ticks };
+  // Both axes in one calculation, because they constrain each other.
+  //
+  //   1. The revenue line must sit ABOVE every column (client request:
+  //      "line always above stick"). A point is above a column when
+  //      rev/revTop > calls/countTop, so the count axis needs enough
+  //      headroom to satisfy the worst hour — the one with the most calls
+  //      per dollar. Solving for countTop gives the `needed` term below.
+  //   2. Both axes use four divisions, so the $ ticks on the right land on
+  //      the same gridlines as the call counts on the left.
+  const axes = React.useMemo(() => {
+    const maxCalls = Math.max(0, ...data.map((d) => d.total));
+    const maxRevenue = Math.max(0, ...data.map((d) => d.revenue));
+
+    // Revenue ceiling first — 10% headroom so the peak's label has room.
+    // Five divisions, not four: a coarser split rounds the ceiling far above
+    // the data (a $777 peak landed on a $1,000 axis, which then dragged the
+    // count axis to 2,000 and left the columns a third of their height).
+    const revStep = niceStep((Math.max(maxRevenue, 1) * 1.1) / DIVISIONS);
+    const revTop = revStep * DIVISIONS;
+
+    // Worst calls-per-dollar hour. Hours with no revenue are skipped: a
+    // column can't be cleared by a line sitting on the baseline.
+    let callsPerDollar = 0;
+    for (const d of data) {
+      if (d.revenue > 0 && d.total > 0) callsPerDollar = Math.max(callsPerDollar, d.total / d.revenue);
+    }
+    // 1.18 = the visible gap between the column top and the line.
+    const needed = revTop * callsPerDollar * 1.18;
+
+    const countStep = niceStep(Math.max(maxCalls * 1.12, needed, 4) / DIVISIONS);
+    const countTop = countStep * DIVISIONS;
+
+    const ticksFor = (step: number) =>
+      Array.from({ length: DIVISIONS + 1 }, (_, i) => step * i);
+    return {
+      countTop,
+      countTicks: ticksFor(countStep),
+      revTop,
+      revTicks: ticksFor(revStep),
+    };
   }, [data]);
 
-  // Revenue panel ceiling — rounded up with headroom so the area never
-  // touches the top edge and its value labels stay inside the strip.
-  const revAxis = React.useMemo(() => {
-    const max = Math.max(0, ...data.map((d) => d.revenue));
-    const step = niceStep(Math.max(max, 1) * 1.25 / 2);
-    return { top: Math.max(step * 2, step), ticks: [0, Math.max(step * 2, step)] };
-  }, [data]);
-
-  // Value labels on the revenue area, but only while the points are sparse
-  // enough to read. A day with revenue in every hour would otherwise stack
-  // 24 figures into an 86px strip; there the axis + tooltip carry it.
+  // Value labels on the line, but only while the points are sparse enough
+  // to read — a day with revenue in every hour would stack 24 figures
+  // across the plot; there the axis and tooltip carry it.
   const showRevenueLabels = React.useMemo(
     () => data.filter((d) => d.revenue > 0).length <= 12,
     [data],
@@ -337,91 +362,21 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
           two rows line up exactly regardless of chart vs. donut proportions
           above them. Centering would leave that alignment to chance. */}
       <CardContent className="flex flex-1 flex-col justify-end">
-        {/* Two panels, one x-axis.
-            Calls and revenue are different units, so overlaying them meant
-            the line rode along the column tops: neither series could carry
-            a readable value, and the right-hand $ ticks sat between the
-            gridlines the left-hand counts sat on. Stacking them — columns
-            above, a revenue strip below, both driven by the same buckets —
-            keeps every hour aligned vertically while giving each series its
-            own scale, its own labels and its own colour. */}
+        {/* One chart, two scales. The revenue line is kept clear of the
+            columns by the axis maths above rather than by hiding one of
+            them: the line rides above every stick, the stick carries its
+            call count inside its own top, and the line carries its dollar
+            figure above itself. */}
         <div ref={containerRef} className="flex h-72 w-full flex-col">
-          {/* ── Calls ──────────────────────────────────────────────── */}
           <div className="min-h-0 flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={data}
-                // bottom: room for the baseline "0" tick, which sat half
-                // outside the panel with the x-axis hidden.
-                margin={{ top: 18, right: 14, left: 4, bottom: 8 }}
-                // Recharts' default (10%) packs bars nearly edge-to-edge — a
-                // modest bump so each column reads as distinct without
-                // shrinking the bars so much the chart looks sparse.
-                barCategoryGap="28%"
+                margin={{ top: 20, right: 14, left: 4, bottom: 0 }}
+                // Solid columns rather than thin sticks; the default (10%)
+                // packs them edge-to-edge, the old 28% left them spindly.
+                barCategoryGap="20%"
               >
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                {/* Hidden here — the revenue strip below owns the shared
-                    x-axis, so the two panels line up on one set of labels. */}
-                <XAxis dataKey="label" hide />
-                <YAxis
-                  yAxisId="count"
-                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={[0, countAxis.top]}
-                  ticks={countAxis.ticks}
-                  // Matches the revenue axis width exactly so both plot
-                  // areas start at the same x and the columns sit directly
-                  // above their revenue point.
-                  width={AXIS_WIDTH}
-                  allowDecimals={false}
-                  tickMargin={4}
-                />
-                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
-                {/* Stack order — bottom to top:
-                     1. noAnswer    (red sliver at bottom)
-                     2. converted   (accent, dominant, top of stack) */}
-                <Bar
-                  yAxisId="count"
-                  dataKey="noAnswer"
-                  stackId="calls"
-                  fill={COLOR_NOANS}
-                  radius={[0, 0, 0, 0]}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="converted"
-                  stackId="calls"
-                  fill={COLOR_CONVERTED}
-                  radius={[3, 3, 0, 0]}
-                >
-                  {/* Total above each column — the space above is the
-                      columns' own again now that the revenue line has
-                      moved to its own panel. */}
-                  <LabelList
-                    dataKey="total"
-                    position="top"
-                    offset={6}
-                    fill="var(--foreground)"
-                    fontSize={10}
-                    fontWeight={600}
-                    formatter={(v: number) => (v > 0 ? formatNumber(v) : "")}
-                  />
-                </Bar>
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* ── Revenue ────────────────────────────────────────────── */}
-          <div className="h-[86px] min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data} margin={{ top: 14, right: 14, left: 4, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="hourlyRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLOR_REVENUE} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={COLOR_REVENUE} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="label"
@@ -445,46 +400,95 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                   }}
                 />
                 <YAxis
-                  yAxisId="rev"
+                  yAxisId="count"
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
                   tickLine={false}
-                  domain={[0, revAxis.top]}
-                  ticks={revAxis.ticks}
+                  domain={[0, axes.countTop]}
+                  ticks={axes.countTicks}
+                  width={AXIS_WIDTH}
+                  allowDecimals={false}
+                  tickMargin={4}
+                />
+                {/* Right-side revenue axis — four divisions, same as the
+                    count axis, so both sets of numbers sit on the same
+                    gridlines instead of floating between them. */}
+                <YAxis
+                  yAxisId="rev"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, axes.revTop]}
+                  ticks={axes.revTicks}
                   width={AXIS_WIDTH}
                   tickFormatter={compactMoney}
                   tickMargin={4}
                 />
                 <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
-                <Area
+                {/* Stack order — bottom to top:
+                     1. noAnswer    (red sliver at bottom)
+                     2. converted   (accent, dominant, top of stack) */}
+                <Bar
+                  yAxisId="count"
+                  dataKey="noAnswer"
+                  stackId="calls"
+                  fill={COLOR_NOANS}
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  yAxisId="count"
+                  dataKey="converted"
+                  stackId="calls"
+                  fill={COLOR_CONVERTED}
+                  radius={[3, 3, 0, 0]}
+                >
+                  {/* Inside the column's own top — the space above it
+                      belongs to the revenue line now. */}
+                  <LabelList
+                    dataKey="total"
+                    position="insideTop"
+                    offset={8}
+                    fill="#fff"
+                    fontSize={10}
+                    fontWeight={700}
+                    // A column shorter than ~7% of the plot can't hold a
+                    // label inside it — the digits would spill past the
+                    // baseline onto the hour labels.
+                    formatter={(v: number) =>
+                      v > 0 && v / axes.countTop >= 0.07 ? formatNumber(v) : ""
+                    }
+                  />
+                </Bar>
+                <Line
                   yAxisId="rev"
                   type="monotone"
                   dataKey="revenue"
                   stroke={COLOR_REVENUE}
                   strokeWidth={2}
-                  fill="url(#hourlyRevenueFill)"
-                  dot={false}
-                  activeDot={{ r: 3.5, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
+                  dot={{ r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
+                  activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
                   isAnimationActive
                   animationDuration={500}
                 >
+                  {/* The line's own figure, above the line — it had none
+                      before, so the series could be seen but not read. */}
                   {showRevenueLabels && (
                     <LabelList
                       dataKey="revenue"
                       position="top"
-                      offset={6}
+                      offset={8}
                       fill={COLOR_REVENUE}
                       fontSize={10}
                       fontWeight={600}
                       formatter={(v: number) => (v > 0 ? compactMoney(v) : "")}
                     />
                   )}
-                </Area>
+                </Line>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
 
-          {/* ── Legend ─────────────────────────────────────────────── */}
           <div className="flex items-center justify-center gap-5 pt-2">
             <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
             <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
