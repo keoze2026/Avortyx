@@ -112,10 +112,16 @@ export const TIMEZONE_BY_LABEL: Record<string, TimezoneOption> = Object.fromEntr
  * Timezone every reporting surface renders call timestamps in until the
  * operator picks another one in the Reports toolbar.
  *
- * UTC — deliberately. The backend sends instants tagged `Z` (contract §1.5),
- * so rendering in UTC shows the operator exactly the wall-clock time the CDR
- * carries, with no offset applied on top of it. Rendering in the browser's
- * own zone silently re-based every row by the viewer's UTC offset, which is
+ * The account's operating timezone, not the viewer's device. The backend
+ * sends instants tagged `Z` (contract §1.5); rendering in the browser's own
+ * zone silently re-based every row by the viewer's UTC offset, which is
  * what made call times read 8 hours late for operators in UTC+8.
+ *
+ * Eastern rather than UTC (client, 2026-09-23: "fix this according to
+ * portal time zone not device time zone"): with UTC as the default, a
+ * browser that had never touched the picker showed a different slice of
+ * the day than one set to the account's own zone — the same portal read
+ * "Live 0, day finished" on a phone and "Live 130, mid-afternoon" on a
+ * desktop at the same moment.
  */
-export const DEFAULT_DISPLAY_TIMEZONE = "Etc/UTC";
+export const DEFAULT_DISPLAY_TIMEZONE = "America/New_York";

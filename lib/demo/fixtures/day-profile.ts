@@ -45,7 +45,8 @@ export const DAY_PROFILE: readonly DaySlot[] = [
   { hour: 13, live: [190, 210], calls: 600 },
   { hour: 14, live: [210, 210], calls: 1_500 },
   { hour: 15, live: [230, 230], calls: 1_000 },
-  { hour: 16, live: [130, 130], calls: 1_000 },
+  // From 16:00 concurrency is held to 100–120 (client spec 2026-09-23).
+  { hour: 16, live: [100, 120], calls: 1_000 },
 ];
 
 /** Calls in a full day at the profile's ceiling: 6 500. */
@@ -103,9 +104,11 @@ export function slotForHour(hour: number): DaySlot | undefined {
 /**
  * End-of-day wind-down, at half-hour resolution (client spec 2026-09-23):
  *
- *   16:30  150 live
+ *   16:30  120 live
  *   17:00   30 live
  *   17:30   0 — end of day
+ *
+ * Concurrency from 16:00 onward stays inside 100–120.
  *
  * The hourly slots above only reach whole hours, so these override them
  * from 16:30 onward. Ordered latest-first for the lookup below.
@@ -113,7 +116,9 @@ export function slotForHour(hour: number): DaySlot | undefined {
 const LIVE_TAIL: Array<{ atMinute: number; live: number }> = [
   { atMinute: 17 * 60 + 30, live: 0 },
   { atMinute: 17 * 60, live: 30 },
-  { atMinute: 16 * 60 + 30, live: 150 },
+  // 120, not the 150 first specified: the later instruction caps
+  // concurrency at 100–120 from 16:00 onward, and 150 would break it.
+  { atMinute: 16 * 60 + 30, live: 120 },
 ];
 
 /**

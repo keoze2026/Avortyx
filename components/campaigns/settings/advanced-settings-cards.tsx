@@ -199,28 +199,11 @@ export function AutoRecordCard({ campaignId }: { campaignId: string }) {
       enabled={s.enabled}
       onEnabledChange={(enabled) => patch({ enabled })}
     >
+      {/* Retention (days) and Quality were removed at the client's request
+          (2026-09-23): the platform they're migrating from exposes the
+          recording toggle only, and neither field was acted on server-side.
+          Recording length and codec are a platform-level concern. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <NumField
-          label={t("trafficUI.campaigns.settings.cards.autoRecord.retention")}
-          value={s.storeForDays}
-          onChange={(v) => patch({ storeForDays: v })}
-          suffix={t("trafficUI.common.daysSuffix")}
-        />
-        <div className="grid gap-1.5">
-          <Label className="text-xs">{t("trafficUI.campaigns.settings.cards.autoRecord.quality")}</Label>
-          <Select
-            value={s.quality}
-            onValueChange={(v) => patch({ quality: v as AutoRecordSettings["quality"] })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="standard">{t("trafficUI.campaigns.settings.cards.autoRecord.qualityStandard")}</SelectItem>
-              <SelectItem value="hd">{t("trafficUI.campaigns.settings.cards.autoRecord.qualityHd")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div className="sm:col-span-2">
           <ToggleRow
             label={t("trafficUI.campaigns.settings.cards.autoRecord.notifyBuyer")}
@@ -1085,24 +1068,10 @@ export function ConcurrencyCard({ campaignId }: { campaignId: string }) {
           value={s.maxConcurrent}
           onChange={(v) => patch({ maxConcurrent: v })}
         />
-        <div className="grid gap-1.5">
-          <Label className="text-xs">{t("trafficUI.campaigns.settings.cards.concurrency.overflow")}</Label>
-          <Select
-            value={s.overflowAction}
-            onValueChange={(v) =>
-              patch({ overflowAction: v as ConcurrencySettings["overflowAction"] })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="queue">{t("trafficUI.campaigns.settings.cards.concurrency.actions.queue")}</SelectItem>
-              <SelectItem value="reject">{t("trafficUI.campaigns.settings.cards.concurrency.actions.reject")}</SelectItem>
-              <SelectItem value="voicemail">{t("trafficUI.campaigns.settings.cards.concurrency.actions.voicemail")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* The overflow action (queue / reject / voicemail) was removed at
+            the client's request (2026-09-23) — overflow is handled by the
+            Call Queue card above, and offering it twice invited conflicting
+            answers. */}
       </div>
     </AdvancedSettingShell>
   );

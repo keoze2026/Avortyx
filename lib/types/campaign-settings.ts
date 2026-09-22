@@ -19,10 +19,6 @@ export interface CallQueueSettings {
 
 export interface AutoRecordSettings {
   enabled: boolean;
-  /** Retain recordings for N days; 0 = forever. */
-  storeForDays: number;
-  /** "standard" = 8 kHz mono, "hd" = 16 kHz stereo. */
-  quality: "standard" | "hd";
   /** Notify the buyer when a recording is available. */
   notifyBuyer: boolean;
 }
@@ -147,7 +143,6 @@ export interface ConcurrencySettings {
   /** Max simultaneous live calls for this campaign. */
   maxConcurrent: number;
   /** When the cap is reached, what to do with new calls. */
-  overflowAction: "queue" | "reject" | "voicemail";
 }
 
 /* ─── Sub-tabs other than General ─────────────────────────────── */
@@ -205,7 +200,7 @@ export interface CampaignAdvancedSettings {
 /** Empty/disabled defaults used when a campaign hasn't been touched yet. */
 export const DEFAULT_CAMPAIGN_SETTINGS: CampaignAdvancedSettings = {
   callQueue: { enabled: false, maxQueueSize: 25, maxWaitSec: 90, musicUrl: "" },
-  autoRecord: { enabled: false, storeForDays: 90, quality: "standard", notifyBuyer: false },
+  autoRecord: { enabled: false, notifyBuyer: false },
   spamFilter: { enabled: false, blockedNumbers: "", blockedStates: [], blockCarrierSpam: true },
   filter: {
     enabled: false,
@@ -243,7 +238,7 @@ export const DEFAULT_CAMPAIGN_SETTINGS: CampaignAdvancedSettings = {
   whisperMessage: { enabled: false, message: "Incoming call from Avortyx campaign." },
   capSettings: { enabled: false, hourlyCap: 0, dailyCap: 0, monthlyCap: 0, scope: "campaign" },
   revenueSaver: { enabled: false, minRevenue: 0, fallback: "deadEnd", rerouteCampaignId: "" },
-  concurrency: { enabled: false, maxConcurrent: 10, overflowAction: "queue" },
+  concurrency: { enabled: false, maxConcurrent: 10 },
 
   rtb: { enabled: false, endpoint: "", authToken: "", timeoutMs: 1000, minBid: 0 },
   enrichmentUrls: [],
