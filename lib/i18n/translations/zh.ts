@@ -3731,6 +3731,8 @@ export const zh: TranslationShape = {
           payout: "分成",
           revenue: "收入",
           profit: "利润",
+          grossProfit: "毛利",
+          net: "净利",
           cost: "成本",
           group: "分组",
         },

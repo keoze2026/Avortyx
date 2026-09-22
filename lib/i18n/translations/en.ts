@@ -3785,6 +3785,8 @@ export const en = {
           payout: "Payout",
           revenue: "Revenue",
           profit: "Profit",
+          grossProfit: "Gross Profit",
+          net: "Net",
           cost: "Cost",
           group: "Group",
         },

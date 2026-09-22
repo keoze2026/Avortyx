@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { analyticsService, type EntitySummary, type SummaryEntity } from "@/lib/api/services/analytics.service";
+import { billingService } from "@/lib/api/services/billing.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
@@ -94,6 +95,26 @@ export default function ReportsPage() {
     publisher: [],
     carrier: [],
   });
+
+  // The account's telco rate, for the Call Summary's Cost column
+  // (per_minute_rate × talk minutes — see CallSummaryTable). Fetched once:
+  // it's an account-level figure, not per range.
+  const [perMinuteRate, setPerMinuteRate] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    billingService
+      .account()
+      .then((a) => {
+        if (!cancelled) setPerMinuteRate(a.rates?.perMinute);
+      })
+      .catch(() => {
+        // Leave undefined — Cost and Net render "—" rather than $0.00.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!fromKey) {
@@ -321,6 +342,7 @@ export default function ReportsPage() {
             onStatusFilterChange={setStatusFilter}
             liveNow={liveNow}
             summaries={summariesForTable}
+            perMinuteRate={perMinuteRate}
           />
         )}
 

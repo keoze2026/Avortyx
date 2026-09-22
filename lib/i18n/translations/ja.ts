@@ -3730,6 +3730,8 @@ export const ja: TranslationShape = {
           payout: "支払い",
           revenue: "収益",
           profit: "利益",
+          grossProfit: "粗利",
+          net: "純利益",
           cost: "コスト",
           group: "グループ",
         },
