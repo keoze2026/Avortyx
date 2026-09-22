@@ -991,6 +991,155 @@ route("GET", "/api/analytics/dashboard", () => ({
   currency: "USD",
 }));
 
+/**
+ * Call activity ("X-ray") — the same five sections plus the routing trace
+ * the real backend returns from /api/analytics/calls/{id}/detail.
+ *
+ * Mirrors the contract's quirks on purpose so the panel is exercised the
+ * way production will drive it: only events that actually happened are
+ * present, `city` / `zip_code` / `timezone` / `fraud_score` come back null
+ * (the lookup provider doesn't supply them), and calls older than the
+ * trace rollout return `routing_trace: {}`.
+ */
+route("GET", "/api/analytics/calls/{id}/detail", (req) => {
+  const id = trimSlash(req.path).split("/").at(-2) ?? "";
+  const call = getDemoCalls().find((c) => c.id === id) ?? generateLiveCalls().find((c) => c.id === id);
+  if (!call) throw new ApiError({ status: 404, message: "Call not found.", code: "not_found" });
+
+  const started = Date.parse(call.created_at);
+  const at = (offsetSec: number) => new Date(started + offsetSec * 1000).toISOString();
+  const connected = call.status === "completed" || call.status === "in-progress";
+  const converted = !!call.is_converted;
+  const digits = call.caller_number.replace(/\D/g, "");
+  const local = digits.length === 11
+    ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+    : call.caller_number;
+
+  // Destinations the router weighed. The demo account runs one, like the
+  // live account, so the trace is short but truthful.
+  const destinations = readTable("destinations", seedDestinations) as Array<Record<string, unknown>>;
+  const eligible = destinations
+    .filter((d) => d.enabled !== false)
+    .map((d) => ({
+      name: `${d.name}`,
+      buyer: `${d.buyer_name ?? ""}`,
+      priority: Number(d.priority ?? 0),
+      weight: Number(d.weight ?? 1),
+      rule_name: "Geo Split",
+    }));
+  const rejected = destinations
+    .filter((d) => d.enabled === false)
+    .map((d) => ({ name: `${d.name}`, buyer: `${d.buyer_name ?? ""}`, priority: 0, reason: "disabled" }));
+
+  // A duplicate caller fails the duplicate check — the one step whose
+  // outcome varies per call in the demo.
+  const steps = [
+    { step: "blacklist", passed: true, detail: "" },
+    { step: "duplicate", passed: !call.is_duplicate, detail: call.is_duplicate ? "seen today" : "" },
+    { step: "campaign_cap", passed: true, detail: "" },
+    { step: "balance", passed: true, detail: "" },
+  ];
+
+  const timeline: Array<Record<string, unknown>> = [
+    { event: "call_received", label: "Call Received", at: at(0), detail: { from: local } },
+    { event: "caller_lookup", label: "Caller Profile", at: at(0), detail: null },
+  ];
+  if (eligible.length > 0) {
+    timeline.push({
+      event: "destination_dialed",
+      label: "Destination Dialed",
+      at: at(1),
+      detail: { destination: eligible[0].name },
+    });
+  }
+  if (connected) {
+    timeline.push({
+      event: "connected",
+      label: "Connected Call",
+      at: at(7),
+      detail: { destination: eligible[0]?.name ?? call.destination_number },
+    });
+  }
+  if (converted) {
+    timeline.push({
+      event: "converted",
+      label: "Converted Call",
+      at: at(7),
+      detail: {
+        buyer: call.buyer_name,
+        destination: eligible[0]?.name ?? call.destination_number,
+        conversion_amount: Number(call.revenue || 0).toFixed(2),
+      },
+    });
+  }
+  timeline.push({
+    event: "ended",
+    label: "Call Ended",
+    at: at(Math.max(1, call.duration)),
+    detail: { duration: `${call.duration}s`, status: call.status },
+  });
+
+  const revenue = Number(call.revenue || 0);
+  const payout = Number(call.publisher_payout || 0);
+  return {
+    caller_profile: {
+      number: call.caller_number,
+      local_format: local,
+      area_code: call.caller_area_code,
+      region: call.caller_state,
+      country: call.caller_country,
+      carrier: call.carrier,
+      line_type: "Mobile",
+      is_voip: false,
+      // Null by design — not supplied by the lookup provider.
+      city: null,
+      zip_code: null,
+      timezone: null,
+      fraud_score: null,
+    },
+    routing: {
+      campaign: call.campaign_name,
+      rule_name: "Geo Split",
+      rule_type: "visual-graph",
+      destination: eligible[0]?.name ?? call.destination_number,
+      buyer: call.buyer_name,
+      publisher: call.publisher_name,
+      block_reason: null,
+    },
+    financials: {
+      revenue: revenue.toFixed(2),
+      payout: payout.toFixed(2),
+      profit: (revenue - payout).toFixed(2),
+      min_call_duration: 30,
+    },
+    recording: {
+      url: call.recording_url || null,
+      transcription: null,
+      sentiment: null,
+    },
+    timeline,
+    routing_trace: {
+      summary: {
+        total_destinations: destinations.length,
+        evaluated: eligible.length + rejected.length,
+        eligible: eligible.length,
+        rejected: rejected.length,
+        // Everything after the winner was never examined.
+        not_reached: Math.max(0, eligible.length - 1),
+      },
+      steps,
+      eligible_destinations: eligible,
+      rejected_destinations: rejected,
+      filtering_breakdown: rejected.length
+        ? [{ reason: "destination disabled", count: rejected.length }]
+        : [],
+      selected: eligible[0]
+        ? { destination: eligible[0].name, buyer: eligible[0].buyer, rule: "Geo Split" }
+        : null,
+    },
+  };
+});
+
 route("GET", "/api/analytics/live", () => generateLiveCalls().filter((c) => !wasHungUp(c.id)));
 route("GET", "/api/routing/calls/live", () => generateLiveCalls().filter((c) => !wasHungUp(c.id)));
 
