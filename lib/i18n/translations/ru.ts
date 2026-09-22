@@ -3731,8 +3731,6 @@ export const ru: TranslationShape = {
           payout: "Выплата",
           revenue: "Выручка",
           profit: "Прибыль",
-          grossProfit: "Валовая прибыль",
-          net: "Чистая",
           cost: "Стоимость",
           group: "Группа",
         },
