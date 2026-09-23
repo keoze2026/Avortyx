@@ -83,6 +83,117 @@ export interface HangupResult {
   message?: string;
 }
 
+/* ─── Call activity ("X-ray") — GET /api/analytics/calls/{id}/detail ───
+ *
+ * Five sections plus a routing trace. Two rules from the backend that the
+ * UI has to honour:
+ *
+ *   • Only events that actually happened appear in `timeline` — render
+ *     what comes back rather than expecting all six.
+ *   • `city`, `zipCode`, `timezone` and `fraudScore` are null by design
+ *     (the lookup provider doesn't supply them) and `areaCode`, `region`,
+ *     `country`, `ruleName` only populate on calls placed from 2026-09-23
+ *     on. Every one of them is hidden when null rather than shown blank.
+ */
+
+/** A timeline entry. `event` is the machine name; `label` is the backend's
+ *  own display string, which we prefer over any mapping of our own. */
+export interface CallActivityEvent {
+  event: string;
+  label?: string;
+  /** ISO instant. */
+  at?: string;
+  detail?: Record<string, unknown> | null;
+}
+
+export interface CallerProfile {
+  number?: string;
+  localFormat?: string;
+  areaCode?: string | null;
+  region?: string | null;
+  country?: string | null;
+  carrier?: string | null;
+  lineType?: string | null;
+  isVoip?: boolean | null;
+  fraudScore?: number | null;
+  city?: string | null;
+  zipCode?: string | null;
+  timezone?: string | null;
+}
+
+export interface CallRouting {
+  campaign?: string | null;
+  ruleName?: string | null;
+  ruleType?: string | null;
+  destination?: string | null;
+  buyer?: string | null;
+  publisher?: string | null;
+  blockReason?: string | null;
+}
+
+export interface CallFinancials {
+  revenue?: number | string | null;
+  payout?: number | string | null;
+  profit?: number | string | null;
+  minCallDuration?: number | null;
+}
+
+export interface CallRecordingInfo {
+  url?: string | null;
+  transcription?: string | null;
+  sentiment?: string | null;
+}
+
+export interface TraceDestination {
+  name?: string;
+  buyer?: string | null;
+  priority?: number | null;
+  weight?: number | null;
+  ruleName?: string | null;
+  /** Rejected destinations only. */
+  reason?: string | null;
+}
+
+export interface RoutingTrace {
+  summary?: {
+    totalDestinations?: number;
+    evaluated?: number;
+    eligible?: number;
+    rejected?: number;
+    /** Never examined — routing stopped at the first destination that
+     *  passed. NOT the same as rejected. */
+    notReached?: number;
+  };
+  steps?: Array<{ step: string; passed: boolean; detail?: string }>;
+  eligibleDestinations?: TraceDestination[];
+  rejectedDestinations?: TraceDestination[];
+  filteringBreakdown?: Array<{ reason: string; count: number }>;
+  selected?: { destination?: string; buyer?: string; rule?: string } | null;
+}
+
+export interface CallActivity {
+  callerProfile?: CallerProfile;
+  routing?: CallRouting;
+  financials?: CallFinancials;
+  recording?: CallRecordingInfo;
+  timeline: CallActivityEvent[];
+  /** `{}` on calls placed before the trace was recorded — the panel says
+   *  "not recorded" rather than drawing a trace full of zeros. */
+  routingTrace?: RoutingTrace;
+}
+
+/** True when the backend sent a trace with something in it. */
+export function hasRoutingTrace(trace: RoutingTrace | undefined): trace is RoutingTrace {
+  if (!trace) return false;
+  return Boolean(
+    trace.summary ||
+      trace.steps?.length ||
+      trace.eligibleDestinations?.length ||
+      trace.rejectedDestinations?.length ||
+      trace.selected,
+  );
+}
+
 /* ─── Public service ──────────────────────────────────────────────────── */
 
 export const callsService = {
@@ -117,6 +228,20 @@ export const callsService = {
     };
     if (w.charged !== undefined && w.charged !== null) patch.revenue = toNum(w.charged);
     return { patch, message: w.message };
+  },
+
+  /**
+   * Everything known about one call — the "X-ray" panel behind the Call
+   * Log's row expander.
+   */
+  async activity(id: string): Promise<CallActivity> {
+    const w = await http.get<Partial<CallActivity>>(`/api/analytics/calls/${id}/detail`);
+    return {
+      ...w,
+      // The contract says only events that happened are present; a backend
+      // that omits the key entirely shouldn't crash the panel.
+      timeline: Array.isArray(w.timeline) ? w.timeline : [],
+    };
   },
 
   /** Live in-flight calls (REST snapshot used before the WebSocket connects). */

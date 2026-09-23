@@ -31,13 +31,21 @@ export function AdvancedSettingShell({
 }: AdvancedSettingShellProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(defaultOpen);
+  // A card whose only control is its own switch (Auto Record, since the
+  // client asked for the extra fields to go) has nothing to expand — it
+  // renders as a plain row rather than a button with a chevron that opens
+  // an empty panel.
+  const expandable = Boolean(children);
+  const Header = expandable ? "button" : "div";
 
   return (
     <Card className="overflow-hidden p-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/40"
+      <Header
+        {...(expandable ? { type: "button" as const, onClick: () => setOpen((v) => !v) } : {})}
+        className={cn(
+          "flex w-full items-center gap-4 p-4 text-left",
+          expandable && "transition-colors hover:bg-muted/40",
+        )}
       >
         <span
           className={cn(
@@ -68,14 +76,16 @@ export function AdvancedSettingShell({
             onCheckedChange={onEnabledChange}
             aria-label={t("trafficUI.campaigns.settings.advancedShell.toggle").replace("{title}", title)}
           />
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform",
-              open && "rotate-180",
-            )}
-          />
+          {expandable && (
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                open && "rotate-180",
+              )}
+            />
+          )}
         </div>
-      </button>
+      </Header>
 
       {open && children && (
         <div className="border-t border-border bg-muted/20 p-5">{children}</div>
