@@ -578,6 +578,7 @@ export const analyticsService = {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
         status: query.status,
+        isQualified: query.isQualified,
         campaignId: query.campaignId,
         buyerId: query.buyerId,
         publisherId: query.publisherId,

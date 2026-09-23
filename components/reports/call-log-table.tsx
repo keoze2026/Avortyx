@@ -39,9 +39,17 @@ import {
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { analyticsService } from "@/lib/api/services/analytics.service";
+import { analyticsService, type CallLogQuery } from "@/lib/api/services/analytics.service";
 import { callsService } from "@/lib/api/services/calls.service";
-import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
+import {
+  csvRowsToXLSX,
+  dateStamped,
+  downloadRows,
+  parseCSV,
+  triggerDownload,
+  type ExportColumn,
+  type ExportFormat,
+} from "@/lib/export";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -286,8 +294,11 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
   }
 }
 
+const SERVER_EXPORT_NUMERIC_HEADERS = ["Duration (s)", "Revenue", "Payout", "Profit"];
+
 interface CallLogTableProps {
   calls: Call[];
+  exportQuery?: Omit<CallLogQuery, "page" | "pageSize"> | null;
   /** Called after a manual hang-up with the backend's final state for the
    *  row, so the owner of `calls` can refresh that record in place. */
   onCallPatched?: (id: string, patch: Partial<Call>) => void;
@@ -301,7 +312,13 @@ interface CallLogTableProps {
   loading?: boolean;
 }
 
-export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched }: CallLogTableProps) {
+export function CallLogTable({
+  calls,
+  limit = 50,
+  loading = false,
+  onCallPatched,
+  exportQuery = null,
+}: CallLogTableProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const publishers = usePublishersStore((s) => s.publishers);
@@ -318,6 +335,7 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
   const [columns, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
+  const [exporting, setExporting] = React.useState(false);
 
   // Reset to page 0 whenever the result set or page size changes so we never
   // sit past the end of the filtered list.
@@ -414,7 +432,33 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
     [playingId, resolveRecordingUrl, t],
   );
 
+  const exportFromServer = async (format: ExportFormat, serverQuery: Omit<CallLogQuery, "page" | "pageSize">) => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const blob = await analyticsService.exportCallsCsv(serverQuery);
+      const text = await blob.text();
+      const table = parseCSV(text);
+      const count = Math.max(table.length - 1, 0);
+      const stem = dateStamped("call-log");
+      if (format === "csv") {
+        triggerDownload(new Blob([text], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
+      } else {
+        triggerDownload(csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS), `${stem}.xlsx`);
+      }
+      toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, "Couldn't export calls"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const onExport = (format: ExportFormat) => {
+    if (exportQuery && !query.trim()) {
+      void exportFromServer(format, exportQuery);
+      return;
+    }
     const dateCol: ExportColumn<Call> = {
       label: t("toolsUI.reports.callLog.columns.callDate"),
       value: (c) => new Date(c.startedAt).toISOString(),
@@ -423,8 +467,8 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
       label: t(COLUMN_LABEL_KEYS[c.id]),
       value: (row) => logCellValue(row, c.id, publisherNameById),
     }));
-    downloadRows(format, [dateCol, ...dataCols], visible, dateStamped("call-log"), "Call log");
-    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(visible.length)).replace("{format}", format.toUpperCase()));
+    downloadRows(format, [dateCol, ...dataCols], filtered, dateStamped("call-log"), "Call log");
+    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(filtered.length)).replace("{format}", format.toUpperCase()));
   };
 
   return (
@@ -481,8 +525,14 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
             </PopoverContent>
           </Popover>
           <ExportMenu onExport={onExport}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.callLogs.toolbar.export")}>
-              <Download className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={exporting}
+              aria-label={t("toolsUI.callLogs.toolbar.export")}
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             </Button>
           </ExportMenu>
         </div>
