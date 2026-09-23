@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Ban,
   Copy,
-  ListTree,
   DollarSign,
   Download,
   ExternalLink,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { CallActivityPanel } from "@/components/reports/call-activity-panel";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,9 +39,17 @@ import {
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { analyticsService } from "@/lib/api/services/analytics.service";
+import { analyticsService, type CallLogQuery } from "@/lib/api/services/analytics.service";
 import { callsService } from "@/lib/api/services/calls.service";
-import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
+import {
+  csvRowsToXLSX,
+  dateStamped,
+  downloadRows,
+  parseCSV,
+  triggerDownload,
+  type ExportColumn,
+  type ExportFormat,
+} from "@/lib/export";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -288,8 +294,11 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
   }
 }
 
+const SERVER_EXPORT_NUMERIC_HEADERS = ["Duration (s)", "Revenue", "Payout", "Profit"];
+
 interface CallLogTableProps {
   calls: Call[];
+  exportQuery?: Omit<CallLogQuery, "page" | "pageSize"> | null;
   /** Called after a manual hang-up with the backend's final state for the
    *  row, so the owner of `calls` can refresh that record in place. */
   onCallPatched?: (id: string, patch: Partial<Call>) => void;
@@ -303,7 +312,13 @@ interface CallLogTableProps {
   loading?: boolean;
 }
 
-export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched }: CallLogTableProps) {
+export function CallLogTable({
+  calls,
+  limit = 50,
+  loading = false,
+  onCallPatched,
+  exportQuery = null,
+}: CallLogTableProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const publishers = usePublishersStore((s) => s.publishers);
@@ -317,11 +332,10 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
     [publishers],
   );
   const [query, setQuery] = React.useState("");
-  // The call whose activity ("X-ray") panel is open, if any.
-  const [activityCall, setActivityCall] = React.useState<Call | null>(null);
   const [columns, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
+  const [exporting, setExporting] = React.useState(false);
 
   // Reset to page 0 whenever the result set or page size changes so we never
   // sit past the end of the filtered list.
@@ -329,7 +343,7 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
     setPage(0);
   }, [query, pageSize, calls.length]);
 
-  const colSpan = 3 + COLUMNS.filter((c) => columns[c.id]).length; // +expander +Call date +actions
+  const colSpan = 2 + COLUMNS.filter((c) => columns[c.id]).length; // +Call date +actions menu
   const toggleColumn = (id: ColumnKey) =>
     setColumns((v) => ({ ...v, [id]: !v[id] }));
 
@@ -418,7 +432,33 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
     [playingId, resolveRecordingUrl, t],
   );
 
+  const exportFromServer = async (format: ExportFormat, serverQuery: Omit<CallLogQuery, "page" | "pageSize">) => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const blob = await analyticsService.exportCallsCsv(serverQuery);
+      const text = await blob.text();
+      const table = parseCSV(text);
+      const count = Math.max(table.length - 1, 0);
+      const stem = dateStamped("call-log");
+      if (format === "csv") {
+        triggerDownload(new Blob([text], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
+      } else {
+        triggerDownload(csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS), `${stem}.xlsx`);
+      }
+      toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, "Couldn't export calls"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const onExport = (format: ExportFormat) => {
+    if (exportQuery && !query.trim()) {
+      void exportFromServer(format, exportQuery);
+      return;
+    }
     const dateCol: ExportColumn<Call> = {
       label: t("toolsUI.reports.callLog.columns.callDate"),
       value: (c) => new Date(c.startedAt).toISOString(),
@@ -427,8 +467,8 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
       label: t(COLUMN_LABEL_KEYS[c.id]),
       value: (row) => logCellValue(row, c.id, publisherNameById),
     }));
-    downloadRows(format, [dateCol, ...dataCols], visible, dateStamped("call-log"), "Call log");
-    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(visible.length)).replace("{format}", format.toUpperCase()));
+    downloadRows(format, [dateCol, ...dataCols], filtered, dateStamped("call-log"), "Call log");
+    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(filtered.length)).replace("{format}", format.toUpperCase()));
   };
 
   return (
@@ -485,8 +525,14 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
             </PopoverContent>
           </Popover>
           <ExportMenu onExport={onExport}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.callLogs.toolbar.export")}>
-              <Download className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={exporting}
+              aria-label={t("toolsUI.callLogs.toolbar.export")}
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             </Button>
           </ExportMenu>
         </div>
@@ -497,9 +543,7 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
           <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                {/* Row expander — opens the call's activity panel. */}
-                <TableHead className="w-9 pl-4" />
-                <TableHead>{t("toolsUI.reports.callLog.columns.callDate")}</TableHead>
+                <TableHead className="pl-6">{t("toolsUI.reports.callLog.columns.callDate")}</TableHead>
                 {columns.campaign && <TableHead>{t("toolsUI.reports.callLog.columns.campaign")}</TableHead>}
                 {columns.publisher && <TableHead>{t("toolsUI.reports.callLog.columns.publisher")}</TableHead>}
                 {columns.caller && <TableHead>{t("toolsUI.reports.callLog.columns.callerId")}</TableHead>}
@@ -536,18 +580,7 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
                 visible.map((c) => {
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="w-9 pl-4 pr-0">
-                        <button
-                          type="button"
-                          onClick={() => setActivityCall(c)}
-                          aria-label={t("toolsUI.reports.activity.open")}
-                          title={t("toolsUI.reports.activity.open")}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-accent"
-                        >
-                          <ListTree className="h-3.5 w-3.5" />
-                        </button>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
+                      <TableCell className="pl-6 whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
                         {timeLabel(c.startedAt, timeZone)}
                       </TableCell>
                       {columns.campaign && (
@@ -656,7 +689,6 @@ export function CallLogTable({ calls, limit = 50, loading = false, onCallPatched
           />
         </div>
       </CardContent>
-      <CallActivityPanel call={activityCall} onOpenChange={(open) => !open && setActivityCall(null)} />
     </Card>
   );
 }

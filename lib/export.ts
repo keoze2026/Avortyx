@@ -30,11 +30,72 @@ export function toCSV<T>(columns: ExportColumn<T>[], rows: T[]): string {
   return body ? `${header}\n${body}` : header;
 }
 
+export function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      row.push(field);
+      field = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += ch;
+    }
+  }
+  if (field !== "" || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+export function csvRowsToXLSX(
+  table: string[][],
+  sheetName = "Sheet1",
+  numericHeaders: string[] = [],
+): Blob {
+  const [header = [], ...body] = table;
+  const numeric = new Set(numericHeaders);
+  const columns: ExportColumn<string[]>[] = header.map((label, i) => ({
+    label,
+    value: (row) => {
+      const v = row[i] ?? "";
+      if (numeric.has(label) && v.trim() !== "") {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : v;
+      }
+      return v;
+    },
+  }));
+  return toXLSX(columns, body, sheetName);
+}
+
 /* ===========================================================
    Browser download
    =========================================================== */
 
-function triggerDownload(blob: Blob, filename: string) {
+export function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

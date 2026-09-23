@@ -20,7 +20,12 @@ import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
-import { analyticsService, type EntitySummary, type SummaryEntity } from "@/lib/api/services/analytics.service";
+import {
+  analyticsService,
+  type CallLogQuery,
+  type EntitySummary,
+  type SummaryEntity,
+} from "@/lib/api/services/analytics.service";
 import { billingService } from "@/lib/api/services/billing.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
@@ -233,6 +238,24 @@ export default function ReportsPage() {
     return filtered.filter((c) => matchesCallStatusFilter(c, statusFilter));
   }, [filtered, statusFilter]);
 
+  const exportQuery = useMemo<Omit<CallLogQuery, "page" | "pageSize"> | null>(() => {
+    if (!fromKey) return null;
+    if (filters.campaignIds.length > 1 || filters.buyerIds.length > 1 || filters.publisherIds.length > 1) {
+      return null;
+    }
+    if (filters.statuses.length > 0) return null;
+    if (statusFilter === "notConnected") return null;
+    return {
+      dateFrom: fromKey,
+      dateTo: toKey,
+      campaignId: filters.campaignIds[0],
+      buyerId: filters.buyerIds[0],
+      publisherId: filters.publisherIds[0],
+      status: statusFilter === "connected" ? "completed" : undefined,
+      isQualified: statusFilter === "qualified" ? true : undefined,
+    };
+  }, [fromKey, toKey, filters, statusFilter]);
+
   // The PIN gate trips when the requested range starts before today's
   // midnight *in the report timezone* — Today-only views always pass
   // through. Comparing "YYYY-MM-DD" keys instead of raw timestamps sidesteps
@@ -373,6 +396,7 @@ export default function ReportsPage() {
           <CallLogTable
             calls={logCalls}
             loading={rangeLoading}
+            exportQuery={exportQuery}
             // Manual hang-up: refresh the row in place from the backend's
             // final state (status / duration / charged) rather than waiting
             // for the next poll.
