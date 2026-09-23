@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Ban,
   Copy,
-  ListTree,
   DollarSign,
   Download,
   ExternalLink,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { CallActivityPanel } from "@/components/reports/call-activity-panel";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -334,8 +332,6 @@ export function CallLogTable({
     [publishers],
   );
   const [query, setQuery] = React.useState("");
-  // The call whose activity ("X-ray") panel is open, if any.
-  const [activityCall, setActivityCall] = React.useState<Call | null>(null);
   const [columns, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
@@ -347,7 +343,7 @@ export function CallLogTable({
     setPage(0);
   }, [query, pageSize, calls.length]);
 
-  const colSpan = 3 + COLUMNS.filter((c) => columns[c.id]).length; // +expander +Call date +actions
+  const colSpan = 2 + COLUMNS.filter((c) => columns[c.id]).length; // +Call date +actions menu
   const toggleColumn = (id: ColumnKey) =>
     setColumns((v) => ({ ...v, [id]: !v[id] }));
 
@@ -547,9 +543,7 @@ export function CallLogTable({
           <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                {/* Row expander — opens the call's activity panel. */}
-                <TableHead className="w-9 pl-4" />
-                <TableHead>{t("toolsUI.reports.callLog.columns.callDate")}</TableHead>
+                <TableHead className="pl-6">{t("toolsUI.reports.callLog.columns.callDate")}</TableHead>
                 {columns.campaign && <TableHead>{t("toolsUI.reports.callLog.columns.campaign")}</TableHead>}
                 {columns.publisher && <TableHead>{t("toolsUI.reports.callLog.columns.publisher")}</TableHead>}
                 {columns.caller && <TableHead>{t("toolsUI.reports.callLog.columns.callerId")}</TableHead>}
@@ -586,18 +580,7 @@ export function CallLogTable({
                 visible.map((c) => {
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="w-9 pl-4 pr-0">
-                        <button
-                          type="button"
-                          onClick={() => setActivityCall(c)}
-                          aria-label={t("toolsUI.reports.activity.open")}
-                          title={t("toolsUI.reports.activity.open")}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-accent"
-                        >
-                          <ListTree className="h-3.5 w-3.5" />
-                        </button>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
+                      <TableCell className="pl-6 whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
                         {timeLabel(c.startedAt, timeZone)}
                       </TableCell>
                       {columns.campaign && (
@@ -706,7 +689,6 @@ export function CallLogTable({
           />
         </div>
       </CardContent>
-      <CallActivityPanel call={activityCall} onOpenChange={(open) => !open && setActivityCall(null)} />
     </Card>
   );
 }
