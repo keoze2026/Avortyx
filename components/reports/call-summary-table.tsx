@@ -187,7 +187,8 @@ type ColumnKey =
   | "payout"
   | "revenue"
   | "profit"
-  | "cost";
+  | "cost"
+  | "net";
 
 const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "live", label: "Live" },
@@ -203,8 +204,13 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "acl", label: "ACL" },
   { id: "payout", label: "Payout" },
   { id: "revenue", label: "Revenue" },
-  { id: "profit", label: "Profit" },
+  // "Gross Profit", not "Profit": it is revenue less the buyer payout and
+  // takes no account of Cost, which sits beside it. Net is the figure that
+  // does — without it a row reading Gross Profit $0.55 next to Cost $5.85
+  // looks profitable when it is $5.30 down.
+  { id: "profit", label: "Gross Profit" },
   { id: "cost", label: "Cost" },
+  { id: "net", label: "Net" },
 ];
 
 const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
@@ -221,8 +227,9 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   acl: "toolsUI.reports.summary.columns.acl",
   payout: "toolsUI.reports.summary.columns.payout",
   revenue: "toolsUI.reports.summary.columns.revenue",
-  profit: "toolsUI.reports.summary.columns.profit",
+  profit: "toolsUI.reports.summary.columns.grossProfit",
   cost: "toolsUI.reports.summary.columns.cost",
+  net: "toolsUI.reports.summary.columns.net",
 };
 
 
@@ -247,6 +254,8 @@ interface SummaryRow {
   acl: number; // avg call length, seconds
   payout: number;
   revenue: number;
+  cost?: number;
+  billableMinutes?: number;
 }
 
 /** Day key in the report timezone — the same zone the Call Log, the hourly
@@ -478,25 +487,26 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
 }
 
 /**
- * Telco cost for a row: the account's per-minute rate × talk minutes.
+ * Telco cost for a row: `total_cost` from the backend summary, billed per
+ * call to the whole minute with the account markup applied. Never derived
+ * from TCL on the frontend.
  *
- * Per the client (2026-09-23): cost is the carrier spend only — the buyer
- * payout is its own column and must not be counted here, and Profit keeps
- * its meaning of revenue − payout. `rate` comes from `per_minute_rate` on
- * GET /api/billing/account.
- *
- * `undefined` when the account exposes no rate, so the column shows "—"
- * rather than a $0.00 that would read as "this call cost nothing".
+ * `undefined` when the backend sent no cost for the row, so the column shows
+ * "—" rather than a $0.00 that would read as "this call cost nothing".
  */
-function rowCost(row: SummaryRow, rate: number | undefined): number | undefined {
-  if (rate === undefined || !Number.isFinite(rate)) return undefined;
-  return (row.tcl / 60) * rate;
+function rowCost(row: SummaryRow): number | undefined {
+  return row.cost;
 }
 
-/** Revenue − payout. Cost sits in its own column and is NOT subtracted
- *  here: the client asked for Profit to keep this meaning (2026-09-23). */
-function profitOf(row: SummaryRow): number {
+/** Revenue − payout. Named gross because it is before Cost. */
+function grossProfit(row: SummaryRow): number {
   return row.revenue - row.payout;
+}
+
+/** What the row actually made: gross profit less the telco cost. */
+function netProfit(row: SummaryRow): number | undefined {
+  const cost = rowCost(row);
+  return cost === undefined ? undefined : grossProfit(row) - cost;
 }
 
 function labelOf(value: string) {
@@ -627,6 +637,8 @@ function applyEntitySummary(rows: SummaryRow[], summary: EntitySummary[]): Summa
     if (c.notConnectedCalls !== undefined) row.noConnect = c.notConnectedCalls;
     if (c.liveCalls !== undefined) row.live = c.liveCalls;
     if (c.totalDurationSec !== undefined) row.tcl = c.totalDurationSec;
+    row.cost = c.totalCost;
+    row.billableMinutes = c.billableMinutes;
     // ACL stays ours: TCL / Connected.
     row.acl = row.connected > 0 ? Math.round(row.tcl / row.connected) : 0;
   }
@@ -721,6 +733,12 @@ function totalsOf(rows: SummaryRow[], totalsLabel: string): SummaryRow {
     t.payout += r.payout;
     t.revenue += r.revenue;
   }
+  if (rows.length > 0 && rows.every((r) => r.cost !== undefined)) {
+    t.cost = Math.round(rows.reduce((sum, r) => sum + (r.cost ?? 0), 0) * 100) / 100;
+  }
+  if (rows.length > 0 && rows.every((r) => r.billableMinutes !== undefined)) {
+    t.billableMinutes = rows.reduce((sum, r) => sum + (r.billableMinutes ?? 0), 0);
+  }
   t.conversionRate = t.incoming > 0 ? t.converted / t.incoming : 0;
   t.acl = t.connected > 0 ? Math.round(t.tcl / t.connected) : 0;
   return t;
@@ -728,7 +746,7 @@ function totalsOf(rows: SummaryRow[], totalsLabel: string): SummaryRow {
 
 /** Single source of truth for what each summary column writes to a file cell.
  *  Numbers stay numeric so XLSX preserves them; rates serialize as a 0..1 ratio. */
-function summaryCellValue(row: SummaryRow, key: ColumnKey, perMinuteRate: number | undefined): number | string {
+function summaryCellValue(row: SummaryRow, key: ColumnKey): number | string {
   switch (key) {
     case "live":
       return row.live;
@@ -757,9 +775,13 @@ function summaryCellValue(row: SummaryRow, key: ColumnKey, perMinuteRate: number
     case "revenue":
       return row.revenue;
     case "profit":
-      return profitOf(row);
+      return grossProfit(row);
     case "cost": {
-      const v = rowCost(row, perMinuteRate);
+      const v = rowCost(row);
+      return v === undefined ? "" : Number(v.toFixed(2));
+    }
+    case "net": {
+      const v = netProfit(row);
       return v === undefined ? "" : Number(v.toFixed(2));
     }
   }
@@ -792,22 +814,17 @@ interface CallSummaryTableProps {
    * filters active that the aggregate can't be narrowed by.
    */
   summaries?: Partial<Record<SummaryEntity | "none", EntitySummary[]>>;
-  /**
-   * `per_minute_rate` from GET /api/billing/account — the account's telco
-   * rate, used for the Cost column. Undefined when the backend exposes no
-   * rate; Cost and Net then read "—" rather than $0.00.
-   */
-  perMinuteRate?: number;
 }
 
 type SummarySortKey = "label" | ColumnKey;
 type SortDir = "asc" | "desc";
 
 /** Extract the value used to compare two SummaryRows for the given sort key. */
-function sortValue(r: SummaryRow, key: SummarySortKey, perMinuteRate: number | undefined): number | string {
+function sortValue(r: SummaryRow, key: SummarySortKey): number | string {
   if (key === "label") return r.label.toLowerCase();
-  if (key === "profit") return profitOf(r);
-  if (key === "cost") return rowCost(r, perMinuteRate) ?? 0;
+  if (key === "profit") return grossProfit(r);
+  if (key === "cost") return rowCost(r) ?? 0;
+  if (key === "net") return netProfit(r) ?? grossProfit(r);
   return r[key];
 }
 
@@ -817,7 +834,6 @@ export function CallSummaryTable({
   onStatusFilterChange,
   liveNow,
   summaries,
-  perMinuteRate,
 }: CallSummaryTableProps) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
@@ -863,8 +879,8 @@ export function CallSummaryTable({
   const allRows = React.useMemo(() => {
     const copy = [...groupedRows];
     copy.sort((a, b) => {
-      const av = sortValue(a, sortKey, perMinuteRate);
-      const bv = sortValue(b, sortKey, perMinuteRate);
+      const av = sortValue(a, sortKey);
+      const bv = sortValue(b, sortKey);
       let diff: number;
       if (typeof av === "string" && typeof bv === "string") {
         diff = av.localeCompare(bv);
@@ -874,7 +890,7 @@ export function CallSummaryTable({
       return sortDir === "asc" ? diff : -diff;
     });
     return copy;
-  }, [groupedRows, sortKey, sortDir, perMinuteRate]);
+  }, [groupedRows, sortKey, sortDir]);
 
   // Totals always reflect the full result set, not just the current page —
   // the operator expects "Totals" to summarise everything they filtered to.
@@ -917,7 +933,7 @@ export function CallSummaryTable({
     const dataCols: ExportColumn<SummaryRow>[] = COLUMNS.filter((c) => visible[c.id]).map(
       (c) => ({
         label: t(COLUMN_LABEL_KEYS[c.id]),
-        value: (r) => summaryCellValue(r, c.id, perMinuteRate),
+        value: (r) => summaryCellValue(r, c.id),
       }),
     );
     const stem = dateStamped(`call-summary-${tab}`);
@@ -1067,8 +1083,9 @@ export function CallSummaryTable({
                 {visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.payout && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {visible.revenue && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.profit && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
+                {visible.profit && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.grossProfit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {visible.cost && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
+                {visible.net && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.net")} sortKey="net" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1144,7 +1161,12 @@ export function CallSummaryTable({
                       )}
                       {visible.cost && (
                         <TableCell className="text-right tabular-nums text-muted-foreground">
-                          <Money value={rowCost(r, perMinuteRate)} />
+                          <Money value={rowCost(r)} />
+                        </TableCell>
+                      )}
+                      {visible.net && (
+                        <TableCell className="text-right tabular-nums">
+                          <Money value={netProfit(r)} tone />
                         </TableCell>
                       )}
                     </TableRow>
@@ -1253,17 +1275,22 @@ export function CallSummaryTable({
                     <TableCell
                       className={cn(
                         "text-right tabular-nums",
-                        profitOf(totals) < 0
+                        grossProfit(totals) < 0
                           ? "text-destructive"
                           : "text-[color:var(--success)]",
                       )}
                     >
-                      {formatCurrency(profitOf(totals), true)}
+                      {formatCurrency(grossProfit(totals), true)}
                     </TableCell>
                   )}
                   {visible.cost && (
                     <TableCell className="text-right tabular-nums text-muted-foreground">
-                      <Money value={rowCost(totals, perMinuteRate)} />
+                      <Money value={rowCost(totals)} />
+                    </TableCell>
+                  )}
+                  {visible.net && (
+                    <TableCell className="text-right tabular-nums">
+                      <Money value={netProfit(totals)} tone />
                     </TableCell>
                   )}
                 </TableRow>
@@ -1304,9 +1331,13 @@ interface SortHeaderProps {
 
 /** Currency cell that shows "—" when the figure can't be computed (no
  *  per-minute rate on the account) instead of a misleading $0.00. */
-function Money({ value }: { value: number | undefined }) {
+function Money({ value, tone = false }: { value: number | undefined; tone?: boolean }) {
   if (value === undefined) return <span className="text-muted-foreground/50">—</span>;
-  return <>{formatCurrency(value, true)}</>;
+  return (
+    <span className={cn(tone && (value < 0 ? "text-destructive" : "text-[color:var(--success)]"))}>
+      {formatCurrency(value, true)}
+    </span>
+  );
 }
 
 function SortHeader({

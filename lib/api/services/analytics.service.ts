@@ -32,6 +32,8 @@ interface DashboardWire {
    *  Total figures — no second request needed. Decimal string ("10050.00"). */
   balance?: string | number | null;
   currency?: string | null;
+  totalCost?: string | number | null;
+  billableMinutes?: number | null;
 }
 
 interface TimeSeriesPointWire {
@@ -144,6 +146,8 @@ interface EntitySummaryWire {
   notConnectedCalls?: number;
   liveCalls?: number;
   totalDurationSec?: number;
+  totalCost?: number | string;
+  billableMinutes?: number;
 }
 
 interface CallLogListWire {
@@ -171,6 +175,8 @@ export interface DashboardKpis {
   /** Account balance in `currency`; undefined when the backend omits it. */
   balance?: number;
   currency?: string;
+  totalCost?: number;
+  billableMinutes?: number;
 }
 
 export interface TimeSeriesPoint {
@@ -206,6 +212,8 @@ export interface EntitySummary {
   notConnectedCalls?: number;
   liveCalls?: number;
   totalDurationSec?: number;
+  totalCost?: number;
+  billableMinutes?: number;
 }
 
 export type SummaryEntity = "campaign" | "buyer" | "publisher" | "carrier";
@@ -378,6 +386,8 @@ function entitySummaryWireToSummary(w: EntitySummaryWire, entity: SummaryEntity)
     notConnectedCalls: firstOf(w.notConnectedCalls),
     liveCalls: firstOf(w.liveCalls),
     totalDurationSec: firstOf(w.totalDurationSec),
+    totalCost: firstOf(w.totalCost),
+    billableMinutes: firstOf(w.billableMinutes),
   };
 }
 
@@ -404,6 +414,8 @@ function dashboardWireToKpis(w: DashboardWire): DashboardKpis {
     duplicateBlocked: w.duplicateBlocked,
     balance: w.balance != null ? toNum(w.balance) : undefined,
     currency: w.currency ?? undefined,
+    totalCost: firstOf(w.totalCost),
+    billableMinutes: firstOf(w.billableMinutes),
   };
 }
 

@@ -1172,7 +1172,7 @@ route("POST", "/api/routing/calls/{id}/hangup", (req) => {
   const duration = connected ? Math.max(1, Math.floor((Date.now() - live.startedAt) / 1000)) : 0;
   return {
     id,
-    status: connected ? "completed" : "no_answer",
+    status: connected ? "Completed" : "No_Answer",
     duration,
     converted: connected,
     charged: connected ? LEDGER_COST_PER_CALL.toFixed(2) : null,
