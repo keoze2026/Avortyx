@@ -212,6 +212,7 @@ export interface EntitySummary {
   notConnectedCalls?: number;
   liveCalls?: number;
   totalDurationSec?: number;
+  totalProfit?: number;
   totalCost?: number;
   billableMinutes?: number;
 }
@@ -386,6 +387,7 @@ function entitySummaryWireToSummary(w: EntitySummaryWire, entity: SummaryEntity)
     notConnectedCalls: firstOf(w.notConnectedCalls),
     liveCalls: firstOf(w.liveCalls),
     totalDurationSec: firstOf(w.totalDurationSec),
+    totalProfit: firstOf(w.totalProfit),
     totalCost: firstOf(w.totalCost),
     billableMinutes: firstOf(w.billableMinutes),
   };

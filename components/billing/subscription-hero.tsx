@@ -1,27 +1,36 @@
 "use client";
 
 /**
- * The headline plan card. Premium gradient surface with embedded usage ring
- * for "calls included", and "manage / upgrade / cancel" actions.
+ * The headline billing card: what this account is actually charged, read
+ * straight from /api/billing/account (`monthly_portal_fee`,
+ * `per_minute_rate`, `markup_percent`, `tfn_purchase_fee` and the portal
+ * fee's charged / next-due dates), plus the account balance.
  *
- * Plan fields come from /api/billing/account; usage comes from
- * /api/analytics/dashboard. Falls back to the mock seeds when the backend
- * hasn't loaded yet so the first paint isn't blank.
+ * There is no plan on the backend, so no plan tier, included calls or
+ * overage is shown. Any figure the account doesn't return reads "—".
  */
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Sparkles, Wallet } from "lucide-react";
+import { Calendar, Receipt, Wallet } from "lucide-react";
 
 import { billingService, type BillingAccount } from "@/lib/api/services/billing.service";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
-import { MOCK_PLAN, MOCK_USAGE } from "@/lib/mock/billing";
-import { formatCompact, formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
+
+function formatDay(ms?: number): string | undefined {
+  if (!ms) return undefined;
+  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
 
 export function SubscriptionHero() {
   const { t } = useTranslation();
+  const tr = (key: string, fallback: string) => {
+    const v = t(key);
+    return v === key ? fallback : v;
+  };
 
   const [account, setAccount] = useState<BillingAccount | null>(null);
   useEffect(() => {
@@ -31,7 +40,7 @@ export function SubscriptionHero() {
         const acc = await billingService.account();
         if (!cancelled) setAccount(acc);
       } catch {
-        // Plan endpoint may not be enabled yet — fall back to the mock seed.
+        // Account unavailable — every figure below renders "—".
       }
     })();
     return () => {
@@ -40,7 +49,6 @@ export function SubscriptionHero() {
   }, []);
 
   const kpis = useCallsStore((s) => s.kpis);
-  const plan = account?.plan;
 
   // Account balance. The dashboard KPI payload the topbar polls every 15s
   // carries it (`balance` / `currency`), so that's the live figure; the
@@ -52,15 +60,35 @@ export function SubscriptionHero() {
   const creditLimit = account?.creditLimit;
   const accountStatus = account?.status;
 
-  const tier = plan?.tier ?? MOCK_PLAN.tier;
-  const monthlyCost = plan?.monthlyCost ?? MOCK_PLAN.monthlyCost;
-  const callsIncluded = plan?.callsIncluded ?? MOCK_PLAN.callsIncluded;
-  const overageRatePerCall = plan?.overageRatePerCall ?? MOCK_PLAN.overageRatePerCall;
-  const callsMetric = MOCK_USAGE.find((m) => m.key === "calls")!;
-  const callsUsed = kpis?.totalCalls ?? callsMetric.used;
-  const renews = new Date(plan?.renewsAt ?? MOCK_PLAN.renewsAt);
-  const pct = callsIncluded > 0 ? Math.min(1, callsUsed / callsIncluded) : 0;
-  const overage = Math.max(0, callsUsed - callsIncluded) * overageRatePerCall;
+  const rates = account?.rates;
+  const unavailable = t("toolsUI.billing.subscription.balance.unavailable");
+  const nextDue = formatDay(rates?.portalFeeNextDue);
+  const lastCharged = formatDay(rates?.portalFeeChargedAt);
+
+  const charges: Array<{ key: string; label: string; value: string; hint?: string }> = [
+    {
+      key: "minute",
+      label: tr("toolsUI.billing.subscription.charges.perMinute", "Per connected minute"),
+      value: rates ? `$${rates.perMinute.toFixed(2)}` : unavailable,
+      hint:
+        rates && rates.markupPercent > 0
+          ? tr("toolsUI.billing.subscription.charges.markup", "+{percent}% markup").replace(
+              "{percent}",
+              String(rates.markupPercent),
+            )
+          : undefined,
+    },
+    {
+      key: "number",
+      label: tr("toolsUI.billing.subscription.charges.perNumber", "Per tracking number"),
+      value: rates ? formatCurrency(rates.tfnPurchaseFee) : unavailable,
+    },
+    {
+      key: "lastCharged",
+      label: tr("toolsUI.billing.subscription.charges.lastCharged", "Portal fee last charged"),
+      value: lastCharged ?? unavailable,
+    },
+  ];
 
   return (
     <motion.section
@@ -83,47 +111,50 @@ export function SubscriptionHero() {
       />
 
       <div className="relative flex flex-col gap-8 lg:flex-row lg:items-stretch">
-        {/* Left: plan + price + renewal */}
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-accent">
-              <Sparkles className="h-2.5 w-2.5" />
-              {t("toolsUI.billing.subscription.currentPlan")}
+              <Receipt className="h-2.5 w-2.5" />
+              {tr("toolsUI.billing.subscription.charges.title", "Your charges")}
             </span>
             <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              {t("toolsUI.billing.subscription.renews").replace("{date}", renews.toLocaleDateString())}
+              {tr("toolsUI.billing.subscription.charges.nextDue", "Next fee due {date}").replace(
+                "{date}",
+                nextDue ?? unavailable,
+              )}
             </span>
           </div>
 
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            {tier}
-          </h2>
+          <div className="mt-3 text-[13px] text-muted-foreground">
+            {tr("toolsUI.billing.subscription.charges.portalFee", "Monthly portal fee")}
+          </div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="font-mono text-xl font-semibold">{formatCurrency(monthlyCost)}</span>
+            <span className="font-mono text-3xl font-semibold tracking-tight sm:text-4xl">
+              {rates ? formatCurrency(rates.monthlyPortalFee) : unavailable}
+            </span>
             <span className="text-[13px] text-muted-foreground">{t("toolsUI.billing.subscription.perMonth")}</span>
           </div>
-
-          <p className="mt-4 max-w-md text-sm text-muted-foreground">
-            {t("toolsUI.billing.subscription.callsBefore").replace("{calls}", formatCompact(callsIncluded))}
-            <span className="font-mono text-foreground">
-              {formatCurrency(overageRatePerCall, true)}{t("toolsUI.billing.subscription.callsAfter")}
-            </span>
-            .{overage > 0 && (
-              <>{t("toolsUI.billing.subscription.projectedOverage").replace("{amount}", formatCurrency(overage))}</>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            {tr(
+              "toolsUI.billing.subscription.charges.cycleNote",
+              "Taken automatically from your balance every 30 days.",
             )}
           </p>
 
-          {/* Plan-management buttons removed for v1 — there is no backend
-              endpoint for plan changes (`/api/billing/plan` doesn't exist).
-              Upgrade / downgrade / cancel will return when the subscription
-              endpoints ship. Until then, the user can recharge their balance
-              via the card below and contact support to change plan. */}
+          <dl className="mt-5 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+            {charges.map((c) => (
+              <div key={c.key} className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 backdrop-blur-sm">
+                <dt className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{c.label}</dt>
+                <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums">{c.value}</dd>
+                {c.hint && <dd className="text-[11px] text-muted-foreground">{c.hint}</dd>}
+              </div>
+            ))}
+          </dl>
         </div>
 
-        {/* Middle: account balance — the same figure as the topbar wallet,
-            with the credit limit and account status from the billing
-            account beside it. */}
+        {/* Account balance — the same figure as the topbar wallet, with the
+            credit limit and account status from the billing account beside it. */}
         <div className="flex flex-col justify-center gap-4 rounded-xl border border-border/60 bg-background/40 px-5 py-4 backdrop-blur-sm lg:w-64">
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
@@ -132,7 +163,7 @@ export function SubscriptionHero() {
               {currency !== "USD" && <span className="ml-auto">{currency}</span>}
             </div>
             <div className="mt-1 font-mono text-3xl font-semibold tabular-nums tracking-tight">
-              {balance != null ? formatCurrency(balance) : t("toolsUI.billing.subscription.balance.unavailable")}
+              {balance != null ? formatCurrency(balance) : unavailable}
             </div>
           </div>
           <dl className="grid grid-cols-2 gap-3 text-xs">
@@ -141,7 +172,7 @@ export function SubscriptionHero() {
                 {t("toolsUI.billing.subscription.balance.creditLimit")}
               </dt>
               <dd className="mt-0.5 font-mono tabular-nums">
-                {creditLimit != null ? formatCurrency(creditLimit) : t("toolsUI.billing.subscription.balance.unavailable")}
+                {creditLimit != null ? formatCurrency(creditLimit) : unavailable}
               </dd>
             </div>
             <div>
@@ -160,7 +191,7 @@ export function SubscriptionHero() {
                     {accountStatus}
                   </span>
                 ) : (
-                  t("toolsUI.billing.subscription.balance.unavailable")
+                  unavailable
                 )}
               </dd>
             </div>
@@ -172,74 +203,7 @@ export function SubscriptionHero() {
             {t("toolsUI.billing.subscription.balance.topUp")}
           </a>
         </div>
-
-        {/* Right: usage ring */}
-        <div className="flex items-center justify-center lg:w-72">
-          <UsageRing
-            pct={pct}
-            used={callsUsed}
-            included={callsIncluded}
-          />
-        </div>
       </div>
     </motion.section>
-  );
-}
-
-/**
- * SVG donut showing calls-included consumption. Uses CSS vars so it
- * matches the brand accent + theme automatically.
- */
-function UsageRing({ pct, used, included }: { pct: number; used: number; included: number }) {
-  const { t } = useTranslation();
-  const size = 200;
-  const radius = 80;
-  const stroke = 14;
-  const c = 2 * Math.PI * radius;
-  const offset = c * (1 - pct);
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <defs>
-          <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#5266E0" />
-            <stop offset="100%" stopColor="#818CF8" />
-          </linearGradient>
-        </defs>
-        {/* Track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="var(--border)"
-          strokeWidth={stroke}
-          fill="none"
-        />
-        {/* Progress */}
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="url(#ring-grad)"
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.1, ease: "easeOut" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-2xl font-semibold tabular-nums">{Math.round(pct * 100)}%</span>
-        <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-          {t("toolsUI.billing.subscription.callsUsed")}
-        </span>
-        <span className="mt-1 font-mono text-[11px] text-foreground">
-          {formatCompact(used)} / {formatCompact(included)}
-        </span>
-      </div>
-    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Download, ExternalLink, FileText } from "lucide-react";
+import { CalendarClock, Download, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { Pagination } from "@/components/shared/pagination";
@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/format";
-import { billingService, type Invoice } from "@/lib/api/services/billing.service";
+import { billingService, type BillingAccount, type Invoice } from "@/lib/api/services/billing.service";
 import { dateStamped, downloadRows, type ExportColumn } from "@/lib/export";
 import { ExportMenu } from "@/components/shared/export-menu";
 import type { InvoiceStatus } from "@/lib/types";
@@ -37,6 +37,11 @@ const STATUS_LABEL_KEYS: Record<InvoiceStatus, string> = {
   uncollectible: "toolsUI.billing.invoices.status.uncollectible",
 };
 
+function formatDay(ms?: number): string | undefined {
+  if (!ms) return undefined;
+  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 function normalizeInvoiceStatus(raw: string | undefined): InvoiceStatus {
   const s = (raw ?? "").toLowerCase();
   if (s === "paid" || s === "open" || s === "void" || s === "uncollectible") return s;
@@ -49,6 +54,30 @@ export function InvoicesTable() {
   const [page, setPage] = React.useState(0);
   const [invoices, setInvoices] = React.useState<Invoice[]>([]);
   const [total, setTotal] = React.useState(0);
+  const [account, setAccount] = React.useState<BillingAccount | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const acc = await billingService.account();
+        if (!cancelled) setAccount(acc);
+      } catch {
+        if (!cancelled) setAccount(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const tr = (key: string, fallback: string) => {
+    const v = t(key);
+    return v === key ? fallback : v;
+  };
+  const rates = account?.rates;
+  const portalNextDue = formatDay(rates?.portalFeeNextDue);
+  const portalLastCharged = formatDay(rates?.portalFeeChargedAt);
 
   React.useEffect(() => {
     setPage(0);
@@ -107,6 +136,28 @@ export function InvoicesTable() {
         </ExportMenu>
       </CardHeader>
       <CardContent className="p-0">
+        {rates && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/60 bg-accent/5 px-4 py-3">
+            <div className="flex items-center gap-2 text-xs">
+              <CalendarClock className="h-3.5 w-3.5 text-accent" />
+              <span className="font-medium">{tr("toolsUI.billing.invoices.portalFee.label", "Monthly portal fee")}</span>
+              <span className="font-mono tabular-nums">{formatCurrency(rates.monthlyPortalFee)}</span>
+              <span className="text-muted-foreground">
+                {tr("toolsUI.billing.invoices.portalFee.cycle", "· charged automatically every 30 days")}
+              </span>
+            </div>
+            <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
+              <div className="flex gap-1.5">
+                <dt className="text-muted-foreground">{tr("toolsUI.billing.invoices.portalFee.lastCharged", "Last charged")}</dt>
+                <dd className="font-mono tabular-nums">{portalLastCharged ?? "—"}</dd>
+              </div>
+              <div className="flex gap-1.5">
+                <dt className="text-muted-foreground">{tr("toolsUI.billing.invoices.portalFee.nextDue", "Next due")}</dt>
+                <dd className="font-mono tabular-nums">{portalNextDue ?? "—"}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

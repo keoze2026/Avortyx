@@ -1,25 +1,19 @@
 "use client";
 
 /**
- * Expenses tracker — date-ranged breakdown of metered billing.
+ * Expenses — what the account was charged, from GET /api/billing/expenses.
  *
- *   ┌─────────────────────────────────────────────────────────┐
- *   │  Expenses           [date range]  [refresh]              │
- *   ├──────────────────────────┬───────────────────────────────┤
- *   │  Total $87.675           │      ╭─────╮                  │
- *   │  ── breakdown list ──    │     ╱ TOTAL ╲                 │
- *   │  Voice Minutes $78.96    │    │ $87.67 │                 │
- *   │  Rejected Call $3.075    │     ╲       ╱                 │
- *   │  …                       │      ╰─────╯                  │
- *   │                          │  ● Rent ● Minutes ● Shield… │
- *   └──────────────────────────┴───────────────────────────────┘
+ * The backend buckets transactions by type (deposit, charge, payout, refund,
+ * adjustment). Deposits and refunds are money coming in, so only the debit
+ * types are shown here, and the total is the sum of exactly those rows so the
+ * breakdown and the total always agree.
  *
- * Data is mocked but reflects per-day usage that scales with the selected
- * range. Categories match the screenshot legend.
+ * The monthly portal fee and its next due date come from
+ * GET /api/billing/account and are shown above the breakdown.
  */
 
 import * as React from "react";
-import { RefreshCw } from "lucide-react";
+import { CalendarClock, RefreshCw } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -27,63 +21,68 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { useTranslation } from "@/hooks/use-translation";
-import { billingService, type ExpensesReport } from "@/lib/api/services/billing.service";
-import { calendarDayKey } from "@/lib/format";
+import {
+  billingService,
+  type BillingAccount,
+  type ExpensesReport,
+} from "@/lib/api/services/billing.service";
+import { calendarDayKey, formatCurrency } from "@/lib/format";
 
-interface CategoryDef {
+interface ExpenseTypeDef {
   key: string;
-  /** Dotted translation key resolved at render time. */
   labelKey: string;
-  /** English fallback used when t() can't resolve. */
   label: string;
   color: string;
-  /** Per-day average dollar amount, used to derive the range total. */
-  perDay: number;
 }
 
-const CATEGORIES: CategoryDef[] = [
-  { key: "rent",     labelKey: "billing.categories.rentNumbers",    label: "Rent Numbers",    color: "#10B981", perDay: 0 },
-  { key: "voice",    labelKey: "billing.categories.voiceMinutes",   label: "Voice Minutes",   color: "#8B5CF6", perDay: 78.96 },
-  { key: "voip",     labelKey: "billing.categories.voipShield",     label: "VoIP Shield",     color: "#F97316", perDay: 0 },
-  { key: "rejected", labelKey: "billing.categories.rejectedCall",   label: "Rejected Call",   color: "#FACC15", perDay: 3.075 },
-  { key: "identity", labelKey: "billing.categories.callerIdentity", label: "Caller Identity", color: "#22D3EE", perDay: 0 },
-  { key: "rec",      labelKey: "billing.categories.callRecording",  label: "Call Recording",  color: "#EC4899", perDay: 5.64 },
+const EXPENSE_TYPES: ExpenseTypeDef[] = [
+  { key: "charge",     labelKey: "billing.transactionTypes.charge",     label: "Charges",     color: "#8B5CF6" },
+  { key: "payout",     labelKey: "billing.transactionTypes.payout",     label: "Payouts",     color: "#10B981" },
+  { key: "adjustment", labelKey: "billing.transactionTypes.adjustment", label: "Adjustments", color: "#F97316" },
 ];
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function daysInRange(range: DateRange | undefined): number {
-  if (!range?.from) return 1;
-  const from = startOfDay(range.from).getTime();
-  const to = startOfDay(range.to ?? range.from).getTime();
-  return Math.max(1, Math.round((to - from) / 86_400_000) + 1);
-}
-
-interface CategoryRow extends CategoryDef {
+interface ExpenseRow extends ExpenseTypeDef {
   amount: number;
+  count?: number;
 }
 
-function buildRows(range: DateRange | undefined): CategoryRow[] {
-  const days = daysInRange(range);
-  return CATEGORIES.map((c) => ({ ...c, amount: Number((c.perDay * days).toFixed(4)) }));
+function formatDay(ms?: number): string | undefined {
+  if (!ms) return undefined;
+  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function ExpensesCard() {
   const { t } = useTranslation();
+  const tr = React.useCallback(
+    (key: string, fallback: string) => {
+      const v = t(key);
+      return v === key ? fallback : v;
+    },
+    [t],
+  );
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const today = new Date();
     return { from: today, to: today };
   });
   const [refreshNonce, setRefreshNonce] = React.useState(0);
   const [remote, setRemote] = React.useState<ExpensesReport | null>(null);
+  const [account, setAccount] = React.useState<BillingAccount | null>(null);
 
-  // Fetch from /api/billing/expenses whenever the range changes or the
-  // refresh button is clicked. Falls back to the local per-day estimate when
-  // the endpoint isn't available (older backends or empty orgs).
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const acc = await billingService.account();
+        if (!cancelled) setAccount(acc);
+      } catch {
+        if (!cancelled) setAccount(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshNonce]);
+
   React.useEffect(() => {
     let cancelled = false;
     // Calendar days go out as their own Y-M-D — `toISOString()` would shift
@@ -103,28 +102,24 @@ export function ExpensesCard() {
     };
   }, [range, refreshNonce]);
 
-  // Merge: backend categories take precedence; per-category color/label
-  // metadata comes from the local CATEGORIES list. Categories the backend
-  // doesn't return are shown as $0 so the legend stays visually stable.
-  const rows = React.useMemo(() => {
-    const remoteByKey = new Map<string, number>();
-    if (remote) {
-      for (const c of remote.categories) {
-        remoteByKey.set(c.key.toLowerCase(), c.amount);
-        if (c.label) remoteByKey.set(c.label.toLowerCase(), c.amount);
-      }
+  const rows = React.useMemo<ExpenseRow[]>(() => {
+    const byKey = new Map<string, { amount: number; count?: number }>();
+    for (const c of remote?.categories ?? []) {
+      byKey.set(c.key.toLowerCase(), { amount: Math.abs(c.amount), count: c.count });
     }
-    return CATEGORIES.map((c) => {
-      const fallback = c.perDay * daysInRange(range);
-      const amount = remote
-        ? (remoteByKey.get(c.key) ?? remoteByKey.get(c.label.toLowerCase()) ?? 0)
-        : Number(fallback.toFixed(4));
-      return { ...c, amount, label: t(c.labelKey) };
+    return EXPENSE_TYPES.map((d) => {
+      const hit = byKey.get(d.key);
+      return { ...d, label: tr(d.labelKey, d.label), amount: hit?.amount ?? 0, count: hit?.count };
     });
-  }, [range, refreshNonce, remote, t]);
+  }, [remote, tr]);
 
-  const total = remote?.total ?? rows.reduce((s, r) => s + r.amount, 0);
+  const total = rows.reduce((s, r) => s + r.amount, 0);
   const pieData = rows.filter((r) => r.amount > 0);
+
+  const rates = account?.rates;
+  const unavailable = "—";
+  const nextDue = formatDay(rates?.portalFeeNextDue);
+  const lastCharged = formatDay(rates?.portalFeeChargedAt);
 
   return (
     <Card className="p-6">
@@ -143,13 +138,42 @@ export function ExpensesCard() {
         </div>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-accent/10 text-accent">
+            <CalendarClock className="h-4 w-4" />
+          </span>
+          <div>
+            <div className="text-xs text-muted-foreground">
+              {tr("billing.portalFee.title", "Monthly portal fee")}
+            </div>
+            <div className="font-mono text-base font-semibold tabular-nums">
+              {rates ? formatCurrency(rates.monthlyPortalFee) : unavailable}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                {tr("billing.portalFee.perMonth", "/ month")}
+              </span>
+            </div>
+          </div>
+        </div>
+        <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+          <div>
+            <dt className="text-muted-foreground">{tr("billing.portalFee.nextDue", "Next due")}</dt>
+            <dd className="font-mono tabular-nums">{nextDue ?? unavailable}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{tr("billing.portalFee.lastCharged", "Last charged")}</dt>
+            <dd className="font-mono tabular-nums">{lastCharged ?? unavailable}</dd>
+          </div>
+        </dl>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Breakdown list */}
         <div className="rounded-lg border border-border p-5">
           <div className="border-b border-border pb-3">
             <div className="text-xs text-muted-foreground">{t("billing.total")}</div>
             <div className="mt-0.5 font-mono text-2xl font-semibold tabular-nums">
-              ${total.toFixed(3)}
+              {formatCurrency(total)}
             </div>
           </div>
           <ul className="mt-2 divide-y divide-border">
@@ -159,9 +183,14 @@ export function ExpensesCard() {
                 className="flex items-center justify-between gap-3 py-3"
               >
                 <div>
-                  <div className="text-xs text-muted-foreground">{r.label}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {r.label}
+                    {r.count !== undefined && r.count > 0 && (
+                      <span className="ml-1 text-muted-foreground/70">· {r.count}</span>
+                    )}
+                  </div>
                   <div className="mt-0.5 font-mono text-base font-semibold tabular-nums">
-                    ${r.amount.toFixed(4)}
+                    {formatCurrency(r.amount)}
                   </div>
                 </div>
                 <span
@@ -189,11 +218,11 @@ export function ExpensesCard() {
                       : [
                           {
                             key: "empty",
+                            labelKey: "",
                             label: "No expenses",
                             amount: 1,
                             color: "var(--muted)",
-                            perDay: 0,
-                          } as CategoryRow,
+                          } as ExpenseRow,
                         ]
                   }
                   dataKey="amount"
@@ -225,7 +254,7 @@ export function ExpensesCard() {
                   <Tooltip
                     cursor={false}
                     formatter={(value: number, name) => [
-                      `$${Number(value).toFixed(4)}`,
+                      formatCurrency(Number(value)),
                       name as string,
                     ]}
                     contentStyle={{
@@ -243,21 +272,21 @@ export function ExpensesCard() {
                 {t("billing.total")}
               </span>
               <span className="mt-0.5 font-mono text-xl font-semibold tabular-nums">
-                ${total.toFixed(4)}
+                {formatCurrency(total)}
               </span>
             </div>
           </div>
 
           {/* Legend */}
-          <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-3">
-            {CATEGORIES.map((c) => (
-              <li key={c.key} className="inline-flex items-center gap-2">
+          <ul className="mt-4 grid grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
+            {rows.map((r) => (
+              <li key={r.key} className="inline-flex items-center gap-2">
                 <span
                   aria-hidden
                   className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: c.color }}
+                  style={{ background: r.color }}
                 />
-                <span className="text-muted-foreground">{t(c.labelKey)}</span>
+                <span className="text-muted-foreground">{r.label}</span>
               </li>
             ))}
           </ul>

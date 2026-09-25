@@ -187,8 +187,7 @@ type ColumnKey =
   | "payout"
   | "revenue"
   | "profit"
-  | "cost"
-  | "net";
+  | "cost";
 
 const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "live", label: "Live" },
@@ -204,13 +203,8 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "acl", label: "ACL" },
   { id: "payout", label: "Payout" },
   { id: "revenue", label: "Revenue" },
-  // "Gross Profit", not "Profit": it is revenue less the buyer payout and
-  // takes no account of Cost, which sits beside it. Net is the figure that
-  // does — without it a row reading Gross Profit $0.55 next to Cost $5.85
-  // looks profitable when it is $5.30 down.
-  { id: "profit", label: "Gross Profit" },
+  { id: "profit", label: "Profit" },
   { id: "cost", label: "Cost" },
-  { id: "net", label: "Net" },
 ];
 
 const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
@@ -227,9 +221,8 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   acl: "toolsUI.reports.summary.columns.acl",
   payout: "toolsUI.reports.summary.columns.payout",
   revenue: "toolsUI.reports.summary.columns.revenue",
-  profit: "toolsUI.reports.summary.columns.grossProfit",
+  profit: "toolsUI.reports.summary.columns.profit",
   cost: "toolsUI.reports.summary.columns.cost",
-  net: "toolsUI.reports.summary.columns.net",
 };
 
 
@@ -254,6 +247,7 @@ interface SummaryRow {
   acl: number; // avg call length, seconds
   payout: number;
   revenue: number;
+  profit?: number;
   cost?: number;
   billableMinutes?: number;
 }
@@ -498,15 +492,11 @@ function rowCost(row: SummaryRow): number | undefined {
   return row.cost;
 }
 
-/** Revenue − payout. Named gross because it is before Cost. */
-function grossProfit(row: SummaryRow): number {
-  return row.revenue - row.payout;
-}
-
-/** What the row actually made: gross profit less the telco cost. */
-function netProfit(row: SummaryRow): number | undefined {
-  const cost = rowCost(row);
-  return cost === undefined ? undefined : grossProfit(row) - cost;
+/** Profit for a row: `total_profit` from the backend summary (revenue −
+ *  payout). Cost is its own column and is not subtracted. Rows with no
+ *  backend summary behind them use revenue − payout of the same calls. */
+function rowProfit(row: SummaryRow): number {
+  return row.profit ?? row.revenue - row.payout;
 }
 
 function labelOf(value: string) {
@@ -637,6 +627,7 @@ function applyEntitySummary(rows: SummaryRow[], summary: EntitySummary[]): Summa
     if (c.notConnectedCalls !== undefined) row.noConnect = c.notConnectedCalls;
     if (c.liveCalls !== undefined) row.live = c.liveCalls;
     if (c.totalDurationSec !== undefined) row.tcl = c.totalDurationSec;
+    row.profit = c.totalProfit;
     row.cost = c.totalCost;
     row.billableMinutes = c.billableMinutes;
     // ACL stays ours: TCL / Connected.
@@ -733,6 +724,7 @@ function totalsOf(rows: SummaryRow[], totalsLabel: string): SummaryRow {
     t.payout += r.payout;
     t.revenue += r.revenue;
   }
+  t.profit = Math.round(rows.reduce((sum, r) => sum + rowProfit(r), 0) * 100) / 100;
   if (rows.length > 0 && rows.every((r) => r.cost !== undefined)) {
     t.cost = Math.round(rows.reduce((sum, r) => sum + (r.cost ?? 0), 0) * 100) / 100;
   }
@@ -775,13 +767,9 @@ function summaryCellValue(row: SummaryRow, key: ColumnKey): number | string {
     case "revenue":
       return row.revenue;
     case "profit":
-      return grossProfit(row);
+      return rowProfit(row);
     case "cost": {
       const v = rowCost(row);
-      return v === undefined ? "" : Number(v.toFixed(2));
-    }
-    case "net": {
-      const v = netProfit(row);
       return v === undefined ? "" : Number(v.toFixed(2));
     }
   }
@@ -822,9 +810,8 @@ type SortDir = "asc" | "desc";
 /** Extract the value used to compare two SummaryRows for the given sort key. */
 function sortValue(r: SummaryRow, key: SummarySortKey): number | string {
   if (key === "label") return r.label.toLowerCase();
-  if (key === "profit") return grossProfit(r);
+  if (key === "profit") return rowProfit(r);
   if (key === "cost") return rowCost(r) ?? 0;
-  if (key === "net") return netProfit(r) ?? grossProfit(r);
   return r[key];
 }
 
@@ -1083,9 +1070,8 @@ export function CallSummaryTable({
                 {visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.payout && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {visible.revenue && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.profit && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.grossProfit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
+                {visible.profit && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {visible.cost && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.net && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.net")} sortKey="net" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1097,7 +1083,7 @@ export function CallSummaryTable({
                 </TableRow>
               ) : (
                 rows.map((r) => {
-                  const profit = r.revenue - r.payout;
+                  const profit = rowProfit(r);
                   return (
                     <TableRow key={r.key}>
                       <TableCell className="pl-6 text-left font-medium">{r.label}</TableCell>
@@ -1162,11 +1148,6 @@ export function CallSummaryTable({
                       {visible.cost && (
                         <TableCell className="text-right tabular-nums text-muted-foreground">
                           <Money value={rowCost(r)} />
-                        </TableCell>
-                      )}
-                      {visible.net && (
-                        <TableCell className="text-right tabular-nums">
-                          <Money value={netProfit(r)} tone />
                         </TableCell>
                       )}
                     </TableRow>
@@ -1275,22 +1256,17 @@ export function CallSummaryTable({
                     <TableCell
                       className={cn(
                         "text-right tabular-nums",
-                        grossProfit(totals) < 0
+                        rowProfit(totals) < 0
                           ? "text-destructive"
                           : "text-[color:var(--success)]",
                       )}
                     >
-                      {formatCurrency(grossProfit(totals), true)}
+                      {formatCurrency(rowProfit(totals), true)}
                     </TableCell>
                   )}
                   {visible.cost && (
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       <Money value={rowCost(totals)} />
-                    </TableCell>
-                  )}
-                  {visible.net && (
-                    <TableCell className="text-right tabular-nums">
-                      <Money value={netProfit(totals)} tone />
                     </TableCell>
                   )}
                 </TableRow>

@@ -44,6 +44,7 @@ export interface ExpenseCategory {
   key: string;
   label: string;
   amount: number;
+  count?: number;
 }
 
 export interface ExpensesReport {
@@ -144,6 +145,13 @@ interface ExpensesWire {
   }>;
   rangeStart?: string;
   rangeEnd?: string;
+  /** GET /api/billing/expenses today: paginated rows bucketed by transaction
+   *  type (deposit, charge, payout, refund, adjustment). */
+  items?: Array<{
+    category?: string;
+    total?: string | number;
+    count?: number;
+  }>;
   /** Some shapes return a flat map { voice: 78.96, recording: 5.64, ... }
    *  rather than a categories array. We handle both. */
   [key: string]: unknown;
@@ -266,6 +274,22 @@ export const billingService = {
   async expenses(query: { dateFrom?: string; dateTo?: string } = {}): Promise<ExpensesReport> {
     const wire = await http.get<ExpensesWire>("/api/billing/expenses", { query });
     const categories: ExpenseCategory[] = [];
+    if (Array.isArray(wire.items)) {
+      for (const c of wire.items) {
+        categories.push({
+          key: (c.category ?? "other").toLowerCase(),
+          label: c.category ?? "Other",
+          amount: toNum(c.total ?? 0),
+          count: c.count,
+        });
+      }
+      return {
+        total: categories.reduce((s, c) => s + c.amount, 0),
+        categories,
+        rangeStart: wire.rangeStart,
+        rangeEnd: wire.rangeEnd,
+      };
+    }
     if (Array.isArray(wire.categories)) {
       for (const c of wire.categories) {
         categories.push({
