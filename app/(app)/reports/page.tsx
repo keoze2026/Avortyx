@@ -328,12 +328,7 @@ export default function ReportsPage() {
                       "lg:block lg:h-full",
                     )}
                   >
-                    <HourlyDistribution
-                      calls={filtered}
-                      className="lg:h-full"
-                      rangeStartKey={fromKey}
-                      rangeEndKey={toKey}
-                    />
+                    <HourlyDistribution calls={filtered} className="lg:h-full" />
                   </div>
                 )}
                 {visibility.donut && (

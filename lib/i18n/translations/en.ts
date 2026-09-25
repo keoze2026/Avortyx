@@ -1588,7 +1588,7 @@ export const en = {
         pending: "Pending",
         expired: "Expired",
         allTypes: "All types",
-        allStatuses: "All statuses",
+        allStatuses: "All status",
       },
       cta: {
         create: "Create",
@@ -2285,7 +2285,7 @@ export const en = {
         description: "Buyer-owned dial targets, each with its own CC and cap.",
         newDestination: "New destination",
         searchPlaceholder: "Search destinations, TFN, or buyer…",
-        allStatuses: "All statuses",
+        allStatuses: "All status",
         active: "Active",
         disabled: "Disabled",
         allBuyers: "All buyers",
