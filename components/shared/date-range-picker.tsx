@@ -203,9 +203,17 @@ export function DateRangePicker({
 
   const onPresetChange = (id: DateRangePresetId) => {
     setPreset(id);
-    // A preset fills the calendar; it is committed by Apply, like any other
-    // selection, so the backend is queried exactly once per operator click.
-    setBuffer(id === "custom" ? undefined : rangeForPreset(id, anchor));
+    // A preset is committed immediately, so the backend is queried exactly
+    // once per operator click. "Custom" clears the calendar and waits for Apply.
+    if (id === "custom") {
+      setBuffer(undefined);
+      return;
+    }
+    const range = rangeForPreset(id, anchor);
+    setBuffer(range);
+    if (!range?.from) return;
+    onChange({ from: range.from, to: range.to ?? range.from });
+    setOpen(false);
   };
 
   const onCalendarSelect = (range: DateRange | undefined) => {
