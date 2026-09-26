@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 interface DestinationSummaryTableProps {
   /** The selected range's calls — already date-scoped by the page. */
   calls: Call[];
+  rangeDestinations?: Destination[];
   /** Shown in the column headers so the figures are never mistaken for "today". */
   dateLabel: string;
   /**
@@ -132,6 +133,7 @@ function buildRows(
 
 export function DestinationSummaryTable({
   calls,
+  rangeDestinations,
   dateLabel,
   useLiveCounters = false,
   destinationFilter,
@@ -141,8 +143,16 @@ export function DestinationSummaryTable({
   const destinations = useDestinationsStore((s) => s.destinations);
   const buyers = useBuyersStore((s) => s.buyers);
   const rows = useMemo(
-    () => buildRows(destinations, destinationFilter, limit, calls, buyers, useLiveCounters),
-    [destinations, destinationFilter, limit, calls, buyers, useLiveCounters],
+    () =>
+      buildRows(
+        rangeDestinations ?? destinations,
+        destinationFilter,
+        limit,
+        calls,
+        buyers,
+        rangeDestinations ? true : useLiveCounters,
+      ),
+    [rangeDestinations, destinations, destinationFilter, limit, calls, buyers, useLiveCounters],
   );
 
   return (

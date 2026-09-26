@@ -34,13 +34,15 @@ export interface DestinationStats {
   vacantCC: number;
 }
 
-export interface DestinationListQuery {
+export type DestinationListQuery = {
   page?: number;
   pageSize?: number;
   status?: "all" | "enabled" | "disabled";
   buyerId?: string;
   search?: string;
-}
+  startDate?: string;
+  endDate?: string;
+};
 
 /* ─── Wire shapes ─────────────────────────────────────────────────────── */
 

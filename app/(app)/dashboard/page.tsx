@@ -22,12 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { analyticsService } from "@/lib/api/services/analytics.service";
+import { destinationsService } from "@/lib/api/services/destinations.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
-import type { Call } from "@/lib/types";
+import type { Call, Destination } from "@/lib/types";
 
 const ALL_DEST = "all";
 
@@ -101,6 +102,35 @@ export default function DashboardPage() {
       window.clearInterval(id);
     };
   }, [fromKey, toKey, includesToday, timeZone]);
+
+  const [rangeDestinations, setRangeDestinations] = useState<Destination[] | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRangeDestinations(undefined);
+    const load = async () => {
+      try {
+        const res = await destinationsService.list({
+          page: 1,
+          pageSize: 500,
+          startDate: fromKey,
+          endDate: toKey,
+        });
+        if (!cancelled) setRangeDestinations(res.items);
+      } catch {
+        if (!cancelled) setRangeDestinations(undefined);
+      }
+    };
+    void load();
+    if (!includesToday) return () => { cancelled = true; };
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, TODAY_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [fromKey, toKey, includesToday]);
 
   // Calls per destination TFN in the selected range — the secondary label in
   // the destination dropdown, so the operator can see which TFNs were hot
@@ -210,6 +240,7 @@ export default function DashboardPage() {
       {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
       <DestinationSummaryTable
         calls={dayCalls}
+        rangeDestinations={rangeDestinations}
         dateLabel={dateLabel}
         useLiveCounters={isToday}
         destinationFilter={allSelected ? undefined : destinationTfn}
