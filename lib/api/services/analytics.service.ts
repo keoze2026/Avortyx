@@ -10,8 +10,9 @@
  */
 
 import { http } from "@/lib/api/http";
+import { destinationFromWire } from "@/lib/api/services/destinations.service";
 import { zonedDayKey } from "@/lib/format";
-import type { Call, CallStatus } from "@/lib/types";
+import type { Call, CallStatus, Destination } from "@/lib/types";
 
 /* ─── Wire shapes (post case-adapter) ─────────────────────────────────── */
 
@@ -150,6 +151,29 @@ interface EntitySummaryWire {
   billableMinutes?: number;
 }
 
+/** One chart point of /api/analytics/snapshot `time_series`. `period` carries
+ *  the requested timezone's offset ("2026-08-26T11:00:00-04:00"). */
+interface SnapshotPointWire {
+  period: string;
+  calls?: number;
+  connected?: number;
+  noAnswer?: number;
+  converted?: number;
+  revenue?: string | number;
+  payout?: string | number;
+  profit?: string | number;
+  avgDuration?: number;
+}
+
+/** GET /api/analytics/snapshot — every dashboard section from one moment. */
+interface SnapshotWire {
+  takenAt?: string;
+  dashboard: DashboardWire;
+  campaigns?: EntitySummaryWire[] | null;
+  timeSeries?: SnapshotPointWire[] | null;
+  destinations?: unknown[] | null;
+}
+
 interface CallLogListWire {
   total: number;
   offset: number;
@@ -218,6 +242,39 @@ export interface EntitySummary {
 }
 
 export type SummaryEntity = "campaign" | "buyer" | "publisher" | "carrier";
+
+/** One chart point from the snapshot, money already parsed to numbers. */
+export interface SnapshotPoint {
+  /** As sent, with the timezone offset applied — read its date and hour as-is. */
+  period: string;
+  calls: number;
+  connected: number;
+  noAnswer: number;
+  converted: number;
+  revenue: number;
+  payout: number;
+  profit: number;
+  avgDurationSec: number;
+}
+
+export interface DashboardSnapshot {
+  /** When the backend took the snapshot (ms). */
+  takenAt: number;
+  kpis: DashboardKpis;
+  campaigns: EntitySummary[];
+  timeSeries: SnapshotPoint[];
+  destinations: Destination[];
+}
+
+export interface SnapshotQuery {
+  dateFrom?: string;
+  dateTo?: string;
+  /** IANA name, e.g. "America/New_York". Sets day boundaries and chart buckets. */
+  timeZone?: string;
+  granularity?: Granularity;
+  /** Destination TFN, e.g. "+18779641530". Omit for all destinations. */
+  destination?: string;
+}
 
 /** @deprecated alias — the Campaign tab used to have its own type. */
 export type CampaignSummary = EntitySummary;
@@ -421,6 +478,20 @@ function dashboardWireToKpis(w: DashboardWire): DashboardKpis {
   };
 }
 
+function snapshotPointToPoint(w: SnapshotPointWire): SnapshotPoint {
+  return {
+    period: w.period,
+    calls: firstNum(w.calls),
+    connected: firstNum(w.connected),
+    noAnswer: firstNum(w.noAnswer),
+    converted: firstNum(w.converted),
+    revenue: toNum(w.revenue),
+    payout: toNum(w.payout),
+    profit: toNum(w.profit),
+    avgDurationSec: firstNum(w.avgDuration),
+  };
+}
+
 function timeSeriesPointToPoint(w: TimeSeriesPointWire): TimeSeriesPoint {
   return {
     period: w.period,
@@ -439,6 +510,32 @@ export const analyticsService = {
   async dashboard(): Promise<DashboardKpis> {
     const wire = await http.get<DashboardWire>("/api/analytics/dashboard");
     return dashboardWireToKpis(wire);
+  },
+
+  /**
+   * Dashboard snapshot — totals, campaigns, chart points and destinations
+   * from one single moment, so every panel on the page agrees.
+   */
+  async snapshot(query: SnapshotQuery = {}): Promise<DashboardSnapshot> {
+    const wire = await http.get<SnapshotWire>("/api/analytics/snapshot", {
+      query: {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        timezone: query.timeZone,
+        granularity: query.granularity,
+        destination: query.destination,
+      },
+    });
+    const takenAt = wire.takenAt ? Date.parse(wire.takenAt) : NaN;
+    return {
+      takenAt: Number.isFinite(takenAt) ? takenAt : Date.now(),
+      kpis: dashboardWireToKpis(wire.dashboard),
+      campaigns: (wire.campaigns ?? [])
+        .map((w) => entitySummaryWireToSummary(w, "campaign"))
+        .filter((r) => r.entityId),
+      timeSeries: (wire.timeSeries ?? []).map(snapshotPointToPoint),
+      destinations: (wire.destinations ?? []).map(destinationFromWire),
+    };
   },
 
   async timeSeries(query: {

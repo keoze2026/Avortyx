@@ -25,6 +25,10 @@ interface RevenueChartProps {
   calls: Call[];
   /** Shown under the title so the figure is never mistaken for "today". */
   dateLabel: string;
+  /** Hourly points (e.g. from the dashboard snapshot). When passed, revenue
+   *  per hour is read from these instead of summing `calls`. `period` carries
+   *  the report timezone's offset, so its hour is read as-is. */
+  series?: Array<{ period: string; revenue: number }>;
 }
 
 /**
@@ -36,13 +40,21 @@ interface RevenueChartProps {
  * "24h / 14d" toggle, which has nothing to toggle to now that the dashboard
  * is a single-date view: the page's date picker is the only time control.
  */
-export function RevenueChart({ calls, dateLabel }: RevenueChartProps) {
+export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
-  const data = React.useMemo(
-    () => bucketHourlyZoned(calls, timeZone).map((p) => ({ x: p.label, revenue: p.revenue })),
-    [calls, timeZone],
-  );
+  const data = React.useMemo(() => {
+    if (series) {
+      const hours = bucketHourlyZoned([], timeZone).map((p) => ({ x: p.label, revenue: 0 }));
+      for (const p of series) {
+        const h = Number(p.period.slice(11, 13));
+        if (!Number.isFinite(h) || h < 0 || h >= 24) continue;
+        hours[h].revenue += p.revenue;
+      }
+      return hours;
+    }
+    return bucketHourlyZoned(calls, timeZone).map((p) => ({ x: p.label, revenue: p.revenue }));
+  }, [calls, series, timeZone]);
 
   const total = data.reduce((s, p) => s + p.revenue, 0);
   const peak = data.length ? Math.max(...data.map((p) => p.revenue)) : 0;

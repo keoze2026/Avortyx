@@ -32,6 +32,9 @@ interface CallsState {
   /** Real-time in-flight call count, written by useLiveSocket on every
    *  WebSocket event. Topbar reads this instead of the stale kpis.liveCalls. */
   liveCount: number;
+  /** True while the Dashboard supplies the header figures from its snapshot,
+   *  so the topbar skips its own poll and both read the same moment. */
+  snapshotDrivesKpis: boolean;
 
   loading: boolean;
   error: string | null;
@@ -42,6 +45,8 @@ interface CallsState {
   fetchTimeSeries: (query?: { dateFrom?: string; dateTo?: string; granularity?: "hour" | "day" | "week" | "month" }) => Promise<void>;
   fetchPage: (query: CallLogQuery) => Promise<CallLogPage>;
   setLiveCount: (n: number) => void;
+  setKpis: (kpis: DashboardKpis) => void;
+  setSnapshotDrivesKpis: (on: boolean) => void;
 }
 
 const RECENT_DEFAULT = 200;
@@ -51,6 +56,7 @@ export const useCallsStore = create<CallsState>()((set) => ({
   kpis: null,
   timeSeries: [],
   liveCount: 0,
+  snapshotDrivesKpis: false,
   loading: false,
   error: null,
   hydrated: false,
@@ -95,6 +101,15 @@ export const useCallsStore = create<CallsState>()((set) => ({
   fetchPage: (query) => analyticsService.calls(query),
 
   setLiveCount: (n) => set({ liveCount: n }),
+
+  setKpis: (kpis) => {
+    set({ kpis });
+    if (kpis.balance !== undefined) {
+      useOnboardingStore.getState().setBalance(kpis.balance);
+    }
+  },
+
+  setSnapshotDrivesKpis: (on) => set({ snapshotDrivesKpis: on }),
 }));
 
 function messageFromError(e: unknown): string {

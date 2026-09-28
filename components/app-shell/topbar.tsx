@@ -33,6 +33,9 @@ export function Topbar() {
   // instead, since the topbar is the one thing mounted on every page.
   useEffect(() => {
     const id = window.setInterval(() => {
+      // On the Dashboard the header figures come from its snapshot instead,
+      // so they match the panels below them exactly.
+      if (useCallsStore.getState().snapshotDrivesKpis) return;
       void useCallsStore.getState().fetchKpis();
     }, KPI_POLL_MS);
     return () => window.clearInterval(id);

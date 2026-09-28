@@ -57,6 +57,23 @@ interface HourlyDistributionProps {
    * other surfaces using this chart are unaffected.
    */
   className?: string;
+  rangeStartKey?: string;
+  rangeEndKey?: string;
+  /**
+   * Ready-made hourly points from /api/analytics/snapshot. When passed, the
+   * chart is built from these (the backend's own connected / no-answer split)
+   * instead of from `calls`. Pages that don't pass it are unaffected.
+   */
+  series?: ChartSeriesPoint[];
+}
+
+/** One hourly point: `period` carries the report timezone's offset
+ *  ("2026-08-26T11:00:00-04:00"), so its date and hour are read as-is. */
+export interface ChartSeriesPoint {
+  period: string;
+  connected: number;
+  noAnswer: number;
+  revenue: number;
 }
 
 interface Bucket {
@@ -190,7 +207,13 @@ function anchorDayKey(calls: Call[], timeZone: string): string {
   return zonedDayKey(Number.isFinite(latest) ? latest : Date.now(), timeZone);
 }
 
-function bucketize(calls: Call[], grain: Grain, timeZone: string): Bucket[] {
+function bucketize(
+  calls: Call[],
+  grain: Grain,
+  timeZone: string,
+  rangeStartKey?: string,
+  rangeEndKey?: string,
+): Bucket[] {
   if (grain === "H") {
     // Hour-of-day distribution across every call handed in. The caller has
     // already scoped the set to the selected date range, so this must not
@@ -242,6 +265,32 @@ function bucketize(calls: Call[], grain: Grain, timeZone: string): Bucket[] {
     return slots;
   }
 
+  if (rangeStartKey) {
+    const startMs = dayKeyToUtcMs(rangeStartKey);
+    const endMs = Math.max(startMs, rangeEndKey ? dayKeyToUtcMs(rangeEndKey) : anchorMs);
+    const weekCount = Math.floor(Math.round((endMs - startMs) / DAY_MS) / 7) + 1;
+    const weekSlots: Bucket[] = Array.from({ length: weekCount }, (_, i) => {
+      const weekStartMs = startMs + i * 7 * DAY_MS;
+      return {
+        label: dayKeyLabel(utcMsToDayKey(weekStartMs)),
+        ts: weekStartMs,
+        converted: 0,
+        notConverted: 0,
+        noAnswer: 0,
+        revenue: 0,
+      };
+    });
+    for (const c of calls) {
+      const callDayMs = dayKeyToUtcMs(zonedDayKey(c.startedAt, timeZone));
+      if (callDayMs < startMs || callDayMs > endMs) continue;
+      const idx = Math.floor(Math.round((callDayMs - startMs) / DAY_MS) / 7);
+      const k = classify(c);
+      weekSlots[idx][k] += 1;
+      weekSlots[idx].revenue += c.revenue;
+    }
+    return weekSlots;
+  }
+
   // M: the 35 days ending on the anchor, grouped into 5 weekly buckets.
   const weeks = 5;
   const slots: Bucket[] = Array.from({ length: weeks }, (_, i) => {
@@ -267,7 +316,123 @@ function bucketize(calls: Call[], grain: Grain, timeZone: string): Bucket[] {
   return slots;
 }
 
-export function HourlyDistribution({ calls, className }: HourlyDistributionProps) {
+function bucketizeSeries(
+  series: ChartSeriesPoint[],
+  grain: Grain,
+  timeZone: string,
+  rangeStartKey?: string,
+  rangeEndKey?: string,
+): Bucket[] {
+  const entries = series
+    .map((p) => ({
+      dayKey: p.period.slice(0, 10),
+      hour: Number(p.period.slice(11, 13)),
+      connected: p.connected,
+      noAnswer: p.noAnswer,
+      revenue: p.revenue,
+    }))
+    .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.dayKey));
+
+  const add = (slot: Bucket, e: (typeof entries)[number]) => {
+    slot.converted += e.connected;
+    slot.noAnswer += e.noAnswer;
+    slot.revenue += e.revenue;
+  };
+
+  if (grain === "H") {
+    const slots: Bucket[] = Array.from({ length: 24 }, (_, h) => ({
+      label: fmt12Hour(h),
+      ts: h,
+      converted: 0,
+      notConverted: 0,
+      noAnswer: 0,
+      revenue: 0,
+    }));
+    for (const e of entries) {
+      if (!Number.isFinite(e.hour) || e.hour < 0 || e.hour >= 24) continue;
+      add(slots[e.hour], e);
+    }
+    return slots;
+  }
+
+  let anchorKey = "";
+  for (const e of entries) {
+    if (e.connected + e.noAnswer > 0 && e.dayKey > anchorKey) anchorKey = e.dayKey;
+  }
+  const anchorMs = dayKeyToUtcMs(anchorKey || zonedDayKey(Date.now(), timeZone));
+
+  if (grain === "D") {
+    const days = 14;
+    const keys = Array.from({ length: days }, (_, i) =>
+      utcMsToDayKey(anchorMs - (days - 1 - i) * DAY_MS),
+    );
+    const indexByKey = new Map(keys.map((k, i) => [k, i]));
+    const slots: Bucket[] = keys.map((key) => ({
+      label: dayKeyLabel(key),
+      ts: dayKeyToUtcMs(key),
+      converted: 0,
+      notConverted: 0,
+      noAnswer: 0,
+      revenue: 0,
+    }));
+    for (const e of entries) {
+      const idx = indexByKey.get(e.dayKey);
+      if (idx === undefined) continue;
+      add(slots[idx], e);
+    }
+    return slots;
+  }
+
+  if (rangeStartKey) {
+    const startMs = dayKeyToUtcMs(rangeStartKey);
+    const endMs = Math.max(startMs, rangeEndKey ? dayKeyToUtcMs(rangeEndKey) : anchorMs);
+    const weekCount = Math.floor(Math.round((endMs - startMs) / DAY_MS) / 7) + 1;
+    const weekSlots: Bucket[] = Array.from({ length: weekCount }, (_, i) => {
+      const weekStartMs = startMs + i * 7 * DAY_MS;
+      return {
+        label: dayKeyLabel(utcMsToDayKey(weekStartMs)),
+        ts: weekStartMs,
+        converted: 0,
+        notConverted: 0,
+        noAnswer: 0,
+        revenue: 0,
+      };
+    });
+    for (const e of entries) {
+      const dayMs = dayKeyToUtcMs(e.dayKey);
+      if (dayMs < startMs || dayMs > endMs) continue;
+      add(weekSlots[Math.floor(Math.round((dayMs - startMs) / DAY_MS) / 7)], e);
+    }
+    return weekSlots;
+  }
+
+  const weeks = 5;
+  const slots: Bucket[] = Array.from({ length: weeks }, (_, i) => {
+    const startMs = anchorMs - (weeks - 1 - i) * 7 * DAY_MS;
+    return {
+      label: dayKeyLabel(utcMsToDayKey(startMs)),
+      ts: startMs,
+      converted: 0,
+      notConverted: 0,
+      noAnswer: 0,
+      revenue: 0,
+    };
+  });
+  for (const e of entries) {
+    const offsetDays = Math.round((anchorMs - dayKeyToUtcMs(e.dayKey)) / DAY_MS);
+    if (offsetDays < 0 || offsetDays >= weeks * 7) continue;
+    add(slots[weeks - 1 - Math.floor(offsetDays / 7)], e);
+  }
+  return slots;
+}
+
+export function HourlyDistribution({
+  calls,
+  className,
+  rangeStartKey,
+  rangeEndKey,
+  series,
+}: HourlyDistributionProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const [grain, setGrain] = React.useState<Grain>("H");
@@ -295,11 +460,14 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
   // advertising reference: "181 · 267 · 444 · 607 · …" labels per column).
   const data = React.useMemo(
     () =>
-      bucketize(calls, grain, timeZone).map((b) => ({
+      (series
+        ? bucketizeSeries(series, grain, timeZone, rangeStartKey, rangeEndKey)
+        : bucketize(calls, grain, timeZone, rangeStartKey, rangeEndKey)
+      ).map((b) => ({
         ...b,
         total: b.converted + b.notConverted + b.noAnswer,
       })),
-    [calls, grain, timeZone],
+    [calls, series, grain, timeZone, rangeStartKey, rangeEndKey],
   );
 
   // Both axes in one calculation, because they constrain each other.
@@ -476,7 +644,7 @@ export function HourlyDistribution({ calls, className }: HourlyDistributionProps
                   dataKey="revenue"
                   stroke={COLOR_REVENUE}
                   strokeWidth={2}
-                  dot={{ r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
+                  dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
                   activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
                   isAnimationActive
                   animationDuration={500}

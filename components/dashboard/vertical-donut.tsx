@@ -14,6 +14,9 @@ interface VerticalDonutProps {
   /** When provided, success vs drop is counted from these calls. Otherwise the
    *  numbers come from TODAY_HOURLY (matching the default-mode KPI block). */
   calls?: Call[];
+  /** Ready-made totals (e.g. from the dashboard snapshot). Used ahead of
+   *  `calls` when passed. */
+  totals?: { total: number; connected: number; notConnected: number };
 }
 
 // Completed slice rides a soft single-hue indigo gradient (deep → bright).
@@ -23,9 +26,12 @@ const DROP_FILL = "var(--destructive)";
 const SUCCESS_SWATCH = "var(--accent)";
 const DROP_SWATCH = "var(--destructive)";
 
-export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
+export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
   const { t } = useTranslation();
   const { total, completed, dropped } = useMemo(() => {
+    if (totals) {
+      return { total: totals.total, completed: totals.connected, dropped: totals.notConnected };
+    }
     if (calls) {
       // Count exactly what was handed in. The caller (dashboard / reports)
       // has already applied the page's date range and destination filter —
@@ -41,7 +47,7 @@ export function VerticalDonut({ calls }: VerticalDonutProps = {}) {
     const all = TODAY_HOURLY.reduce((s, p) => s + p.calls, 0);
     const ok = TODAY_HOURLY.reduce((s, p) => s + p.conversions, 0);
     return { total: all, completed: ok, dropped: Math.max(0, all - ok) };
-  }, [calls]);
+  }, [calls, totals]);
 
   const slices = [
     { key: "completed", label: t("dashboard.donut.completed"), count: completed, fill: SUCCESS_FILL, swatch: SUCCESS_SWATCH },

@@ -21,14 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { analyticsService } from "@/lib/api/services/analytics.service";
-import { destinationsService } from "@/lib/api/services/destinations.service";
+import { analyticsService, type DashboardSnapshot } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
+import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
-import type { Call, Destination } from "@/lib/types";
+import type { Call } from "@/lib/types";
+
+const NO_CALLS: Call[] = [];
 
 const ALL_DEST = "all";
 
@@ -68,26 +70,39 @@ export default function DashboardPage() {
   /** The range ends today (or later), so new calls can still land in it. */
   const includesToday = toKey >= todayKey;
 
-  // The range's calls, fetched from the backend for exactly fromKey..toKey.
-  // This used to read the calls store's `recent` cache — the most recent 200
-  // calls account-wide, with no date sent to the API — and filter it
-  // client-side to the picked day. Any date older than what happened to be
-  // in those 200 rows was empty by construction, which is why every
-  // historical date showed 0 calls / $0 across the whole page.
-  const [dayCalls, setDayCalls] = useState<Call[]>([]);
+  // Every panel on this page — header figures, charts, campaigns and
+  // destinations — comes from one GET /api/analytics/snapshot, taken at a
+  // single moment. Separate requests landed a second or two apart during live
+  // traffic, so panels disagreed (192 in the header, 190 in the chart).
+  // Hourly points are requested once; the chart adds them up into days and
+  // weeks itself, so switching H / D / M needs no extra request.
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
+  // Dropdown call counts from the last "All destinations" snapshot — a
+  // filtered snapshot only carries the chosen destination.
+  const [allDestCounts, setAllDestCounts] = useState<Map<string, number> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setSnapshot(null);
     const load = async (showSpinner: boolean) => {
       if (showSpinner) setLoading(true);
       try {
-        const items = await analyticsService.allCalls({ dateFrom: fromKey, dateTo: toKey }, { timeZone });
-        if (!cancelled) setDayCalls(items);
+        const snap = await analyticsService.snapshot({
+          dateFrom: fromKey,
+          dateTo: toKey,
+          timeZone,
+          granularity: "hour",
+          destination: allSelected ? undefined : destinationTfn,
+        });
+        if (cancelled) return;
+        setSnapshot(snap);
+        if (allSelected) {
+          setAllDestCounts(new Map(snap.destinations.map((d) => [toE164(d.tfn), d.dailyCalls])));
+        }
       } catch (e) {
         if (cancelled) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this date range"));
-        setDayCalls([]);
+        toast.error(friendlyErrorMessage(e, "Couldn't load the dashboard for this date range"));
       } finally {
         if (!cancelled && showSpinner) setLoading(false);
       }
@@ -101,69 +116,54 @@ export default function DashboardPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [fromKey, toKey, includesToday, timeZone]);
-
-  const [rangeDestinations, setRangeDestinations] = useState<Destination[] | undefined>(undefined);
+  }, [fromKey, toKey, includesToday, timeZone, allSelected, destinationTfn]);
 
   useEffect(() => {
-    let cancelled = false;
-    setRangeDestinations(undefined);
-    const load = async () => {
-      try {
-        const res = await destinationsService.list({
-          page: 1,
-          pageSize: 500,
-          startDate: fromKey,
-          endDate: toKey,
-        });
-        if (!cancelled) setRangeDestinations(res.items);
-      } catch {
-        if (!cancelled) setRangeDestinations(undefined);
-      }
-    };
-    void load();
-    if (!includesToday) return () => { cancelled = true; };
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, TODAY_REFRESH_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [fromKey, toKey, includesToday]);
+    setAllDestCounts(null);
+  }, [fromKey, toKey, timeZone]);
+
+  // The header shows today's account-wide figures on every page. The
+  // snapshot carries exactly that when the view is today with all
+  // destinations, so then the header reads the snapshot (and pauses its own
+  // poll) to match the panels below. Any other view leaves the header as is.
+  const headerFromSnapshot = isToday && allSelected;
+  useEffect(() => {
+    if (!headerFromSnapshot) return;
+    useCallsStore.getState().setSnapshotDrivesKpis(true);
+    return () => useCallsStore.getState().setSnapshotDrivesKpis(false);
+  }, [headerFromSnapshot]);
+  useEffect(() => {
+    if (headerFromSnapshot && snapshot) useCallsStore.getState().setKpis(snapshot.kpis);
+  }, [headerFromSnapshot, snapshot]);
 
   // Calls per destination TFN in the selected range — the secondary label in
-  // the destination dropdown, so the operator can see which TFNs were hot
-  // in the span they're looking at. For today the count comes straight off
-  // the Destination record (`calls_today` from the destinations API), which
-  // includes in-flight calls a completed-call log can't; for any other
-  // range it's tallied from the range's fetched calls.
+  // the destination dropdown.
   const callsByTfn = useMemo(() => {
+    if (allDestCounts) return allDestCounts;
     const map = new Map<string, number>();
-    // Keyed by E.164 so a CDR that spells the number "18779641530" still
-    // matches a destination stored as "+18779641530".
     if (isToday) {
       for (const d of destinations) map.set(toE164(d.tfn), d.dailyCalls);
-      return map;
-    }
-    for (const c of dayCalls) {
-      const k = toE164(c.destinationNumber);
-      map.set(k, (map.get(k) ?? 0) + 1);
     }
     return map;
-  }, [dayCalls, destinations, isToday]);
-
-  // When a destination is selected, scope everything to just its calls.
-  const scopedCalls = useMemo(() => {
-    if (allSelected) return dayCalls;
-    const wanted = toE164(destinationTfn);
-    return dayCalls.filter((c) => toE164(c.destinationNumber) === wanted);
-  }, [destinationTfn, allSelected, dayCalls]);
+  }, [allDestCounts, destinations, isToday]);
 
   const summary = useMemo(() => ({
-    revenue: scopedCalls.reduce((s, c) => s + c.revenue, 0),
-    payout: scopedCalls.reduce((s, c) => s + c.payout, 0),
-  }), [scopedCalls]);
+    revenue: snapshot?.kpis.totalRevenue ?? 0,
+    payout: snapshot?.kpis.totalPayout ?? 0,
+  }), [snapshot]);
+
+  const donutTotals = useMemo(() => {
+    const points = snapshot?.timeSeries ?? [];
+    const connected = points.reduce((s, p) => s + p.connected, 0);
+    const notConnected = points.reduce((s, p) => s + p.noAnswer, 0);
+    return { total: connected + notConnected, connected, notConnected };
+  }, [snapshot]);
+
+  const updatedLabel = snapshot
+    ? new Date(snapshot.takenAt).toLocaleTimeString(undefined, { timeZone })
+    : null;
+  const updatedKey = t("dashboard.updatedAt");
+  const updatedPrefix = updatedKey === "dashboard.updatedAt" ? "Updated" : updatedKey;
 
   const dateLabel = isToday
     ? t("sharedUI.dateRange.today")
@@ -178,6 +178,11 @@ export default function DashboardPage() {
         description={t("page.dashboard.description")}
         actions={
           <>
+            {updatedLabel && (
+              <span className="whitespace-nowrap text-[11px] text-muted-foreground tabular-nums">
+                {updatedPrefix} {updatedLabel}
+              </span>
+            )}
             <TimezonePicker />
             <Select value={destinationTfn} onValueChange={setDestinationTfn}>
               <SelectTrigger size="sm" className="w-[20rem]">
@@ -221,26 +226,26 @@ export default function DashboardPage() {
             the two stacked cards beside it; the chart then centres in the
             extra space rather than leaving a gap at the bottom. */}
         <div className="h-full lg:col-span-2">
-          <HourlyDistribution calls={scopedCalls} className="h-full" />
+          <HourlyDistribution calls={NO_CALLS} series={snapshot?.timeSeries ?? []} className="h-full" />
         </div>
         <div className="flex h-full min-w-0 flex-col gap-4">
           <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
           <div className="min-h-0 flex-1">
-            <VerticalDonut calls={scopedCalls} />
+            <VerticalDonut totals={donutTotals} />
           </div>
         </div>
       </div>
 
       {/* Row 2 — Top campaigns + Revenue by hour (secondary) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TopCampaignsBars calls={scopedCalls} dateLabel={dateLabel} />
-        <RevenueChart calls={scopedCalls} dateLabel={dateLabel} />
+        <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
+        <RevenueChart calls={NO_CALLS} series={snapshot?.timeSeries ?? []} dateLabel={dateLabel} />
       </div>
 
       {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
       <DestinationSummaryTable
-        calls={dayCalls}
-        rangeDestinations={rangeDestinations}
+        calls={NO_CALLS}
+        rangeDestinations={snapshot?.destinations}
         dateLabel={dateLabel}
         useLiveCounters={isToday}
         destinationFilter={allSelected ? undefined : destinationTfn}

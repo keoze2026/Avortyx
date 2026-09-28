@@ -21,6 +21,7 @@ import { matchesCallStatusFilter } from "@/lib/call-status";
 import { CHART_TOOLTIP_PROPS } from "@/lib/chart-tooltip";
 import { ROUTES } from "@/lib/constants";
 import { formatNumber } from "@/lib/format";
+import type { EntitySummary } from "@/lib/api/services/analytics.service";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { Call } from "@/lib/types";
 
@@ -35,6 +36,9 @@ interface TopCampaignsBarsProps {
   calls: Call[];
   /** Shown in the card subtitle so the ranking is never mistaken for "today". */
   dateLabel: string;
+  /** Per-campaign totals (e.g. from the dashboard snapshot). When passed, the
+   *  ranking uses their connected counts instead of counting `calls`. */
+  campaignSummaries?: EntitySummary[];
 }
 
 /**
@@ -46,12 +50,23 @@ interface TopCampaignsBarsProps {
  * picker is the only time control now; this card ranks exactly what it's
  * handed.
  */
-export function TopCampaignsBars({ calls, dateLabel }: TopCampaignsBarsProps) {
+export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCampaignsBarsProps) {
   const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
 
   const data = useMemo<Row[]>(() => {
     const nameById = new Map(campaigns.map((c) => [c.id, c.name]));
+    if (campaignSummaries) {
+      return campaignSummaries
+        .map((s) => ({
+          id: s.entityId,
+          name: nameById.get(s.entityId) ?? s.entityName,
+          connected: s.connectedCalls ?? 0,
+        }))
+        .filter((r) => r.connected > 0)
+        .sort((a, b) => b.connected - a.connected)
+        .slice(0, 6);
+    }
     const m = new Map<string, Row>();
     for (const call of calls) {
       if (!matchesCallStatusFilter(call, "connected")) continue;
@@ -74,7 +89,7 @@ export function TopCampaignsBars({ calls, dateLabel }: TopCampaignsBarsProps) {
       .filter((r) => r.connected > 0)
       .sort((a, b) => b.connected - a.connected)
       .slice(0, 6);
-  }, [calls, campaigns]);
+  }, [calls, campaigns, campaignSummaries]);
 
   const subLabel = t("dashboard.topCampaignsHintOn").replace("{date}", dateLabel);
 

@@ -231,6 +231,12 @@ function wireToDestination(w: DestinationWire): Destination {
 
 /** Build a writable subset of the wire shape from a Destination patch.
  *  Skips read-only / computed fields (live counters, buyer_name, timestamps). */
+/** Converts one destination row as the API sends it (e.g. the
+ *  `destinations` section of /api/analytics/snapshot). */
+export function destinationFromWire(w: unknown): Destination {
+  return wireToDestination(w as DestinationWire);
+}
+
 function destinationToWire(patch: Partial<Destination>): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   // buyerId is optional — empty string means "no buyer assigned yet", send
