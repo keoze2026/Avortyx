@@ -164,27 +164,22 @@ function LegendKey({ color, label }: { color: string; label: string }) {
  *  the same lines as the call counts on the left. */
 const DIVISIONS = 6;
 
-/** How far above a column the revenue line rides, as a multiple of the
- *  column's height — enough to clear the call-count label printed on top
- *  of the column with a little air either side. */
-const LABEL_GAP = 1.3;
-
 function niceStep(raw: number): number {
   if (raw <= 0) return 1;
   const pow = Math.pow(10, Math.floor(Math.log10(raw)));
   const f = raw / pow;
   const m =
     f <= 1 ? 1
-    : f <= 1.2 ? 1.2
-    : f <= 1.5 ? 1.5
-    : f <= 2 ? 2
-    : f <= 2.5 ? 2.5
-    : f <= 3 ? 3
-    : f <= 4 ? 4
-    : f <= 5 ? 5
-    : f <= 6 ? 6
-    : f <= 8 ? 8
-    : 10;
+      : f <= 1.2 ? 1.2
+        : f <= 1.5 ? 1.5
+          : f <= 2 ? 2
+            : f <= 2.5 ? 2.5
+              : f <= 3 ? 3
+                : f <= 4 ? 4
+                  : f <= 5 ? 5
+                    : f <= 6 ? 6
+                      : f <= 8 ? 8
+                        : 10;
   return m * pow;
 }
 
@@ -470,15 +465,15 @@ export function HourlyDistribution({
     [calls, series, grain, timeZone, rangeStartKey, rangeEndKey],
   );
 
-  // Both axes in one calculation, because they constrain each other.
+  // Each axis is sized from its own data only.
   //
-  //   1. The revenue line must sit ABOVE every column (client request:
-  //      "line always above stick"). A point is above a column when
-  //      rev/revTop > calls/countTop, so the count axis needs enough
-  //      headroom to satisfy the worst hour — the one with the most calls
-  //      per dollar. Solving for countTop gives the `needed` term below.
-  //   2. Both axes use four divisions, so the $ ticks on the right land on
-  //      the same gridlines as the call counts on the left.
+  //   1. The count axis follows the busiest period's call total. It used to
+  //      be stretched by a calls-per-dollar ratio to force the revenue line
+  //      above every column, which pushed a 49-call peak onto a 240 axis and
+  //      made the revenue line read as a call count. Removed on request:
+  //      the left scale is set by hourly calls, not by a ratio.
+  //   2. Both axes still use the same number of divisions, so the $ ticks on
+  //      the right land on the same gridlines as the call counts on the left.
   const axes = React.useMemo(() => {
     const maxCalls = Math.max(0, ...data.map((d) => d.total));
     const maxRevenue = Math.max(0, ...data.map((d) => d.revenue));
@@ -490,17 +485,9 @@ export function HourlyDistribution({
     const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.1) / DIVISIONS)));
     const revTop = revStep * DIVISIONS;
 
-    // Worst calls-per-dollar hour. Hours with no revenue are skipped: a
-    // column can't be cleared by a line sitting on the baseline.
-    let callsPerDollar = 0;
-    for (const d of data) {
-      if (d.revenue > 0 && d.total > 0) callsPerDollar = Math.max(callsPerDollar, d.total / d.revenue);
-    }
-    // The line sits above the column *and* above the count label printed
-    // on top of it, so the gap has to cover both.
-    const needed = revTop * callsPerDollar * LABEL_GAP;
-
-    const countStep = Math.max(1, Math.ceil(niceStep(Math.max(maxCalls * 1.12, needed, 4) / DIVISIONS)));
+    // Count ceiling from the calls alone — 12% headroom so the total printed
+    // on top of the tallest column stays inside the chart.
+    const countStep = Math.max(1, Math.ceil(niceStep(Math.max(maxCalls * 1.12, 4) / DIVISIONS)));
     const countTop = countStep * DIVISIONS;
 
     const ticksFor = (step: number) =>
@@ -626,8 +613,7 @@ export function HourlyDistribution({
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
                 >
-                  {/* Above the column, as in the reference layout. The
-                      revenue line clears these too — see LABEL_GAP. */}
+                  {/* Above the column, as in the reference layout. */}
                   <LabelList
                     dataKey="total"
                     position="top"
