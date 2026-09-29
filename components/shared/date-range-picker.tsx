@@ -222,6 +222,15 @@ export function DateRangePicker({
     setPreset(detectPreset(range, anchor));
   };
 
+  const onCalendarDayClick = (day: Date, _modifiers: unknown, e: React.MouseEvent) => {
+    if (e.detail < 2) return;
+    const single: DateRange = { from: day, to: day };
+    setBuffer(single);
+    setPreset(detectPreset(single, anchor));
+    onChange(single);
+    setOpen(false);
+  };
+
   const onApply = () => {
     if (!buffer?.from) return;
     onChange({ from: buffer.from, to: buffer.to ?? buffer.from });
@@ -272,6 +281,7 @@ export function DateRangePicker({
           mode="range"
           selected={buffer}
           onSelect={onCalendarSelect}
+          onDayClick={onCalendarDayClick}
           numberOfMonths={1}
           defaultMonth={buffer?.from ?? value?.from ?? anchor}
           disabled={{ after: anchor }}
