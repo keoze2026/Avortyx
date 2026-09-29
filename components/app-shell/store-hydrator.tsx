@@ -71,6 +71,9 @@ export function StoreHydrator() {
     if (!isAuthed) return;
     const tick = () => {
       if (document.visibilityState !== "visible") return;
+      // On the Dashboard these figures come from its single snapshot
+      // request, so the separate polls are skipped while it's showing.
+      if (useCallsStore.getState().snapshotDrivesKpis) return;
       void useCampaignsStore.getState().fetch();
       void useDestinationsStore.getState().fetch();
       void useDestinationsStore.getState().fetchStats();

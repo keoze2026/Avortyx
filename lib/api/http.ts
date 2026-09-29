@@ -11,6 +11,8 @@
  *   - Inject `Authorization: Bearer <access>` unless { anonymous: true }
  *   - On 401, attempt one refresh, then retry the original request once.
  *     Concurrent 401s coalesce into a single refresh call.
+ *   - While a refresh is in flight, new requests wait for it and go out
+ *     with the new token instead of the expired one.
  *   - Normalize non-2xx into `ApiError`
  *
  * Phase 0 lays the plumbing. Stores will adopt it during Phase 1.
@@ -92,6 +94,43 @@ async function performRefresh(): Promise<string | null> {
     // backend. Leave localStorage alone so the user can retry instead of
     // being bounced to login on a flaky connection.
     return null;
+  }
+}
+
+/** Seconds left on a JWT access token, or null when it can't be read. */
+function tokenSecondsLeft(token: string): number | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
+    if (typeof exp !== "number") return null;
+    return exp - Date.now() / 1000;
+  } catch {
+    return null;
+  }
+}
+
+/** Refresh this many seconds before expiry, so no request goes out with a
+ *  token that expires while it's on the wire. */
+const REFRESH_AHEAD_SECONDS = 15;
+
+/**
+ * Called before every authenticated request. Waits for a refresh that is
+ * already in flight, and starts one when the current access token has
+ * expired (or is about to), so the request is sent with a valid token
+ * rather than failing with a 401 first.
+ */
+async function ensureFreshToken(): Promise<void> {
+  if (refreshInFlight) {
+    await refreshInFlight;
+    return;
+  }
+  const token = getAccessToken();
+  if (!token || !getRefreshToken()) return;
+  const left = tokenSecondsLeft(token);
+  if (left !== null && left < REFRESH_AHEAD_SECONDS) {
+    await refreshOnce();
   }
 }
 
@@ -182,10 +221,15 @@ async function doRequest<T>({
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.headers) Object.assign(headers, options.headers);
 
-  // Auth header.
+  // Auth header. Wait for any refresh in flight (or start one if the token
+  // has expired) so the request never leaves with a stale token.
+  const needsAuth = !options.anonymous && !path.endsWith(REFRESH_PATH);
+  if (needsAuth) await ensureFreshToken();
+  let sentToken: string | null = null;
   if (!options.anonymous) {
     const token = getAccessToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
+    sentToken = token ?? null;
   }
 
   // Body serialization.
@@ -202,22 +246,40 @@ async function doRequest<T>({
     }
   }
 
-  const res = await fetch(buildUrl(path, options.query), {
-    method,
-    headers,
-    body,
-    signal: options.signal,
-    credentials: "omit",
-  });
+  let res: Response;
+  try {
+    res = await fetch(buildUrl(path, options.query), {
+      method,
+      headers,
+      body,
+      signal: options.signal,
+      credentials: "omit",
+    });
+  } catch (err) {
+    // A 401 sent without CORS headers reaches the browser as a network error
+    // ("Failed to fetch"), not as a 401. If the token we sent had expired,
+    // treat it the same way: refresh once and retry.
+    const left = sentToken ? tokenSecondsLeft(sentToken) : null;
+    const sentExpired = left !== null && left <= 0;
+    if (needsAuth && !alreadyRetried && sentExpired && !options.signal?.aborted) {
+      const newAccess = await refreshOnce();
+      if (newAccess) {
+        return doRequest<T>({ method, path, options, alreadyRetried: true });
+      }
+    }
+    throw err;
+  }
 
   // Refresh-on-401 retry. Skip for the refresh endpoint itself and for explicit anonymous requests.
   if (
     res.status === 401 &&
     !alreadyRetried &&
-    !options.anonymous &&
-    !path.endsWith(REFRESH_PATH)
+    needsAuth
   ) {
-    const newAccess = await refreshOnce();
+    // Another request may already have refreshed while this one was on the
+    // wire — then just retry with the new token instead of refreshing again.
+    const current = getAccessToken();
+    const newAccess = current && current !== sentToken ? current : await refreshOnce();
     if (newAccess) {
       return doRequest<T>({ method, path, options, alreadyRetried: true });
     }
