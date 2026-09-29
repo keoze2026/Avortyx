@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 
 import { LiveControls } from "@/components/live/live-controls";
@@ -11,12 +11,18 @@ import { SessionMeter } from "@/components/live/session-meter";
 import { LiveBadge } from "@/components/shared/live-badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { useLiveSocket } from "@/hooks/use-live-socket";
+import { longestActiveToCall, useLiveSummary } from "@/hooks/use-live-summary";
 import { useTranslation } from "@/hooks/use-translation";
 
 export default function LivePage() {
   const { t, locale } = useTranslation();
   const [paused, setPaused] = useState(false);
-  const { inFlight, history, totals, hangup } = useLiveSocket({ paused });
+  // WebSocket drives the radar (in-flight dots + count) and the stream.
+  const { inFlight, history, totals: socketTotals, hangup } = useLiveSocket({ paused });
+  // Counters and featured call come from the backend's day totals, polled.
+  const summary = useLiveSummary({ paused });
+  // The socket tally only stands in until the first poll lands.
+  const totals = summary?.totals ?? socketTotals;
 
   // Today's date chip — defer formatting to after mount so SSR and the
   // first client paint don't disagree about the locale string.
@@ -32,11 +38,15 @@ export default function LivePage() {
     );
   }, [locale]);
 
-  // Featured = longest-running in-flight call, falls back to most recent settled.
-  const featured =
-    inFlight.length > 0
-      ? [...inFlight].sort((a, b) => a.startedAt - b.startedAt)[0]
-      : history[0] ?? null;
+  // Featured = the backend's longest active call. The socket's copy of the
+  // same call is preferred (it carries buyer, publisher and number for the
+  // routing path); when the socket list doesn't hold it, a card is built from
+  // the summary. With nothing live, falls back to the most recent settled call.
+  const longestActive = summary?.longestActive ?? null;
+  const featured = useMemo(() => {
+    if (!longestActive) return history[0] ?? null;
+    return inFlight.find((c) => c.id === longestActive.id) ?? longestActiveToCall(longestActive);
+  }, [longestActive, inFlight, history]);
 
   return (
     <>

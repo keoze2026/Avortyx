@@ -132,7 +132,12 @@ export function LiveRadar({ inFlight, featured, totals }: LiveRadarProps) {
               </span>
             </div>
             {featured ? (
-              <LiveCallCard call={featured} isLive={inFlight.includes(featured)} />
+              <LiveCallCard
+                call={featured}
+                // A featured call built from the live summary isn't in the
+                // socket list, but it is live — its timer should still tick.
+                isLive={inFlight.includes(featured) || featured.status === "ringing" || featured.status === "in-progress"}
+              />
             ) : (
               <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
                 {t("liveUI.radar.awaitingFirst")}
