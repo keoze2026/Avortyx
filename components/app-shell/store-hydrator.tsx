@@ -31,7 +31,8 @@ export function StoreHydrator() {
 
   useEffect(() => {
     if (!isAuthed) return;
-    // Fire in parallel — each store handles its own loading + error state.
+    // Essentials first — what the header and the pages people open first
+    // read. Each store handles its own loading + error state.
     void useBuyersStore.getState().fetch();
     void useCampaignsStore.getState().fetch();
     void usePublishersStore.getState().fetch();
@@ -42,23 +43,14 @@ export function StoreHydrator() {
     void useCallsStore.getState().fetchRecent();
     void useCallsStore.getState().fetchKpis();
     void useCallsStore.getState().fetchTimeSeries({ granularity: "hour" });
-    // AI Insights — recommendations + anomalies (cheap, rule-based on the backend).
-    void useAiInsightsStore.getState().fetchAll();
-    // Suppression list — blocked numbers (blacklist).
-    void useBlockedNumbersStore.getState().fetch();
-    // VoIP + TCPA shields (named policies).
-    void useVoipShieldStore.getState().fetch();
-    void useTcpaShieldStore.getState().fetch();
-    // Routing plans (visual graphs ↔ flat backend rules via routing-bridge).
-    void useRoutingStore.getState().fetch();
-    // Webhooks (Integrations → Webhooks section).
-    void useWebhooksStore.getState().fetch();
-    // Notification rules (Settings → Notifications preferences matrix).
-    void useNotificationsRulesStore.getState().fetch();
-    // Integrations marketplace catalog.
-    void useIntegrationsStore.getState().fetch();
-    // Workspace meta: activity log + sessions + role catalog.
-    void useWorkspaceMetaStore.getState().fetch();
+
+    // Everything else a moment later. Firing all ~17 requests together, on
+    // top of the page's own, went past the server's limit of 20 requests in
+    // flight per IP, and the last ones came back 429.
+    const secondary = window.setTimeout(() => {
+      loadSecondaryStores();
+    }, SECONDARY_LOAD_DELAY_MS);
+    return () => window.clearTimeout(secondary);
   }, [isAuthed]);
 
   // The per-entity live/hourly/daily counters (`liveCalls` on campaigns and
@@ -89,4 +81,27 @@ export function StoreHydrator() {
   return null;
 }
 
+function loadSecondaryStores() {
+  // AI Insights — recommendations + anomalies (cheap, rule-based on the backend).
+  void useAiInsightsStore.getState().fetchAll();
+  // Suppression list — blocked numbers (blacklist).
+  void useBlockedNumbersStore.getState().fetch();
+  // VoIP + TCPA shields (named policies).
+  void useVoipShieldStore.getState().fetch();
+  void useTcpaShieldStore.getState().fetch();
+  // Routing plans (visual graphs ↔ flat backend rules via routing-bridge).
+  void useRoutingStore.getState().fetch();
+  // Webhooks (Integrations → Webhooks section).
+  void useWebhooksStore.getState().fetch();
+  // Notification rules (Settings → Notifications preferences matrix).
+  void useNotificationsRulesStore.getState().fetch();
+  // Integrations marketplace catalog.
+  void useIntegrationsStore.getState().fetch();
+  // Workspace meta: activity log + sessions + role catalog.
+  void useWorkspaceMetaStore.getState().fetch();
+}
+
 const LIVE_COUNTER_POLL_MS = 15_000;
+
+/** Delay before the non-essential stores load after sign-in / page load. */
+const SECONDARY_LOAD_DELAY_MS = 1_500;

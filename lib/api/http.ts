@@ -13,6 +13,9 @@
  *     Concurrent 401s coalesce into a single refresh call.
  *   - While a refresh is in flight, new requests wait for it and go out
  *     with the new token instead of the expired one.
+ *   - A GET throttled by the server (429, or the network error the browser
+ *     reports when the throttle reply carries no CORS header) waits briefly
+ *     and is retried once.
  *   - Normalize non-2xx into `ApiError`
  *
  * Phase 0 lays the plumbing. Stores will adopt it during Phase 1.
@@ -168,6 +171,36 @@ interface DoRequestArgs {
   options?: RequestOptions;
   /** Internal — set after a refresh has already been attempted. */
   alreadyRetried?: boolean;
+  /** Internal — set after a throttled / network-failed GET was retried once. */
+  throttleRetried?: boolean;
+}
+
+/** Wait before retrying a throttled GET: the server's Retry-After when it is
+ *  readable (capped at 5 s), otherwise ~1.5 s with a little jitter so a burst
+ *  of throttled requests doesn't come back at the same instant. */
+function throttleDelayMs(res?: Response): number {
+  const header = res?.headers.get("retry-after");
+  const seconds = header ? Number(header) : NaN;
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds, 5) * 1000;
+  return 1200 + Math.random() * 800;
+}
+
+function sleep(ms: number, signal?: AbortSignal | null): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const id = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(id);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
 }
 
 /**
@@ -194,6 +227,7 @@ async function doRequest<T>({
   path,
   options = {},
   alreadyRetried = false,
+  throttleRetried = false,
 }: DoRequestArgs): Promise<T> {
   // Demo mode — route every request through the in-memory mock router and
   // never touch the network. The router returns snake_case wire shapes;
@@ -264,10 +298,22 @@ async function doRequest<T>({
     if (needsAuth && !alreadyRetried && sentExpired && !options.signal?.aborted) {
       const newAccess = await refreshOnce();
       if (newAccess) {
-        return doRequest<T>({ method, path, options, alreadyRetried: true });
+        return doRequest<T>({ method, path, options, alreadyRetried: true, throttleRetried });
       }
     }
+    // A throttle reply (429) from the server's front proxy carries no CORS
+    // header, so the browser reports it as a network error. GETs are safe to
+    // repeat, so wait a moment and try once more.
+    if (method === "GET" && !throttleRetried && !options.signal?.aborted) {
+      await sleep(throttleDelayMs(), options.signal);
+      return doRequest<T>({ method, path, options, alreadyRetried, throttleRetried: true });
+    }
     throw err;
+  }
+
+  if (res.status === 429 && method === "GET" && !throttleRetried) {
+    await sleep(throttleDelayMs(res), options.signal);
+    return doRequest<T>({ method, path, options, alreadyRetried, throttleRetried: true });
   }
 
   // Refresh-on-401 retry. Skip for the refresh endpoint itself and for explicit anonymous requests.
@@ -281,7 +327,7 @@ async function doRequest<T>({
     const current = getAccessToken();
     const newAccess = current && current !== sentToken ? current : await refreshOnce();
     if (newAccess) {
-      return doRequest<T>({ method, path, options, alreadyRetried: true });
+      return doRequest<T>({ method, path, options, alreadyRetried: true, throttleRetried });
     }
   }
 
