@@ -39,6 +39,11 @@ const CLOSED_POLL_MS = 60_000;
 /** The backend's `name` column is 200 characters. */
 const NAME_MAX = 200;
 
+/** The portal's brand colour — the same classes as the active sidebar item,
+ *  so the chat follows whichever colour theme the user has picked. */
+const ACCENT = "bg-accent text-accent-foreground hover:bg-accent/90";
+const ACCENT_GLOW = "shadow-[0_4px_16px_rgba(82,102,224,0.30)]";
+
 /* ─── Per-user storage ───────────────────────────────────────────────── */
 
 function storageKey(userId: string, what: "session" | "seen"): string {
@@ -278,13 +283,21 @@ export function SupportChat() {
           aria-label={tr("supportChat.title", "Support")}
           className="fixed right-4 bottom-20 z-40 flex h-[min(520px,calc(100svh-7rem))] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xl sm:right-6"
         >
+          {/* Accent hairline, as along the top of the topbar */}
+          <div aria-hidden className="h-px w-full bg-accent-gradient" />
+
           {/* Header */}
           <div className="flex items-start justify-between gap-2 border-b px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold">{tr("supportChat.title", "Support")}</p>
-              <p className="text-xs text-muted-foreground">
-                {tr("supportChat.subtitle", "Our team replies here. You can close this and come back.")}
-              </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-gradient text-[color:var(--accent-foreground)] shadow-sm">
+                <MessageCircle className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{tr("supportChat.title", "Support")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {tr("supportChat.subtitle", "Our team replies here. You can close this and come back.")}
+                </p>
+              </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {sessionId && (
@@ -330,7 +343,7 @@ export function SupportChat() {
                     <div
                       className={cn(
                         "max-w-[85%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap",
-                        mine ? "bg-primary text-primary-foreground" : "bg-muted",
+                        mine ? "bg-accent text-accent-foreground" : "bg-muted",
                       )}
                     >
                       {m.body}
@@ -362,6 +375,7 @@ export function SupportChat() {
             />
             <Button
               size="icon"
+              className={ACCENT}
               onClick={() => void send()}
               disabled={sending || !draft.trim()}
               aria-label={tr("supportChat.send", "Send")}
@@ -376,7 +390,11 @@ export function SupportChat() {
       <Button
         onClick={toggle}
         size="icon-lg"
-        className="fixed right-4 bottom-4 z-40 size-12 rounded-full shadow-lg sm:right-6 sm:bottom-6"
+        className={cn(
+          "fixed right-4 bottom-4 z-40 size-12 rounded-full sm:right-6 sm:bottom-6",
+          ACCENT,
+          ACCENT_GLOW,
+        )}
         aria-label={open ? tr("supportChat.close", "Close") : tr("supportChat.open", "Need help? Chat with support")}
         title={open ? undefined : tr("supportChat.open", "Need help? Chat with support")}
       >
