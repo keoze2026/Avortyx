@@ -151,51 +151,45 @@ function compactMoney(v: number): string {
  *  keeps a column sitting exactly above its revenue point. */
 const AXIS_WIDTH = 46;
 
-/** Shortest column (px) that can hold its call count inside. */
-const INSIDE_LABEL_MIN_PX = 16;
-
 /**
- * Call count printed inside the top of its column, so the revenue line can
- * never run through the figure. Attached to both stacked segments: the top
- * (connected) segment draws it when the hour has connected calls, the bottom
- * (no-answer) segment only when it has none, so every column gets exactly
- * one label. Columns too short to hold the figure go without — the tooltip
- * still shows it.
+ * Call count printed on top of its column.
+ *
+ * Rendered by a zero-height bar stacked on top of each column and placed
+ * after the revenue line in the chart, so the figures are drawn over the
+ * line rather than under it. A thin halo in the card colour around the
+ * digits keeps them clearly readable where the line runs close by. With the
+ * tight revenue scale the line normally rides just above the figures, as in
+ * the reference layout.
  */
-function InsideCountLabel({
+function ColumnCountLabel({
   viewBox,
   index,
   data,
-  segment,
 }: {
-  viewBox?: { x?: number; y?: number; width?: number; height?: number };
+  viewBox?: { x?: number; y?: number; width?: number };
   index?: number;
-  data?: Array<{ converted: number; total: number }>;
-  segment?: "top" | "bottom";
+  data?: Array<{ total: number }>;
 }) {
   const row = index === undefined ? undefined : data?.[index];
   if (!row || row.total <= 0) return null;
-  if (segment === "top" ? row.converted <= 0 : row.converted > 0) return null;
 
   const x = Number(viewBox?.x);
-  const y = Number(viewBox?.y);
+  const columnTop = Number(viewBox?.y);
   const width = Number(viewBox?.width);
-  const segmentPx = Math.abs(Number(viewBox?.height));
-  if (![x, y, width, segmentPx].every(Number.isFinite)) return null;
-
-  // The top segment only knows its own height; scale it to the whole column
-  // so a short connected part over a tall no-answer part still has room.
-  const columnPx = segment === "top" ? (segmentPx / row.converted) * row.total : segmentPx;
-  if (columnPx < INSIDE_LABEL_MIN_PX) return null;
+  if (![x, columnTop, width].every(Number.isFinite)) return null;
 
   return (
     <text
       x={x + width / 2}
-      y={y + 12}
+      y={columnTop - 4}
       textAnchor="middle"
-      fontSize={10}
-      fontWeight={600}
-      fill="#fff"
+      fontSize={11}
+      fontWeight={700}
+      fill="var(--foreground)"
+      stroke="var(--card)"
+      strokeWidth={3}
+      strokeLinejoin="round"
+      paintOrder="stroke"
     >
       {formatNumber(row.total)}
     </text>
@@ -512,6 +506,9 @@ export function HourlyDistribution({
       ).map((b) => ({
         ...b,
         total: b.converted + b.notConverted + b.noAnswer,
+        // Zero-height segment stacked on top of each column; it only carries
+        // the call-count label (see ColumnCountLabel).
+        labelAnchor: 0,
       })),
     [calls, series, grain, timeZone, rangeStartKey, rangeEndKey],
   );
@@ -529,11 +526,10 @@ export function HourlyDistribution({
     const maxCalls = Math.max(0, ...data.map((d) => d.total));
     const maxRevenue = Math.max(0, ...data.map((d) => d.revenue));
 
-    // Revenue ceiling first — 10% headroom so the peak's label has room.
-    // Five divisions, not four: a coarser split rounds the ceiling far above
-    // the data (a $777 peak landed on a $1,000 axis, which then dragged the
-    // count axis to 2,000 and left the columns a third of their height).
-    const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.1) / DIVISIONS)));
+    // Revenue ceiling: kept tight to the peak (2% headroom) so the revenue
+    // line rides above the columns and normally clears the call counts
+    // printed on top of them. The dollar scale on the right stays exact.
+    const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.02) / DIVISIONS)));
     const revTop = revStep * DIVISIONS;
 
     // Count ceiling from the calls alone — 12% headroom so the tallest
@@ -656,28 +652,14 @@ export function HourlyDistribution({
                   stackId="calls"
                   fill={COLOR_NOANS}
                   radius={[0, 0, 0, 0]}
-                >
-                  {/* Only draws for a column with no connected calls —
-                      see InsideCountLabel. */}
-                  <LabelList
-                    dataKey="total"
-                    content={<InsideCountLabel data={data} segment="bottom" />}
-                  />
-                </Bar>
+                />
                 <Bar
                   yAxisId="count"
                   dataKey="converted"
                   stackId="calls"
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
-                >
-                  {/* Inside the top of the column, not above it, so the
-                      revenue line never crosses the figure. */}
-                  <LabelList
-                    dataKey="total"
-                    content={<InsideCountLabel data={data} segment="top" />}
-                  />
-                </Bar>
+                />
                 <Line
                   yAxisId="rev"
                   type="monotone"
@@ -690,12 +672,25 @@ export function HourlyDistribution({
                   animationDuration={500}
                 >
                   {/* No value labels on the line: the numbers are printed
-                      inside the sticks only. Stacking a
+                      on top of the sticks only. Stacking a
                       second figure above the line collided with the count
                       on every short column, where the proportional gap
                       between the two is only a few pixels. The line's
                       value is on the right axis and in the tooltip. */}
                 </Line>
+                {/* Call counts on top of each column. A zero-height bar on
+                    the same stack, placed after the line so the figures are
+                    drawn over it; hidden from the tooltip and legend. */}
+                <Bar
+                  yAxisId="count"
+                  dataKey="labelAnchor"
+                  stackId="calls"
+                  fill="transparent"
+                  legendType="none"
+                  tooltipType="none"
+                >
+                  <LabelList dataKey="total" content={<ColumnCountLabel data={data} />} />
+                </Bar>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
