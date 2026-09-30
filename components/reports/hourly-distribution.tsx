@@ -151,37 +151,67 @@ function compactMoney(v: number): string {
  *  keeps a column sitting exactly above its revenue point. */
 const AXIS_WIDTH = 46;
 
+/** Top margin of the chart's plot area (px). Shared with <ComposedChart>
+ *  so the count labels can work out the plot's pixel scale. */
+const CHART_MARGIN_TOP = 20;
+
 /**
- * Call count printed on top of its column.
+ * Call count printed on top of its column, underneath the revenue line.
+ *
+ * Normally the figure sits just above its column, below the line (as on the
+ * tall columns). On short columns the line runs only a few pixels above the
+ * column, leaving no room in between; there the figure moves down to sit
+ * just under the line, over the top edge of its column, so every figure is
+ * under the line. Where the line runs below the column's top (hours with
+ * many unanswered calls), the figure stays above the column and the line
+ * passes underneath it.
  *
  * Rendered by a zero-height bar stacked on top of each column and placed
- * after the revenue line in the chart, so the figures are drawn over the
- * line rather than under it. A thin halo in the card colour around the
- * digits keeps them clearly readable where the line runs close by. With the
- * tight revenue scale the line normally rides just above the figures, as in
- * the reference layout.
+ * after the revenue line, so figures are drawn over the line; a thin halo in
+ * the card colour keeps the digits crisp against the line and the column.
  */
 function ColumnCountLabel({
   viewBox,
   index,
   data,
+  countTop,
+  revTop,
 }: {
   viewBox?: { x?: number; y?: number; width?: number };
   index?: number;
-  data?: Array<{ total: number }>;
+  data?: Array<{ total: number; revenue: number }>;
+  countTop?: number;
+  revTop?: number;
 }) {
   const row = index === undefined ? undefined : data?.[index];
-  if (!row || row.total <= 0) return null;
+  if (!row || row.total <= 0 || !countTop || !revTop) return null;
 
   const x = Number(viewBox?.x);
   const columnTop = Number(viewBox?.y);
   const width = Number(viewBox?.width);
   if (![x, columnTop, width].every(Number.isFinite)) return null;
 
+  // Plot scale from this column: its top sits at total/countTop of the plot
+  // height, measured down from the plot's top margin.
+  const filled = row.total / countTop;
+  if (!(filled < 1)) return null;
+  const plotPx = (columnTop - CHART_MARGIN_TOP) / (1 - filled);
+  if (!(plotPx > 0)) return null;
+  const baseline = CHART_MARGIN_TOP + plotPx;
+  const lineY = baseline - (row.revenue / revTop) * plotPx;
+
+  const TEXT_H = 9; // height of 11px bold digits
+  const LINE_CLEAR = 3; // the line's stroke and dot
+  let labelBottom = columnTop - 4; // just above the column
+  if (lineY < columnTop && labelBottom - TEXT_H < lineY + LINE_CLEAR) {
+    // No room between column and line: tuck the figure just under the line.
+    labelBottom = Math.min(lineY + LINE_CLEAR + TEXT_H, baseline - 1);
+  }
+
   return (
     <text
       x={x + width / 2}
-      y={columnTop - 4}
+      y={labelBottom}
       textAnchor="middle"
       fontSize={11}
       fontWeight={700}
@@ -589,7 +619,7 @@ export function HourlyDistribution({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={data}
-                margin={{ top: 20, right: 14, left: 4, bottom: 0 }}
+                margin={{ top: CHART_MARGIN_TOP, right: 14, left: 4, bottom: 0 }}
                 // The reference build's spacing — columns read as distinct
                 // sticks rather than a solid block.
                 barCategoryGap="28%"
@@ -678,9 +708,10 @@ export function HourlyDistribution({
                       between the two is only a few pixels. The line's
                       value is on the right axis and in the tooltip. */}
                 </Line>
-                {/* Call counts on top of each column. A zero-height bar on
-                    the same stack, placed after the line so the figures are
-                    drawn over it; hidden from the tooltip and legend. */}
+                {/* Call counts on top of each column, under the line —
+                    see ColumnCountLabel. A zero-height bar on the same
+                    stack, placed after the line so the figures are drawn
+                    over it; hidden from the tooltip and legend. */}
                 <Bar
                   yAxisId="count"
                   dataKey="labelAnchor"
@@ -689,7 +720,10 @@ export function HourlyDistribution({
                   legendType="none"
                   tooltipType="none"
                 >
-                  <LabelList dataKey="total" content={<ColumnCountLabel data={data} />} />
+                  <LabelList
+                    dataKey="total"
+                    content={<ColumnCountLabel data={data} countTop={axes.countTop} revTop={axes.revTop} />}
+                  />
                 </Bar>
               </ComposedChart>
             </ResponsiveContainer>
