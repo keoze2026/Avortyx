@@ -570,6 +570,12 @@ const SUMMARY_ENTITY_FOR_TAB: Partial<Record<GroupKey, SummaryEntity>> = {
   "identity-carrier": "carrier",
 };
 
+/** Tabs that show exactly the rows the backend aggregate returns, and
+ *  nothing grouped from the call log. The call log carries no carrier name,
+ *  so grouping it by carrier put every call in an "Unknown" row; kept beside
+ *  the carrier rows, that row counted every call a second time in Totals. */
+const SUMMARY_ROWS_ONLY = new Set<GroupKey>(["profile-carrier", "identity-carrier"]);
+
 /**
  * Overlay the backend's per-entity aggregate (GET /api/analytics/campaigns
  * | /buyers | /publishers) onto the rows the call log produced for that
@@ -584,9 +590,17 @@ const SUMMARY_ENTITY_FOR_TAB: Partial<Record<GroupKey, SummaryEntity>> = {
  * Entities the aggregate lists but the call log didn't return (calls that
  * fell outside the paged fetch) are added as rows so the table matches
  * the backend's list for the range.
+ *
+ * With `summaryRowsOnly`, call-log rows the aggregate doesn't list are
+ * dropped, so the table (and its Totals) is exactly the backend's rows.
  */
-function applyEntitySummary(rows: SummaryRow[], summary: EntitySummary[]): SummaryRow[] {
+function applyEntitySummary(
+  rows: SummaryRow[],
+  summary: EntitySummary[],
+  summaryRowsOnly = false,
+): SummaryRow[] {
   if (summary.length === 0) return rows;
+  const kept = new Set<SummaryRow>();
   const byId = new Map(rows.map((r) => [r.key, r]));
   // Production /campaigns rows carry only `campaign_name` (no id), so fall
   // back to matching the row label when the id doesn't hit.
@@ -632,8 +646,9 @@ function applyEntitySummary(rows: SummaryRow[], summary: EntitySummary[]): Summa
     row.billableMinutes = c.billableMinutes;
     // ACL stays ours: TCL / Connected.
     row.acl = row.connected > 0 ? Math.round(row.tcl / row.connected) : 0;
+    kept.add(row);
   }
-  return rows;
+  return summaryRowsOnly ? Array.from(kept) : rows;
 }
 
 /**
@@ -844,7 +859,7 @@ export function CallSummaryTable({
   const groupedRows = React.useMemo(() => {
     const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
     const grouped = summary
-      ? applyEntitySummary(groupCalls(calls, tab, timeZone), summary)
+      ? applyEntitySummary(groupCalls(calls, tab, timeZone), summary, SUMMARY_ROWS_ONLY.has(tab))
       : groupCalls(calls, tab, timeZone);
     // Merge the per-entity live counters in before sorting / totals / export,
     // so every consumer of these rows sees the same figure. `max`, not
