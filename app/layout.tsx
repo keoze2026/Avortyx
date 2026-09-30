@@ -32,8 +32,18 @@ export const metadata: Metadata = {
   },
   description: BRAND.description,
   applicationName: BRAND.name,
+  // Browser-tab icon (favicon). The .ico is the fallback every browser
+  // understands (Safari, bookmarks, old caches); the SVG is used where
+  // supported; the PNGs cover Android / "add to home screen". All show the
+  // Avortyx mark on its dark tile so it reads on light and dark tab bars.
   icons: {
-    icon: [{ url: "/avortyx-mark.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.ico",
     apple: "/apple-icon.png",
   },
 };
