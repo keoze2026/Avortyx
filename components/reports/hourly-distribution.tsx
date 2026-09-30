@@ -151,6 +151,57 @@ function compactMoney(v: number): string {
  *  keeps a column sitting exactly above its revenue point. */
 const AXIS_WIDTH = 46;
 
+/** Shortest column (px) that can hold its call count inside. */
+const INSIDE_LABEL_MIN_PX = 16;
+
+/**
+ * Call count printed inside the top of its column, so the revenue line can
+ * never run through the figure. Attached to both stacked segments: the top
+ * (connected) segment draws it when the hour has connected calls, the bottom
+ * (no-answer) segment only when it has none, so every column gets exactly
+ * one label. Columns too short to hold the figure go without — the tooltip
+ * still shows it.
+ */
+function InsideCountLabel({
+  viewBox,
+  index,
+  data,
+  segment,
+}: {
+  viewBox?: { x?: number; y?: number; width?: number; height?: number };
+  index?: number;
+  data?: Array<{ converted: number; total: number }>;
+  segment?: "top" | "bottom";
+}) {
+  const row = index === undefined ? undefined : data?.[index];
+  if (!row || row.total <= 0) return null;
+  if (segment === "top" ? row.converted <= 0 : row.converted > 0) return null;
+
+  const x = Number(viewBox?.x);
+  const y = Number(viewBox?.y);
+  const width = Number(viewBox?.width);
+  const segmentPx = Math.abs(Number(viewBox?.height));
+  if (![x, y, width, segmentPx].every(Number.isFinite)) return null;
+
+  // The top segment only knows its own height; scale it to the whole column
+  // so a short connected part over a tall no-answer part still has room.
+  const columnPx = segment === "top" ? (segmentPx / row.converted) * row.total : segmentPx;
+  if (columnPx < INSIDE_LABEL_MIN_PX) return null;
+
+  return (
+    <text
+      x={x + width / 2}
+      y={y + 12}
+      textAnchor="middle"
+      fontSize={10}
+      fontWeight={600}
+      fill="#fff"
+    >
+      {formatNumber(row.total)}
+    </text>
+  );
+}
+
 function LegendKey({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
@@ -170,16 +221,16 @@ function niceStep(raw: number): number {
   const f = raw / pow;
   const m =
     f <= 1 ? 1
-      : f <= 1.2 ? 1.2
-        : f <= 1.5 ? 1.5
-          : f <= 2 ? 2
-            : f <= 2.5 ? 2.5
-              : f <= 3 ? 3
-                : f <= 4 ? 4
-                  : f <= 5 ? 5
-                    : f <= 6 ? 6
-                      : f <= 8 ? 8
-                        : 10;
+    : f <= 1.2 ? 1.2
+    : f <= 1.5 ? 1.5
+    : f <= 2 ? 2
+    : f <= 2.5 ? 2.5
+    : f <= 3 ? 3
+    : f <= 4 ? 4
+    : f <= 5 ? 5
+    : f <= 6 ? 6
+    : f <= 8 ? 8
+    : 10;
   return m * pow;
 }
 
@@ -485,8 +536,8 @@ export function HourlyDistribution({
     const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.1) / DIVISIONS)));
     const revTop = revStep * DIVISIONS;
 
-    // Count ceiling from the calls alone — 12% headroom so the total printed
-    // on top of the tallest column stays inside the chart.
+    // Count ceiling from the calls alone — 12% headroom so the tallest
+    // column doesn't touch the top of the chart.
     const countStep = Math.max(1, Math.ceil(niceStep(Math.max(maxCalls * 1.12, 4) / DIVISIONS)));
     const countTop = countStep * DIVISIONS;
 
@@ -605,7 +656,14 @@ export function HourlyDistribution({
                   stackId="calls"
                   fill={COLOR_NOANS}
                   radius={[0, 0, 0, 0]}
-                />
+                >
+                  {/* Only draws for a column with no connected calls —
+                      see InsideCountLabel. */}
+                  <LabelList
+                    dataKey="total"
+                    content={<InsideCountLabel data={data} segment="bottom" />}
+                  />
+                </Bar>
                 <Bar
                   yAxisId="count"
                   dataKey="converted"
@@ -613,15 +671,11 @@ export function HourlyDistribution({
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
                 >
-                  {/* Above the column, as in the reference layout. */}
+                  {/* Inside the top of the column, not above it, so the
+                      revenue line never crosses the figure. */}
                   <LabelList
                     dataKey="total"
-                    position="top"
-                    offset={6}
-                    fill="var(--foreground)"
-                    fontSize={10}
-                    fontWeight={600}
-                    formatter={(v: number) => (v > 0 ? formatNumber(v) : "")}
+                    content={<InsideCountLabel data={data} segment="top" />}
                   />
                 </Bar>
                 <Line
@@ -635,8 +689,8 @@ export function HourlyDistribution({
                   isAnimationActive
                   animationDuration={500}
                 >
-                  {/* No value labels on the line: the reference layout
-                      prints numbers above the sticks only. Stacking a
+                  {/* No value labels on the line: the numbers are printed
+                      inside the sticks only. Stacking a
                       second figure above the line collided with the count
                       on every short column, where the proportional gap
                       between the two is only a few pixels. The line's
