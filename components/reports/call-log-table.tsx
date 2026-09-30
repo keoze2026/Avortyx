@@ -60,6 +60,10 @@ import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
+/** Call Date, Caller ID and Called Number share one look: the same
+ *  monospaced font, size and bright colour, so the three read as a set. */
+const NUMBER_CELL = "whitespace-nowrap font-mono text-xs tabular-nums text-foreground";
+
 type ColumnKey =
   | "campaign"
   | "publisher"
@@ -597,7 +601,7 @@ export function CallLogTable({
                           <ListTree className="h-3.5 w-3.5" />
                         </button>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground tabular-nums">
+                      <TableCell className={NUMBER_CELL}>
                         {timeLabel(c.startedAt, timeZone)}
                       </TableCell>
                       {columns.campaign && (
@@ -609,7 +613,7 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.caller && (
-                        <TableCell className="whitespace-nowrap font-mono text-xs">
+                        <TableCell className={NUMBER_CELL}>
                           {isBlocked(c.callerNumber, c.campaignId) ? (
                             <span
                               className="inline-flex items-center gap-1 font-semibold text-destructive"
@@ -624,7 +628,7 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.dialed && (
-                        <TableCell className="whitespace-nowrap font-mono text-xs">
+                        <TableCell className={NUMBER_CELL}>
                           {toE164(c.destinationNumber)}
                         </TableCell>
                       )}
