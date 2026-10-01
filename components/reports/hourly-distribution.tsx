@@ -155,36 +155,52 @@ const AXIS_WIDTH = 46;
  *  so the count labels can work out the plot's pixel scale. */
 const CHART_MARGIN_TOP = 20;
 
+/** How far the calls line rides above each column, as a share of the
+ *  count axis — the gap the call count is printed in. */
+const LINE_LIFT = 0.12;
+
 /**
- * Call count printed just above its column.
+ * Call count printed between the top of its column and the calls line.
  *
- * The green line traces the call totals, so it passes through the top of
- * every column; the figure sits just above that point, clear of the line's
- * dot. Rendered by a zero-height bar stacked on top of each column and
+ * The line rides LINE_LIFT of the axis above every non-empty column (see
+ * `lineLevel`), so each figure sits in that gap: under the line, above its
+ * column. Rendered by a zero-height bar stacked on top of each column and
  * placed after the line, so figures are drawn over it; a thin halo in the
- * card colour keeps the digits crisp where the line passes.
+ * card colour keeps the digits crisp.
  */
 function ColumnCountLabel({
   viewBox,
   index,
   data,
+  countTop,
 }: {
   viewBox?: { x?: number; y?: number; width?: number };
   index?: number;
   data?: Array<{ total: number }>;
+  countTop?: number;
 }) {
   const row = index === undefined ? undefined : data?.[index];
-  if (!row || row.total <= 0) return null;
+  if (!row || row.total <= 0 || !countTop) return null;
 
   const x = Number(viewBox?.x);
   const columnTop = Number(viewBox?.y);
   const width = Number(viewBox?.width);
   if (![x, columnTop, width].every(Number.isFinite)) return null;
 
+  // Plot height in px from this column: its top sits at total/countTop of
+  // the plot, measured down from the plot's top margin.
+  const filled = row.total / countTop;
+  if (!(filled < 1)) return null;
+  const plotPx = (columnTop - CHART_MARGIN_TOP) / (1 - filled);
+  const gapPx = LINE_LIFT * plotPx; // column top → line
+  // Just above the column, leaving the rest of the gap clear below the line
+  // (it rises steeply beside tall columns); never past the gap's middle.
+  const baseline = columnTop - Math.min(5, Math.max(2, gapPx / 2 - 4.5));
+
   return (
     <text
       x={x + width / 2}
-      y={columnTop - 7}
+      y={baseline}
       textAnchor="middle"
       fontSize={11}
       fontWeight={700}
@@ -549,6 +565,18 @@ export function HourlyDistribution({
     };
   }, [data]);
 
+  // The calls line rides a little above each column so its count fits in
+  // between; empty periods stay at zero. The tooltip still reads the real
+  // totals from each period.
+  const chartData = React.useMemo(
+    () =>
+      data.map((d) => ({
+        ...d,
+        lineLevel: d.total > 0 ? d.total + axes.countTop * LINE_LIFT : 0,
+      })),
+    [data, axes.countTop],
+  );
+
   return (
     <Card className={cn("flex flex-col", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -590,7 +618,7 @@ export function HourlyDistribution({
           <div className="min-h-0 flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
-                data={data}
+                data={chartData}
                 margin={{ top: CHART_MARGIN_TOP, right: 14, left: 4, bottom: 0 }}
                 // The reference build's spacing — columns read as distinct
                 // sticks rather than a solid block.
@@ -663,12 +691,13 @@ export function HourlyDistribution({
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
                 />
-                {/* Calls line: joins the top of every column (total calls
-                    per period), on the same scale as the columns. */}
+                {/* Calls line: follows the call totals on the columns'
+                    scale, riding just above each column so the count sits
+                    between the column and the line (see lineLevel). */}
                 <Line
                   yAxisId="count"
                   type="monotone"
-                  dataKey="total"
+                  dataKey="lineLevel"
                   stroke={COLOR_REVENUE}
                   strokeWidth={2}
                   dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
@@ -679,7 +708,7 @@ export function HourlyDistribution({
                   {/* No value labels on the line: the call counts printed
                       on top of the columns are the line's values. */}
                 </Line>
-                {/* Call counts just above each column — see
+                {/* Call counts between each column and the line — see
                     ColumnCountLabel. A zero-height bar on the same stack,
                     placed after the line so the figures are drawn over it;
                     hidden from the tooltip and legend. */}
@@ -693,7 +722,7 @@ export function HourlyDistribution({
                 >
                   <LabelList
                     dataKey="total"
-                    content={<ColumnCountLabel data={data} />}
+                    content={<ColumnCountLabel data={data} countTop={axes.countTop} />}
                   />
                 </Bar>
               </ComposedChart>
