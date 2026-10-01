@@ -156,62 +156,35 @@ const AXIS_WIDTH = 46;
 const CHART_MARGIN_TOP = 20;
 
 /**
- * Call count printed on top of its column, underneath the revenue line.
+ * Call count printed just above its column.
  *
- * Normally the figure sits just above its column, below the line (as on the
- * tall columns). On short columns the line runs only a few pixels above the
- * column, leaving no room in between; there the figure moves down to sit
- * just under the line, over the top edge of its column, so every figure is
- * under the line. Where the line runs below the column's top (hours with
- * many unanswered calls), the figure stays above the column and the line
- * passes underneath it.
- *
- * Rendered by a zero-height bar stacked on top of each column and placed
- * after the revenue line, so figures are drawn over the line; a thin halo in
- * the card colour keeps the digits crisp against the line and the column.
+ * The green line traces the call totals, so it passes through the top of
+ * every column; the figure sits just above that point, clear of the line's
+ * dot. Rendered by a zero-height bar stacked on top of each column and
+ * placed after the line, so figures are drawn over it; a thin halo in the
+ * card colour keeps the digits crisp where the line passes.
  */
 function ColumnCountLabel({
   viewBox,
   index,
   data,
-  countTop,
-  revTop,
 }: {
   viewBox?: { x?: number; y?: number; width?: number };
   index?: number;
-  data?: Array<{ total: number; revenue: number }>;
-  countTop?: number;
-  revTop?: number;
+  data?: Array<{ total: number }>;
 }) {
   const row = index === undefined ? undefined : data?.[index];
-  if (!row || row.total <= 0 || !countTop || !revTop) return null;
+  if (!row || row.total <= 0) return null;
 
   const x = Number(viewBox?.x);
   const columnTop = Number(viewBox?.y);
   const width = Number(viewBox?.width);
   if (![x, columnTop, width].every(Number.isFinite)) return null;
 
-  // Plot scale from this column: its top sits at total/countTop of the plot
-  // height, measured down from the plot's top margin.
-  const filled = row.total / countTop;
-  if (!(filled < 1)) return null;
-  const plotPx = (columnTop - CHART_MARGIN_TOP) / (1 - filled);
-  if (!(plotPx > 0)) return null;
-  const baseline = CHART_MARGIN_TOP + plotPx;
-  const lineY = baseline - (row.revenue / revTop) * plotPx;
-
-  const TEXT_H = 9; // height of 11px bold digits
-  const LINE_CLEAR = 3; // the line's stroke and dot
-  let labelBottom = columnTop - 4; // just above the column
-  if (lineY < columnTop && labelBottom - TEXT_H < lineY + LINE_CLEAR) {
-    // No room between column and line: tuck the figure just under the line.
-    labelBottom = Math.min(lineY + LINE_CLEAR + TEXT_H, baseline - 1);
-  }
-
   return (
     <text
       x={x + width / 2}
-      y={labelBottom}
+      y={columnTop - 7}
       textAnchor="middle"
       fontSize={11}
       fontWeight={700}
@@ -556,9 +529,8 @@ export function HourlyDistribution({
     const maxCalls = Math.max(0, ...data.map((d) => d.total));
     const maxRevenue = Math.max(0, ...data.map((d) => d.revenue));
 
-    // Revenue ceiling: kept tight to the peak (2% headroom) so the revenue
-    // line rides above the columns and normally clears the call counts
-    // printed on top of them. The dollar scale on the right stays exact.
+    // Revenue ceiling for the (hidden) right-hand axis — kept so the old
+    // revenue line can be switched back on without other changes.
     const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.02) / DIVISIONS)));
     const revTop = revStep * DIVISIONS;
 
@@ -657,11 +629,12 @@ export function HourlyDistribution({
                   allowDecimals={false}
                   tickMargin={4}
                 />
-                {/* Right-side revenue axis — four divisions, same as the
-                    count axis, so both sets of numbers sit on the same
-                    gridlines instead of floating between them. */}
+                {/* Right-side revenue axis — hidden: the line now traces
+                    call totals on the left axis, so no series uses this
+                    scale. Revenue per period is still in the tooltip. */}
                 <YAxis
                   yAxisId="rev"
+                  hide
                   orientation="right"
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
@@ -690,10 +663,12 @@ export function HourlyDistribution({
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
                 />
+                {/* Calls line: joins the top of every column (total calls
+                    per period), on the same scale as the columns. */}
                 <Line
-                  yAxisId="rev"
+                  yAxisId="count"
                   type="monotone"
-                  dataKey="revenue"
+                  dataKey="total"
                   stroke={COLOR_REVENUE}
                   strokeWidth={2}
                   dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
@@ -701,17 +676,13 @@ export function HourlyDistribution({
                   isAnimationActive
                   animationDuration={500}
                 >
-                  {/* No value labels on the line: the numbers are printed
-                      on top of the sticks only. Stacking a
-                      second figure above the line collided with the count
-                      on every short column, where the proportional gap
-                      between the two is only a few pixels. The line's
-                      value is on the right axis and in the tooltip. */}
+                  {/* No value labels on the line: the call counts printed
+                      on top of the columns are the line's values. */}
                 </Line>
-                {/* Call counts on top of each column, under the line —
-                    see ColumnCountLabel. A zero-height bar on the same
-                    stack, placed after the line so the figures are drawn
-                    over it; hidden from the tooltip and legend. */}
+                {/* Call counts just above each column — see
+                    ColumnCountLabel. A zero-height bar on the same stack,
+                    placed after the line so the figures are drawn over it;
+                    hidden from the tooltip and legend. */}
                 <Bar
                   yAxisId="count"
                   dataKey="labelAnchor"
@@ -722,7 +693,7 @@ export function HourlyDistribution({
                 >
                   <LabelList
                     dataKey="total"
-                    content={<ColumnCountLabel data={data} countTop={axes.countTop} revTop={axes.revTop} />}
+                    content={<ColumnCountLabel data={data} />}
                   />
                 </Bar>
               </ComposedChart>
@@ -732,7 +703,7 @@ export function HourlyDistribution({
           <div className="flex items-center justify-center gap-5 pt-2">
             <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
             <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
-            <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.legend.revenue")} />
+            <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
           </div>
         </div>
       </CardContent>
