@@ -61,8 +61,9 @@ import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
 /** Call Date, Caller ID and Called Number share one look: the same
- *  monospaced font, size and bright colour, so the three read as a set. */
-const NUMBER_CELL = "whitespace-nowrap font-mono text-xs tabular-nums text-foreground";
+ *  monospaced font, size and bright colour, so the three read as a set.
+ *  13px — one step up from the table's 12px, so they stand out a little. */
+const NUMBER_CELL = "whitespace-nowrap font-mono text-[13px] tabular-nums text-foreground";
 
 type ColumnKey =
   | "campaign"
