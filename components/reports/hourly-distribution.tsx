@@ -157,7 +157,7 @@ const CHART_MARGIN_TOP = 20;
 
 /** How far the calls line rides above each column, as a share of the
  *  count axis — the gap the call count is printed in. */
-const LINE_LIFT = 0.12;
+const LINE_LIFT = 0.09;
 
 /**
  * Call count printed between the top of its column and the calls line.
@@ -551,8 +551,13 @@ export function HourlyDistribution({
     const revTop = revStep * DIVISIONS;
 
     // Count ceiling from the calls alone — 12% headroom so the tallest
-    // column doesn't touch the top of the chart.
-    const countStep = Math.max(1, Math.ceil(niceStep(Math.max(maxCalls * 1.12, 4) / DIVISIONS)));
+    // column doesn't touch the top of the chart, and always enough for the
+    // calls line, which rides LINE_LIFT of the axis above the tallest column
+    // (plus a little air), to stay inside the chart.
+    const countStep = Math.max(
+      1,
+      Math.ceil(niceStep(Math.max(maxCalls * 1.12, maxCalls / (1 - LINE_LIFT - 0.02), 4) / DIVISIONS)),
+    );
     const countTop = countStep * DIVISIONS;
 
     const ticksFor = (step: number) =>
