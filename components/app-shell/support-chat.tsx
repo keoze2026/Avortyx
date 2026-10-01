@@ -39,10 +39,10 @@ const CLOSED_POLL_MS = 60_000;
 /** The backend's `name` column is 200 characters. */
 const NAME_MAX = 200;
 
-/** The portal's brand colour — the same classes as the active sidebar item,
- *  so the chat follows whichever colour theme the user has picked. */
-const ACCENT = "bg-accent text-accent-foreground hover:bg-accent/90";
-const ACCENT_GLOW = "shadow-[0_4px_16px_rgba(82,102,224,0.30)]";
+/** Dark grey with white, matching the portal's dark surfaces: used for the
+ *  chat button, the send button and the header icon. */
+const DARK = "border border-white/10 bg-zinc-800 text-white hover:bg-zinc-700";
+const DARK_SHADOW = "shadow-lg shadow-black/40";
 
 /* ─── Per-user storage ───────────────────────────────────────────────── */
 
@@ -284,17 +284,17 @@ export function SupportChat() {
           className="fixed right-4 bottom-20 z-40 flex h-[min(520px,calc(100svh-7rem))] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xl sm:right-6"
         >
           {/* Accent hairline, as along the top of the topbar */}
-          <div aria-hidden className="h-px w-full bg-accent-gradient" />
+          <div aria-hidden className="h-px w-full bg-white/10" />
 
           {/* Header */}
           <div className="flex items-start justify-between gap-2 border-b px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-gradient text-[color:var(--accent-foreground)] shadow-sm">
+              <div className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-zinc-800 text-white shadow-sm">
                 <MessageCircle className="size-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold">{tr("supportChat.title", "Support")}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-base font-semibold">{tr("supportChat.title", "Support")}</p>
+                <p className="text-[13px] text-foreground/70">
                   {tr("supportChat.subtitle", "Our team replies here. You can close this and come back.")}
                 </p>
               </div>
@@ -325,7 +325,7 @@ export function SupportChat() {
           {/* Messages */}
           <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
             {messages.length === 0 ? (
-              <div className="rounded-lg bg-muted px-3 py-2 text-sm">
+              <div className="rounded-lg bg-muted px-3 py-2 text-[15px] leading-relaxed">
                 {firstName
                   ? `${tr("supportChat.greetingNamed", "Hi")} ${firstName}, ${tr("supportChat.greetingAsk", "how can we help?")}`
                   : tr("supportChat.greeting", "Hi, how can we help?")}
@@ -336,25 +336,25 @@ export function SupportChat() {
                 return (
                   <div key={m.id ?? `local-${i}`} className={cn("flex flex-col", mine ? "items-end" : "items-start")}>
                     {!mine && (
-                      <span className="mb-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="mb-0.5 text-xs font-medium text-foreground/70">
                         {tr("supportChat.teamName", "Avortyx Support")}
                       </span>
                     )}
                     <div
                       className={cn(
-                        "max-w-[85%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap",
-                        mine ? "bg-accent text-accent-foreground" : "bg-muted",
+                        "max-w-[85%] rounded-lg px-3 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
+                        mine ? "bg-zinc-700 text-white" : "bg-muted text-foreground",
                       )}
                     >
                       {m.body}
                     </div>
-                    <span className="mt-0.5 text-[11px] text-muted-foreground">{formatTime(m.createdAt)}</span>
+                    <span className="mt-0.5 text-xs text-foreground/60">{formatTime(m.createdAt)}</span>
                   </div>
                 );
               })
             )}
             {waitingForTeam && (
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="text-center text-[13px] text-foreground/70">
                 {tr("supportChat.sent", "Sent to our support team. Their reply will appear here.")}
               </p>
             )}
@@ -370,12 +370,12 @@ export function SupportChat() {
               rows={2}
               maxLength={4000}
               placeholder={tr("supportChat.placeholder", "Type your question…")}
-              className="max-h-32 min-h-10 resize-none text-sm"
+              className="max-h-32 min-h-10 resize-none text-[15px]"
               disabled={sending}
             />
             <Button
               size="icon"
-              className={ACCENT}
+              className={DARK}
               onClick={() => void send()}
               disabled={sending || !draft.trim()}
               aria-label={tr("supportChat.send", "Send")}
@@ -392,8 +392,8 @@ export function SupportChat() {
         size="icon-lg"
         className={cn(
           "fixed right-4 bottom-4 z-40 size-12 rounded-full sm:right-6 sm:bottom-6",
-          ACCENT,
-          ACCENT_GLOW,
+          DARK,
+          DARK_SHADOW,
         )}
         aria-label={open ? tr("supportChat.close", "Close") : tr("supportChat.open", "Need help? Chat with support")}
         title={open ? undefined : tr("supportChat.open", "Need help? Chat with support")}
