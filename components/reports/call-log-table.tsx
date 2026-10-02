@@ -147,6 +147,12 @@ const STATUS_LABEL_FALLBACK: Record<CallStatus, string> = {
   failed: "Failed",
 };
 
+/** A busy call is grouped with no-answer ("missed") for totals and filters,
+ *  but labelled "Busy" so the client sees exactly what happened. */
+function isBusy(c: Call): boolean {
+  return c.status === "missed" && c.statusRaw === "busy";
+}
+
 /** Completed is green, in-flight is neutral, and every not-connected
  *  outcome — No Answer, Rejected, Failed — is the same red, so the log
  *  reads as connected vs. not at a glance. */
@@ -293,7 +299,7 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "hangUp":
       return HANG_UP_LABEL[getHangUpSide(c)];
     case "status":
-      return STATUS_LABEL_FALLBACK[c.status];
+      return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
     case "failReason":
       // No trustworthy backend fail-reason field exists yet — showing a
       // fabricated one (e.g. "Carrier error") read as real diagnostic data.
@@ -487,7 +493,7 @@ export function CallLogTable({
     <Card className="overflow-hidden p-0">
       {/* Section title */}
       <div className="flex items-center justify-between gap-2 border-b border-border px-6 py-4">
-        <div className="text-sm font-semibold text-foreground">{t("toolsUI.reports.callLog.title")}</div>
+        <div className="text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.callLog.title")}</div>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -675,7 +681,7 @@ export function CallLogTable({
                           {/* Fixed width so Live / Completed / No Answer are
                               identical pills rather than sized to their text. */}
                           <Badge variant={statusVariant(c.status)} className="w-24 justify-center">
-                            {t(STATUS_LABEL_KEYS[c.status])}
+                            {isBusy(c) ? "Busy" : t(STATUS_LABEL_KEYS[c.status])}
                           </Badge>
                         </TableCell>
                       )}

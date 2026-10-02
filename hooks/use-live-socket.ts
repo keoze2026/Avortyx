@@ -214,10 +214,17 @@ export function useLiveSocket({ paused }: UseLiveSocketOptions): UseLiveSocketRe
         if (pausedRef.current) return;
         const call = eventDataToCall(data);
         if (!call) return;
+        // Use the status the event itself carries (e.g. "no_answer" or
+        // "busy") — a `call.failed` event can still be a no-answer, and
+        // labelling it by the event name showed buyers' unanswered calls as
+        // "Failed". Only when the event has no status do we go by its name.
+        const rawStatus = (data as Record<string, unknown>).status;
         const status =
-          type === "call.failed" ? "failed" :
-          type === "call.spam_blocked" ? "rejected" :
-          normalizeStatus(call.status ?? "completed");
+          typeof rawStatus === "string" && rawStatus.trim()
+            ? normalizeStatus(rawStatus)
+            : type === "call.failed" ? "failed" :
+              type === "call.spam_blocked" ? "rejected" :
+              "completed";
         dispatch({
           kind: "settle",
           id: call.id,

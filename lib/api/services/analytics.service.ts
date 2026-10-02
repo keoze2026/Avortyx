@@ -342,8 +342,29 @@ function toTs(s: string | number | undefined): number {
   return Date.now();
 }
 
+/** Tidies a backend status word for matching: trimmed, lower-case, with
+ *  spaces and underscores turned into hyphens ("No Answer", "no_answer" and
+ *  "NO-ANSWER" all become "no-answer"). */
+function statusKey(raw: string | null | undefined): string {
+  return (raw ?? "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+}
+
+/**
+ * Backend status → frontend status. The outcomes the backend sends:
+ *
+ *   completed    → completed    shown as "Completed"
+ *   in_progress  → in-progress  shown as "Live"
+ *   no_answer    → missed       shown as "No Answer" (rang the buyer, nobody picked up)
+ *   busy         → missed       shown as "Busy"      (see statusRaw on Call)
+ *   failed       → failed       shown as "Failed"    (we refused to route: cap, no rule, blocked)
+ *
+ * "failed" is only ever used for a real "failed" from the backend. No answer
+ * and busy are the buyer not picking up — not our failure — so they must
+ * never be shown as Failed.
+ */
 function normalizeStatus(raw: string | null | undefined): CallStatus {
-  const s = (raw ?? "").toLowerCase().replace(/_/g, "-");
+  const s = statusKey(raw);
+  if (s === "no-answer" || s === "noanswer" || s === "busy") return "missed";
   if (s === "ringing" || s === "in-progress" || s === "completed" ||
       s === "missed" || s === "rejected" || s === "failed") return s;
   if (s === "queued") return "ringing";
@@ -394,6 +415,7 @@ function callRecordToCall(w: CallRecordWire): Call {
     startedAt: toTs(w.startedAt ?? w.createdAt),
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),
+    statusRaw: w.status ? statusKey(w.status) : undefined,
     isQualified: w.isQualified,
     isDuplicate: w.isDuplicate ?? w.duplicate,
     isConverted: w.isConverted,
@@ -703,4 +725,4 @@ export const analyticsService = {
 /* ─── Shared types re-exported for socket / call detail ──────────────── */
 
 export type { CallRecordWire };
-export { callRecordToCall, normalizeStatus, toNum, toTs };
+export { callRecordToCall, normalizeStatus, statusKey, toNum, toTs };

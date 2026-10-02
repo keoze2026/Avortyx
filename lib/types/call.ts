@@ -19,6 +19,11 @@ export interface Call {
   startedAt: number;
   durationSec: number;
   status: CallStatus;
+  /** The backend's own status word, tidied to lower-case with hyphens —
+   *  e.g. "no-answer", "busy", "failed". `status` groups outcomes for totals
+   *  and filters (busy and no-answer are both "missed"); this keeps the exact
+   *  outcome so screens can label it precisely. */
+  statusRaw?: string;
   payout: number;
   revenue: number;
   geo: { country: string; state?: string; city?: string };

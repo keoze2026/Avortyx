@@ -40,9 +40,13 @@ const CLOSED_POLL_MS = 60_000;
 const NAME_MAX = 200;
 
 /** Dark grey with white, matching the portal's dark surfaces: used for the
- *  chat button, the send button and the header icon. */
+ *  send button and the header icon. */
 const DARK = "border border-white/10 bg-zinc-800 text-white hover:bg-zinc-700";
-const DARK_SHADOW = "shadow-lg shadow-black/40";
+
+/** The round chat button: the portal's blue, with the same soft glow as the
+ *  active sidebar item, and a white icon. */
+const BUBBLE = "bg-accent text-accent-foreground hover:bg-accent/90";
+const BUBBLE_GLOW = "shadow-[0_4px_16px_rgba(82,102,224,0.30)]";
 
 /* ─── Per-user storage ───────────────────────────────────────────────── */
 
@@ -392,8 +396,8 @@ export function SupportChat() {
         size="icon-lg"
         className={cn(
           "fixed right-4 bottom-4 z-40 size-12 rounded-full sm:right-6 sm:bottom-6",
-          DARK,
-          DARK_SHADOW,
+          BUBBLE,
+          BUBBLE_GLOW,
         )}
         aria-label={open ? tr("supportChat.close", "Close") : tr("supportChat.open", "Need help? Chat with support")}
         title={open ? undefined : tr("supportChat.open", "Need help? Chat with support")}

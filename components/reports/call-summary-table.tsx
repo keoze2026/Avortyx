@@ -951,7 +951,7 @@ export function CallSummaryTable({
   return (
     <Card className="overflow-hidden p-0">
       {/* Section title */}
-      <div className="px-6 pt-5 text-sm font-semibold text-foreground">{t("toolsUI.reports.summary.title")}</div>
+      <div className="px-6 pt-5 text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.summary.title")}</div>
 
       {/* Tabs + right actions */}
       <div className="flex items-center justify-between gap-2 border-b border-border px-4">
