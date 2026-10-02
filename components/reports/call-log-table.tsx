@@ -60,17 +60,11 @@ import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
-/** The call log table is set in Calibri. Calibri ships with Windows and
- *  Microsoft Office; Carlito is its free, same-width look-alike; then the
- *  system font for everyone else. */
-const CALL_LOG_FONT: React.CSSProperties = {
-  fontFamily: 'Calibri, Carlito, "Segoe UI", system-ui, sans-serif',
-};
-/** Every text cell in a call row shares one size, weight and colour, so the
- *  whole row reads evenly. 13px Calibri appears about the same size as 12px
- *  of the previous font (Calibri's letters are smaller at the same size).
+/** Every text cell in a call row shares one font, size, weight and colour,
+ *  so the whole row reads evenly: the portal's Inter in Medium, as in the
+ *  sidebar, at 11.5px — a touch smaller than the sidebar's 12px.
  *  tabular-nums keeps digits lined up from row to row. */
-const CELL = "whitespace-nowrap text-[13px] font-medium tabular-nums text-foreground";
+const CELL = "whitespace-nowrap text-[11.5px] font-medium tabular-nums text-foreground";
 /** Dates, phone numbers and times: identical to CELL. */
 const NUMBER_CELL = CELL;
 
@@ -558,7 +552,7 @@ export function CallLogTable({
 
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[1100px]" style={CALL_LOG_FONT}>
+          <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 {/* Row expander — opens the call's activity panel. */}
