@@ -42,6 +42,10 @@ function hash(s: string): number {
   return Math.abs(h);
 }
 
+/** Every text cell in a number row shares one font, size, weight and colour —
+ *  the same style as the Reporting tables (Inter Medium, 9.5px). */
+const CELL = "text-[9.5px] font-medium tabular-nums text-foreground";
+
 const VENDORS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
 const ALLOCATED_OPTIONS = [100, 250, 500, 1_000, 2_500];
 const COUNTRIES_LOCAL = ["United States", "Canada"];
@@ -233,17 +237,17 @@ export function TrackNumbersTable({
                       />
                     </TableCell>
                     {visibleColumns.has("number") && (
-                      <TableCell className="text-left font-mono text-xs">
+                      <TableCell className={cn("text-left", CELL)}>
                         {toE164(n.number)}
                       </TableCell>
                     )}
                     {visibleColumns.has("name") && (
-                      <TableCell className="text-left font-medium">
+                      <TableCell className={cn("text-left", CELL)}>
                         {n.label?.trim() || deriveName(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("country") && (
-                      <TableCell className="text-left text-muted-foreground">
+                      <TableCell className={cn("text-left", CELL)}>
                         {deriveCountry(n)}
                       </TableCell>
                     )}
@@ -260,12 +264,12 @@ export function TrackNumbersTable({
                       </TableCell>
                     )}
                     {visibleColumns.has("region") && (
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className={CELL}>
                         {n.state ?? "—"}
                       </TableCell>
                     )}
                     {visibleColumns.has("campaign") && (
-                      <TableCell className="text-left text-xs">
+                      <TableCell className={cn("text-left", CELL)}>
                         {n.campaignId && n.campaignName ? (
                           <Link
                             href={`${ROUTES.campaigns}/${n.campaignId}`}
@@ -274,57 +278,57 @@ export function TrackNumbersTable({
                             {n.campaignName}
                           </Link>
                         ) : (
-                          <span className="italic text-muted-foreground">{t("trafficUI.numbers.track.unassigned")}</span>
+                          <span>{t("trafficUI.numbers.track.unassigned")}</span>
                         )}
                       </TableCell>
                     )}
                     {visibleColumns.has("allocated") && (
-                      <TableCell className="tabular-nums">
+                      <TableCell className={CELL}>
                         {formatNumber(deriveAllocated(n))}
                       </TableCell>
                     )}
                     {visibleColumns.has("renew") && (
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className={CELL}>
                         {deriveRenewDate(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("lifetime") && (
-                      <TableCell className="font-mono tabular-nums text-xs">
+                      <TableCell className={CELL}>
                         {deriveLifetimeDays(n)}d
                       </TableCell>
                     )}
                     {visibleColumns.has("vendor") && (
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className={CELL}>
                         {deriveVendor(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("live") && (
                       <TableCell
                         className={cn(
-                          "tabular-nums",
-                          live > 0 && "font-semibold text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]",
+                          CELL,
+                          live > 0 && "text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]",
                         )}
                       >
                         {live}
                       </TableCell>
                     )}
                     {visibleColumns.has("hourly") && (
-                      <TableCell className="tabular-nums">
+                      <TableCell className={CELL}>
                         {formatNumber(deriveHourly(n))}
                       </TableCell>
                     )}
                     {visibleColumns.has("daily") && (
-                      <TableCell className="tabular-nums">
+                      <TableCell className={CELL}>
                         {formatNumber(n.callsToday)}
                       </TableCell>
                     )}
                     {visibleColumns.has("monthly") && (
-                      <TableCell className="tabular-nums">
+                      <TableCell className={CELL}>
                         {formatCompact(n.callsMonthly)}
                       </TableCell>
                     )}
                     {visibleColumns.has("global") && (
-                      <TableCell className="tabular-nums">
+                      <TableCell className={CELL}>
                         {formatCompact(deriveGlobal(n))}
                       </TableCell>
                     )}
