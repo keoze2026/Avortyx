@@ -46,7 +46,10 @@ const COLOR_NOANS = "var(--destructive)";
 // Revenue is money, not calls — it gets the app's money-green, NOT the
 // accent. Sharing the accent with the Connected bars put two identical
 // blue squares in the legend and made the line read as part of the stack.
-const COLOR_REVENUE = "var(--success)";
+const COLOR_REVENUE = "var(--success)"; // green — the total-calls line
+/** Revenue line: amber and dashed, so it can't be mistaken for the green
+ *  calls line. Read against the dollar scale on the right. */
+const COLOR_REVENUE_LINE = "var(--warning)";
 
 interface HourlyDistributionProps {
   calls: Call[];
@@ -215,10 +218,14 @@ function ColumnCountLabel({
   );
 }
 
-function LegendKey({ color, label }: { color: string; label: string }) {
+function LegendKey({ color, label, dashed = false }: { color: string; label: string; dashed?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
-      <span aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: color }} />
+      {dashed ? (
+        <span aria-hidden className="w-3.5 border-t-2 border-dashed" style={{ borderColor: color }} />
+      ) : (
+        <span aria-hidden className="h-2 w-2 rounded-[2px]" style={{ background: color }} />
+      )}
       {label}
     </span>
   );
@@ -545,8 +552,8 @@ export function HourlyDistribution({
     const maxCalls = Math.max(0, ...data.map((d) => d.total));
     const maxRevenue = Math.max(0, ...data.map((d) => d.revenue));
 
-    // Revenue ceiling for the (hidden) right-hand axis — kept so the old
-    // revenue line can be switched back on without other changes.
+    // Revenue ceiling for the dollar scale on the right, which the dashed
+    // revenue line is drawn against.
     const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.02) / DIVISIONS)));
     const revTop = revStep * DIVISIONS;
 
@@ -662,12 +669,9 @@ export function HourlyDistribution({
                   allowDecimals={false}
                   tickMargin={4}
                 />
-                {/* Right-side revenue axis — hidden: the line now traces
-                    call totals on the left axis, so no series uses this
-                    scale. Revenue per period is still in the tooltip. */}
+                {/* Right-side dollar scale for the dashed revenue line. */}
                 <YAxis
                   yAxisId="rev"
-                  hide
                   orientation="right"
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
@@ -695,6 +699,21 @@ export function HourlyDistribution({
                   stackId="calls"
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
+                />
+                {/* Revenue line: dashed amber, on the dollar scale. Drawn
+                    before the calls line so that line and the counts stay
+                    on top where they cross. */}
+                <Line
+                  yAxisId="rev"
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke={COLOR_REVENUE_LINE}
+                  strokeWidth={1.75}
+                  strokeDasharray="5 4"
+                  dot={false}
+                  activeDot={{ r: 3.5, stroke: COLOR_REVENUE_LINE, strokeWidth: 2, fill: "var(--card)" }}
+                  isAnimationActive
+                  animationDuration={500}
                 />
                 {/* Calls line: follows the call totals on the columns'
                     scale, riding just above each column so the count sits
@@ -738,6 +757,7 @@ export function HourlyDistribution({
             <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
             <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
             <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
+            <LegendKey color={COLOR_REVENUE_LINE} label={t("toolsUI.reports.hourly.legend.revenue")} dashed />
           </div>
         </div>
       </CardContent>
