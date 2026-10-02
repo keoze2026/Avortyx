@@ -62,9 +62,9 @@ import { cn } from "@/lib/utils";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
  *  so the whole row reads evenly: the portal's Inter in Medium, as in the
- *  sidebar, at 11px — smaller than the sidebar's 12px.
+ *  sidebar, at 10.5px — smaller than the sidebar's 12px.
  *  tabular-nums keeps digits lined up from row to row. */
-const CELL = "whitespace-nowrap text-[11px] font-medium tabular-nums text-foreground";
+const CELL = "whitespace-nowrap text-[10.5px] font-medium tabular-nums text-foreground";
 /** Dates, phone numbers and times: identical to CELL. */
 const NUMBER_CELL = CELL;
 

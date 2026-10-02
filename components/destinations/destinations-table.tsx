@@ -81,8 +81,8 @@ function pacingTone(pct: number): string {
 }
 
 /** Every text cell in a destination row shares one font, size, weight and
- *  colour — the portal's Inter in Medium at 11px, as in the call log. */
-const CELL = "text-[11px] font-medium tabular-nums text-foreground";
+ *  colour — the portal's Inter in Medium at 10.5px, as in the call log. */
+const CELL = "text-[10.5px] font-medium tabular-nums text-foreground";
 
 export function DestinationsTable({
   destinations,
@@ -272,7 +272,7 @@ export function DestinationsTable({
                     >
                       <span
                         className={cn(
-                          "inline-flex min-w-[3.5rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium tabular-nums",
+                          "inline-flex min-w-[3.5rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[10.5px] font-medium tabular-nums",
                           pacingTone(livePct),
                         )}
                       >
@@ -292,7 +292,7 @@ export function DestinationsTable({
 
                     {/* HOURLY — just the count */}
                     <TableCell className="text-center">
-                      <span className="inline-flex min-w-[3rem] items-center justify-center rounded border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium tabular-nums">
+                      <span className="inline-flex min-w-[3rem] items-center justify-center rounded border border-border bg-muted/40 px-2 py-1 text-[10.5px] font-medium tabular-nums">
                         {formatNumber(hourly)}
                       </span>
                     </TableCell>
@@ -304,7 +304,7 @@ export function DestinationsTable({
                     >
                       <span
                         className={cn(
-                          "inline-flex min-w-[3rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium tabular-nums",
+                          "inline-flex min-w-[3rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[10.5px] font-medium tabular-nums",
                           pacingTone(dailyPct),
                         )}
                       >
@@ -329,7 +329,7 @@ export function DestinationsTable({
                     >
                       <span
                         className={cn(
-                          "inline-flex min-w-[3rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium tabular-nums",
+                          "inline-flex min-w-[3rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[10.5px] font-medium tabular-nums",
                           pacingTone(monthlyPct),
                         )}
                       >
@@ -349,7 +349,7 @@ export function DestinationsTable({
 
                     {/* GLOBAL — lifetime count */}
                     <TableCell className="text-center">
-                      <span className="inline-flex min-w-[3rem] items-center justify-center rounded border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium tabular-nums">
+                      <span className="inline-flex min-w-[3rem] items-center justify-center rounded border border-border bg-muted/40 px-2 py-1 text-[10.5px] font-medium tabular-nums">
                         {formatNumber(global)}
                       </span>
                     </TableCell>
@@ -503,7 +503,7 @@ function EditableCap({
         }}
         onClick={(e) => e.stopPropagation()}
         aria-label={ariaLabel}
-        className="w-14 rounded border border-accent/50 bg-background px-1 py-0.5 text-center text-[11px] font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-accent"
+        className="w-14 rounded border border-accent/50 bg-background px-1 py-0.5 text-center text-[10.5px] font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-accent"
       />
     );
   }
@@ -518,7 +518,7 @@ function EditableCap({
       }}
       aria-label={ariaLabel}
       title={ariaLabel}
-      className="cursor-text rounded px-1 text-[11px] font-medium tabular-nums transition-colors hover:bg-accent/10 hover:ring-1 hover:ring-accent/40"
+      className="cursor-text rounded px-1 text-[10.5px] font-medium tabular-nums transition-colors hover:bg-accent/10 hover:ring-1 hover:ring-accent/40"
     >
       {value > 0 ? formatNumber(value) : "∞"}
     </button>
