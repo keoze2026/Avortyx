@@ -47,9 +47,6 @@ const COLOR_NOANS = "var(--destructive)";
 // accent. Sharing the accent with the Connected bars put two identical
 // blue squares in the legend and made the line read as part of the stack.
 const COLOR_REVENUE = "var(--success)"; // green — the total-calls line
-/** Revenue line: amber and dashed, so it can't be mistaken for the green
- *  calls line. Read against the dollar scale on the right. */
-const COLOR_REVENUE_LINE = "var(--warning)";
 
 interface HourlyDistributionProps {
   calls: Call[];
@@ -552,8 +549,7 @@ export function HourlyDistribution({
     const maxCalls = Math.max(0, ...data.map((d) => d.total));
     const maxRevenue = Math.max(0, ...data.map((d) => d.revenue));
 
-    // Revenue ceiling for the dollar scale on the right, which the dashed
-    // revenue line is drawn against.
+    // Revenue ceiling for the dollar scale on the right.
     const revStep = Math.max(1, Math.ceil(niceStep((Math.max(maxRevenue, 1) * 1.02) / DIVISIONS)));
     const revTop = revStep * DIVISIONS;
 
@@ -669,7 +665,8 @@ export function HourlyDistribution({
                   allowDecimals={false}
                   tickMargin={4}
                 />
-                {/* Right-side dollar scale for the dashed revenue line. */}
+                {/* Right-side dollar scale (revenue per period is also in
+                    the tooltip). */}
                 <YAxis
                   yAxisId="rev"
                   orientation="right"
@@ -699,21 +696,6 @@ export function HourlyDistribution({
                   stackId="calls"
                   fill={COLOR_CONVERTED}
                   radius={[3, 3, 0, 0]}
-                />
-                {/* Revenue line: dashed amber, on the dollar scale. Drawn
-                    before the calls line so that line and the counts stay
-                    on top where they cross. */}
-                <Line
-                  yAxisId="rev"
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke={COLOR_REVENUE_LINE}
-                  strokeWidth={1.75}
-                  strokeDasharray="5 4"
-                  dot={false}
-                  activeDot={{ r: 3.5, stroke: COLOR_REVENUE_LINE, strokeWidth: 2, fill: "var(--card)" }}
-                  isAnimationActive
-                  animationDuration={500}
                 />
                 {/* Calls line: follows the call totals on the columns'
                     scale, riding just above each column so the count sits
@@ -757,7 +739,6 @@ export function HourlyDistribution({
             <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
             <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
             <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
-            <LegendKey color={COLOR_REVENUE_LINE} label={t("toolsUI.reports.hourly.legend.revenue")} dashed />
           </div>
         </div>
       </CardContent>
