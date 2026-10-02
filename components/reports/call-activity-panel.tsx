@@ -184,7 +184,7 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
                 </button>
               ))}
             </div>
-            <span className="shrink-0 rounded-md bg-accent/15 px-2.5 py-1 text-[10px] font-medium tabular-nums text-accent">
+            <span className="shrink-0 rounded-md bg-accent/15 px-2.5 py-1 text-[9px] font-medium tabular-nums text-accent">
               {data?.callerProfile?.number ?? caller}
             </span>
           </div>
@@ -327,7 +327,7 @@ function Row({
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="text-sm font-semibold">{item.title}</h3>
-          <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-[9px] font-medium tabular-nums text-muted-foreground">
             {timeOf(item.at, timeZone)}
           </span>
         </div>
@@ -350,7 +350,7 @@ function FieldList({ rows }: { rows: Array<[string, string]> }) {
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex gap-3 text-[10px] font-medium tabular-nums">
+    <div className="flex gap-3 text-[9px] font-medium tabular-nums">
       <span className="w-24 shrink-0 text-muted-foreground">{label}:</span>
       <span className="min-w-0 break-words text-foreground">{value}</span>
     </div>
@@ -433,7 +433,7 @@ function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
       >
         <ul className="space-y-1 pt-1">
           {(trace?.filteringBreakdown ?? []).map((b) => (
-            <li key={b.reason} className="flex justify-between gap-3 text-[10px] font-medium">
+            <li key={b.reason} className="flex justify-between gap-3 text-[9px] font-medium">
               <span className="text-muted-foreground">{b.reason}</span>
               <span className="tabular-nums">{b.count}</span>
             </li>
@@ -444,7 +444,7 @@ function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
         <Disclosure label={t("toolsUI.reports.activity.checks")} count={trace?.steps?.length}>
           <ul className="space-y-1 pt-1">
             {(trace?.steps ?? []).map((step) => (
-              <li key={step.step} className="flex items-center justify-between gap-3 text-[10px] font-medium">
+              <li key={step.step} className="flex items-center justify-between gap-3 text-[9px] font-medium">
                 <span className="text-muted-foreground">{step.step.replace(/_/g, " ")}</span>
                 <span className={step.passed ? "text-[color:var(--success)]" : "text-destructive"}>
                   {step.passed
@@ -475,14 +475,14 @@ function Disclosure({
   const [open, setOpen] = React.useState(false);
   const heading = `${label}${count === undefined ? "" : ` (${count})`}`;
   if (plain || !count) {
-    return <div className="py-0.5 pl-4 text-[10px] font-medium text-muted-foreground">{heading}</div>;
+    return <div className="py-0.5 pl-4 text-[9px] font-medium text-muted-foreground">{heading}</div>;
   }
   return (
     <div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1 py-0.5 text-left text-[10px] font-medium text-accent transition-colors hover:text-accent/80"
+        className="flex w-full items-center gap-1 py-0.5 text-left text-[9px] font-medium text-accent transition-colors hover:text-accent/80"
       >
         <ChevronRight className={cn("h-3 w-3 transition-transform", open && "rotate-90")} />
         {heading}
@@ -505,11 +505,11 @@ function DestinationList({
   return (
     <ol className="space-y-0.5 pt-1">
       {items.map((d, i) => (
-        <li key={`${d.name}-${i}`} className="flex gap-2 text-[10px] font-medium tabular-nums">
+        <li key={`${d.name}-${i}`} className="flex gap-2 text-[9px] font-medium tabular-nums">
           {numbered && <span className="w-6 shrink-0 text-right text-muted-foreground">{i + 1}.</span>}
           <span className="min-w-0 break-all">{d.name}</span>
           {showReason && d.reason && (
-            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{d.reason}</span>
+            <span className="ml-auto shrink-0 text-[9px] text-muted-foreground">{d.reason}</span>
           )}
         </li>
       ))}
