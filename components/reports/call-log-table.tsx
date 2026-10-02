@@ -60,10 +60,12 @@ import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
-/** Call Date, Caller ID and Called Number share one look: the same
- *  monospaced font, size and bright colour, so the three read as a set.
- *  13px — one step up from the table's 12px, so they stand out a little. */
-const NUMBER_CELL = "whitespace-nowrap font-mono text-[13px] tabular-nums text-foreground";
+/** Every text cell in a call row shares one size, weight and colour, so the
+ *  whole row reads evenly. */
+const CELL = "whitespace-nowrap text-xs font-medium tabular-nums text-foreground";
+/** Phone numbers, dates and times also use the monospaced font so their
+ *  digits line up from row to row — same size and colour as CELL. */
+const NUMBER_CELL = `${CELL} font-mono`;
 
 type ColumnKey =
   | "campaign"
@@ -606,10 +608,10 @@ export function CallLogTable({
                         {timeLabel(c.startedAt, timeZone)}
                       </TableCell>
                       {columns.campaign && (
-                        <TableCell className="whitespace-nowrap font-medium">{c.campaignName}</TableCell>
+                        <TableCell className={CELL}>{c.campaignName}</TableCell>
                       )}
                       {columns.publisher && (
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                        <TableCell className={CELL}>
                           {resolvePublisherName(c, publisherNameById) || "—"}
                         </TableCell>
                       )}
@@ -617,7 +619,7 @@ export function CallLogTable({
                         <TableCell className={NUMBER_CELL}>
                           {isBlocked(c.callerNumber, c.campaignId) ? (
                             <span
-                              className="inline-flex items-center gap-1 font-semibold text-destructive"
+                              className="inline-flex items-center gap-1 text-destructive"
                               title={t("toolsUI.reports.callLog.blockedCaller")}
                             >
                               <Ban className="h-3 w-3" aria-hidden />
@@ -634,12 +636,12 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.buyer && (
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                        <TableCell className={CELL}>
                           {c.buyerName ?? "—"}
                         </TableCell>
                       )}
                       {columns.revenue && (
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className={`${CELL} text-right`}>
                           {formatCurrency(c.revenue, true)}
                         </TableCell>
                       )}
@@ -648,17 +650,17 @@ export function CallLogTable({
                           itself (the raw `payout` field) is internal and is
                           not shown here. */}
                       {columns.payout && (
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className={`${CELL} text-right`}>
                           {formatCurrency(customerPayout(c), true)}
                         </TableCell>
                       )}
                       {columns.ttc && (
-                        <TableCell className="font-mono tabular-nums">
+                        <TableCell className={NUMBER_CELL}>
                           {formatHMS(getTTCSeconds(c))}
                         </TableCell>
                       )}
                       {columns.duration && (
-                        <TableCell className="font-mono tabular-nums">
+                        <TableCell className={NUMBER_CELL}>
                           {formatHMS(c.durationSec)}
                         </TableCell>
                       )}
@@ -677,7 +679,7 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.failReason && (
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        <TableCell className={CELL}>
                           —
                         </TableCell>
                       )}
