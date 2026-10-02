@@ -312,6 +312,29 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
 
 const SERVER_EXPORT_NUMERIC_HEADERS = ["Duration (s)", "Revenue", "Payout", "Profit"];
 
+/** Header names the backend export may use for the caller's number. */
+const CALLER_HEADERS = new Set(["caller", "callerid", "callernumber"]);
+
+/** The backend export sends caller IDs as stored (often without the leading
+ *  "1"). Format that one column the same way the call log shows it on screen
+ *  (formatCallerId — e.g. 7202664680 → 17202664680). Every other column,
+ *  and the header row, is left exactly as the backend sent it. */
+function formatExportCallerColumn(table: string[][]): string[][] {
+  if (table.length === 0) return table;
+  const col = table[0].findIndex((h) => CALLER_HEADERS.has(h.toLowerCase().replace(/[^a-z]/g, "")));
+  if (col < 0) return table;
+  return table.map((row, i) =>
+    i === 0 || !row[col]?.trim() ? row : row.map((cell, j) => (j === col ? formatCallerId(cell) : cell)),
+  );
+}
+
+/** Rows back to CSV text, quoting only values that need it (same rule as
+ *  lib/export's CSV writer). */
+function rowsToCsv(table: string[][]): string {
+  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return table.map((row) => row.map(esc).join(",")).join("\n");
+}
+
 interface CallLogTableProps {
   calls: Call[];
   exportQuery?: Omit<CallLogQuery, "page" | "pageSize"> | null;
@@ -456,11 +479,12 @@ export function CallLogTable({
     try {
       const blob = await analyticsService.exportCallsCsv(serverQuery);
       const text = await blob.text();
-      const table = parseCSV(text);
+      // Caller IDs in the file match the screen (with the leading "1").
+      const table = formatExportCallerColumn(parseCSV(text));
       const count = Math.max(table.length - 1, 0);
       const stem = dateStamped("call-log");
       if (format === "csv") {
-        triggerDownload(new Blob([text], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
+        triggerDownload(new Blob([rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
       } else {
         triggerDownload(csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS), `${stem}.xlsx`);
       }
