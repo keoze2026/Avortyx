@@ -587,8 +587,15 @@ export function HourlyDistribution({
 
   return (
     <Card className={cn("flex flex-col", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-1 rounded-md border border-border bg-muted p-0.5">
+      {/* The title sits in the exact centre of the card. On a wide card:
+          three columns — H/D/M switch, title, and an empty column as wide as
+          the switch's. On a narrow card (phones), there isn't room for that
+          on one line, so the switch takes its own line and the title is
+          centred on the full width below it. Based on the card's own width
+          (the header measures; the inner row changes layout). */}
+      <CardHeader className="block space-y-0 pb-2">
+        <div className="grid grid-cols-1 items-center gap-2 @md/card-header:grid-cols-[1fr_auto_1fr]">
+        <div className="flex items-center gap-1 justify-self-start rounded-md border border-border bg-muted p-0.5">
           {GRAINS.map((g) => (
             <button
               key={g.id}
@@ -606,8 +613,10 @@ export function HourlyDistribution({
         </div>
         {/* Cased in CSS rather than in the copy, so translations stay
             natural-cased and every locale gets the same treatment. */}
-        <div className="flex-1 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-muted-foreground">
           {`${t("dashboard.chart.callsBy")} : ${t(GRAIN_NOUN_KEYS[grain])}`}
+        </div>
+        <div aria-hidden className="hidden @md/card-header:block" />
         </div>
       </CardHeader>
       {/* justify-end, not justify-center: the legend is the last element
