@@ -228,9 +228,9 @@ function LegendKey({ color, label, dashed = false }: { color: string; label: str
   );
 }
 
-/** Gridline count on both axes. Shared so the $ ticks on the right land on
- *  the same lines as the call counts on the left. */
-const DIVISIONS = 6;
+/** Gridline count on both axes — 4 lines above zero. Shared so the $ ticks
+ *  on the right land on the same lines as the call counts on the left. */
+const DIVISIONS = 4;
 
 function niceStep(raw: number): number {
   if (raw <= 0) return 1;
