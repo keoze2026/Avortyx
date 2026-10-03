@@ -106,7 +106,9 @@ export default function ReportsPage() {
       return;
     }
     let cancelled = false;
-    const range = { dateFrom: fromKey, dateTo: toKey };
+    // The picked days plus the page's timezone, so the backend counts the
+    // same days the page shows (it defaults to UTC otherwise).
+    const range = { dateFrom: fromKey, dateTo: toKey, timezone: timeZone };
     // Each one is independent — a failing endpoint just leaves its tab on
     // the call-log derivation instead of blanking the others.
     Promise.all(
@@ -119,7 +121,7 @@ export default function ReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey]);
+  }, [fromKey, toKey, timeZone]);
 
   // An aggregate is per entity for the whole range; it can't be narrowed by
   // the other filters. So a tab only gets its aggregate when the only active

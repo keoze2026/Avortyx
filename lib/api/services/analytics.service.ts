@@ -84,6 +84,8 @@ interface CallRecordWire {
   callerAreaCode?: string;
   callerState?: string;
   callerCountry?: string;
+  /** Wire: `ipqs_line_type` — the caller's line type. */
+  ipqsLineType?: string | null;
   campaignId?: string | null;
   campaignName?: string | null;
   buyerId?: string | null;
@@ -291,6 +293,9 @@ export interface CallLogQuery {
   pageSize?: number;
   dateFrom?: string;
   dateTo?: string;
+  /** IANA zone the day range is counted in (e.g. "America/New_York"). Sent
+   *  as `timezone`; without it the backend counts days in UTC. */
+  timezone?: string;
   /**
    * Raw backend status value (e.g. "completed") — NOT the normalized
    * frontend `CallStatus`. The backend's CDR `status` column only ever
@@ -416,6 +421,7 @@ function callRecordToCall(w: CallRecordWire): Call {
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),
     statusRaw: w.status ? statusKey(w.status) : undefined,
+    lineType: w.ipqsLineType?.trim() || undefined,
     isQualified: w.isQualified,
     isDuplicate: w.isDuplicate ?? w.duplicate,
     isConverted: w.isConverted,
@@ -589,6 +595,7 @@ export const analyticsService = {
         limit: pageSize,
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
+        timezone: query.timezone,
         status: query.status,
         isQualified: query.isQualified,
         campaignId: query.campaignId,
@@ -626,7 +633,8 @@ export const analyticsService = {
     const MAX_PAGES = 40;
     const all: Call[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const res = await this.calls({ ...query, page, pageSize: PAGE_SIZE });
+      // Ask the backend for the same day boundaries the page shows.
+      const res = await this.calls({ ...query, timezone: query.timezone ?? options.timeZone, page, pageSize: PAGE_SIZE });
       all.push(...res.items);
       if (all.length >= res.total || res.items.length < PAGE_SIZE) break;
     }
@@ -665,18 +673,20 @@ export const analyticsService = {
    */
   async entitySummary(
     entity: SummaryEntity,
-    query: { dateFrom?: string; dateTo?: string } = {},
+    query: { dateFrom?: string; dateTo?: string; timezone?: string } = {},
   ): Promise<EntitySummary[]> {
     const wire = await http.get<EntitySummaryWire[] | { items?: EntitySummaryWire[] | null }>(
       SUMMARY_PATH[entity],
-      { query: { dateFrom: query.dateFrom, dateTo: query.dateTo } },
+      // `timezone` so the backend counts the picked days in the page's zone
+      // (it defaults to UTC, where a day runs 8pm–8pm Eastern).
+      { query: { dateFrom: query.dateFrom, dateTo: query.dateTo, timezone: query.timezone } },
     );
     const rows = Array.isArray(wire) ? wire : (wire?.items ?? []);
     return rows.map((w) => entitySummaryWireToSummary(w, entity)).filter((r) => r.entityId);
   },
 
   /** Campaign tab aggregate — see `entitySummary`. */
-  async campaignSummary(query: { dateFrom?: string; dateTo?: string } = {}): Promise<EntitySummary[]> {
+  async campaignSummary(query: { dateFrom?: string; dateTo?: string; timezone?: string } = {}): Promise<EntitySummary[]> {
     return this.entitySummary("campaign", query);
   },
 

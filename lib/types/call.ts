@@ -24,6 +24,9 @@ export interface Call {
    *  and filters (busy and no-answer are both "missed"); this keeps the exact
    *  outcome so screens can label it precisely. */
   statusRaw?: string;
+  /** The caller's line type from the backend (`ipqs_line_type`), e.g.
+   *  "mobile", "landline", "voip". Undefined when the backend has none. */
+  lineType?: string;
   payout: number;
   revenue: number;
   geo: { country: string; state?: string; city?: string };

@@ -270,8 +270,26 @@ const BROWSERS = ["Chrome", "Safari", "Firefox", "Edge"];
 const REFERRERS = ["google.com", "facebook.com", "direct", "twitter.com", "tiktok.com", "youtube.com"];
 const TRAFFIC_SOURCES = ["Search", "Display", "Social", "Email", "Affiliate"];
 
-/* Caller profile / identity derivations — added per Ringba-style sub-options. */
-const LINE_TYPES = ["Mobile", "Landline", "VoIP", "Toll-free"];
+/* Caller Profile / Caller Identity: rows come from real per-call fields.
+ * The call list response carries the line type (`ipqs_line_type`) and the
+ * caller's state (`caller_state`); country is used when the backend sends
+ * it. City, zip code, caller timezone and fraud score are not in the
+ * response, so those options show a single "Not available" row instead of
+ * invented values. */
+const NOT_AVAILABLE = "Not available";
+
+/** Backend line type → display label; missing → "Unknown". */
+function lineTypeLabel(raw: string | undefined): string {
+  const k = (raw ?? "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+  if (!k) return "Unknown";
+  if (k === "mobile" || k === "wireless" || k === "cell") return "Mobile";
+  if (k === "landline" || k === "fixed" || k === "fixedline") return "Landline";
+  if (k === "voip" || k === "nonfixedvoip" || k === "fixedvoip") return "VoIP";
+  if (k === "tollfree") return "Toll-free";
+  // Anything else the backend sends is shown as-is (first letter capitalised).
+  const t = raw!.trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
 const COUNTRIES = ["United States", "Canada", "Mexico", "United Kingdom", "Australia"];
 const CITIES = [
   "New York",
@@ -293,14 +311,6 @@ const REGIONS = [
   "Ohio",
   "Georgia",
 ];
-const STATES = ["CA", "TX", "NY", "FL", "IL", "PA", "OH", "GA", "NC", "MI", "WA", "MA"];
-const PROFILE_TIMEZONES = [
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-];
-const FRAUD_BANDS = ["Low (0-30)", "Medium (31-70)", "High (71-100)"];
 
 
 /* Session-data derivations. */
@@ -403,42 +413,36 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
     case "profile-carrier":
       return labelOf(c.carrier || "Unknown");
     case "profile-linetype":
-      return labelOf(pickFrom(c, "p-lt", LINE_TYPES));
+      return labelOf(lineTypeLabel(c.lineType));
     case "profile-country":
-      return labelOf(pickFrom(c, "p-cn", COUNTRIES));
+      return labelOf(c.geo?.country?.trim() || NOT_AVAILABLE);
     case "profile-city":
-      return labelOf(pickFrom(c, "p-cty", CITIES));
-    case "profile-zipcode": {
-      const prefix = ZIP_PREFIXES[hashOf(c.callerNumber + "p-zip") % ZIP_PREFIXES.length];
-      const v = `${prefix}${(hashOf(c.id + "p-zip") % 999).toString().padStart(3, "0")}`;
-      return { key: v, label: v };
-    }
+      return labelOf(NOT_AVAILABLE);
+    case "profile-zipcode":
+      return labelOf(NOT_AVAILABLE);
     case "profile-region":
-      return labelOf(pickFrom(c, "p-reg", REGIONS));
+      return labelOf(c.geo?.state?.trim() || "Unknown");
     case "profile-timezone":
-      return labelOf(pickFrom(c, "p-tz", PROFILE_TIMEZONES));
+      return labelOf(NOT_AVAILABLE);
     case "profile-fraudscore":
-      return labelOf(pickFrom(c, "p-fr", FRAUD_BANDS));
+      return labelOf(NOT_AVAILABLE);
 
     /* ── Caller Identity ─────────────────────────────────────────────── */
     case "identity-city":
-      return labelOf(pickFrom(c, "i-cty", CITIES));
+      return labelOf(NOT_AVAILABLE);
     case "identity-carrier":
       return labelOf(c.carrier || "Unknown");
     case "identity-linetype":
-      return labelOf(pickFrom(c, "i-lt", LINE_TYPES));
+      return labelOf(lineTypeLabel(c.lineType));
     case "identity-phone": {
       // The caller's own number is already known on the record.
       const v = formatCallerId(c.callerNumber);
       return { key: v, label: v };
     }
-    case "identity-zipcode": {
-      const prefix = ZIP_PREFIXES[hashOf(c.callerNumber + "i-zip") % ZIP_PREFIXES.length];
-      const v = `${prefix}${(hashOf(c.id + "i-zip") % 999).toString().padStart(3, "0")}`;
-      return { key: v, label: v };
-    }
+    case "identity-zipcode":
+      return labelOf(NOT_AVAILABLE);
     case "identity-state":
-      return labelOf(pickFrom(c, "i-st", STATES));
+      return labelOf(c.geo?.state?.trim() || "Unknown");
 
     /* ── Session Data ────────────────────────────────────────────────── */
     case "session-ip": {
@@ -545,7 +549,8 @@ function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRo
       row.converted += 1;
     }
     if (matchesCallStatusFilter(c, "notConnected")) row.noConnect += 1;
-    if (c.isDuplicate) row.dupe += 1;
+    // Same rule as the backend's Dupe: a duplicate that was answered.
+    if (c.isDuplicate && (c.status === "completed" || c.status === "in-progress")) row.dupe += 1;
     row.tcl += c.durationSec;
     row.payout += c.payout;
     row.revenue += c.revenue;
