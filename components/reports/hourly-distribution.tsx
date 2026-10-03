@@ -641,7 +641,7 @@ export function HourlyDistribution({
                 // sticks rather than a solid block.
                 barCategoryGap="28%"
               >
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}

@@ -347,7 +347,7 @@ export function SupportChat() {
                     <div
                       className={cn(
                         "max-w-[85%] rounded-lg px-3 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
-                        mine ? "bg-zinc-700 text-white" : "bg-muted text-foreground",
+                        mine ? "bg-zinc-700 text-white" : "bg-accent text-accent-foreground",
                       )}
                     >
                       {m.body}
