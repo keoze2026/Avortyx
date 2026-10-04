@@ -317,6 +317,53 @@ function fraudBand(score: number | undefined): string {
   return "Clean (0-24)";
 }
 
+/* Reference data, not derivation. These are fixed published codes - the
+ * backend sends "US" and "FL", and these turn them into the names a reader
+ * expects. Nothing here is computed from a call id, which is what the removed
+ * lists did; an unrecognised code falls through to itself rather than being
+ * assigned a plausible-looking name. */
+const COUNTRY_NAMES: Record<string, string> = {
+  US: "United States", CA: "Canada", MX: "Mexico", GB: "United Kingdom",
+  IE: "Ireland", AU: "Australia", NZ: "New Zealand", IN: "India",
+  PH: "Philippines", PK: "Pakistan", ZA: "South Africa", NG: "Nigeria",
+  DE: "Germany", FR: "France", ES: "Spain", IT: "Italy", NL: "Netherlands",
+  PL: "Poland", BR: "Brazil", AR: "Argentina", CO: "Colombia", DO: "Dominican Republic",
+  JM: "Jamaica", PR: "Puerto Rico",
+};
+
+const CONTINENT_BY_COUNTRY: Record<string, [string, string]> = {
+  US: ["NA", "North America"], CA: ["NA", "North America"], MX: ["NA", "North America"],
+  DO: ["NA", "North America"], JM: ["NA", "North America"], PR: ["NA", "North America"],
+  GB: ["EU", "Europe"], IE: ["EU", "Europe"], DE: ["EU", "Europe"], FR: ["EU", "Europe"],
+  ES: ["EU", "Europe"], IT: ["EU", "Europe"], NL: ["EU", "Europe"], PL: ["EU", "Europe"],
+  AU: ["OC", "Oceania"], NZ: ["OC", "Oceania"],
+  IN: ["AS", "Asia"], PH: ["AS", "Asia"], PK: ["AS", "Asia"],
+  ZA: ["AF", "Africa"], NG: ["AF", "Africa"],
+  BR: ["SA", "South America"], AR: ["SA", "South America"], CO: ["SA", "South America"],
+};
+
+const REGION_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi",
+  MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+  NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina",
+  ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming", DC: "District of Columbia",
+  AB: "Alberta", BC: "British Columbia", MB: "Manitoba", NB: "New Brunswick",
+  NL: "Newfoundland and Labrador", NS: "Nova Scotia", ON: "Ontario",
+  PE: "Prince Edward Island", QC: "Quebec", SK: "Saskatchewan",
+};
+
+/** The code the backend sent, upper-cased; "" when it sent nothing. */
+function code(raw: string | undefined): string {
+  return (raw ?? "").trim().toUpperCase();
+}
+
 /* The country, city, region, continent, country-code, region-code, user-agent
  * and referrer lists are gone with the code that used them, along with
  * `pickFrom`, which turned a call id into one of them.
@@ -418,27 +465,52 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       return labelOf(c.geo?.state?.trim() || "Unknown");
 
     /* ── Session Data ────────────────────────────────────────────────── */
-    /* Session data is not collected. Every one of these used to be produced
-     * by hashing the call id and picking from a hard-coded list, which gave a
-     * table that looked like real analysis: the country option returned one of
-     * five countries - United States, Canada, Mexico, United Kingdom,
-     * Australia - spread evenly across the calls, when every call in the
-     * system was from the US or Canada.
+    /* These used to be produced by hashing the call id and picking from a
+     * hard-coded list, which gave a table that looked like real analysis: the
+     * country option returned one of five countries spread evenly across the
+     * calls, when every call in the system was from the US or Canada. Hashing
+     * made it worse than random - the numbers were stable across reloads and
+     * exports, so they read as a measurement.
      *
-     * Hashing made it worse than random, not better: the numbers were stable
-     * across reloads and exports, so they read as a measurement.
+     * The location options are real now. A call has no browser session, but it
+     * does have a caller, and the backend resolves that caller's country,
+     * region, city and zip from their number. These read those fields - the
+     * same values Caller Profile shows, named the way this tab names them.
      *
-     * They now say what Caller Profile already says for the fields we do not
-     * have. If session data is ever captured, read it here. */
-    case "session-ip":
-    case "session-continent":
-    case "session-continentcode":
-    case "session-country":
+     * The five below them have no phone equivalent at all. An IP address,
+     * browser, device, user agent and referrer belong to a web visitor, and
+     * one only exists if the call came through DNI - which records all of it
+     * on DNISession but has never been switched on (0 pools, 0 sessions) and
+     * has no link to a call. Those stay "Not available" until DNI is in use
+     * and a call is joined to its session. */
+    case "session-country": {
+      const cc = code(c.geo?.country);
+      if (!cc) return labelOf("Unknown");
+      return labelOf(COUNTRY_NAMES[cc] ?? cc);
+    }
     case "session-countrycode":
-    case "session-region":
+      return labelOf(code(c.geo?.country) || "Unknown");
+    case "session-continent": {
+      const cc = code(c.geo?.country);
+      return labelOf(CONTINENT_BY_COUNTRY[cc]?.[1] ?? "Unknown");
+    }
+    case "session-continentcode": {
+      const cc = code(c.geo?.country);
+      return labelOf(CONTINENT_BY_COUNTRY[cc]?.[0] ?? "Unknown");
+    }
+    case "session-region": {
+      const rc = code(c.geo?.state);
+      if (!rc) return labelOf("Unknown");
+      return labelOf(REGION_NAMES[rc] ?? rc);
+    }
     case "session-regioncode":
+      return labelOf(code(c.geo?.state) || "Unknown");
     case "session-city":
+      return labelOf(c.geo?.city?.trim() || "Unknown");
     case "session-zipcode":
+      return labelOf(c.geo?.zip?.trim() || "Unknown");
+
+    case "session-ip":
     case "session-device":
     case "session-browser":
     case "session-referrerurl":
