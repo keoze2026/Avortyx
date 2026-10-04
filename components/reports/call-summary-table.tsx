@@ -264,11 +264,10 @@ function dateKey(ts: number, timeZone: string) {
  *  call's id is hashed with a salt to pick a stable value from the list,
  *  so groupings are reproducible across renders and exports. */
 
-const ZIP_PREFIXES = ["10", "20", "30", "40", "50", "60", "70", "80", "90"];
-const DEVICES = ["Mobile", "Desktop", "Tablet"];
-const BROWSERS = ["Chrome", "Safari", "Firefox", "Edge"];
-const REFERRERS = ["google.com", "facebook.com", "direct", "twitter.com", "tiktok.com", "youtube.com"];
-const TRAFFIC_SOURCES = ["Search", "Display", "Social", "Email", "Affiliate"];
+/* The lists that used to feed the derivations above are gone. They were:
+ * zip prefixes, devices, browsers, referrers and traffic sources - each one
+ * picked by hashing an id. Removed rather than left unused, so the next
+ * person looking for a value to show cannot reach for them. */
 
 /* Caller Profile / Caller Identity: rows come from real per-call fields.
  * The call list response carries the line type (`ipqs_line_type`) and the
@@ -290,68 +289,13 @@ function lineTypeLabel(raw: string | undefined): string {
   const t = raw!.trim();
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
-const COUNTRIES = ["United States", "Canada", "Mexico", "United Kingdom", "Australia"];
-const CITIES = [
-  "New York",
-  "Los Angeles",
-  "Chicago",
-  "Houston",
-  "Phoenix",
-  "Miami",
-  "Boston",
-  "Seattle",
-];
-const REGIONS = [
-  "California",
-  "Texas",
-  "New York",
-  "Florida",
-  "Illinois",
-  "Pennsylvania",
-  "Ohio",
-  "Georgia",
-];
-
-
-/* Session-data derivations. */
-const CONTINENTS = [
-  "North America",
-  "Europe",
-  "Asia",
-  "South America",
-  "Africa",
-  "Oceania",
-];
-const CONTINENT_CODES = ["NA", "EU", "AS", "SA", "AF", "OC"];
-const COUNTRY_CODES = ["US", "CA", "MX", "UK", "AU", "DE", "FR", "JP"];
-const REGION_CODES = ["US-CA", "US-NY", "US-TX", "US-FL", "US-IL", "CA-ON", "UK-ENG"];
-const USER_AGENTS = [
-  "Chrome/120 (Windows)",
-  "Safari/17 (macOS)",
-  "Firefox/121 (Windows)",
-  "Chrome/120 (Android)",
-  "Safari/17 (iOS)",
-  "Edge/120 (Windows)",
-];
-const REFERRER_URLS = [
-  "https://www.google.com/search",
-  "https://www.facebook.com/ads",
-  "https://duckduckgo.com/?q=insurance",
-  "direct",
-  "https://t.co/share",
-  "https://www.youtube.com/watch",
-];
-
-function hashOf(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-/** Pick a stable bucket from a list using id + salt. */
-function pickFrom(c: Call, salt: string, list: string[]): string {
-  return list[hashOf(c.id + salt) % list.length];
-}
+/* The country, city, region, continent, country-code, region-code, user-agent
+ * and referrer lists are gone with the code that used them, along with
+ * `pickFrom`, which turned a call id into one of them.
+ *
+ * The country list in particular is why this was reported: it held United
+ * States, Canada, Mexico, United Kingdom and Australia, and produced an even
+ * five-way split of a day's calls that had only ever come from two countries. */
 
 /** Translate a (call, group) pair to a {key, label} bucket — or null to skip. */
 function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string; label: string } | null {
@@ -374,11 +318,12 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
     }
     case "buyer":
       return c.buyerId ? { key: c.buyerId, label: c.buyerName ?? "—" } : null;
-    case "trafficSource": {
-      const idx = hashOf((c.publisherId ?? c.id) + "ts") % TRAFFIC_SOURCES.length;
-      const v = TRAFFIC_SOURCES[idx];
-      return { key: v, label: v };
-    }
+    /* Traffic source is not recorded against a call. This was the same
+     * hash-and-pick as the session columns - every publisher was assigned one
+     * of Search, Display, Social, Email or Affiliate by arithmetic on its id,
+     * and it sat on a top-level tab where it read as fact. */
+    case "trafficSource":
+      return labelOf(NOT_AVAILABLE);
 
     case "date": {
       const v = dateKey(c.startedAt, timeZone);
@@ -445,42 +390,32 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       return labelOf(c.geo?.state?.trim() || "Unknown");
 
     /* ── Session Data ────────────────────────────────────────────────── */
-    case "session-ip": {
-      const h = hashOf(c.id + "s-ip");
-      const a = (h & 0xff) || 1;
-      const b = (h >> 8) & 0xff;
-      const cc = (h >> 16) & 0xff;
-      const d = (h >> 24) & 0xff || 1;
-      const v = `${a}.${b}.${cc}.${d}`;
-      return { key: v, label: v };
-    }
+    /* Session data is not collected. Every one of these used to be produced
+     * by hashing the call id and picking from a hard-coded list, which gave a
+     * table that looked like real analysis: the country option returned one of
+     * five countries - United States, Canada, Mexico, United Kingdom,
+     * Australia - spread evenly across the calls, when every call in the
+     * system was from the US or Canada.
+     *
+     * Hashing made it worse than random, not better: the numbers were stable
+     * across reloads and exports, so they read as a measurement.
+     *
+     * They now say what Caller Profile already says for the fields we do not
+     * have. If session data is ever captured, read it here. */
+    case "session-ip":
     case "session-continent":
-      return labelOf(pickFrom(c, "s-cont", CONTINENTS));
     case "session-continentcode":
-      return labelOf(pickFrom(c, "s-cont-c", CONTINENT_CODES));
     case "session-country":
-      return labelOf(pickFrom(c, "s-cn", COUNTRIES));
     case "session-countrycode":
-      return labelOf(pickFrom(c, "s-cn-c", COUNTRY_CODES));
     case "session-region":
-      return labelOf(pickFrom(c, "s-reg", REGIONS));
     case "session-regioncode":
-      return labelOf(pickFrom(c, "s-reg-c", REGION_CODES));
     case "session-city":
-      return labelOf(pickFrom(c, "s-cty", CITIES));
-    case "session-zipcode": {
-      const prefix = ZIP_PREFIXES[hashOf(c.callerNumber + "s-zip") % ZIP_PREFIXES.length];
-      const v = `${prefix}${(hashOf(c.id + "s-zip") % 999).toString().padStart(3, "0")}`;
-      return { key: v, label: v };
-    }
+    case "session-zipcode":
     case "session-device":
-      return labelOf(pickFrom(c, "s-dev", DEVICES));
     case "session-browser":
-      return labelOf(pickFrom(c, "s-brw", BROWSERS));
     case "session-referrerurl":
-      return labelOf(pickFrom(c, "s-ref", REFERRER_URLS));
     case "session-useragent":
-      return labelOf(pickFrom(c, "s-ua", USER_AGENTS));
+      return labelOf(NOT_AVAILABLE);
   }
 }
 

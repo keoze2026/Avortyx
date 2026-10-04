@@ -22,8 +22,16 @@ export function isDemoMode(): boolean {
   return RAW === "true" || RAW === "1";
 }
 
-/** Hostnames the real production app is served from. */
+/** Hostnames the real production app is served from.
+ *
+ * `avortyx.com` is the one clients actually log in to; `avortyx.io` serves the
+ * API. The list held only the .io pair, so the guard that is meant to refuse a
+ * demo build on production did not cover the production portal at all — a
+ * build made with NEXT_PUBLIC_DEMO_MODE=true would have served invented data
+ * to clients with nothing to stop it. */
 const PRODUCTION_HOSTNAMES = new Set([
+  "avortyx.com",
+  "www.avortyx.com",
   "avortyx.io",
   "www.avortyx.io",
 ]);
