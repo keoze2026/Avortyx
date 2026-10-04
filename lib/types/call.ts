@@ -29,7 +29,11 @@ export interface Call {
   lineType?: string;
   payout: number;
   revenue: number;
-  geo: { country: string; state?: string; city?: string };
+  /** Caller geo as the backend resolved it, from the lookup provider.
+   *  `zip` and `timezone` arrive alongside country/state/city; any of them is
+   *  an empty string or undefined when the provider returned nothing for that
+   *  call, which is normal - coverage is partial, not total. */
+  geo: { country: string; state?: string; city?: string; zip?: string; timezone?: string };
   recordingUrl?: string;
   /** The backend's own qualification verdict, when it sends one — see
    *  matchesCallStatusFilter() in lib/call-status.ts for how this is used

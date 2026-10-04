@@ -270,11 +270,18 @@ function dateKey(ts: number, timeZone: string) {
  * person looking for a value to show cannot reach for them. */
 
 /* Caller Profile / Caller Identity: rows come from real per-call fields.
- * The call list response carries the line type (`ipqs_line_type`) and the
- * caller's state (`caller_state`); country is used when the backend sends
- * it. City, zip code, caller timezone and fraud score are not in the
- * response, so those options show a single "Not available" row instead of
- * invented values. */
+ * The call list response carries the line type (`ipqs_line_type`), and the
+ * caller's state, country, city, zip and timezone.
+ *
+ * Coverage is partial by nature - the lookup provider answers for most calls
+ * but not all - so a call with no value for the grouping falls into "Unknown",
+ * the same label region and carrier already use for the same situation. That
+ * is a real bucket: it counts calls the provider could not resolve.
+ *
+ * Fraud score is the one option with nothing behind it. Only the Telnyx branch
+ * of the enrichment task sets `ipqs_fraud_score`, and RealValidito answers
+ * first on every call, so the column is empty for every record in the system.
+ * It shows "Not available" until a provider that returns one is paid for. */
 const NOT_AVAILABLE = "Not available";
 
 /** Backend line type → display label; missing → "Unknown". */
@@ -360,21 +367,21 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
     case "profile-linetype":
       return labelOf(lineTypeLabel(c.lineType));
     case "profile-country":
-      return labelOf(c.geo?.country?.trim() || NOT_AVAILABLE);
+      return labelOf(c.geo?.country?.trim() || "Unknown");
     case "profile-city":
-      return labelOf(NOT_AVAILABLE);
+      return labelOf(c.geo?.city?.trim() || "Unknown");
     case "profile-zipcode":
-      return labelOf(NOT_AVAILABLE);
+      return labelOf(c.geo?.zip?.trim() || "Unknown");
     case "profile-region":
       return labelOf(c.geo?.state?.trim() || "Unknown");
     case "profile-timezone":
-      return labelOf(NOT_AVAILABLE);
+      return labelOf(c.geo?.timezone?.trim() || "Unknown");
     case "profile-fraudscore":
       return labelOf(NOT_AVAILABLE);
 
     /* ── Caller Identity ─────────────────────────────────────────────── */
     case "identity-city":
-      return labelOf(NOT_AVAILABLE);
+      return labelOf(c.geo?.city?.trim() || "Unknown");
     case "identity-carrier":
       return labelOf(c.carrier || "Unknown");
     case "identity-linetype":
@@ -385,7 +392,7 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       return { key: v, label: v };
     }
     case "identity-zipcode":
-      return labelOf(NOT_AVAILABLE);
+      return labelOf(c.geo?.zip?.trim() || "Unknown");
     case "identity-state":
       return labelOf(c.geo?.state?.trim() || "Unknown");
 

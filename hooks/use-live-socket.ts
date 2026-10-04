@@ -137,6 +137,12 @@ function eventDataToCall(data: unknown): Call | null {
     callerAreaCode: (d.callerAreaCode as string) ?? "",
     callerState: (d.callerState as string) ?? "",
     callerCountry: (d.callerCountry as string) ?? "",
+    // Passed through for the same reason country is: a live call runs through
+    // the same mapper as a historical one, so leaving these out would put
+    // in-progress calls in "Unknown" while finished calls grouped correctly.
+    callerCity: (d.callerCity as string) ?? "",
+    callerZip: (d.callerZip as string) ?? "",
+    callerTimezone: (d.callerTimezone as string) ?? "",
     campaignId: (d.campaignId as string) ?? null,
     campaignName: (d.campaignName as string) ?? null,
     buyerId: (d.buyerId as string) ?? null,

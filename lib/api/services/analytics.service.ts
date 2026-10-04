@@ -84,6 +84,10 @@ interface CallRecordWire {
   callerAreaCode?: string;
   callerState?: string;
   callerCountry?: string;
+  /** Wire: `caller_city` / `caller_zip` / `caller_timezone`. */
+  callerCity?: string;
+  callerZip?: string;
+  callerTimezone?: string;
   /** Wire: `ipqs_line_type` — the caller's line type. */
   ipqsLineType?: string | null;
   campaignId?: string | null;
@@ -432,6 +436,12 @@ function callRecordToCall(w: CallRecordWire): Call {
     geo: {
       country: w.callerCountry ?? "",
       state: w.callerState ?? undefined,
+      // City, zip and timezone reach the list endpoint now that the reporting
+      // mirror carries them. `|| undefined` so the backend's "" for "provider
+      // had nothing" becomes absent rather than an empty bucket.
+      city: w.callerCity || undefined,
+      zip: w.callerZip || undefined,
+      timezone: w.callerTimezone || undefined,
     },
     recordingUrl: w.recordingUrl || w.recordingUri || undefined,
   };
