@@ -34,6 +34,9 @@ export interface Call {
    *  an empty string or undefined when the provider returned nothing for that
    *  call, which is normal - coverage is partial, not total. */
   geo: { country: string; state?: string; city?: string; zip?: string; timezone?: string };
+  /** IPQualityScore fraud score, 0-100. Undefined when the call was never
+   *  scored - which is every call until IPQS is switched on. */
+  fraudScore?: number;
   recordingUrl?: string;
   /** The backend's own qualification verdict, when it sends one — see
    *  matchesCallStatusFilter() in lib/call-status.ts for how this is used

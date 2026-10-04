@@ -296,6 +296,27 @@ function lineTypeLabel(raw: string | undefined): string {
   const t = raw!.trim();
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
+/** IPQS fraud score (0-100) → a band, because grouping on the raw number
+ *  would produce up to 101 one-row buckets and tell you nothing.
+ *
+ *  The cut at 85 is the one that matters: it is the default
+ *  `Campaign.max_fraud_score`, the threshold this platform actually blocks
+ *  on, so the top band reads directly against the setting. The bands below it
+ *  are for shape only - confirm them against IPQS's own guidance before
+ *  anyone treats "Medium" as their wording rather than ours.
+ *
+ *  `undefined` means the call was never scored - every call until
+ *  IPQualityScore is switched on - and is kept separate from a real score of
+ *  0, which means the caller was checked and came back clean. */
+function fraudBand(score: number | undefined): string {
+  if (score === undefined || score === null) return "Not scored";
+  if (score >= 85) return "Critical (85-100)";
+  if (score >= 75) return "High (75-84)";
+  if (score >= 50) return "Medium (50-74)";
+  if (score >= 25) return "Low (25-49)";
+  return "Clean (0-24)";
+}
+
 /* The country, city, region, continent, country-code, region-code, user-agent
  * and referrer lists are gone with the code that used them, along with
  * `pickFrom`, which turned a call id into one of them.
@@ -377,7 +398,7 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
     case "profile-timezone":
       return labelOf(c.geo?.timezone?.trim() || "Unknown");
     case "profile-fraudscore":
-      return labelOf(NOT_AVAILABLE);
+      return labelOf(fraudBand(c.fraudScore));
 
     /* ── Caller Identity ─────────────────────────────────────────────── */
     case "identity-city":

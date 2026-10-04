@@ -88,6 +88,8 @@ interface CallRecordWire {
   callerCity?: string;
   callerZip?: string;
   callerTimezone?: string;
+  /** Wire: `ipqs_fraud_score`. Null until IPQualityScore is switched on. */
+  ipqsFraudScore?: number | null;
   /** Wire: `ipqs_line_type` — the caller's line type. */
   ipqsLineType?: string | null;
   campaignId?: string | null;
@@ -443,6 +445,9 @@ function callRecordToCall(w: CallRecordWire): Call {
       zip: w.callerZip || undefined,
       timezone: w.callerTimezone || undefined,
     },
+    // `?? undefined`, not `|| undefined`: 0 is a real IPQS score meaning
+    // clean, and `||` would turn it into "not scored".
+    fraudScore: w.ipqsFraudScore ?? undefined,
     recordingUrl: w.recordingUrl || w.recordingUri || undefined,
   };
 }
