@@ -452,11 +452,13 @@ function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
           <ul className="space-y-1 pt-1">
             {(trace?.steps ?? []).map((step) => (
               <li key={step.step} className="flex items-center justify-between gap-3 text-[9.5px] font-medium">
-                <span className="text-muted-foreground">{step.step.replace(/_/g, " ")}</span>
+                <span className="text-muted-foreground">{capitalizeFirst(step.step.replace(/_/g, " "))}</span>
                 <span className={step.passed ? "text-[color:var(--success)]" : "text-destructive"}>
-                  {step.passed
-                    ? t("toolsUI.reports.activity.passed")
-                    : step.detail || t("toolsUI.reports.activity.failed")}
+                  {capitalizeFirst(
+                    step.passed
+                      ? t("toolsUI.reports.activity.passed")
+                      : step.detail || t("toolsUI.reports.activity.failed"),
+                  )}
                 </span>
               </li>
             ))}
