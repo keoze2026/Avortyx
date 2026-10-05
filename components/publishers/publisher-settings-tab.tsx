@@ -16,6 +16,7 @@
  */
 
 import * as React from "react";
+import { publishersService } from "@/lib/api/services/publishers.service";
 import {
   AlertTriangle,
   ChevronDown,
@@ -111,10 +112,11 @@ export function PublisherSettingsTab({ publisher }: Props) {
             Preview — these settings save to this browser only
           </div>
           <p className="text-muted-foreground">
-            Member invites, permissions, reporting visibility, and the cap
-            toggle don't yet round-trip to the server. Other parts of the
-            publisher record (payout rate, status, campaign assignments) are
-            wired correctly via Network → Publishers → list/detail.
+            Permissions, reporting visibility, and the cap toggle don't yet
+            round-trip to the server. Member invites now do — a real invite
+            email is sent. Other parts of the publisher record (payout rate,
+            status, campaign assignments) are wired correctly via Network →
+            Publishers → list/detail.
           </p>
         </div>
       </div>
@@ -128,7 +130,13 @@ export function PublisherSettingsTab({ publisher }: Props) {
       <MembersSection
         publisherId={publisher.id}
         members={members}
-        onAdd={(email) => addMember(publisher.id, email)}
+        onAdd={async (email) => {
+          // Send the invite first. The local store is display state backed by
+          // localStorage - adding to it before the request succeeded is what
+          // made the row read "Invited" when no email had been sent.
+          await publishersService.invite(publisher.id, email);
+          addMember(publisher.id, email);
+        }}
         onRemove={(memberId) => removeMember(publisher.id, memberId)}
       />
 
@@ -199,7 +207,7 @@ function MembersSection({
 }: {
   publisherId: string;
   members: ReturnType<typeof usePublisherAccessStore.getState>["byPublisher"][string]["members"];
-  onAdd: (email: string) => void;
+  onAdd: (email: string) => Promise<void>;
   onRemove: (memberId: string) => void;
 }) {
   const { t } = useTranslation();
@@ -214,13 +222,25 @@ function MembersSection({
     return members.filter((m) => m.email.toLowerCase().includes(q));
   }, [members, query]);
 
-  const submitInvite = () => {
+  const [sending, setSending] = React.useState(false);
+
+  const submitInvite = async () => {
     const trimmed = inviteEmail.trim();
     if (!/^\S+@\S+\.\S+$/.test(trimmed)) {
       toast.error(t("networkUI.publishers.settings.invalidEmail"));
       return;
     }
-    onAdd(trimmed);
+    setSending(true);
+    try {
+      await onAdd(trimmed);
+    } catch (e) {
+      // Previously this path did not exist: the success toast fired
+      // unconditionally because nothing was being sent to fail.
+      toast.error(e instanceof Error ? e.message : "Could not send the invite");
+      return;
+    } finally {
+      setSending(false);
+    }
     toast.success(t("networkUI.publishers.settings.invited").replace("{email}", trimmed));
     setInviteEmail("");
     setInviteOpen(false);
@@ -284,7 +304,7 @@ function MembersSection({
             className="h-8"
             autoFocus
           />
-          <Button size="sm" onClick={submitInvite}>
+          <Button size="sm" onClick={submitInvite} disabled={sending}>
             {t("networkUI.publishers.settings.sendInvite")}
           </Button>
           <Button

@@ -36,20 +36,22 @@ import { cn } from "@/lib/utils";
    stable across renders.
    =========================================================== */
 
-function hash(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 
 /** Every text cell in a number row shares one font, size, weight and colour —
  *  the same style as the Reporting tables (Inter Medium, 9.5px). */
 const CELL = "text-[9.5px] font-medium tabular-nums text-foreground";
 
-const VENDORS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
-const ALLOCATED_OPTIONS = [100, 250, 500, 1_000, 2_500];
-const COUNTRIES_LOCAL = ["United States", "Canada"];
-const COUNTRIES_INTL = ["United Kingdom", "Australia", "Germany", "France"];
+/* VENDORS, ALLOCATED_OPTIONS and the two COUNTRIES lists are gone, with the
+ * hash() that picked from them. They turned a number's id into a carrier, a
+ * capacity, a country, a renewal date and three call counters - so ten numbers
+ * imported minutes earlier, which had never carried a call, displayed 150-494
+ * lifetime calls, 1-3 concurrent, and renewal dates spread across three weeks.
+ *
+ * A blank column is readable. An invented one is not, and on this page it is
+ * billing information. */
+
+/** Shown wherever the backend has no value. */
+const DASH = "\u2014";
 
 export function deriveName(n: TrackingNumber): string {
   const last4 = n.number.replace(/\D/g, "").slice(-4);
@@ -58,13 +60,7 @@ export function deriveName(n: TrackingNumber): string {
 }
 
 export function deriveCountry(n: TrackingNumber): string {
-  // Prefer the real value from the backend; fall back to a deterministic
-  // hash-derived placeholder so existing demos keep rendering. When the
-  // backend ships the `country` field this branch silently goes away.
-  if (n.country) return n.country;
-  const h = hash(n.id);
-  if (n.type === "international") return COUNTRIES_INTL[h % COUNTRIES_INTL.length];
-  return COUNTRIES_LOCAL[h % COUNTRIES_LOCAL.length];
+  return n.country?.trim() || DASH;
 }
 
 export function derivePurchaseStatus(n: TrackingNumber): {
@@ -77,20 +73,17 @@ export function derivePurchaseStatus(n: TrackingNumber): {
   return { label: "Purchased", labelKey: "trafficUI.numbers.track.purchase.purchased", tone: "success" };
 }
 
-export function deriveAllocated(n: TrackingNumber): number {
-  // Prefer the real value from the backend; fall back to a deterministic
-  // placeholder so unpopulated demos stay readable.
-  if (typeof n.allocatedCapacity === "number") return n.allocatedCapacity;
-  return ALLOCATED_OPTIONS[hash(n.id) % ALLOCATED_OPTIONS.length];
+export function deriveAllocated(n: TrackingNumber): number | undefined {
+  return typeof n.allocatedCapacity === "number" ? n.allocatedCapacity : undefined;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function deriveRenewDate(n: TrackingNumber): string {
-  // Prefer the real value from the backend; fall back to a deterministic
-  // 5..34-day offset so the column never blanks out during demos.
-  const ts = n.renewsAt ?? Date.now() + (5 + (hash(n.id) % 30)) * DAY_MS;
-  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // A rental renewal is a date money moves on. Inventing one told somebody a
+  // charge was coming on a day nothing happens.
+  if (!n.renewsAt) return DASH;
+  return new Date(n.renewsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export function deriveLifetimeDays(n: TrackingNumber): number {
@@ -105,25 +98,25 @@ export function deriveLifetimeDays(n: TrackingNumber): number {
  * placeholder so empty demos stay readable.
  */
 export function deriveVendor(n: TrackingNumber): string {
-  if (n.vendor && n.vendor.trim()) return n.vendor;
-  return VENDORS[hash(n.id) % VENDORS.length];
+  return n.vendor?.trim() || DASH;
 }
 
+/** Concurrent calls on this number right now, counted by the backend from the
+ *  call log. This used to be `hash(id) % 4` — a number that never moved and was
+ *  never zero, while the real count was already in the response and ignored. */
 export function deriveLive(n: TrackingNumber): number {
-  if (n.status !== "active") return 0;
-  return hash(n.id + "live") % 4; // 0..3 concurrent
+  return n.liveCalls ?? 0;
 }
 
-export function deriveHourly(n: TrackingNumber): number {
-  // ~ callsToday / 24 ± jitter
-  const base = Math.max(0, Math.round(n.callsToday / 24));
-  return base + (hash(n.id + "hr") % 3);
+/** Calls in the current hour. The backend does not aggregate this yet, so the
+ *  column is blank rather than a guess derived from the daily figure. */
+export function deriveHourly(n: TrackingNumber): number | undefined {
+  return n.callsHourly;
 }
 
-export function deriveGlobal(n: TrackingNumber): number {
-  // All-time across this number's lifetime — scale with monthly volume.
-  const months = Math.max(1, Math.round(deriveLifetimeDays(n) / 30));
-  return n.callsMonthly * months + (hash(n.id + "g") % 500);
+/** Calls over this number's whole life. Also not aggregated by the backend. */
+export function deriveGlobal(n: TrackingNumber): number | undefined {
+  return n.callsGlobal;
 }
 
 /* ===========================================================
@@ -284,7 +277,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("allocated") && (
                       <TableCell className={CELL}>
-                        {formatNumber(deriveAllocated(n))}
+                        {deriveAllocated(n) === undefined ? DASH : formatNumber(deriveAllocated(n)!)}
                       </TableCell>
                     )}
                     {visibleColumns.has("renew") && (
@@ -314,7 +307,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("hourly") && (
                       <TableCell className={CELL}>
-                        {formatNumber(deriveHourly(n))}
+                        {deriveHourly(n) === undefined ? DASH : formatNumber(deriveHourly(n)!)}
                       </TableCell>
                     )}
                     {visibleColumns.has("daily") && (
@@ -329,7 +322,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("global") && (
                       <TableCell className={CELL}>
-                        {formatCompact(deriveGlobal(n))}
+                        {deriveGlobal(n) === undefined ? DASH : formatCompact(deriveGlobal(n)!)}
                       </TableCell>
                     )}
                     {visibleColumns.has("status") && (

@@ -19,22 +19,27 @@ export interface TrackingNumber {
 
   state?: string;
   city?: string;
-  /** ISO country name or code from the backend.
-   *  When undefined the UI falls back to a deterministic hash-derived display
-   *  (see deriveCountry in track-numbers-table.tsx). */
+  /** ISO country name or code from the backend. Undefined shows as a dash. */
   country?: string;
 
   monthlyCost: number;
   callsToday: number;
   callsMonthly: number;
+  /** Concurrent calls on this number right now. The backend counts these from
+   *  the call log and sends them as `live`. */
+  liveCalls?: number;
+  /** Calls this hour / over the number's whole life. The backend does not
+   *  aggregate either yet, so both are undefined and the columns show a dash
+   *  rather than a figure derived from something else. */
+  callsHourly?: number;
+  callsGlobal?: number;
   conversionRate: number; // 0..1
 
   /** How many concurrent channels / DIDs the carrier has allocated to this
-   *  number. Optional — backend may not return it; UI falls back to a
-   *  hash-derived placeholder. */
+   *  number. Undefined shows as a dash. */
   allocatedCapacity?: number;
-  /** Next rental renewal date (ms epoch). Optional — backend may not return
-   *  it; UI falls back to a hash-derived placeholder. */
+  /** Next rental renewal date (ms epoch). Undefined shows as a dash - this is
+   *  a date money moves on and must never be invented. */
   renewsAt?: number;
 
   provisionedAt: number;
