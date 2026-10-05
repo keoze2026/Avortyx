@@ -163,7 +163,17 @@ export function flattenPlan(plan: RoutingPlan): FlattenedPlan {
     rule: {
       name: plan.name,
       description: plan.description,
-      ruleType: "visual-graph",
+      // "visual-graph" is not a rule type the engine knows. RoutingRule.RuleType
+      // lists time_based, geo_based, round_robin, weighted, priority,
+      // caller_specific, overflow, schedule_based, tag_based, rtb and
+      // ping_post; evaluate_rule has a branch for each and none for this, so it
+      // fell through and returned None. Every rule the canvas ever created was
+      // unroutable - the campaign showed a live plan with destinations attached
+      // and dropped every call with "No matching rule found".
+      //
+      // "priority" is the right one: the canvas hands destinations to the
+      // backend in node order, which is what get_valid_destination walks.
+      ruleType: "priority",
       priority: 1,
       status: planStatusToRule(plan.status),
       campaignId: plan.campaignId ?? "",
