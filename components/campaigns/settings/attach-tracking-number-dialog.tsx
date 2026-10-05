@@ -35,7 +35,7 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { numbersService } from "@/lib/api/services/numbers.service";
 import { toE164 } from "@/lib/format";
-import type { NumberType } from "@/lib/types";
+import type { NumberType, TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -86,35 +86,25 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     [allNumbers],
   );
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | NumberType>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return available;
-    return available.filter(
-      (n) =>
+    return available.filter((n) => {
+      if (typeFilter !== "all" && n.type !== typeFilter) return false;
+      if (!q) return true;
+      return (
         n.number.toLowerCase().includes(q) ||
         (n.label ?? "").toLowerCase().includes(q) ||
-        (n.city ?? "").toLowerCase().includes(q),
-    );
-  }, [available, query]);
+        (n.city ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [available, query, typeFilter]);
 
   // ─── "Buy new" state ──────────────────────────────────────────────────
   const [buyType, setBuyType] = useState<NumberType>("tollfree");
   const [buyRegion, setBuyRegion] = useState(STATE_OPTIONS[0].code);
   const [buyCount, setBuyCount] = useState(1);
-
-  /* Numbers already owned, free, and of the type being asked for.
-   *
-   * Buying from the carrier while unattached numbers sit idle costs money for
-   * nothing - ten toll-free numbers were imported from a new carrier and the
-   * Buy tab would still have gone out and bought more. These are spent first
-   * and only the shortfall is purchased. */
-  const bucket = useMemo(
-    () => available.filter((n) => n.type === buyType),
-    [available, buyType],
-  );
-  const fromBucket = Math.min(buyCount, bucket.length);
-  const toPurchase = Math.max(0, buyCount - bucket.length);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -124,6 +114,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     if (!open) return;
     setMode("add");
     setQuery("");
+    setTypeFilter("all");
     setSelected(new Set());
     setBuyType("tollfree");
     setBuyRegion(STATE_OPTIONS[0].code);
@@ -139,9 +130,15 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     });
   };
 
+  const allShownSelected = filtered.length > 0 && filtered.every((n) => selected.has(n.id));
+  const someShownSelected = filtered.some((n) => selected.has(n.id));
   const toggleAll = () => {
-    if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map((n) => n.id)));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allShownSelected) filtered.forEach((n) => next.delete(n.id));
+      else filtered.forEach((n) => next.add(n.id));
+      return next;
+    });
   };
 
   const onSubmitAdd = async () => {
@@ -175,45 +172,23 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     const region = STATE_OPTIONS.find((s) => s.code === buyRegion) ?? STATE_OPTIONS[0];
     const numberType = buyType === "tollfree" ? "toll_free" : "local";
     try {
-      // Spend what is already owned before buying anything.
-      const taken = bucket.slice(0, fromBucket);
-      for (const n of taken) {
-        await updateNumber(n.id, { campaignId: campaign.id, campaignName: campaign.name });
-      }
-
-      if (toPurchase === 0) {
-        toast.success(
-          taken.length === 1
-            ? "1 number attached from your pool"
-            : `${taken.length} numbers attached from your pool`,
-          { description: `Attached to "${campaign.name}". Nothing was purchased.` },
-        );
-        onOpenChange(false);
-        return;
-      }
-
       // Ask the carrier what is actually for sale. Toll-free has no area code.
       const available = await numbersService.phoneNumberSearch({
         numberType,
         countryCode: "US",
-        limit: toPurchase,
+        limit: buyCount,
         areaCode: buyType === "tollfree" ? undefined : String(region.area),
       });
 
       // Stop rather than buy a partial batch. Quietly provisioning 2 of 5 and
       // reporting success is how a campaign ends up short of the numbers
-      // somebody thinks it has. Anything already taken from the pool is named,
-      // because that part did happen.
-      if (available.length < toPurchase) {
+      // somebody thinks it has.
+      if (available.length < buyCount) {
         toast.error(
           available.length === 0
             ? "The carrier has no numbers available for that selection"
-            : `Only ${available.length} of ${toPurchase} numbers are available to buy`,
-          {
-            description: taken.length
-              ? `${taken.length} attached from your pool. Nothing was purchased.`
-              : "Nothing was purchased. Try a different area or a smaller count.",
-          },
+            : `Only ${available.length} of ${buyCount} numbers are available`,
+          { description: "Nothing was purchased. Try a different area or a smaller count." },
         );
         return;
       }
@@ -222,7 +197,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
       // carrier, and a partial failure must leave a knowable state.
       const bought: string[] = [];
       try {
-        for (const candidate of available.slice(0, toPurchase)) {
+        for (const candidate of available.slice(0, buyCount)) {
           await provisionNumber({
             // Verbatim from the search result, never reformatted.
             phoneNumber: candidate.phoneNumber,
@@ -237,20 +212,15 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         // billable, and pretending otherwise leaves them unaccounted for.
         toast.error(e instanceof Error ? e.message : "Could not purchase number", {
           description: bought.length
-            ? `${bought.length} of ${toPurchase} were purchased and attached: ${bought.join(", ")}`
+            ? `${bought.length} of ${buyCount} were purchased and attached: ${bought.join(", ")}`
             : "No numbers were purchased.",
         });
         return;
       }
 
-      const total = taken.length + bought.length;
       toast.success(
-        total === 1 ? "1 number attached" : `${total} numbers attached`,
-        {
-          description: taken.length
-            ? `${taken.length} from your pool, ${bought.length} purchased. Attached to "${campaign.name}".`
-            : `Attached to "${campaign.name}".`,
-        },
+        bought.length === 1 ? "1 number purchased" : `${bought.length} numbers purchased`,
+        { description: `Attached to "${campaign.name}".` },
       );
       onOpenChange(false);
     } catch (e) {
@@ -262,96 +232,111 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      {/* Large window: room for dozens of numbers at once, so several can be
+          picked and added to the campaign in one go. */}
+      <DialogContent className="flex max-h-[90vh] w-[95vw] flex-col gap-4 sm:max-w-5xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
               <Hash className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle>Add Tracking Number</DialogTitle>
+              <DialogTitle className="uppercase tracking-wide">Add numbers</DialogTitle>
               <DialogDescription>
-                Toll-free or local numbers that land calls for{" "}
-                <span className="font-medium text-foreground">{campaign?.name ?? "this campaign"}</span>{" "}
-                and forward them to the routed destinations below.
+                Pick one or more numbers for{" "}
+                <span className="font-medium text-foreground">{campaign?.name ?? "this campaign"}</span>
+                {" "}— calls to them forward to the routed destinations.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Mode toggle — Add (existing inventory) vs Buy (new from carrier) */}
-        <div className="inline-flex w-full rounded-md border border-border bg-muted p-0.5">
+        {/* Add existing numbers / Buy new numbers */}
+        <div className="inline-flex w-full rounded-md border border-border bg-muted p-0.5 sm:w-auto sm:self-start">
           {(["add", "buy"] as Mode[]).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setMode(m)}
               className={cn(
-                "flex-1 rounded px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                mode === m
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                "flex-1 rounded px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none",
+                mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {m === "add" ? "Add existing number" : "Buy a new number"}
+              {m === "add" ? "Add existing numbers" : "Buy new numbers"}
             </button>
           ))}
         </div>
 
         {mode === "add" ? (
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by number, name, or city"
-                className="pl-8 text-xs"
-              />
+          <>
+            {/* Search · type filter · count */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by number, name or city"
+                  className="pl-8 text-xs"
+                />
+              </div>
+              <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
+                {([
+                  ["all", "All"],
+                  ["tollfree", "Toll-free"],
+                  ["local", "Local"],
+                ] as Array<["all" | NumberType, string]>).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setTypeFilter(v)}
+                    className={cn(
+                      "rounded px-3 py-1 text-xs font-medium transition-colors",
+                      typeFilter === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
+                {filtered.length} of {available.length} available
+              </span>
             </div>
 
             {available.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-8 text-center">
+              <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-12 text-center">
                 <Hash className="mx-auto h-6 w-6 text-muted-foreground" />
-                <p className="mt-2 text-xs font-medium">No unassigned numbers in inventory</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Switch to <span className="font-medium text-foreground">Buy a new number</span>{" "}
-                  above to purchase one.
+                <p className="mt-2 text-sm font-medium">No unassigned numbers in inventory</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Switch to <span className="font-medium text-foreground">Buy new numbers</span> above to purchase some.
                 </p>
               </div>
             ) : (
-              <div className="max-h-72 overflow-auto rounded-lg border border-border">
+              <div className="min-h-[240px] flex-1 overflow-auto rounded-lg border border-border">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-10 pl-3">
+                      <TableHead className="w-10 pl-4">
                         <Checkbox
-                          checked={
-                            filtered.length > 0 && selected.size === filtered.length
-                          }
+                          checked={allShownSelected || (someShownSelected && "indeterminate")}
                           onCheckedChange={toggleAll}
-                          aria-label="Select all"
+                          aria-label="Select all shown numbers"
                         />
                       </TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">
-                        Number
-                      </TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">
-                        Type
-                      </TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">
-                        Name
-                      </TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">
-                        Region
-                      </TableHead>
+                      <TableHead className="text-left text-[11px] uppercase tracking-wider">Number</TableHead>
+                      <TableHead className="text-left text-[11px] uppercase tracking-wider">Name</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">Type</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">Region</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
-                          No matches for &ldquo;{query}&rdquo;
+                        <TableCell colSpan={6} className="py-10 text-center text-xs text-muted-foreground">
+                          No numbers match your search.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -362,22 +347,25 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                           onClick={() => toggle(n.id)}
                           data-state={selected.has(n.id) ? "selected" : undefined}
                         >
-                          <TableCell className="pl-3" onClick={(e) => e.stopPropagation()}>
+                          <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selected.has(n.id)}
                               onCheckedChange={() => toggle(n.id)}
                               aria-label={`Select ${toE164(n.number)}`}
                             />
                           </TableCell>
-                          <TableCell className="font-mono text-xs whitespace-nowrap">
+                          <TableCell className="text-left text-xs font-medium tabular-nums whitespace-nowrap">
                             {toE164(n.number)}
                           </TableCell>
-                          <TableCell className="text-xs capitalize text-muted-foreground">
-                            {n.type === "tollfree" ? "Toll-free" : n.type}
+                          <TableCell className="text-left text-xs font-medium">{n.label ?? "—"}</TableCell>
+                          <TableCell className="text-xs font-medium">
+                            {n.type === "tollfree" ? "Toll-free" : "Local"}
                           </TableCell>
-                          <TableCell className="text-xs">{n.label ?? "—"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          <TableCell className="text-xs font-medium">
                             {n.city ? `${n.city}, ${n.state ?? ""}` : n.state ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <NumberStatusPill status={n.status} />
                           </TableCell>
                         </TableRow>
                       ))
@@ -387,31 +375,35 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
               </div>
             )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-                Cancel
-              </Button>
-              <Button
-                onClick={onSubmitAdd}
-                disabled={submitting || selected.size === 0}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Attaching…
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-3.5 w-3.5" />{" "}
-                    {selected.size > 0
-                      ? `Attach ${selected.size} number${selected.size === 1 ? "" : "s"}`
-                      : "Attach"}
-                  </>
-                )}
-              </Button>
+            <DialogFooter className="items-center sm:justify-between">
+              <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                {selected.size === 0
+                  ? "Tick one or more numbers to add them"
+                  : `${selected.size} number${selected.size === 1 ? "" : "s"} selected`}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button onClick={onSubmitAdd} disabled={submitting || selected.size === 0}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Adding…
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-3.5 w-3.5" />{" "}
+                      {selected.size > 0
+                        ? `Add ${selected.size} number${selected.size === 1 ? "" : "s"}`
+                        : "Add"}
+                    </>
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
-          </div>
+          </>
         ) : (
-          <div className="space-y-4">
+          <div className="mx-auto w-full max-w-xl space-y-4 overflow-auto">
             <div className="space-y-2">
               <Label>Number type</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -427,13 +419,9 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                         : "border-border bg-secondary/30 hover:border-border/80",
                     )}
                   >
-                    <div className="text-sm font-medium">
-                      {nt === "tollfree" ? "Toll-free" : "Local"}
-                    </div>
+                    <div className="text-sm font-medium">{nt === "tollfree" ? "Toll-free" : "Local"}</div>
                     <div className="mt-0.5 text-[10px] text-muted-foreground">
-                      {nt === "tollfree"
-                        ? "8xx prefix — best for national campaigns."
-                        : "Geo-targeted area code."}
+                      {nt === "tollfree" ? "8xx prefix — best for national campaigns." : "Geo-targeted area code."}
                     </div>
                   </button>
                 ))}
@@ -466,25 +454,10 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 min={1}
                 max={20}
                 value={buyCount}
-                onChange={(e) =>
-                  setBuyCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))
-                }
-                className="font-mono"
+                onChange={(e) => setBuyCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                className="tabular-nums"
               />
-              <p className="text-[10px] text-muted-foreground">
-                Up to 20 per batch.
-                {bucket.length > 0 && (
-                  <>
-                    {" "}
-                    You already own {bucket.length} free{" "}
-                    {buyType === "tollfree" ? "toll-free" : "local"}{" "}
-                    {bucket.length === 1 ? "number" : "numbers"} —{" "}
-                    {toPurchase === 0
-                      ? `all ${fromBucket} will come from those, nothing will be bought.`
-                      : `${fromBucket} will come from those and ${toPurchase} will be bought.`}
-                  </>
-                )}
-              </p>
+              <p className="text-[10px] text-muted-foreground">Up to 20 per batch.</p>
             </div>
 
             <DialogFooter>
@@ -499,7 +472,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 ) : (
                   <>
                     <Plus className="h-3.5 w-3.5" />{" "}
-                    {buyCount > 1 ? `Buy ${buyCount} numbers & attach` : "Buy & attach"}
+                    {buyCount > 1 ? `Buy ${buyCount} numbers & add` : "Buy & add"}
                   </>
                 )}
               </Button>
@@ -508,5 +481,22 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Active / Paused / Pending / Expired as a small coloured pill. */
+function NumberStatusPill({ status }: { status: TrackingNumber["status"] }) {
+  const tone =
+    status === "active"
+      ? "bg-[color:var(--success)]/15 text-[color:var(--success)]"
+      : status === "paused"
+        ? "bg-[color:var(--warning)]/15 text-[color:var(--warning)]"
+        : status === "expired"
+          ? "bg-destructive/15 text-destructive"
+          : "bg-muted text-muted-foreground";
+  return (
+    <span className={cn("inline-flex min-w-[4.5rem] justify-center rounded-md px-2 py-0.5 text-[11px] font-medium capitalize", tone)}>
+      {status}
+    </span>
   );
 }
