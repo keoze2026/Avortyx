@@ -89,7 +89,7 @@ export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
                   <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="x"
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}

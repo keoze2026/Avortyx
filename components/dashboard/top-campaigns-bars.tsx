@@ -121,7 +121,7 @@ export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCam
               margin={{ top: 4, right: 72, left: 4, bottom: 4 }}
               barCategoryGap={12}
             >
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+              <CartesianGrid stroke="var(--border)" horizontal={false} />
               <XAxis type="number" hide />
               <YAxis
                 type="category"
