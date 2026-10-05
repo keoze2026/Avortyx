@@ -310,7 +310,7 @@ export function TrackingNumberEditDialog({
                       ? t("trafficUI.campaigns.settings.trackingNumbers.edit.enabled")
                       : t("trafficUI.campaigns.settings.trackingNumbers.edit.disabled")}
                   </span>
-                  <Switch
+                  <Switch className="data-[state=checked]:bg-accent"
                     checked={trafficEnabled}
                     onCheckedChange={(v) => patch({ trafficSourceEnabled: v })}
                     aria-label={t("trafficUI.campaigns.settings.trackingNumbers.edit.traffic.toggleAria")}
@@ -558,7 +558,7 @@ function CollapsibleCard({
                   {enabled ? enabledLabel : disabledLabel}
                 </span>
               </Label>
-              <Switch checked={enabled} onCheckedChange={onEnabledChange} />
+              <Switch className="data-[state=checked]:bg-accent" checked={enabled} onCheckedChange={onEnabledChange} />
             </div>
             <div
               className={cn(
@@ -601,4 +601,3 @@ function NumberField({
     </div>
   );
 }
-

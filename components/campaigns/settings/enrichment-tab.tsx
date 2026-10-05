@@ -153,7 +153,7 @@ export function EnrichmentTab({ campaignId }: { campaignId: string }) {
                     {u.url}
                   </div>
                 </div>
-                <Switch
+                <Switch className="data-[state=checked]:bg-accent"
                   checked={u.enabled}
                   onCheckedChange={(v) => toggleUrl(u.id, v)}
                   aria-label={t("trafficUI.campaigns.settings.enrichment.toggle").replace("{label}", u.label)}

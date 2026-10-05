@@ -116,7 +116,7 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                       {formatCurrency(n.payoutPerCall ?? 0, true)}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Switch
+                      <Switch className="data-[state=checked]:bg-accent"
                         checked={n.status === "active"}
                         onCheckedChange={(v) => {
                           setNumberStatus(n.id, v ? "active" : "paused");

@@ -44,7 +44,7 @@ export function RtbTab({ campaignId }: { campaignId: string }) {
               {t("trafficUI.campaigns.settings.rtb.enableHint")}
             </div>
           </div>
-          <Switch
+          <Switch className="data-[state=checked]:bg-accent"
             checked={form.enabled}
             onCheckedChange={(enabled) => setForm((f) => ({ ...f, enabled }))}
           />
