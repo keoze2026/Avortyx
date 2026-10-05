@@ -149,12 +149,33 @@ export const routingService = {
     });
   },
 
+  /**
+   * Attach a destination to a rule.
+   *
+   * `destination` is the number calls are dialed to and the backend requires
+   * it — CreateDestinationSchema raises "destination or phone_number is
+   * required" without one. This method only ever sent buyerId, weight and
+   * priority, so every call to it failed; nothing in the app called it, which
+   * is why that went unnoticed.
+   */
   async addDestination(
     ruleId: string,
-    destination: { buyerId: string; weight?: number; priority?: number },
+    destination: {
+      destination: string;
+      buyerId?: string;
+      destinationType?: string;
+      weight?: number;
+      priority?: number;
+    },
   ): Promise<RoutingDestination> {
     return http.post<RoutingDestination>(`/api/routing/rules/${ruleId}/destinations`, {
-      body: destination,
+      body: {
+        destination: destination.destination,
+        destinationType: destination.destinationType ?? "phone",
+        buyerId: destination.buyerId,
+        weight: destination.weight ?? 100,
+        priority: destination.priority ?? 1,
+      },
     });
   },
 
