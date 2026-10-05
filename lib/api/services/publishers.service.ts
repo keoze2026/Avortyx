@@ -160,6 +160,20 @@ export const publishersService = {
     if (Array.isArray(res)) return res;
     return res.items ?? [];
   },
+
+  /**
+   * POST /api/publishers/{id}/invite — send the publisher a link to set up
+   * their own login.
+   *
+   * The endpoint has existed and nothing called it. The Members list on the
+   * publisher settings tab wrote the invited address to a zustand store backed
+   * by localStorage and showed a success toast, so the row read "Invited"
+   * forever, no email was ever sent, and the entry did not exist outside the
+   * one browser that made it.
+   */
+  async invite(id: string, email: string): Promise<void> {
+    await http.post(`/api/publishers/${id}/invite`, { body: { email } });
+  },
 };
 
 /** Lightweight wire shape for a payout row; backend may add fields over time. */
