@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { spamService } from "@/lib/api/services/spam.service";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,22 +31,46 @@ export function ProviderConfigurationCard({ config, onChange }: Props) {
     }
     setTesting(true);
     setResponse(null);
-    // Mocked round-trip — pretend we hit the provider and got back a payload.
-    await new Promise((r) => setTimeout(r, Math.min(config.timeoutMs, 1500)));
-    const payload = {
-      status: "ok",
-      provider: "TCPA / DNC",
-      latencyMs: Math.round(80 + Math.random() * 220),
-      sample: {
-        number: "+14155550100",
-        litigator: false,
-        dnc: false,
-        confidence: 0.97,
-      },
-    };
-    setResponse(JSON.stringify(payload, null, 2));
-    setTesting(false);
-    toast.success(t("toolsUI.suppression.providerConfig.toastTestSuccess"));
+    // This used to sleep, then print status "ok" with a latency of
+    // 80 + Math.random() * 220 and a sample result saying litigator: false,
+    // dnc: false, confidence 0.97. It never contacted anything, so wrong
+    // credentials still reported success - the one button whose entire job is
+    // telling you whether the provider answers.
+    const sample = "+14155550100";
+    const startedAt = performance.now();
+    try {
+      const result = await spamService.checkNumber(sample);
+      setResponse(
+        JSON.stringify(
+          {
+            status: "ok",
+            latencyMs: Math.round(performance.now() - startedAt),
+            checked: sample,
+            result,
+          },
+          null,
+          2,
+        ),
+      );
+      toast.success(t("toolsUI.suppression.providerConfig.toastTestSuccess"));
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "The provider did not answer";
+      setResponse(
+        JSON.stringify(
+          {
+            status: "failed",
+            latencyMs: Math.round(performance.now() - startedAt),
+            checked: sample,
+            error: message,
+          },
+          null,
+          2,
+        ),
+      );
+      toast.error(message);
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (

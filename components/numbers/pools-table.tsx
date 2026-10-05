@@ -26,34 +26,37 @@ import type { NumberPool } from "@/lib/types";
    Derived column values
    =========================================================== */
 
-function hash(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+/* hash() and the three lists it picked from are gone. They turned a pool's id
+ * into a country, a closed-browser delay, an idle limit, an impression count
+ * and a missed-call count - five columns of a table that reads as measurement.
+ *
+ * The backend sends none of these yet, so each shows a dash. A blank column is
+ * honest; a populated one that nobody measured is not. */
+
+export const POOL_DASH = "\u2014";
+
+export function derivePoolCountry(p: NumberPool): string | undefined {
+  return p.country?.trim() || undefined;
 }
 
-const POOL_COUNTRIES = ["United States", "Canada", "United Kingdom", "Australia"];
-const CLOSED_BROWSER_DELAYS = [5, 10, 30, 60]; // seconds
-const IDLE_LIMITS = [60, 120, 300, 600]; // seconds
-
-export function derivePoolCountry(p: NumberPool): string {
-  return POOL_COUNTRIES[hash(p.id) % POOL_COUNTRIES.length];
+export function deriveClosedBrowserDelay(p: NumberPool): number | undefined {
+  return typeof p.closedBrowserDelaySec === "number" ? p.closedBrowserDelaySec : undefined;
 }
 
-export function deriveClosedBrowserDelay(p: NumberPool): number {
-  return CLOSED_BROWSER_DELAYS[hash(p.id + "cbd") % CLOSED_BROWSER_DELAYS.length];
+export function deriveIdleLimit(p: NumberPool): number | undefined {
+  return typeof p.idleTimeSec === "number" ? p.idleTimeSec : undefined;
 }
 
-export function deriveIdleLimit(p: NumberPool): number {
-  return IDLE_LIMITS[hash(p.id + "idle") % IDLE_LIMITS.length];
+/* Impressions and missed calls have no field on NumberPool and nothing in the
+ * backend counts them. They were callsToday * 30 plus a hash, and
+ * callsToday * 0.04 plus a hash - arithmetic on an unrelated number dressed as
+ * a measurement. Until something counts them, they are blank. */
+export function deriveImpressions(_p: NumberPool): number | undefined {
+  return undefined;
 }
 
-export function deriveImpressions(p: NumberPool): number {
-  return p.callsToday * 30 + (hash(p.id + "imp") % 5_000);
-}
-
-export function deriveMisses(p: NumberPool): number {
-  return Math.round(p.callsToday * 0.04) + (hash(p.id + "miss") % 25);
+export function deriveMisses(_p: NumberPool): number | undefined {
+  return undefined;
 }
 
 function formatSeconds(s: number): string {
@@ -156,7 +159,7 @@ export function PoolsTable({
                   )}
                   {visibleColumns.has("country") && (
                     <TableCell className="text-muted-foreground">
-                      {derivePoolCountry(p)}
+                      {derivePoolCountry(p) ?? POOL_DASH}
                     </TableCell>
                   )}
                   {visibleColumns.has("poolSize") && (
@@ -171,22 +174,22 @@ export function PoolsTable({
                   )}
                   {visibleColumns.has("closedBrowserDelay") && (
                     <TableCell className="font-mono text-xs tabular-nums">
-                      {formatSeconds(deriveClosedBrowserDelay(p))}
+                      {deriveClosedBrowserDelay(p) === undefined ? POOL_DASH : formatSeconds(deriveClosedBrowserDelay(p)!)}
                     </TableCell>
                   )}
                   {visibleColumns.has("idleLimit") && (
                     <TableCell className="font-mono text-xs tabular-nums">
-                      {formatSeconds(deriveIdleLimit(p))}
+                      {deriveIdleLimit(p) === undefined ? POOL_DASH : formatSeconds(deriveIdleLimit(p)!)}
                     </TableCell>
                   )}
                   {visibleColumns.has("impressions") && (
                     <TableCell className="tabular-nums">
-                      {formatCompact(deriveImpressions(p))}
+                      {deriveImpressions(p) === undefined ? POOL_DASH : formatCompact(deriveImpressions(p)!)}
                     </TableCell>
                   )}
                   {visibleColumns.has("misses") && (
                     <TableCell className="tabular-nums">
-                      {formatNumber(deriveMisses(p))}
+                      {deriveMisses(p) === undefined ? POOL_DASH : formatNumber(deriveMisses(p)!)}
                     </TableCell>
                   )}
                   {visibleColumns.has("status") && (

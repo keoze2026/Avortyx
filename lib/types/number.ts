@@ -109,6 +109,12 @@ export interface NumberPool {
   /** Max idle time a number is held for a user, in seconds. */
   idleTimeSec?: number;
   autoBuy?: boolean;
+  /** Impressions and missed calls. The backend does not report either yet,
+   *  so both columns show a dash. They used to be derived from the pool id -
+   *  callsToday * 30 plus a hash, and callsToday * 0.04 plus a hash - which
+   *  put invented traffic figures in a table that reads as measurement. */
+  impressions?: number;
+  missedCalls?: number;
 
   /* ── Detail-page-only fields ── */
   /** "Replacement Number" — number to replace with one from the pool. */
