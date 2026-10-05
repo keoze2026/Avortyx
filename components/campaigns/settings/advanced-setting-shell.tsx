@@ -76,13 +76,17 @@ export function AdvancedSettingShell({
             onCheckedChange={onEnabledChange}
             aria-label={t("trafficUI.campaigns.settings.advancedShell.toggle").replace("{title}", title)}
           />
-          {expandable && (
+          {expandable ? (
             <ChevronDown
               className={cn(
                 "h-4 w-4 text-muted-foreground transition-transform",
                 open && "rotate-180",
               )}
             />
+          ) : (
+            // Same size as the arrow, so cards without options (e.g. Auto
+            // Record Calls) keep their status and switch lined up with the rest.
+            <span aria-hidden className="h-4 w-4 shrink-0" />
           )}
         </div>
       </Header>

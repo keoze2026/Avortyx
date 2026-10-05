@@ -359,6 +359,8 @@ export function DestinationsTable({
                       <Switch
                         checked={destination.enabled}
                         onCheckedChange={() => onToggle?.(destination.id)}
+                        // Green when the destination is active (on); off is unchanged.
+                        className="data-[state=checked]:bg-[color:var(--success)]"
                         aria-label={
                           destination.enabled
                             ? t("networkUI.destinations.table.disableAria").replace("{name}", destination.name)

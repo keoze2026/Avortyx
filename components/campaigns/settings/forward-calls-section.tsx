@@ -299,7 +299,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         {buyer?.name ?? "—"}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap text-[9.5px] font-medium tabular-nums text-foreground">
                       {toE164(d.tfn)}
                     </TableCell>
                     <TableCell>
