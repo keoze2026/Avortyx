@@ -17,6 +17,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { toast } from "sonner";
 
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import {
@@ -101,11 +102,17 @@ function scheduleSync(
       .update(campaignId, {
         advancedSettings: settings as unknown as Record<string, unknown>,
       })
-      .catch(() => {
-        // Backend rejected the PATCH — local state is already saved (and
-        // visible to the user). The next page load will reseed from the
-        // server's last-good value via `seed()`, so we don't need to revert
-        // anything here. Caller is welcome to attach error handling.
+      .catch((e: unknown) => {
+        // Say so. Swallowing this is why a switch could be flipped, look
+        // saved, and mean nothing: local state updates immediately and the
+        // page only reseeds from the server on the next load, so a rejected
+        // PATCH was invisible until someone noticed the feature wasn't
+        // working. Local state is deliberately left as it is - reverting a
+        // control the user just moved is worse than telling them.
+        toast.error(
+          e instanceof Error ? e.message : "Could not save that setting",
+          { description: "The change was not saved. Reload to see the current values." },
+        );
       });
   }, SYNC_DELAY_MS);
   pending.set(campaignId, timer);
