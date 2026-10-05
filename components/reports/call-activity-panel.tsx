@@ -100,7 +100,10 @@ function detailRows(detail: Record<string, unknown> | null | undefined): Array<[
       .replace(/([A-Z])/g, " $1")
       .replace(/^./, (c) => c.toUpperCase())
       .trim();
-    out.push([label, String(v)]);
+    // Status words arrive raw ("failed", "no_answer"): show them as
+    // "Failed", "No answer". Other values are shown as sent.
+    const value = k === "status" ? capitalizeFirst(String(v).replace(/_/g, " ")) ?? "" : String(v);
+    out.push([label, value]);
   }
   return out;
 }

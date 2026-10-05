@@ -296,7 +296,9 @@ function ProgressPill({ state }: { state: ProgressState }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium",
+        // One width for every state (sized to fit "Incomplete"), text centred,
+        // so Ready, Incomplete and Paused are the same size.
+        "inline-flex min-w-[5.75rem] items-center justify-center rounded-md px-2.5 py-1 text-[11px] font-medium",
         toneClass,
       )}
     >

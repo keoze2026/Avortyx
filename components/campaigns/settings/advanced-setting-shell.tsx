@@ -74,6 +74,8 @@ export function AdvancedSettingShell({
           <Switch
             checked={enabled}
             onCheckedChange={onEnabledChange}
+            // Blue when the setting is enabled; off is unchanged.
+            className="data-[state=checked]:bg-accent"
             aria-label={t("trafficUI.campaigns.settings.advancedShell.toggle").replace("{title}", title)}
           />
           {expandable ? (
