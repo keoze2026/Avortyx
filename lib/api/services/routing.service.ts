@@ -20,7 +20,11 @@ export interface RoutingCondition {
 
 export interface RoutingDestination {
   id: string;
-  /** Backend models destinations as { buyer_id, weight, priority, … }. */
+  /** The number calls are dialed to. format_destination has always sent it and
+   *  this type never named it, so nothing downstream could read where a rule
+   *  actually sends a call. */
+  destination?: string;
+  destinationType?: string;
   buyerId?: string;
   buyerName?: string;
   weight?: number;
