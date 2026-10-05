@@ -360,6 +360,13 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 /** Caller profile. Every field is dropped when null — the backend flags
  *  city / zip / timezone / fraud score as "null by design", and blank rows
  *  read as missing data rather than data that was never offered. */
+/** First letter in capitals for values the backend sends in lower case
+ *  (e.g. rule type "priority" → "Priority", line type "mobile" → "Mobile"). */
+function capitalizeFirst(v: string | null | undefined): string | undefined {
+  if (!v) return v ?? undefined;
+  return v.charAt(0).toUpperCase() + v.slice(1);
+}
+
 function ProfileFields({ profile }: { profile: CallerProfile | undefined }) {
   const { t } = useTranslation();
   if (!profile) return null;
@@ -374,7 +381,7 @@ function ProfileFields({ profile }: { profile: CallerProfile | undefined }) {
   add("country", profile.country);
   add("timezone", profile.timezone);
   add("zipCode", profile.zipCode);
-  add("lineType", profile.lineType);
+  add("lineType", capitalizeFirst(profile.lineType));
   if (profile.isVoip !== null && profile.isVoip !== undefined) {
     add("voip", profile.isVoip ? t("common.yes") : t("common.no"));
   }
@@ -532,7 +539,7 @@ function ParametersTab({ data }: { data: CallActivity }) {
       rows: [
         [t("toolsUI.reports.activity.campaign"), data.routing?.campaign ?? undefined],
         [t("toolsUI.reports.activity.rule"), data.routing?.ruleName ?? undefined],
-        [t("toolsUI.reports.activity.ruleType"), data.routing?.ruleType ?? undefined],
+        [t("toolsUI.reports.activity.ruleType"), capitalizeFirst(data.routing?.ruleType)],
         [t("toolsUI.reports.activity.destination"), data.routing?.destination ?? undefined],
         [t("toolsUI.reports.activity.buyer"), data.routing?.buyer ?? undefined],
         [t("toolsUI.reports.activity.publisher"), data.routing?.publisher ?? undefined],

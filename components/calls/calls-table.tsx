@@ -64,7 +64,7 @@ export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Prop
                     </TableCell>
                   )}
                   {visibleColumns.has("caller") && (
-                    <TableCell className="font-mono text-xs">{formatCallerId(c.callerNumber)}</TableCell>
+                    <TableCell className="text-[9.5px] font-medium tabular-nums">{formatCallerId(c.callerNumber)}</TableCell>
                   )}
                   {visibleColumns.has("campaign") && (
                     <TableCell>
