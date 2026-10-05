@@ -44,6 +44,10 @@ interface NumberWire {
   monthlyCost?: string | number;
   callsToday?: number;
   callsMonthly?: number;
+  /** Wire: `live` — concurrent calls, counted by the backend. */
+  live?: number;
+  callsHourly?: number;
+  callsGlobal?: number;
   conversionRate?: number;
   /** Concurrent channel allocation. Try several naming conventions. */
   allocatedCapacity?: string | number;
@@ -127,6 +131,11 @@ function wireToNumber(w: NumberWire): TrackingNumber {
     monthlyCost: toNum(w.monthlyCost),
     callsToday: w.callsToday ?? 0,
     callsMonthly: w.callsMonthly ?? 0,
+    // The backend has always sent this and nothing read it, so the Live
+    // column showed hash(id) % 4 instead of the real count.
+    liveCalls: w.live ?? 0,
+    callsHourly: w.callsHourly,
+    callsGlobal: w.callsGlobal,
     conversionRate: w.conversionRate ?? 0,
     allocatedCapacity:
       allocatedRaw !== undefined && allocatedRaw !== null ? toNum(allocatedRaw) : undefined,
