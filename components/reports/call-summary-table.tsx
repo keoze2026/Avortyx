@@ -381,9 +381,17 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       return c.publisherId
         ? { key: c.publisherId, label: c.publisherName ?? "—" }
         : null;
-    case "dialed":
+    /* Dialed and Destination are not the same number and used to share this
+     * case, so both tabs listed the tracking number that was rung. Dialed is
+     * our TFN; Destination is the buyer's number the call was forwarded to. */
+    case "dialed": {
+      const v = toE164(c.calledNumber);
+      return { key: v, label: v };
+    }
     case "destination": {
-      const v = toE164(c.destinationNumber);
+      const raw = c.destinationNumber?.trim();
+      if (!raw) return labelOf("Not forwarded");
+      const v = toE164(raw);
       return { key: v, label: v };
     }
     case "numberPool": {

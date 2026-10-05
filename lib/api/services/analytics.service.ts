@@ -422,7 +422,13 @@ function callRecordToCall(w: CallRecordWire): Call {
     // still ship `destinationNumber`). Reading only one silently dropped the
     // called number whenever the backend sent the other — try both, in the
     // order the contract names them.
-    destinationNumber: w.calledNumber || w.destinationNumber || "",
+    // Two different numbers, and they were collapsed into one. `calledNumber`
+    // is our tracking number — what the caller dialled. `destinationNumber` is
+    // the buyer's number the call was forwarded to. Preferring calledNumber
+    // meant the Destination tab listed TFNs that were rung, not the numbers
+    // calls were sent to, and Dialed and Destination showed the same thing.
+    calledNumber: w.calledNumber || w.destinationNumber || "",
+    destinationNumber: w.destinationNumber || "",
     startedAt: toTs(w.startedAt ?? w.createdAt),
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     status: normalizeStatus(w.status),

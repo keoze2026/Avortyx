@@ -15,6 +15,11 @@ export interface Call {
   publisherId?: string;
   publisherName?: string;
   callerNumber: string;
+  /** The number the caller dialled — our tracking number (TFN). */
+  calledNumber: string;
+  /** Where the call was forwarded to: the buyer's destination. Distinct from
+   *  `calledNumber`, and the two were conflated — the Destination tab listed
+   *  the TFN that was rung instead of the number the call was sent to. */
   destinationNumber: string;
   startedAt: number;
   durationSec: number;
