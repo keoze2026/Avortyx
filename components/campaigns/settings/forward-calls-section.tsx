@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Pencil, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
+import { AttachDestinationDialog } from "@/components/campaigns/settings/attach-destination-dialog";
+import { useCampaignsStore } from "@/lib/store/campaigns-store";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -93,8 +95,11 @@ interface ForwardCallsSectionProps {
 }
 
 export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
-  void campaignId;
   const { t } = useTranslation();
+  const campaigns = useCampaignsStore((s) => s.campaigns);
+  const campaignName =
+    campaigns.find((c) => c.id === campaignId)?.name ?? "this campaign";
+  const [attachOpen, setAttachOpen] = useState(false);
   const [routing, setRouting] = useState<RoutingOption>("Standard");
   const [duplicate, setDuplicate] = useState<DuplicateHandling>("Different");
   const [direction, setDirection] = useState<DirectionScope>("Destination");
@@ -226,10 +231,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
             {t("trafficUI.campaigns.settings.forward.routedDestinations")}
           </div>
-          <Button
-            size="sm"
-            onClick={() => toast.info(t("trafficUI.campaigns.settings.forward.addDestSoon"))}
-          >
+          <Button size="sm" onClick={() => setAttachOpen(true)}>
             <Plus className="h-4 w-4" /> {t("trafficUI.common.add")}
           </Button>
         </div>
@@ -373,6 +375,13 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           </div>
         )}
       </Card>
+
+      <AttachDestinationDialog
+        campaignId={campaignId}
+        campaignName={campaignName}
+        open={attachOpen}
+        onOpenChange={setAttachOpen}
+      />
 
       {/* Conversion settings — opens when a row's pencil action is clicked. */}
       {editingDest && (
