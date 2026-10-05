@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
+import { numbersService } from "@/lib/api/services/numbers.service";
 import { toE164 } from "@/lib/format";
 import type { NumberType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -56,24 +57,24 @@ const STATE_OPTIONS = [
   { code: "GA", city: "Atlanta", area: 404 },
 ];
 
-function randomLocalNumber(area: number) {
-  const prefix = 200 + Math.floor(Math.random() * 700);
-  const line = 1000 + Math.floor(Math.random() * 8999);
-  return `+1${area}${prefix}${line}`;
-}
-
-function randomTollfree() {
-  const prefix = [800, 833, 844, 855, 866, 877, 888][Math.floor(Math.random() * 7)];
-  const line = 100000 + Math.floor(Math.random() * 899999);
-  return `+1${prefix}${line}`;
-}
+/* randomLocalNumber and randomTollfree used to live here. They invented an
+ * E.164 string from Math.random() and "Buy" imported it into the backend as a
+ * live tracking number attached to the campaign, with a hardcoded monthly
+ * cost. Nothing was ever bought from the carrier, so the campaign was wired to
+ * a number no call could arrive on - and it looked correctly configured.
+ *
+ * Numbers now come from the carrier's own inventory via
+ * numbersService.phoneNumberSearch, and are bought with the exact string the
+ * search returned. phoneNumberPurchase says it outright: the number "must be
+ * the exact E.164 string from the search result - never a client-generated
+ * value." */
 
 export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: Props) {
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const campaign = campaigns.find((c) => c.id === campaignId);
   const allNumbers = useNumbersStore((s) => s.numbers);
   const updateNumber = useNumbersStore((s) => s.updateNumber);
-  const addNumber = useNumbersStore((s) => s.addNumber);
+  const provisionNumber = useNumbersStore((s) => s.provisionNumber);
 
   const [mode, setMode] = useState<Mode>("add");
 
@@ -159,24 +160,56 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     if (!campaign) return;
     setSubmitting(true);
     const region = STATE_OPTIONS.find((s) => s.code === buyRegion) ?? STATE_OPTIONS[0];
+    const numberType = buyType === "tollfree" ? "toll_free" : "local";
     try {
-      for (let i = 0; i < buyCount; i++) {
-        await addNumber({
-          number: buyType === "tollfree" ? randomTollfree() : randomLocalNumber(region.area),
-          type: buyType,
-          status: "active",
-          campaignId: campaign.id,
-          campaignName: campaign.name,
-          state: buyType === "tollfree" ? undefined : region.code,
-          city: buyType === "tollfree" ? undefined : region.city,
-          monthlyCost: buyType === "tollfree" ? 5 : 2,
-          callsToday: 0,
-          callsMonthly: 0,
-          conversionRate: 0,
-        });
+      // Ask the carrier what is actually for sale. Toll-free has no area code.
+      const available = await numbersService.phoneNumberSearch({
+        numberType,
+        countryCode: "US",
+        limit: buyCount,
+        areaCode: buyType === "tollfree" ? undefined : String(region.area),
+      });
+
+      // Stop rather than buy a partial batch. Quietly provisioning 2 of 5 and
+      // reporting success is how a campaign ends up short of the numbers
+      // somebody thinks it has.
+      if (available.length < buyCount) {
+        toast.error(
+          available.length === 0
+            ? "The carrier has no numbers available for that selection"
+            : `Only ${available.length} of ${buyCount} numbers are available`,
+          { description: "Nothing was purchased. Try a different area or a smaller count." },
+        );
+        return;
       }
+
+      // Sequential, not Promise.all: each one is a real purchase against the
+      // carrier, and a partial failure must leave a knowable state.
+      const bought: string[] = [];
+      try {
+        for (const candidate of available.slice(0, buyCount)) {
+          await provisionNumber({
+            // Verbatim from the search result, never reformatted.
+            phoneNumber: candidate.phoneNumber,
+            numberType,
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+          });
+          bought.push(candidate.phoneNumber);
+        }
+      } catch (e) {
+        // Say exactly how far it got. The numbers already bought are real and
+        // billable, and pretending otherwise leaves them unaccounted for.
+        toast.error(e instanceof Error ? e.message : "Could not purchase number", {
+          description: bought.length
+            ? `${bought.length} of ${buyCount} were purchased and attached: ${bought.join(", ")}`
+            : "No numbers were purchased.",
+        });
+        return;
+      }
+
       toast.success(
-        buyCount === 1 ? "1 number purchased" : `${buyCount} numbers purchased`,
+        bought.length === 1 ? "1 number purchased" : `${bought.length} numbers purchased`,
         { description: `Attached to "${campaign.name}".` },
       );
       onOpenChange(false);
