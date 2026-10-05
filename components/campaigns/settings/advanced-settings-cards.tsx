@@ -6,7 +6,7 @@
  * for header/toggle/expand chrome and renders its own form body.
  */
 
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import {
   ClockAlert,
   Disc,
@@ -211,10 +211,10 @@ export function AutoRecordCard({ campaignId }: { campaignId: string }) {
 /* ─── 3. Spam Filter ───────────────────────────────────────────── */
 
 const US_STATES = [
-  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
-  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
-  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
-  "VA","WA","WV","WI","WY",
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA",
+  "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT",
+  "VA", "WA", "WV", "WI", "WY",
 ];
 
 export function SpamFilterCard({ campaignId }: { campaignId: string }) {
@@ -263,11 +263,10 @@ export function SpamFilterCard({ campaignId }: { campaignId: string }) {
                   key={st}
                   type="button"
                   onClick={() => toggleState(st)}
-                  className={`rounded px-2 py-0.5 text-[10px] font-mono transition-colors ${
-                    on
+                  className={`rounded px-2 py-0.5 text-[10px] font-mono transition-colors ${on
                       ? "bg-destructive/15 text-destructive"
                       : "bg-muted/40 text-muted-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   {st}
                 </button>
@@ -291,68 +290,68 @@ const FILTER_PARAMETERS: Array<{
   groupKey: string;
   items: Array<{ value: string; labelKey: string }>;
 }> = [
-  {
-    groupKey: "trafficUI.campaigns.settings.cards.filter.groups.call",
-    items: [
-      { value: "call.duration", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callDuration" },
-      { value: "call.status", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callStatus" },
-      { value: "call.startedAtHour", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callStartedAtHour" },
-      { value: "call.callerNumber", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callerNumber" },
-      { value: "call.destinationNumber", labelKey: "trafficUI.campaigns.settings.cards.filter.params.destinationNumber" },
-      { value: "call.publisherId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.publisher" },
-      { value: "call.campaignId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.campaign" },
-    ],
-  },
-  {
-    groupKey: "trafficUI.campaigns.settings.cards.filter.groups.callerProfile",
-    items: [
-      { value: "caller.country", labelKey: "trafficUI.campaigns.settings.cards.filter.params.country" },
-      { value: "caller.state", labelKey: "trafficUI.campaigns.settings.cards.filter.params.state" },
-      { value: "caller.city", labelKey: "trafficUI.campaigns.settings.cards.filter.params.city" },
-      { value: "caller.zipcode", labelKey: "trafficUI.campaigns.settings.cards.filter.params.zipcode" },
-      { value: "caller.carrier", labelKey: "trafficUI.campaigns.settings.cards.filter.params.carrier" },
-      { value: "caller.lineType", labelKey: "trafficUI.campaigns.settings.cards.filter.params.lineType" },
-      { value: "caller.areaCode", labelKey: "trafficUI.campaigns.settings.cards.filter.params.areaCode" },
-      { value: "caller.timezone", labelKey: "trafficUI.campaigns.settings.cards.filter.params.timezone" },
-      { value: "caller.fraudScore", labelKey: "trafficUI.campaigns.settings.cards.filter.params.fraudScore" },
-    ],
-  },
-  {
-    groupKey: "trafficUI.campaigns.settings.cards.filter.groups.custom",
-    items: [
-      { value: "param.vertical", labelKey: "trafficUI.campaigns.settings.cards.filter.params.vertical" },
-      { value: "param.trafficSource", labelKey: "trafficUI.campaigns.settings.cards.filter.params.trafficSource" },
-      { value: "param.partnerId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.partnerId" },
-      { value: "param.leadId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.leadId" },
-      { value: "param.utmSource", labelKey: "trafficUI.campaigns.settings.cards.filter.params.utmSource" },
-      { value: "param.utmMedium", labelKey: "trafficUI.campaigns.settings.cards.filter.params.utmMedium" },
-      { value: "param.utmCampaign", labelKey: "trafficUI.campaigns.settings.cards.filter.params.utmCampaign" },
-    ],
-  },
-  {
-    groupKey: "trafficUI.campaigns.settings.cards.filter.groups.session",
-    items: [
-      { value: "session.id", labelKey: "trafficUI.campaigns.settings.cards.filter.params.sessionId" },
-      { value: "session.referrer", labelKey: "trafficUI.campaigns.settings.cards.filter.params.referrer" },
-      { value: "session.landingPage", labelKey: "trafficUI.campaigns.settings.cards.filter.params.landingPage" },
-      { value: "session.userAgent", labelKey: "trafficUI.campaigns.settings.cards.filter.params.userAgent" },
-      { value: "session.deviceType", labelKey: "trafficUI.campaigns.settings.cards.filter.params.deviceType" },
-      { value: "session.pagesViewed", labelKey: "trafficUI.campaigns.settings.cards.filter.params.pagesViewed" },
-      { value: "session.timeOnSite", labelKey: "trafficUI.campaigns.settings.cards.filter.params.timeOnSite" },
-    ],
-  },
-  {
-    groupKey: "trafficUI.campaigns.settings.cards.filter.groups.sip",
-    items: [
-      { value: "sip.fromHost", labelKey: "trafficUI.campaigns.settings.cards.filter.params.fromHost" },
-      { value: "sip.toHost", labelKey: "trafficUI.campaigns.settings.cards.filter.params.toHost" },
-      { value: "sip.contact", labelKey: "trafficUI.campaigns.settings.cards.filter.params.contact" },
-      { value: "sip.userAgent", labelKey: "trafficUI.campaigns.settings.cards.filter.params.sipUserAgent" },
-      { value: "sip.diversion", labelKey: "trafficUI.campaigns.settings.cards.filter.params.diversion" },
-      { value: "sip.pAssertedIdentity", labelKey: "trafficUI.campaigns.settings.cards.filter.params.pAssertedIdentity" },
-    ],
-  },
-];
+    {
+      groupKey: "trafficUI.campaigns.settings.cards.filter.groups.call",
+      items: [
+        { value: "call.duration", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callDuration" },
+        { value: "call.status", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callStatus" },
+        { value: "call.startedAtHour", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callStartedAtHour" },
+        { value: "call.callerNumber", labelKey: "trafficUI.campaigns.settings.cards.filter.params.callerNumber" },
+        { value: "call.destinationNumber", labelKey: "trafficUI.campaigns.settings.cards.filter.params.destinationNumber" },
+        { value: "call.publisherId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.publisher" },
+        { value: "call.campaignId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.campaign" },
+      ],
+    },
+    {
+      groupKey: "trafficUI.campaigns.settings.cards.filter.groups.callerProfile",
+      items: [
+        { value: "caller.country", labelKey: "trafficUI.campaigns.settings.cards.filter.params.country" },
+        { value: "caller.state", labelKey: "trafficUI.campaigns.settings.cards.filter.params.state" },
+        { value: "caller.city", labelKey: "trafficUI.campaigns.settings.cards.filter.params.city" },
+        { value: "caller.zipcode", labelKey: "trafficUI.campaigns.settings.cards.filter.params.zipcode" },
+        { value: "caller.carrier", labelKey: "trafficUI.campaigns.settings.cards.filter.params.carrier" },
+        { value: "caller.lineType", labelKey: "trafficUI.campaigns.settings.cards.filter.params.lineType" },
+        { value: "caller.areaCode", labelKey: "trafficUI.campaigns.settings.cards.filter.params.areaCode" },
+        { value: "caller.timezone", labelKey: "trafficUI.campaigns.settings.cards.filter.params.timezone" },
+        { value: "caller.fraudScore", labelKey: "trafficUI.campaigns.settings.cards.filter.params.fraudScore" },
+      ],
+    },
+    {
+      groupKey: "trafficUI.campaigns.settings.cards.filter.groups.custom",
+      items: [
+        { value: "param.vertical", labelKey: "trafficUI.campaigns.settings.cards.filter.params.vertical" },
+        { value: "param.trafficSource", labelKey: "trafficUI.campaigns.settings.cards.filter.params.trafficSource" },
+        { value: "param.partnerId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.partnerId" },
+        { value: "param.leadId", labelKey: "trafficUI.campaigns.settings.cards.filter.params.leadId" },
+        { value: "param.utmSource", labelKey: "trafficUI.campaigns.settings.cards.filter.params.utmSource" },
+        { value: "param.utmMedium", labelKey: "trafficUI.campaigns.settings.cards.filter.params.utmMedium" },
+        { value: "param.utmCampaign", labelKey: "trafficUI.campaigns.settings.cards.filter.params.utmCampaign" },
+      ],
+    },
+    {
+      groupKey: "trafficUI.campaigns.settings.cards.filter.groups.session",
+      items: [
+        { value: "session.id", labelKey: "trafficUI.campaigns.settings.cards.filter.params.sessionId" },
+        { value: "session.referrer", labelKey: "trafficUI.campaigns.settings.cards.filter.params.referrer" },
+        { value: "session.landingPage", labelKey: "trafficUI.campaigns.settings.cards.filter.params.landingPage" },
+        { value: "session.userAgent", labelKey: "trafficUI.campaigns.settings.cards.filter.params.userAgent" },
+        { value: "session.deviceType", labelKey: "trafficUI.campaigns.settings.cards.filter.params.deviceType" },
+        { value: "session.pagesViewed", labelKey: "trafficUI.campaigns.settings.cards.filter.params.pagesViewed" },
+        { value: "session.timeOnSite", labelKey: "trafficUI.campaigns.settings.cards.filter.params.timeOnSite" },
+      ],
+    },
+    {
+      groupKey: "trafficUI.campaigns.settings.cards.filter.groups.sip",
+      items: [
+        { value: "sip.fromHost", labelKey: "trafficUI.campaigns.settings.cards.filter.params.fromHost" },
+        { value: "sip.toHost", labelKey: "trafficUI.campaigns.settings.cards.filter.params.toHost" },
+        { value: "sip.contact", labelKey: "trafficUI.campaigns.settings.cards.filter.params.contact" },
+        { value: "sip.userAgent", labelKey: "trafficUI.campaigns.settings.cards.filter.params.sipUserAgent" },
+        { value: "sip.diversion", labelKey: "trafficUI.campaigns.settings.cards.filter.params.diversion" },
+        { value: "sip.pAssertedIdentity", labelKey: "trafficUI.campaigns.settings.cards.filter.params.pAssertedIdentity" },
+      ],
+    },
+  ];
 
 const FILTER_OPERATORS: Array<{ value: string; labelKey: string }> = [
   { value: "equals", labelKey: "trafficUI.campaigns.settings.cards.filter.ops.equals" },
@@ -771,9 +770,8 @@ export function BusinessHoursCard({ campaignId }: { campaignId: string }) {
                   key={d.id}
                   type="button"
                   onClick={() => toggleDay(d.id)}
-                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
-                    on ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"
-                  }`}
+                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${on ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"
+                    }`}
                 >
                   {d.label}
                 </button>
@@ -1071,21 +1069,41 @@ export function ConcurrencyCard({ campaignId }: { campaignId: string }) {
 
 /* ─── Aggregator ───────────────────────────────────────────────── */
 
+/** The cards in their usual order; enabled ones are moved to the top. */
+const ADVANCED_CARDS: Array<{
+  key: keyof CampaignAdvancedSettings;
+  Card: (props: { campaignId: string }) => ReactNode;
+}> = [
+    { key: "callQueue", Card: CallQueueCard },
+    { key: "autoRecord", Card: AutoRecordCard },
+    { key: "spamFilter", Card: SpamFilterCard },
+    { key: "filter", Card: FilterCard },
+    { key: "voipShield", Card: VoipShieldCard },
+    { key: "businessHours", Card: BusinessHoursCard },
+    { key: "greetingsMessage", Card: GreetingsMessageCard },
+    { key: "voicemail", Card: VoicemailCard },
+    { key: "whisperMessage", Card: WhisperMessageCard },
+    { key: "capSettings", Card: CapSettingsCard },
+    { key: "revenueSaver", Card: RevenueSaverCard },
+    { key: "concurrency", Card: ConcurrencyCard },
+  ];
+
 export function AdvancedSettingsList({ campaignId }: { campaignId: string }) {
+  // Raw stored settings for this campaign (a stable reference, so this only
+  // re-renders when they change). Anything not stored yet is off.
+  const stored = useCampaignSettingsStore((s) => s.byId[campaignId]);
+  const isOn = (key: keyof CampaignAdvancedSettings) =>
+    Boolean((stored?.[key] as { enabled?: boolean } | undefined)?.enabled);
+
+  // Enabled cards first, then disabled; the usual order is kept within each
+  // group (the sort is stable).
+  const cards = [...ADVANCED_CARDS].sort((a, b) => Number(isOn(b.key)) - Number(isOn(a.key)));
+
   return (
     <div className="space-y-2">
-      <CallQueueCard campaignId={campaignId} />
-      <AutoRecordCard campaignId={campaignId} />
-      <SpamFilterCard campaignId={campaignId} />
-      <FilterCard campaignId={campaignId} />
-      <VoipShieldCard campaignId={campaignId} />
-      <BusinessHoursCard campaignId={campaignId} />
-      <GreetingsMessageCard campaignId={campaignId} />
-      <VoicemailCard campaignId={campaignId} />
-      <WhisperMessageCard campaignId={campaignId} />
-      <CapSettingsCard campaignId={campaignId} />
-      <RevenueSaverCard campaignId={campaignId} />
-      <ConcurrencyCard campaignId={campaignId} />
+      {cards.map(({ key, Card }) => (
+        <Card key={key} campaignId={campaignId} />
+      ))}
     </div>
   );
 }
