@@ -41,44 +41,58 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-/* ─── Deterministic per-call synthetic enrichment ───────────────────────
- * The Call record doesn't store carrier / line-type / country (those come
- * from a CNAM / number-intelligence lookup in production). For the demo
- * surface we derive them from `call.id` via a stable hash so the same call
- * always shows the same values across renders. */
+/* ─── Caller enrichment, read from the record ───────────────────────────
+ * This used to pick the carrier and line type from two hard-coded lists by
+ * hashing `call.id`, and the country the same way for anything not starting
+ * +1. A call id has nothing to do with a caller's network, so the panel stated
+ * a carrier as fact for every call in the system - on the one screen somebody
+ * would open to show a client a specific call.
+ *
+ * The backend resolves all three from the caller's number and sends them on
+ * the call record. Nothing is derived here: a value the provider could not
+ * resolve reads "Unknown" rather than becoming a plausible-looking carrier. */
 
-const CARRIERS = ["AT&T", "Verizon", "T-Mobile", "Sprint", "US Cellular", "Cricket"];
-const LINE_TYPES = ["Mobile", "Landline", "VoIP", "Toll-free"] as const;
-const COUNTRIES: Array<{ name: string; flag: string }> = [
-  { name: "United States", flag: "🇺🇸" },
-  { name: "Canada", flag: "🇨🇦" },
-  { name: "Mexico", flag: "🇲🇽" },
-  { name: "United Kingdom", flag: "🇬🇧" },
-  { name: "Australia", flag: "🇦🇺" },
-];
+const UNKNOWN = "Unknown";
 
-function hash(s: string, salt: number): number {
-  let h = salt | 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+/** ISO code to a name and flag. Fixed reference data, not derivation - it can
+ *  only translate a code the backend already sent. */
+const COUNTRY_BY_CODE: Record<string, { name: string; flag: string }> = {
+  US: { name: "United States", flag: "🇺🇸" },
+  CA: { name: "Canada", flag: "🇨🇦" },
+  MX: { name: "Mexico", flag: "🇲🇽" },
+  GB: { name: "United Kingdom", flag: "🇬🇧" },
+  AU: { name: "Australia", flag: "🇦🇺" },
+  IE: { name: "Ireland", flag: "🇮🇪" },
+  NZ: { name: "New Zealand", flag: "🇳🇿" },
+  PR: { name: "Puerto Rico", flag: "🇵🇷" },
+  DO: { name: "Dominican Republic", flag: "🇩🇴" },
+  JM: { name: "Jamaica", flag: "🇯🇲" },
+};
+
+/** Backend line type to the label shown; missing reads Unknown. */
+function lineTypeLabel(raw: string | undefined): string {
+  const k = (raw ?? "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+  if (!k) return UNKNOWN;
+  if (k === "mobile" || k === "wireless" || k === "cell") return "Mobile";
+  if (k === "landline" || k === "fixed" || k === "fixedline") return "Landline";
+  if (k === "voip" || k === "nonfixedvoip" || k === "fixedvoip") return "VoIP";
+  if (k === "tollfree") return "Toll-free";
+  const t = raw!.trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 interface CallEnrichment {
   country: { name: string; flag: string };
   carrier: string;
-  lineType: (typeof LINE_TYPES)[number];
+  lineType: string;
 }
 
 function enrich(call: Call): CallEnrichment {
+  const code = (call.geo?.country ?? "").trim().toUpperCase();
   return {
-    // US-formatted callers always resolve to United States; anything else
-    // gets a stable bucket. (All mock data is US right now, but keeping the
-    // branch makes the field meaningful when international traffic arrives.)
-    country: call.callerNumber.startsWith("+1")
-      ? COUNTRIES[0]
-      : COUNTRIES[hash(call.id, 101) % COUNTRIES.length],
-    carrier: CARRIERS[hash(call.id, 203) % CARRIERS.length],
-    lineType: LINE_TYPES[hash(call.id, 307) % LINE_TYPES.length],
+    country: COUNTRY_BY_CODE[code] ?? { name: code || UNKNOWN, flag: "" },
+    carrier: call.carrier?.trim() || UNKNOWN,
+    lineType: lineTypeLabel(call.lineType),
   };
 }
 
