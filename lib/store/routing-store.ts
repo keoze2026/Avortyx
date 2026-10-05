@@ -11,6 +11,7 @@
 import { create } from "zustand";
 
 import { routingService } from "@/lib/api/services/routing.service";
+import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { flattenPlan, reconstructPlan } from "@/lib/routing-bridge";
 import type { RoutingEdge, RoutingNode, RoutingPlan, RoutingPlanStatus } from "@/lib/types";
 
@@ -99,17 +100,30 @@ export const useRoutingStore = create<RoutingState>()((set, get) => ({
     } catch {
       // Non-fatal — the rule still exists; the graph can be saved later.
     }
-    // Surface buyer destinations.
+    // Surface buyer destinations. Failures are collected rather than
+    // swallowed: a plan whose destinations did not save routes no calls, and
+    // that is exactly what used to happen in silence.
+    const failed: string[] = [];
+    let priority = 1;
     for (const d of flat.destinations) {
+      const number = destinationNumberForBuyer(d.buyerId);
+      if (!number) {
+        failed.push(`buyer ${d.buyerId} has no destination number`);
+        continue;
+      }
       try {
         await routingService.addDestination(created.id, {
+          destination: number,
           buyerId: d.buyerId,
           weight: d.weight,
-          priority: d.priority,
+          priority: d.priority ?? priority++,
         });
-      } catch {
-        // Skip individual failures; the bridge will reconstruct from the blob.
+      } catch (e) {
+        failed.push(e instanceof Error ? e.message : String(e));
       }
+    }
+    if (failed.length) {
+      set({ error: `Plan saved, but ${failed.length} destination(s) did not attach: ${failed.join('; ')}` });
     }
     // Re-fetch the freshly-created rule so we have the full server-side shape.
     const fresh = await routingService.getRule(created.id);
@@ -160,6 +174,24 @@ export const useRoutingStore = create<RoutingState>()((set, get) => ({
       // conditions in the spec we have), so we just append a fresh one. The
       // bridge picks the latest blob on reconstruct.
       await routingService.addCondition(id, flat.conditionBlob);
+
+      // And attach the buyers on the canvas as real destinations. Saving used
+      // to write the picture and nothing else, so dropping a Buyer node onto an
+      // existing plan changed what was drawn and not where calls went.
+      const existing = new Set(
+        (await routingService.getRule(id)).destinations?.map((d) => d.destination) ?? [],
+      );
+      let p = existing.size + 1;
+      for (const d of flat.destinations) {
+        const number = destinationNumberForBuyer(d.buyerId);
+        if (!number || existing.has(number)) continue;
+        await routingService.addDestination(id, {
+          destination: number,
+          buyerId: d.buyerId,
+          weight: d.weight,
+          priority: d.priority ?? p++,
+        });
+      }
     } catch (e) {
       set({ plans: prev, error: messageFromError(e) });
       throw e;
@@ -181,6 +213,26 @@ export const useRoutingStore = create<RoutingState>()((set, get) => ({
       ),
     })),
 }));
+
+/**
+ * The number calls are dialed to for a buyer.
+ *
+ * A Buyer node on the canvas carries only `buyerId`; the number lives on the
+ * buyer's Destination row. Without it addDestination sends no `destination`
+ * and the backend answers "destination or phone_number is required" - which it
+ * always did, into a `catch {}`. Every destination the visual routing builder
+ * ever tried to create failed silently, so a plan could look complete on the
+ * canvas while the campaign had nothing to route to.
+ */
+function destinationNumberForBuyer(buyerId: string): string | undefined {
+  const rows = useDestinationsStore.getState().destinations;
+  // An enabled row first: routing refuses a disabled destination, so attaching
+  // one would recreate the same silent dead end in a different place.
+  return (
+    rows.find((d) => d.buyerId === buyerId && d.enabled)?.tfn ??
+    rows.find((d) => d.buyerId === buyerId)?.tfn
+  );
+}
 
 function messageFromError(e: unknown): string {
   if (e instanceof Error) return e.message;
