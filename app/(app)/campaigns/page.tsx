@@ -5,7 +5,7 @@ import { Megaphone, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { CampaignBuilder } from "@/components/campaigns/campaign-builder";
-import { CampaignsTable } from "@/components/campaigns/campaigns-table";
+import { CampaignsTable, PROGRESS_ORDER, campaignProgress } from "@/components/campaigns/campaigns-table";
 import {
   ALL_CAMPAIGN_COLUMNS,
   CampaignsToolbar,
@@ -20,6 +20,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useNumbersStore } from "@/lib/store/numbers-store";
 
 export default function CampaignsPage() {
   const { t } = useTranslation();
@@ -46,6 +47,17 @@ export default function CampaignsPage() {
     setPage(0);
   }, [query, statusFilter, sort, pageSize]);
 
+  // Tracking numbers per campaign — the same count the Progress badge uses.
+  const allNumbers = useNumbersStore((s) => s.numbers);
+  const numbersByCampaign = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const n of allNumbers ?? []) {
+      if (!n.campaignId) continue;
+      map.set(n.campaignId, (map.get(n.campaignId) ?? 0) + 1);
+    }
+    return map;
+  }, [allNumbers]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = campaigns;
@@ -57,13 +69,19 @@ export default function CampaignsPage() {
         `${c.name} ${c.vertical}`.toLowerCase().includes(q),
       );
     }
+    // Ready always first, then Paused, then Incomplete; the chosen sort
+    // (recent, name, calls, revenue) orders campaigns within each group.
+    const rank = (c: (typeof list)[number]) =>
+      PROGRESS_ORDER[campaignProgress(c, numbersByCampaign.get(c.id) ?? 0)];
     return [...list].sort((a, b) => {
+      const byProgress = rank(a) - rank(b);
+      if (byProgress !== 0) return byProgress;
       if (sort === "name") return a.name.localeCompare(b.name);
       if (sort === "callsToday") return b.callsToday - a.callsToday;
       if (sort === "revenueToday") return b.revenueToday - a.revenueToday;
       return b.createdAt - a.createdAt;
     });
-  }, [campaigns, query, statusFilter, sort]);
+  }, [campaigns, query, statusFilter, sort, numbersByCampaign]);
 
   const start = page * pageSize;
   const visible = filtered.slice(start, start + pageSize);

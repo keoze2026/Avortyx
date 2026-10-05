@@ -73,7 +73,10 @@ export default function DestinationsPage() {
         if (!haystack.includes(q)) return false;
       }
       return true;
-    });
+    })
+      // Active destinations always first, disabled ones after; the existing
+      // order is kept within each group (the sort is stable).
+      .sort((a, b) => Number(b.enabled) - Number(a.enabled));
   }, [destinations, query, statusFilter, buyerFilter, buyers]);
 
   // Summary stats: prefer the dedicated /api/destinations/stats/ endpoint

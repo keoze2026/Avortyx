@@ -63,14 +63,6 @@ export function AdvancedSettingShell({
           className="flex items-center gap-3"
           onClick={(e) => e.stopPropagation()}
         >
-          <span
-            className={cn(
-              "text-[11px] uppercase tracking-wider",
-              enabled ? "text-[color:var(--success)]" : "text-muted-foreground",
-            )}
-          >
-            {enabled ? t("trafficUI.campaigns.settings.advancedShell.enabled") : t("trafficUI.campaigns.settings.advancedShell.disabled")}
-          </span>
           <Switch
             checked={enabled}
             onCheckedChange={onEnabledChange}

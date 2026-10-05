@@ -15,9 +15,9 @@
 
 "use client";
 
+import { toast } from "sonner";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { toast } from "sonner";
 
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import {
@@ -83,6 +83,27 @@ interface CampaignSettingsState {
   seed: (campaignId: string, settings: CampaignAdvancedSettings) => void;
 }
 
+/**
+ * The campaign fields a live call actually reads, taken from the cards.
+ * Recording, the greeting and the whisper are played by the call handler
+ * from `recording_enabled`, `greeting_enabled`/`greeting_message` and
+ * `whisper_enabled`/`whisper_message` — not from `advanced_settings` — so
+ * the Auto Record, Greetings Message and Whisper Message cards send these
+ * alongside the settings bundle. A greeting or whisper with no text is sent
+ * as off, since there would be nothing to play.
+ */
+export function liveCallFields(s: CampaignAdvancedSettings) {
+  const greeting = s.greetingsMessage?.message?.trim() ?? "";
+  const whisper = s.whisperMessage?.message?.trim() ?? "";
+  return {
+    recordingEnabled: Boolean(s.autoRecord?.enabled),
+    greetingEnabled: Boolean(s.greetingsMessage?.enabled) && greeting !== "",
+    greetingMessage: greeting,
+    whisperEnabled: Boolean(s.whisperMessage?.enabled) && whisper !== "",
+    whisperMessage: whisper,
+  };
+}
+
 /* ─── Debounced backend sync ────────────────────────────────────────────── */
 /* Toggle-spam on the 12 advanced cards coalesces into one PATCH per campaign.
  * Errors are toast'd by the caller, not the store, to keep this module pure. */
@@ -101,18 +122,13 @@ function scheduleSync(
     void campaignsService
       .update(campaignId, {
         advancedSettings: settings as unknown as Record<string, unknown>,
+        ...liveCallFields(settings),
       })
-      .catch((e: unknown) => {
-        // Say so. Swallowing this is why a switch could be flipped, look
-        // saved, and mean nothing: local state updates immediately and the
-        // page only reseeds from the server on the next load, so a rejected
-        // PATCH was invisible until someone noticed the feature wasn't
-        // working. Local state is deliberately left as it is - reverting a
-        // control the user just moved is worse than telling them.
-        toast.error(
-          e instanceof Error ? e.message : "Could not save that setting",
-          { description: "The change was not saved. Reload to see the current values." },
-        );
+      .catch(() => {
+        // Backend rejected the PATCH. Say so rather than leave a switch that
+        // looks saved; the next page load reseeds from the server's
+        // last-good value via `seed()`.
+        toast.error("Couldn't save campaign settings. Please try again.");
       });
   }, SYNC_DELAY_MS);
   pending.set(campaignId, timer);

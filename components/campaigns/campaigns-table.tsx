@@ -33,6 +33,25 @@ import { cn } from "@/lib/utils";
 
 type ProgressState = "ready" | "paused" | "incomplete";
 
+/**
+ * Ready / Paused / Incomplete for one campaign — the rule behind the Progress
+ * badge. A campaign is "incomplete" only when no tracking number is attached
+ * at all (`numbersCount` from the backend, or numbers in the local numbers
+ * store); otherwise a paused campaign is "paused" and the rest are "ready".
+ * Shared with the Campaigns page so the list order always matches the badge.
+ */
+export function campaignProgress(
+  c: { status: string; numbersCount?: number | null },
+  localNumbers = 0,
+): ProgressState {
+  const hasNumber = (c.numbersCount ?? 0) > 0 || localNumbers > 0;
+  if (c.status !== "archived" && !hasNumber) return "incomplete";
+  return c.status === "paused" ? "paused" : "ready";
+}
+
+/** List order: Ready first, then Paused, then Incomplete. */
+export const PROGRESS_ORDER: Record<ProgressState, number> = { ready: 0, paused: 1, incomplete: 2 };
+
 interface CampaignsTableProps {
   campaigns: Campaign[];
   columns?: Record<CampaignColumnKey, boolean>;
@@ -153,7 +172,6 @@ export function CampaignsTable({
             {campaigns.map((c) => {
               const m = makeMetrics(c);
               const isActive = c.status === "active";
-              const isPaused = c.status === "paused";
               // A campaign is "incomplete" only when no tracking number is
               // attached at all — that's the one hard requirement before a
               // call can land. Buyers are wired up via routing rules (not
@@ -167,14 +185,7 @@ export function CampaignsTable({
               // numbers store catches up. The backend has no completeness
               // signal of its own (confirmed by backend dev), so this
               // badge is computed entirely client-side.
-              const liveNumbers = numbersByCampaign.get(c.id) ?? 0;
-              const hasNumber = (c.numbersCount ?? 0) > 0 || liveNumbers > 0;
-              const isIncomplete = c.status !== "archived" && !hasNumber;
-              const progressState: ProgressState = isIncomplete
-                ? "incomplete"
-                : isPaused
-                  ? "paused"
-                  : "ready";
+              const progressState = campaignProgress(c, numbersByCampaign.get(c.id) ?? 0);
               return (
                 <TableRow
                   key={c.id}
