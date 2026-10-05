@@ -103,6 +103,19 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
   const [buyRegion, setBuyRegion] = useState(STATE_OPTIONS[0].code);
   const [buyCount, setBuyCount] = useState(1);
 
+  /* Numbers already owned, free, and of the type being asked for.
+   *
+   * Buying from the carrier while unattached numbers sit idle costs money for
+   * nothing - ten toll-free numbers were imported from a new carrier and the
+   * Buy tab would still have gone out and bought more. These are spent first
+   * and only the shortfall is purchased. */
+  const bucket = useMemo(
+    () => available.filter((n) => n.type === buyType),
+    [available, buyType],
+  );
+  const fromBucket = Math.min(buyCount, bucket.length);
+  const toPurchase = Math.max(0, buyCount - bucket.length);
+
   const [submitting, setSubmitting] = useState(false);
 
   // Reset transient form state whenever the dialog re-opens so a previous
@@ -162,23 +175,45 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     const region = STATE_OPTIONS.find((s) => s.code === buyRegion) ?? STATE_OPTIONS[0];
     const numberType = buyType === "tollfree" ? "toll_free" : "local";
     try {
+      // Spend what is already owned before buying anything.
+      const taken = bucket.slice(0, fromBucket);
+      for (const n of taken) {
+        await updateNumber(n.id, { campaignId: campaign.id, campaignName: campaign.name });
+      }
+
+      if (toPurchase === 0) {
+        toast.success(
+          taken.length === 1
+            ? "1 number attached from your pool"
+            : `${taken.length} numbers attached from your pool`,
+          { description: `Attached to "${campaign.name}". Nothing was purchased.` },
+        );
+        onOpenChange(false);
+        return;
+      }
+
       // Ask the carrier what is actually for sale. Toll-free has no area code.
       const available = await numbersService.phoneNumberSearch({
         numberType,
         countryCode: "US",
-        limit: buyCount,
+        limit: toPurchase,
         areaCode: buyType === "tollfree" ? undefined : String(region.area),
       });
 
       // Stop rather than buy a partial batch. Quietly provisioning 2 of 5 and
       // reporting success is how a campaign ends up short of the numbers
-      // somebody thinks it has.
-      if (available.length < buyCount) {
+      // somebody thinks it has. Anything already taken from the pool is named,
+      // because that part did happen.
+      if (available.length < toPurchase) {
         toast.error(
           available.length === 0
             ? "The carrier has no numbers available for that selection"
-            : `Only ${available.length} of ${buyCount} numbers are available`,
-          { description: "Nothing was purchased. Try a different area or a smaller count." },
+            : `Only ${available.length} of ${toPurchase} numbers are available to buy`,
+          {
+            description: taken.length
+              ? `${taken.length} attached from your pool. Nothing was purchased.`
+              : "Nothing was purchased. Try a different area or a smaller count.",
+          },
         );
         return;
       }
@@ -187,7 +222,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
       // carrier, and a partial failure must leave a knowable state.
       const bought: string[] = [];
       try {
-        for (const candidate of available.slice(0, buyCount)) {
+        for (const candidate of available.slice(0, toPurchase)) {
           await provisionNumber({
             // Verbatim from the search result, never reformatted.
             phoneNumber: candidate.phoneNumber,
@@ -202,15 +237,20 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         // billable, and pretending otherwise leaves them unaccounted for.
         toast.error(e instanceof Error ? e.message : "Could not purchase number", {
           description: bought.length
-            ? `${bought.length} of ${buyCount} were purchased and attached: ${bought.join(", ")}`
+            ? `${bought.length} of ${toPurchase} were purchased and attached: ${bought.join(", ")}`
             : "No numbers were purchased.",
         });
         return;
       }
 
+      const total = taken.length + bought.length;
       toast.success(
-        bought.length === 1 ? "1 number purchased" : `${bought.length} numbers purchased`,
-        { description: `Attached to "${campaign.name}".` },
+        total === 1 ? "1 number attached" : `${total} numbers attached`,
+        {
+          description: taken.length
+            ? `${taken.length} from your pool, ${bought.length} purchased. Attached to "${campaign.name}".`
+            : `Attached to "${campaign.name}".`,
+        },
       );
       onOpenChange(false);
     } catch (e) {
@@ -431,7 +471,20 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 }
                 className="font-mono"
               />
-              <p className="text-[10px] text-muted-foreground">Up to 20 per batch.</p>
+              <p className="text-[10px] text-muted-foreground">
+                Up to 20 per batch.
+                {bucket.length > 0 && (
+                  <>
+                    {" "}
+                    You already own {bucket.length} free{" "}
+                    {buyType === "tollfree" ? "toll-free" : "local"}{" "}
+                    {bucket.length === 1 ? "number" : "numbers"} —{" "}
+                    {toPurchase === 0
+                      ? `all ${fromBucket} will come from those, nothing will be bought.`
+                      : `${fromBucket} will come from those and ${toPurchase} will be bought.`}
+                  </>
+                )}
+              </p>
             </div>
 
             <DialogFooter>
