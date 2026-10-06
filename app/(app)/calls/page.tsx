@@ -8,6 +8,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { CallDetailSheet } from "@/components/calls/call-detail-sheet";
 import { ALL_COLUMNS, CallsToolbar } from "@/components/calls/calls-toolbar";
 import { CallsTable } from "@/components/calls/calls-table";
+import { ReportsPinGate } from "@/components/reports/reports-pin-gate";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
@@ -15,9 +16,11 @@ import { rangeDayKeys, totals, type DateRange } from "@/lib/analytics";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
+import { isPinRequiredError } from "@/lib/reports-scope";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
-import { formatCompact, formatCurrency, formatDuration, formatPercent } from "@/lib/format";
+import { formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
 const DEFAULT_VISIBLE = new Set(ALL_COLUMNS.map((c) => c.id));
@@ -63,7 +66,18 @@ export default function CallsPage() {
   const [rangeCalls, setRangeCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Today is open to everyone; a range that starts earlier is history, which
+  // needs the reports PIN once one exists (the server refuses it otherwise).
+  const needsPin = fromKey < zonedDayKey(Date.now(), timeZone);
+  const access = useReportsAccess(needsPin);
+  const mayLoad = !needsPin || access.canFetch;
+
   useEffect(() => {
+    if (!mayLoad) {
+      setRangeCalls([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     analyticsService
@@ -73,7 +87,8 @@ export default function CallsPage() {
       })
       .catch((e) => {
         if (cancelled) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        // "History is locked" is not an error: the PIN prompt says so.
+        if (!isPinRequiredError(e)) toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
         setRangeCalls([]);
       })
       .finally(() => {
@@ -82,7 +97,7 @@ export default function CallsPage() {
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey, timeZone]);
+  }, [fromKey, toKey, timeZone, mayLoad]);
 
   const filtered = useMemo(() => {
     let calls = rangeCalls;
@@ -146,70 +161,72 @@ export default function CallsPage() {
         description={t("toolsUI.callLogs.pageDescription")}
       />
 
-      {/* Summary tiles */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryCard label={t("toolsUI.callLogs.summary.totalCalls")} value={formatCompact(summary.count)} />
-        <SummaryCard label={t("toolsUI.callLogs.summary.won")} value={formatCompact(summary.completed)} />
-        <SummaryCard label={t("toolsUI.callLogs.summary.conversion")} value={formatPercent(summary.conversionRate * 100, 1)} />
-        <SummaryCard label={t("toolsUI.callLogs.summary.revenue")} value={formatCurrency(summary.revenue)} />
-      </div>
+      <ReportsPinGate needsPin={needsPin} onCancel={() => setRange("today")}>
+        {/* Summary tiles */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryCard label={t("toolsUI.callLogs.summary.totalCalls")} value={formatCompact(summary.count)} />
+          <SummaryCard label={t("toolsUI.callLogs.summary.won")} value={formatCompact(summary.completed)} />
+          <SummaryCard label={t("toolsUI.callLogs.summary.conversion")} value={formatPercent(summary.conversionRate * 100, 1)} />
+          <SummaryCard label={t("toolsUI.callLogs.summary.revenue")} value={formatCurrency(summary.revenue)} />
+        </div>
 
-      <CallsToolbar
-        query={query}
-        onQuery={setQuery}
-        range={range}
-        onRange={setRange}
-        statuses={statuses}
-        onToggleStatus={toggleStatus}
-        campaignFilter={campaignFilter}
-        onCampaign={setCampaignFilter}
-        campaigns={campaigns}
-        visibleColumns={visibleColumns}
-        onToggleColumn={toggleColumn}
-        onExport={onExport}
-        count={filtered.length}
-        total={rangeCalls.length}
-      />
-
-      {filtered.length === 0 && !loading ? (
-        <EmptyState
-          icon={PhoneCall}
-          tone="cyan"
-          title={t("toolsUI.callLogs.emptyTitle")}
-          description={t("toolsUI.callLogs.emptyDescription")}
+        <CallsToolbar
+          query={query}
+          onQuery={setQuery}
+          range={range}
+          onRange={setRange}
+          statuses={statuses}
+          onToggleStatus={toggleStatus}
+          campaignFilter={campaignFilter}
+          onCampaign={setCampaignFilter}
+          campaigns={campaigns}
+          visibleColumns={visibleColumns}
+          onToggleColumn={toggleColumn}
+          onExport={onExport}
+          count={filtered.length}
+          total={rangeCalls.length}
         />
-      ) : (
-        <>
-          <CallsTable
-            calls={paged}
-            visibleColumns={visibleColumns}
-            onSelect={setSelected}
-            selectedId={selected?.id}
-          />
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            total={filtered.length}
-            onPage={setPage}
-            onPageSize={(n) => {
-              setPageSize(n);
-              setPage(0);
-            }}
-          />
-        </>
-      )}
 
-      {/* Tiny footer note explaining avg duration */}
-      <p className="-mt-3 text-[11px] text-muted-foreground">
-        {t("toolsUI.callLogs.avgDurationLabel")} <span className="font-mono text-foreground">{formatDuration(summary.avgDurationSec)}</span>
-      </p>
+        {filtered.length === 0 && !loading ? (
+          <EmptyState
+            icon={PhoneCall}
+            tone="cyan"
+            title={t("toolsUI.callLogs.emptyTitle")}
+            description={t("toolsUI.callLogs.emptyDescription")}
+          />
+        ) : (
+          <>
+            <CallsTable
+              calls={paged}
+              visibleColumns={visibleColumns}
+              onSelect={setSelected}
+              selectedId={selected?.id}
+            />
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={filtered.length}
+              onPage={setPage}
+              onPageSize={(n) => {
+                setPageSize(n);
+                setPage(0);
+              }}
+            />
+          </>
+        )}
 
-      <CallDetailSheet
-        call={selected}
-        onOpenChange={(o) => {
-          if (!o) setSelected(null);
-        }}
-      />
+        {/* Tiny footer note explaining avg duration */}
+        <p className="-mt-3 text-[11px] text-muted-foreground">
+          {t("toolsUI.callLogs.avgDurationLabel")} <span className="font-mono text-foreground">{formatDuration(summary.avgDurationSec)}</span>
+        </p>
+
+        <CallDetailSheet
+          call={selected}
+          onOpenChange={(o) => {
+            if (!o) setSelected(null);
+          }}
+        />
+      </ReportsPinGate>
     </>
   );
 }

@@ -27,6 +27,7 @@ import {
 } from "@/lib/api/services/analytics.service";
 import { zonedDayKey } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useSecurityStore } from "@/lib/store/security-store";
 
 const STORAGE_PREFIX = "vortyx.dashboard-snapshot.v1:";
 const MAX_ENTRIES = 8;
@@ -170,4 +171,33 @@ export function prefetchDashboardSnapshot(timeZone: string): void {
   const cached = getCachedSnapshot(key);
   if (cached && Date.now() - cached.takenAt < PREFETCH_FRESH_MS) return;
   loadSnapshotShared(view).catch(() => undefined);
+}
+
+/**
+ * Forget the cached snapshots of earlier days (keep today's). Called when the
+ * reports PIN locks again, so history that was unlocked a moment ago cannot be
+ * shown from this tab's saved copy.
+ */
+export function invalidateHistoricalSnapshots(): void {
+  const isHistorical = (key: string): boolean => {
+    const [, dateFrom, , timeZone] = key.split("|");
+    return !!dateFrom && !!timeZone && dateFrom < zonedDayKey(Date.now(), timeZone);
+  };
+  for (const key of [...memory.keys()]) if (isHistorical(key)) memory.delete(key);
+  const ss = storage();
+  if (!ss) return;
+  const doomed: string[] = [];
+  for (let i = 0; i < ss.length; i++) {
+    const k = ss.key(i);
+    if (k && k.startsWith(STORAGE_PREFIX) && isHistorical(k.slice(STORAGE_PREFIX.length))) doomed.push(k);
+  }
+  doomed.forEach((k) => ss.removeItem(k));
+}
+
+if (typeof window !== "undefined") {
+  let wasUnlocked = useSecurityStore.getState().unlocked;
+  useSecurityStore.subscribe((s) => {
+    if (wasUnlocked && !s.unlocked) invalidateHistoricalSnapshots();
+    wasUnlocked = s.unlocked;
+  });
 }

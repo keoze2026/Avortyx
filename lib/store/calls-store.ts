@@ -12,6 +12,7 @@
 
 import { create } from "zustand";
 
+import { allOrToday, todayScope } from "@/lib/reports-scope";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import {
   analyticsService,
@@ -27,6 +28,10 @@ interface CallsState {
   recent: Call[];
   /** Headline KPIs from /api/analytics/dashboard. */
   kpis: DashboardKpis | null;
+  /** What `kpis` adds up: every call ("all"), or only today's ("today") - which is
+   *  all the server gives out while the reports PIN is locked. Lets a screen that
+   *  wants all-time totals (Billing) avoid showing today's as if they were. */
+  kpisScope: "all" | "today";
   /** Cached time-series for the dashboard hourly/day chart. */
   timeSeries: TimeSeriesPoint[];
   /** In-flight call count for the header, kept fresh by lib/live-count.ts (one
@@ -61,6 +66,7 @@ const RECENT_DEFAULT = 200;
 export const useCallsStore = create<CallsState>()((set) => ({
   recent: [],
   kpis: null,
+  kpisScope: "all",
   timeSeries: [],
   liveCount: 0,
   liveCountAt: null,
@@ -72,7 +78,12 @@ export const useCallsStore = create<CallsState>()((set) => ({
   fetchRecent: async (pageSize = RECENT_DEFAULT) => {
     set({ loading: true, error: null });
     try {
-      const page = await analyticsService.calls({ page: 1, pageSize });
+      // No dates = "everything", which the server refuses while the reports PIN
+      // is locked - then show today's calls only.
+      const { value: page } = await allOrToday(
+        () => analyticsService.calls({ page: 1, pageSize }),
+        () => analyticsService.calls({ page: 1, pageSize, ...todayScope() }),
+      );
       set({ recent: page.items, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
@@ -81,8 +92,14 @@ export const useCallsStore = create<CallsState>()((set) => ({
 
   fetchKpis: async () => {
     try {
-      const kpis = await analyticsService.dashboard();
-      set({ kpis });
+      // The header's Live / Total / wallet come from this on every page. With no
+      // dates it is all-time, which the server refuses while the reports PIN is
+      // locked - so ask for today, which is always allowed.
+      const { value: kpis, today } = await allOrToday(
+        () => analyticsService.dashboard(),
+        () => analyticsService.dashboard(todayScope()),
+      );
+      set({ kpis, kpisScope: today ? "today" : "all" });
       // The dashboard payload carries the account balance alongside the
       // call counters, and the topbar polls it every 15s — so it is the
       // freshest balance the app has. Mirror it into the onboarding store,
@@ -98,7 +115,10 @@ export const useCallsStore = create<CallsState>()((set) => ({
 
   fetchTimeSeries: async (query = {}) => {
     try {
-      const timeSeries = await analyticsService.timeSeries(query);
+      const { value: timeSeries } = await allOrToday(
+        () => analyticsService.timeSeries(query),
+        () => analyticsService.timeSeries({ ...query, ...todayScope() }),
+      );
       set({ timeSeries });
     } catch (e) {
       set({ error: messageFromError(e) });
@@ -113,7 +133,8 @@ export const useCallsStore = create<CallsState>()((set) => ({
   clearLiveCount: () => set({ liveCountAt: null }),
 
   setKpis: (kpis) => {
-    set({ kpis });
+    // Only the Dashboard calls this, with its snapshot of today.
+    set({ kpis, kpisScope: "today" });
     if (kpis.balance !== undefined) {
       useOnboardingStore.getState().setBalance(kpis.balance);
     }

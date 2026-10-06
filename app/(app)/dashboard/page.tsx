@@ -10,6 +10,7 @@ import { TopCampaignsBars } from "@/components/dashboard/top-campaigns-bars";
 import { VerticalDonut } from "@/components/dashboard/vertical-donut";
 import { CallPerfCard } from "@/components/reports/call-perf-card";
 import { HourlyDistribution } from "@/components/reports/hourly-distribution";
+import { ReportsPinGate } from "@/components/reports/reports-pin-gate";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { PageHeader } from "@/components/shared/page-header";
 import { TimezonePicker } from "@/components/shared/timezone-picker";
@@ -24,8 +25,10 @@ import {
 import type { DashboardSnapshot } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { getCachedSnapshot, loadSnapshotShared, snapshotKey } from "@/lib/dashboard-snapshot";
+import { isPinRequiredError } from "@/lib/reports-scope";
 import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useReportsAccess } from "@/lib/store/security-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
@@ -83,6 +86,12 @@ export default function DashboardPage() {
   const isToday = fromKey === todayKey && toKey === todayKey;
   /** The range ends today (or later), so new calls can still land in it. */
   const includesToday = toKey >= todayKey;
+  // Today is open to everyone; any range that starts earlier is history, which
+  // needs the reports PIN once one exists (the server refuses it otherwise).
+  const needsPin = fromKey < todayKey;
+  const access = useReportsAccess(needsPin);
+  /** False only while history is locked - then nothing is requested or shown. */
+  const mayLoad = !needsPin || access.canFetch;
 
   // Every panel on this page — header figures, charts, campaigns and
   // destinations — comes from one GET /api/analytics/snapshot, taken at a
@@ -110,16 +119,25 @@ export default function DashboardPage() {
   // the view changes) - the refresh below then happens behind it. Without this
   // every visit and every date / destination change started from empty panels.
   useIsoLayoutEffect(() => {
+    if (!mayLoad) return;
     const cached = getCachedSnapshot(viewKey);
     if (!cached) return;
     setSnapshot(cached);
     if (allSelected) setAllDestCounts(countsOf(cached));
-  }, [viewKey, userId, allSelected]);
+  }, [viewKey, userId, allSelected, mayLoad]);
 
   const lastLoadAt = useRef(0);
   const refreshRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    // History is locked behind the reports PIN: ask for nothing (the gate below
+    // is showing) and drop what was on screen. Loads again the moment it unlocks.
+    if (!mayLoad) {
+      refreshRef.current = null;
+      setSnapshot(null);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const view = { dateFrom: fromKey, dateTo: toKey, timeZone, destination };
     // Only dim the panels when there is nothing of THIS view to show yet.
@@ -140,6 +158,8 @@ export default function DashboardPage() {
         // view's numbers sitting under the new label. A failed background
         // refresh keeps what is on screen.
         if (viewChanged && !hadCache) setSnapshot(null);
+        // "History is locked" is not an error: the PIN prompt below says so.
+        if (isPinRequiredError(e)) return;
         toast.error(friendlyErrorMessage(e, "Couldn't load the dashboard for this date range"), {
           id: "dashboard-load-error",
         });
@@ -171,7 +191,7 @@ export default function DashboardPage() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [fromKey, toKey, includesToday, timeZone, allSelected, destinationTfn]);
+  }, [fromKey, toKey, includesToday, timeZone, allSelected, destinationTfn, mayLoad]);
 
   // A call started or ended (the live count moved): pull fresh figures now
   // instead of waiting for the next timer tick.
@@ -275,42 +295,46 @@ export default function DashboardPage() {
         }
       />
 
-      {/* Row 1 — Hourly CALLS chart (primary) + donut on the right.
-          Uses the same composed-chart component as the Reports page so the
-          two surfaces share an identical visual language. */}
-      <div
-        className="grid grid-cols-1 gap-4 transition-opacity lg:grid-cols-3"
-        style={loading ? { opacity: 0.6 } : undefined}
-        aria-busy={loading}
-      >
-        {/* h-full on both wrapper and card so the chart matches the height of
-            the two stacked cards beside it; the chart then centres in the
-            extra space rather than leaving a gap at the bottom. */}
-        <div className="h-full lg:col-span-2">
-          <HourlyDistribution calls={NO_CALLS} series={snapshot?.timeSeries ?? []} className="h-full" />
-        </div>
-        <div className="flex h-full min-w-0 flex-col gap-4">
-          <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
-          <div className="min-h-0 flex-1">
-            <VerticalDonut totals={donutTotals} />
+      {/* Everything below is the account's history when the range starts before
+          today, so it sits behind the reports PIN (today never does). */}
+      <ReportsPinGate needsPin={needsPin} onCancel={() => setDateRange({ from: today, to: today })}>
+        {/* Row 1 — Hourly CALLS chart (primary) + donut on the right.
+            Uses the same composed-chart component as the Reports page so the
+            two surfaces share an identical visual language. */}
+        <div
+          className="grid grid-cols-1 gap-4 transition-opacity lg:grid-cols-3"
+          style={loading ? { opacity: 0.6 } : undefined}
+          aria-busy={loading}
+        >
+          {/* h-full on both wrapper and card so the chart matches the height of
+              the two stacked cards beside it; the chart then centres in the
+              extra space rather than leaving a gap at the bottom. */}
+          <div className="h-full lg:col-span-2">
+            <HourlyDistribution calls={NO_CALLS} series={snapshot?.timeSeries ?? []} className="h-full" />
+          </div>
+          <div className="flex h-full min-w-0 flex-col gap-4">
+            <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
+            <div className="min-h-0 flex-1">
+              <VerticalDonut totals={donutTotals} />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Row 2 — Top campaigns + Revenue by hour (secondary) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
-        <RevenueChart calls={NO_CALLS} series={snapshot?.timeSeries ?? []} dateLabel={dateLabel} />
-      </div>
+        {/* Row 2 — Top campaigns + Revenue by hour (secondary) */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
+          <RevenueChart calls={NO_CALLS} series={snapshot?.timeSeries ?? []} dateLabel={dateLabel} />
+        </div>
 
-      {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
-      <DestinationSummaryTable
-        calls={NO_CALLS}
-        rangeDestinations={snapshot?.destinations}
-        dateLabel={dateLabel}
-        useLiveCounters={isToday}
-        destinationFilter={allSelected ? undefined : destinationTfn}
-      />
+        {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
+        <DestinationSummaryTable
+          calls={NO_CALLS}
+          rangeDestinations={snapshot?.destinations}
+          dateLabel={dateLabel}
+          useLiveCounters={isToday}
+          destinationFilter={allSelected ? undefined : destinationTfn}
+        />
+      </ReportsPinGate>
     </>
   );
 }

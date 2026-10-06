@@ -21,7 +21,8 @@ interface UsageMetric {
   key: string;
   label: string;
   icon: LucideIcon;
-  used: number;
+  /** null = not known right now (shown as "—"). */
+  used: number | null;
 }
 
 export function UsageGrid() {
@@ -31,6 +32,7 @@ export function UsageGrid() {
     return v === key ? fallback : v;
   };
   const kpis = useCallsStore((s) => s.kpis);
+  const kpisScope = useCallsStore((s) => s.kpisScope);
   const numbers = useNumbersStore((s) => s.numbers);
   const publishers = usePublishersStore((s) => s.publishers);
 
@@ -40,7 +42,9 @@ export function UsageGrid() {
       key: "calls",
       label: tr("billing.usageMetrics.calls", "Calls routed"),
       icon: Gauge,
-      used: kpis?.totalCalls ?? 0,
+      // "Calls routed" is an all-time total. While the reports PIN is locked the
+      // server only gives today's, which must not be shown as the total.
+      used: kpisScope === "all" ? (kpis?.totalCalls ?? 0) : null,
     },
     {
       key: "numbers",
@@ -79,7 +83,7 @@ export function UsageGrid() {
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-accent/10 text-accent">
                   <Icon className="h-3.5 w-3.5" />
                 </span>
-                <div className="mt-3 font-mono text-lg font-semibold">{formatCompact(m.used)}</div>
+                <div className="mt-3 font-mono text-lg font-semibold">{m.used === null ? "—" : formatCompact(m.used)}</div>
                 <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{m.label}</div>
               </motion.div>
             );

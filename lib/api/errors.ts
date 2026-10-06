@@ -54,6 +54,7 @@ function fallbackForStatus(status: number): string {
   if (status === 404) return "We couldn't find what you were looking for.";
   if (status === 409) return "This action conflicts with the current state. Please refresh and try again.";
   if (status === 422) return "Some fields are missing or invalid. Please review and try again.";
+  if (status === 423) return "This is locked. Enter the reports PIN on the Reports page to view it.";
   if (status === 429) return "Too many requests — please wait a moment and try again.";
   if (status >= 500 && status < 600) return "Something went wrong on our end. Please try again in a moment.";
   return "Something went wrong. Please try again.";

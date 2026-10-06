@@ -556,8 +556,15 @@ function timeSeriesPointToPoint(w: TimeSeriesPointWire): TimeSeriesPoint {
 /* ─── Public service ──────────────────────────────────────────────────── */
 
 export const analyticsService = {
-  async dashboard(): Promise<DashboardKpis> {
-    const wire = await http.get<DashboardWire>("/api/analytics/dashboard");
+  /**
+   * Headline totals. With no scope this is every call the account has ever
+   * had; pass a scope (see lib/reports-scope.ts `todayScope`) to count only
+   * those days - the only form the server allows while the reports PIN is locked.
+   */
+  async dashboard(scope: { dateFrom?: string; dateTo?: string; timezone?: string } = {}): Promise<DashboardKpis> {
+    const wire = await http.get<DashboardWire>("/api/analytics/dashboard", {
+      query: { dateFrom: scope.dateFrom, dateTo: scope.dateTo, timezone: scope.timezone },
+    });
     return dashboardWireToKpis(wire);
   },
 
@@ -590,12 +597,14 @@ export const analyticsService = {
   async timeSeries(query: {
     dateFrom?: string;
     dateTo?: string;
+    timezone?: string;
     granularity?: Granularity;
   } = {}): Promise<TimeSeriesPoint[]> {
     const wire = await http.get<TimeSeriesResponseWire>("/api/analytics/time-series", {
       query: {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
+        timezone: query.timezone,
         granularity: query.granularity,
       },
     });
