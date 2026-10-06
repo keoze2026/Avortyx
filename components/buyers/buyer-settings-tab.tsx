@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Building2, DollarSign, Eye, Gauge, Mail, UserSquare } from "lucide-react";
 import { toast } from "sonner";
 
+import { BuyerMembersCard } from "@/components/buyers/buyer-members-card";
 import { ErrorLine, SaveBar } from "@/components/campaigns/campaign-settings-tab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -131,6 +132,9 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
 
   return (
     <div className="space-y-4">
+      {/* Members - who was invited, and who has registered */}
+      <BuyerMembersCard buyer={buyer} />
+
       {/* Identity */}
       <Card>
         <CardHeader className="pb-2">

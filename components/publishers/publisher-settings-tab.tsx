@@ -17,24 +17,11 @@
 
 import * as React from "react";
 import { publishersService } from "@/lib/api/services/publishers.service";
-import {
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  Gauge,
-  Info,
-  Search,
-  Trash2,
-  Users,
-} from "lucide-react";
-import { toast } from "sonner";
+import { AlertTriangle, ChevronDown, ChevronUp, Gauge, Info } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -44,13 +31,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  PartnerMembersSection,
+  type PartnerMemberRow,
+  type PartnerMembersLabels,
+} from "@/components/network/partner-members-section";
+import { usePartnerRegistration } from "@/hooks/use-partner-registration";
 import { useTranslation } from "@/hooks/use-translation";
 import {
   PERMISSIONS,
@@ -97,6 +82,52 @@ export function PublisherSettingsTab({ publisher }: Props) {
   };
   const capEnabled = access?.cap.enabled ?? false;
 
+  // Who is listed: the publisher's own contact email (the address the backend
+  // invites when the publisher is created) plus anyone invited from this tab.
+  // Each one's status - "Invited", or "Registered" once they have accepted -
+  // is checked against the workspace's logins and refreshes by itself.
+  const { t } = useTranslation();
+  const contactEmail = (publisher.email ?? "").trim().toLowerCase();
+  const memberEmails = React.useMemo(
+    () => [...(contactEmail ? [contactEmail] : []), ...members.map((m) => m.email)],
+    [contactEmail, members],
+  );
+  const registration = usePartnerRegistration(memberEmails);
+  const memberRows = React.useMemo<PartnerMemberRow[]>(() => {
+    const out: PartnerMemberRow[] = [];
+    if (contactEmail) {
+      out.push({ id: "contact", email: contactEmail, ...registration.info(contactEmail), canRemove: false });
+    }
+    for (const m of members) {
+      if (m.email.trim().toLowerCase() === contactEmail) continue;
+      out.push({ id: m.id, email: m.email, ...registration.info(m.email), canRemove: true });
+    }
+    return out;
+  }, [contactEmail, members, registration]);
+  const memberLabels = React.useMemo<PartnerMembersLabels>(
+    () => ({
+      title: t("networkUI.publishers.settings.membersTitle"),
+      description: t("networkUI.publishers.settings.membersDesc"),
+      searchAria: t("networkUI.publishers.settings.searchMembers"),
+      searchPlaceholder: t("networkUI.publishers.settings.searchByEmail"),
+      filterAria: t("networkUI.publishers.settings.filterMembers"),
+      filterSoon: t("networkUI.publishers.settings.filterSoon"),
+      invite: t("networkUI.publishers.settings.invite"),
+      invitePlaceholder: t("networkUI.publishers.settings.invitePlaceholder"),
+      sendInvite: t("networkUI.publishers.settings.sendInvite"),
+      cancel: t("networkUI.publishers.settings.cancel"),
+      email: t("networkUI.publishers.settings.email"),
+      status: t("networkUI.publishers.settings.status"),
+      actions: t("networkUI.publishers.settings.actions"),
+      noData: t("networkUI.publishers.settings.noData"),
+      invalidEmail: t("networkUI.publishers.settings.invalidEmail"),
+      invitedToast: (email) => t("networkUI.publishers.settings.invited").replace("{email}", email),
+      removedToast: (email) => t("networkUI.publishers.settings.removed").replace("{email}", email),
+      removeAria: (email) => t("networkUI.publishers.settings.removeMemberAria").replace("{email}", email),
+    }),
+    [t],
+  );
+
   return (
     <Card className="space-y-6 p-6">
       {/* Honest framing — the four sub-sections below (Members,
@@ -127,15 +158,16 @@ export function PublisherSettingsTab({ publisher }: Props) {
         onTimezoneChange={(v) => setTimezone(publisher.id, v)}
       />
 
-      <MembersSection
-        publisherId={publisher.id}
-        members={members}
-        onAdd={async (email) => {
+      <PartnerMembersSection
+        rows={memberRows}
+        labels={memberLabels}
+        onInvite={async (email) => {
           // Send the invite first. The local store is display state backed by
           // localStorage - adding to it before the request succeeded is what
           // made the row read "Invited" when no email had been sent.
           await publishersService.invite(publisher.id, email);
           addMember(publisher.id, email);
+          registration.refresh();
         }}
         onRemove={(memberId) => removeMember(publisher.id, memberId)}
       />
@@ -194,188 +226,6 @@ function HeaderRow({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-
-/* ─── Members ────────────────────────────────────────────────────────── */
-
-function MembersSection({
-  publisherId,
-  members,
-  onAdd,
-  onRemove,
-}: {
-  publisherId: string;
-  members: ReturnType<typeof usePublisherAccessStore.getState>["byPublisher"][string]["members"];
-  onAdd: (email: string) => Promise<void>;
-  onRemove: (memberId: string) => void;
-}) {
-  const { t } = useTranslation();
-  const [query, setQuery] = React.useState("");
-  const [searchOpen, setSearchOpen] = React.useState(false);
-  const [inviteOpen, setInviteOpen] = React.useState(false);
-  const [inviteEmail, setInviteEmail] = React.useState("");
-
-  const filtered = React.useMemo(() => {
-    if (!query.trim()) return members;
-    const q = query.trim().toLowerCase();
-    return members.filter((m) => m.email.toLowerCase().includes(q));
-  }, [members, query]);
-
-  const [sending, setSending] = React.useState(false);
-
-  const submitInvite = async () => {
-    const trimmed = inviteEmail.trim();
-    if (!/^\S+@\S+\.\S+$/.test(trimmed)) {
-      toast.error(t("networkUI.publishers.settings.invalidEmail"));
-      return;
-    }
-    setSending(true);
-    try {
-      await onAdd(trimmed);
-    } catch (e) {
-      // Previously this path did not exist: the success toast fired
-      // unconditionally because nothing was being sent to fail.
-      toast.error(e instanceof Error ? e.message : "Could not send the invite");
-      return;
-    } finally {
-      setSending(false);
-    }
-    toast.success(t("networkUI.publishers.settings.invited").replace("{email}", trimmed));
-    setInviteEmail("");
-    setInviteOpen(false);
-  };
-
-  return (
-    <Section
-      title={t("networkUI.publishers.settings.membersTitle")}
-      description={t("networkUI.publishers.settings.membersDesc")}
-    >
-      <div className="flex items-center justify-end gap-2 px-4 pb-3 pt-1">
-        <button
-          type="button"
-          onClick={() => setSearchOpen((v) => !v)}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          aria-label={t("networkUI.publishers.settings.searchMembers")}
-        >
-          <Search className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => toast.info(t("networkUI.publishers.settings.filterSoon"))}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          aria-label={t("networkUI.publishers.settings.filterMembers")}
-        >
-          <Filter className="h-3.5 w-3.5" />
-        </button>
-        <Button
-          size="sm"
-          variant="default"
-          onClick={() => setInviteOpen((v) => !v)}
-        >
-          {t("networkUI.publishers.settings.invite")}
-        </Button>
-      </div>
-
-      {searchOpen && (
-        <div className="px-4 pb-3">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("networkUI.publishers.settings.searchByEmail")}
-            className="h-8"
-          />
-        </div>
-      )}
-
-      {inviteOpen && (
-        <div className="mx-4 mb-3 flex items-center gap-2 rounded-md border border-border bg-secondary/30 p-2">
-          <Input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submitInvite();
-              }
-            }}
-            placeholder={t("networkUI.publishers.settings.invitePlaceholder")}
-            className="h-8"
-            autoFocus
-          />
-          <Button size="sm" onClick={submitInvite} disabled={sending}>
-            {t("networkUI.publishers.settings.sendInvite")}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setInviteOpen(false);
-              setInviteEmail("");
-            }}
-          >
-            {t("networkUI.publishers.settings.cancel")}
-          </Button>
-        </div>
-      )}
-
-      <div className="overflow-hidden border-t border-border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-4 text-left">{t("networkUI.publishers.settings.email")}</TableHead>
-              <TableHead className="text-left">{t("networkUI.publishers.settings.status")}</TableHead>
-              <TableHead className="pr-4 text-right">{t("networkUI.publishers.settings.actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={3}
-                  className="py-10 text-center text-sm text-muted-foreground"
-                >
-                  <Users className="mx-auto mb-2 h-5 w-5 opacity-40" />
-                  {t("networkUI.publishers.settings.noData")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="pl-4 text-left font-medium">
-                    {m.email}
-                  </TableCell>
-                  <TableCell className="text-left">
-                    <Badge
-                      variant={m.status === "active" ? "success" : "outline"}
-                      className="capitalize"
-                    >
-                      {m.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="pr-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onRemove(m.id);
-                        toast.success(t("networkUI.publishers.settings.removed").replace("{email}", m.email));
-                      }}
-                      aria-label={t("networkUI.publishers.settings.removeMemberAria").replace("{email}", m.email)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      {/* swallow unused-var linter warning when publisherId isn't read directly */}
-      <span hidden data-publisher-id={publisherId} />
-    </Section>
   );
 }
 

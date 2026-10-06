@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { http } from "@/lib/api/http";
+import { useBuyerMembersStore } from "@/lib/store/buyer-members-store";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import type { Buyer } from "@/lib/types";
 
@@ -64,6 +65,11 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
           message: message.trim() || undefined,
         },
       });
+      // Remember who was invited so the buyer's Members table lists them (the
+      // buyer's own contact email is listed there automatically).
+      if (email.trim().toLowerCase() !== (buyer.email ?? "").trim().toLowerCase()) {
+        useBuyerMembersStore.getState().addMember(buyer.id, email.trim());
+      }
       toast.success(`Invite sent to ${email.trim()}`);
       onOpenChange(false);
     } catch (e) {

@@ -1668,9 +1668,62 @@ route("GET", "/api/kyc/company/", () => ({
 
 // Workspace activity / sessions / roles — paginated/array shapes.
 route("GET", "/api/accounts/workspace/activity", () => ({ items: [], total: 0, page: 1, page_size: 25 }));
-route("GET", "/api/accounts/workspace/sessions", () => []);
+/* ─── Partner invites (demo) ─────────────────────────────────────────
+ * An invite sent from a publisher or buyer page is remembered here. The
+ * invited person "accepts" 20 seconds later: from then on they are in the
+ * workspace member list and have a login session - which is exactly what the
+ * Members table reads to switch the status from "Invited" to "Registered". */
+interface DemoPartnerInvite {
+  email: string;
+  kind: "buyer" | "publisher";
+  at: number;
+}
+const DEMO_ACCEPT_AFTER_MS = 20_000;
+const demoPartnerInvites = () => readTable<DemoPartnerInvite>("partnerInvites", () => []);
+const demoPartnerUserId = (email: string) => "demo-user-" + email.replace(/[^a-z0-9]/g, "_");
+
+function demoRecordInvite(kind: "buyer" | "publisher", req: DemoRequest) {
+  const email = String((req.body as { email?: string } | undefined)?.email ?? "").trim().toLowerCase();
+  if (email) {
+    const others = demoPartnerInvites().filter((r) => r.email !== email);
+    writeTable("partnerInvites", [...others, { email, kind, at: Date.now() }]);
+  }
+  return { success: true, email, email_sent: true, expires_in_hours: 48 };
+}
+
+route("POST", "/api/publishers/{id}/invite", (req) => demoRecordInvite("publisher", req));
+route("POST", "/api/buyers/{id}/invite", (req) => demoRecordInvite("buyer", req));
+
+route("GET", "/api/accounts/workspace/members", () => {
+  const items = demoPartnerInvites().map((i) => ({
+    id: demoPartnerUserId(i.email),
+    email: i.email,
+    username: i.email,
+    first_name: "",
+    last_name: "",
+    role: i.kind,
+    is_active: true,
+    status: "active",
+    created_at: new Date(i.at).toISOString(),
+  }));
+  return { items, total: items.length, page: 1, page_size: 200, pages: 1 };
+});
+
+route("GET", "/api/accounts/workspace/sessions", () =>
+  demoPartnerInvites()
+    .filter((i) => Date.now() - i.at >= DEMO_ACCEPT_AFTER_MS)
+    .map((i) => ({
+      id: "demo-session-" + demoPartnerUserId(i.email),
+      user_id: demoPartnerUserId(i.email),
+      user_name: i.email,
+      ip: "",
+      location: null,
+      user_agent: "",
+      last_active_at: new Date(i.at + DEMO_ACCEPT_AFTER_MS).toISOString(),
+      current: false,
+    })),
+);
 route("GET", "/api/accounts/workspace/roles", () => []);
-route("GET", "/api/accounts/workspace/members", () => []);
 route("GET", "/api/accounts/roles", () => []);
 route("GET", "/api/accounts/access-requests/", () => ({ items: [], total: 0 }));
 route("GET", "/api/accounts/api-keys/", () => []);
