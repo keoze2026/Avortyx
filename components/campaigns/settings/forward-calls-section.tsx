@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Pencil, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
@@ -35,8 +35,10 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { campaignsService } from "@/lib/api/services/campaigns.service";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
+import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -92,9 +94,66 @@ interface ForwardCallsSectionProps {
   campaignId: string;
 }
 
+/** Longest duplicate window offered: one year, in hours. */
+const MAX_DUPLICATE_HOURS = 8760;
+
 export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
-  void campaignId;
   const { t } = useTranslation();
+  const updateCampaign = useCampaignsStore((s) => s.update);
+
+  // ─── Block duplicate calls ──────────────────────────────────────────────
+  // Saved on the campaign as duplicate_call_block / duplicate_call_block_hours.
+  // When on, the backend drops any call from a caller ID that already called
+  // this campaign within the window ("Duplicate call blocked").
+  const [dupBlock, setDupBlock] = useState(false);
+  const [dupHours, setDupHours] = useState("24");
+  const [dupSavedHours, setDupSavedHours] = useState(24); // last value saved
+  const [dupLoaded, setDupLoaded] = useState(false);
+  const [dupSaving, setDupSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDupLoaded(false);
+    campaignsService
+      .get(campaignId)
+      .then((c) => {
+        if (cancelled) return;
+        setDupBlock(Boolean(c.duplicateCallBlock));
+        setDupHours(String(c.duplicateCallBlockHours ?? 24));
+        setDupSavedHours(c.duplicateCallBlockHours ?? 24);
+        setDupLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Couldn't load the duplicate call setting.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId]);
+
+  const saveDuplicate = async (block: boolean, hoursText: string) => {
+    const hours = Math.min(MAX_DUPLICATE_HOURS, Math.max(1, Math.floor(Number(hoursText) || 24)));
+    const prevBlock = dupBlock;
+    const prevHours = dupHours;
+    setDupBlock(block);
+    setDupHours(String(hours));
+    setDupSaving(true);
+    try {
+      await updateCampaign(campaignId, { duplicateCallBlock: block, duplicateCallBlockHours: hours });
+      setDupSavedHours(hours);
+      toast.success(
+        block
+          ? `Duplicate calls blocked — repeat callers within ${hours} hour${hours === 1 ? "" : "s"} are dropped.`
+          : "Duplicate call blocking turned off.",
+      );
+    } catch {
+      setDupBlock(prevBlock);
+      setDupHours(prevHours);
+      toast.error("Couldn't save the duplicate call setting. Please try again.");
+    } finally {
+      setDupSaving(false);
+    }
+  };
   const [routing, setRouting] = useState<RoutingOption>("Standard");
   const [duplicate, setDuplicate] = useState<DuplicateHandling>("Different");
   const [direction, setDirection] = useState<DirectionScope>("Destination");
@@ -218,6 +277,46 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           </div>
           <Switch className="data-[state=checked]:bg-accent" checked={strict} onCheckedChange={setStrict} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
         </div>
+        <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
+          <div>
+            <div className="text-xs font-medium">Block duplicate calls</div>
+            <div className="text-[11px] text-muted-foreground">
+              Drop any call from a caller ID that already called this campaign within the time window.
+            </div>
+            {dupBlock && (
+              <div className="mt-2 flex items-center gap-2 text-[11px]">
+                <span className="text-muted-foreground">Block repeat callers for</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={MAX_DUPLICATE_HOURS}
+                  value={dupHours}
+                  disabled={!dupLoaded || dupSaving}
+                  onChange={(e) => setDupHours(e.target.value)}
+                  onBlur={() => {
+                    // Only save when the number actually changed.
+                    const next = Math.min(MAX_DUPLICATE_HOURS, Math.max(1, Math.floor(Number(dupHours) || 24)));
+                    if (next !== dupSavedHours) void saveDuplicate(true, dupHours);
+                    else setDupHours(String(dupSavedHours));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  }}
+                  aria-label="Duplicate window in hours"
+                  className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <span className="text-muted-foreground">hours</span>
+              </div>
+            )}
+          </div>
+          <Switch
+            className="data-[state=checked]:bg-accent"
+            checked={dupBlock}
+            disabled={!dupLoaded || dupSaving}
+            onCheckedChange={(on) => void saveDuplicate(on, dupHours)}
+            aria-label="Block duplicate calls"
+          />
+        </div>
       </Card>
 
       {/* Destinations priority table */}
@@ -281,7 +380,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         type="number"
                         min={0}
                         max={100}
-                        className="h-6 w-16 text-[11px]"
+                        // Wide enough for "100", centred, without the browser's
+                        // up/down arrows (which took the space and cut it to "10").
+                        className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         value={weights[d.id] ?? 100}
                         onChange={(e) =>
                           setWeights((p) => ({ ...p, [d.id]: Number(e.target.value) }))
