@@ -74,8 +74,17 @@ export function pinErrorInfo(e: unknown): PinErrorInfo {
 
 export const securityService = {
   async status(): Promise<ReportsPinStatus> {
-    const s = toPinStatus(await http.get<unknown>(`${BASE}/status`));
-    if (!s) throw new Error("Unexpected reports PIN status response");
+    const raw = await http.get<unknown>(`${BASE}/status`);
+    const s = toPinStatus(raw);
+    if (!s) {
+      // Say what did arrive: a server that answers 200 with different field
+      // names looks exactly like one that has no PIN support at all.
+      const seen =
+        raw && typeof raw === "object" && !Array.isArray(raw)
+          ? `fields received: ${Object.keys(raw as object).slice(0, 12).join(", ") || "(none)"}`
+          : `received ${Array.isArray(raw) ? "a list" : typeof raw}`;
+      throw new Error(`The server answered, but not in the expected shape (needs a true/false "configured" field; ${seen}).`);
+    }
     return s;
   },
 

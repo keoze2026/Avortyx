@@ -356,6 +356,7 @@ type PinMode = "view" | "edit" | "remove";
 function ReportsPinCard() {
   const { t } = useTranslation();
   const load = useSecurityStore((s) => s.load);
+  const statusError = useSecurityStore((s) => s.statusError);
   const configured = useSecurityStore((s) => s.configured);
   const canManage = useSecurityStore((s) => s.canManage);
   const fetchStatus = useSecurityStore((s) => s.fetchStatus);
@@ -447,8 +448,18 @@ function ReportsPinCard() {
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
           </div>
         ) : load === "unavailable" ? (
-          <div className="rounded-lg border border-border bg-secondary/20 p-3 text-xs text-muted-foreground">
-            PIN protection isn't available on this server yet.
+          <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3 text-xs text-muted-foreground">
+            <div className="flex items-start justify-between gap-3">
+              <span>PIN protection isn&apos;t available from this server right now.</span>
+              <Button size="sm" variant="outline" onClick={() => void fetchStatus()}>
+                Check again
+              </Button>
+            </div>
+            {statusError && (
+              <p className="break-words rounded-md bg-background/60 p-2 font-mono text-[11px] leading-relaxed text-foreground/80">
+                {statusError}
+              </p>
+            )}
           </div>
         ) : !canManage ? (
           <div className="flex items-center gap-2.5 rounded-lg border border-border bg-secondary/20 p-3">

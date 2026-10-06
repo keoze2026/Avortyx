@@ -25,7 +25,7 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 
-import { friendlyErrorMessage } from "@/lib/api/errors";
+import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { onReportsLocked } from "@/lib/api/lock-events";
 import {
   pinErrorInfo,
@@ -45,6 +45,8 @@ export type VerifyResult =
 
 interface SecurityState {
   load: PinLoadState;
+  /** Why the last status check failed (shown when `load` is "unavailable"), else null. */
+  statusError: string | null;
   /** The workspace has a PIN. */
   configured: boolean;
   /** This login has entered it and is unlocked right now. */
@@ -75,6 +77,7 @@ interface SecurityState {
 
 const INITIAL = {
   load: "idle" as PinLoadState,
+  statusError: null as string | null,
   configured: false,
   unlocked: false,
   unlockExpiresAt: null as number | null,
@@ -88,6 +91,24 @@ const toMs = (iso: string | null): number | null => {
   const ms = Date.parse(iso);
   return Number.isFinite(ms) ? ms : null;
 };
+
+/** A plain-language reason a status check failed, including what the server said. */
+function describeStatusFailure(e: unknown): string {
+  if (e instanceof ApiError) {
+    const code = e.code ? ` (${e.code})` : "";
+    if (e.status === 0) return "The browser could not reach the server (network down, or the request was blocked - for example by CORS).";
+    if (e.status === 404) return `The server answered 404${code}: this address has no /api/security/reports-pin/status. The PIN service may not be deployed on the server this site talks to.`;
+    if (e.status === 401) return `The server answered 401${code}: not signed in.`;
+    if (e.status === 403) return `The server answered 403${code}: this login is not allowed to read the PIN status.`;
+    if (e.status >= 500) return `The server answered ${e.status}${code}: an error on the server.`;
+    return `The server answered ${e.status}${code}.`;
+  }
+  // The browser's own wording for "the request never completed".
+  if (e instanceof TypeError || (e instanceof Error && /failed to fetch|networkerror|load failed|network request failed/i.test(e.message))) {
+    return "The browser could not reach the server (network down, or the request was blocked - for example by CORS).";
+  }
+  return e instanceof Error && e.message ? e.message : "The status check failed for an unknown reason.";
+}
 
 /* One status check at a time: a refresh that triggers another refresh (for
  * example through markLocked) must never turn into a loop. */
@@ -130,11 +151,14 @@ export const useSecurityStore = create<SecurityState>()((set, get) => {
       if (get().load !== "ready") set({ load: "loading" });
       try {
         apply(await securityService.status());
-      } catch {
+        set({ statusError: null });
+      } catch (e) {
         // First answer failed: the server doesn't offer PIN protection (yet),
         // or can't be reached. The UI stays out of the way; the server still
         // refuses locked data on its own. A failed REFRESH keeps what we know.
-        if (get().load !== "ready") set({ load: "unavailable" });
+        // The reason is kept so the Settings card can show it instead of a
+        // generic sentence that fits every possible cause.
+        if (get().load !== "ready") set({ load: "unavailable", statusError: describeStatusFailure(e) });
       } finally {
         statusInFlight = false;
       }
@@ -200,6 +224,20 @@ export const useSecurityStore = create<SecurityState>()((set, get) => {
     },
   };
 });
+
+// If the first status check failed - typically the page was opened before the PIN
+// service was deployed - try again whenever the tab comes back into view, instead
+// of staying "unavailable" until the user happens to reload. At most every 15 s.
+if (typeof document !== "undefined") {
+  let lastRetry = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    const s = useSecurityStore.getState();
+    if (s.load !== "unavailable" || Date.now() - lastRetry < 15_000) return;
+    lastRetry = Date.now();
+    void s.fetchStatus();
+  });
+}
 
 /* Any request, anywhere, refused with `reports_pin_required` locks the UI. */
 onReportsLocked(() => useSecurityStore.getState().markLocked());
