@@ -344,6 +344,20 @@ export const campaignsService = {
     if (patch.duplicateCallBlock !== undefined) body.duplicateCallBlock = patch.duplicateCallBlock;
     if (patch.duplicateCallBlockHours !== undefined) body.duplicateCallBlockHours = patch.duplicateCallBlockHours;
     if (patch.advancedSettings !== undefined) body.advancedSettings = patch.advancedSettings;
+    // Auto schedule. This method copies field by field, so anything not named
+    // here is dropped before the request is built — the same silent discard
+    // that kept the campaign shields from ever saving.
+    const p = patch as Record<string, unknown>;
+    for (const k of [
+      "autoScheduleEnabled",
+      "playHour",
+      "playMinute",
+      "pauseHour",
+      "pauseMinute",
+      "autoScheduleTimezone",
+    ]) {
+      if (p[k] !== undefined) body[k] = p[k];
+    }
     const wire = await http.patch<CampaignWire>(`/api/campaigns/${id}`, { body });
     return detailWireToCampaign(wire);
   },

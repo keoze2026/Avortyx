@@ -11,6 +11,9 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { toast } from "sonner";
+
+import { campaignsService } from "@/lib/api/services/campaigns.service";
 
 export type ScheduleTarget = "campaign" | "buyer" | "destination";
 
@@ -52,16 +55,44 @@ export const useAutoScheduleStore = create<State>()(
 
       setPortalTimezone: (tz) => set({ portalTimezone: tz }),
 
-      setSchedule: (target, id, schedule) =>
-        set((s) => {
-          const key =
-            target === "campaign"
-              ? "campaignSchedules"
-              : target === "buyer"
-                ? "buyerSchedules"
-                : "destinationSchedules";
-          return { [key]: { ...s[key], [id]: schedule } } as Partial<State>;
-        }),
+      setSchedule: (target, id, schedule) => {
+        const key =
+          target === "campaign"
+            ? "campaignSchedules"
+            : target === "buyer"
+              ? "buyerSchedules"
+              : "destinationSchedules";
+        set((s) => ({ [key]: { ...s[key], [id]: schedule } }) as Partial<State>);
+
+        // Campaigns persist. The times used to live only here, so a campaign
+        // set to pause at 5pm took calls all night and the schedule existed
+        // only in the browser that set it. The backend now stores them and a
+        // Celery task plays and pauses the campaign on the minute.
+        //
+        // Buyers and destinations have no columns yet, so they stay local —
+        // and that is said out loud rather than left to look saved.
+        if (target !== "campaign") {
+          toast.warning("Saved on this device only", {
+            description:
+              "Schedules for buyers and destinations aren't stored on the server yet, so they won't run.",
+          });
+          return;
+        }
+        void campaignsService
+          .update(id, {
+            autoScheduleEnabled: schedule.enabled,
+            playHour: schedule.playHour,
+            playMinute: schedule.playMinute ?? 0,
+            pauseHour: schedule.pauseHour,
+            pauseMinute: schedule.pauseMinute ?? 0,
+            autoScheduleTimezone: get().portalTimezone,
+          } as Record<string, unknown>)
+          .catch((e: unknown) => {
+            toast.error(e instanceof Error ? e.message : "Could not save the schedule", {
+              description: "The change was not saved. Reload to see the current values.",
+            });
+          });
+      },
 
       getSchedule: (target, id) => {
         const s = get();
