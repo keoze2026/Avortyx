@@ -55,6 +55,8 @@ const STEP_KEYS: Record<Step, string> = {
 interface FormState {
   name: string;
   payout: number;
+  /** What the buyer pays per qualifying call - drives the Dashboard's Revenue. */
+  revenue: number;
   payoutModel: PayoutModel;
   qualifyDurationSec: number;
   dailyCap: number;
@@ -64,6 +66,7 @@ interface FormState {
 const EMPTY: FormState = {
   name: "",
   payout: 35,
+  revenue: 0,
   payoutModel: "per-qualified",
   qualifyDurationSec: 90,
   dailyCap: 200,
@@ -112,6 +115,7 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
       vertical: "Other",
       status: "draft",
       payout: form.payout,
+      revenue: form.revenue,
       payoutModel: form.payoutModel,
       qualifyDurationSec: form.qualifyDurationSec,
       dailyCap: form.dailyCap,
@@ -242,6 +246,28 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
                       </Select>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cb-revenue">Revenue per call (USD)</Label>
+                    <div className="relative">
+                      <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="cb-revenue"
+                        type="number"
+                        min={0}
+                        step="0.5"
+                        value={form.revenue}
+                        onChange={(e) => setForm((f) => ({ ...f, revenue: parseFloat(e.target.value) || 0 }))}
+                        className="pl-8 font-mono"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      What the buyer pays you for each qualifying call. The Dashboard&apos;s Revenue and Profit are
+                      built from this and the payout above.
+                      {form.revenue === 0 && (
+                        <span className="text-[color:var(--warning)]"> At 0, Revenue will show $0 for this campaign.</span>
+                      )}
+                    </p>
+                  </div>
                   {form.payoutModel === "per-qualified" && (
                     <div className="space-y-2">
                       <Label htmlFor="cb-qual">{t("trafficUI.campaigns.builder.labels.qualifyDuration")}</Label>
@@ -299,6 +325,7 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                       <Field label={t("trafficUI.campaigns.builder.labels.payoutModel")} value={form.payoutModel} />
                       <Field label={t("trafficUI.campaigns.builder.labels.payoutLabel")} value={`$${form.payout.toFixed(2)}`} />
+                      <Field label="Revenue per call" value={`$${form.revenue.toFixed(2)}`} />
                       <Field
                         label={t("trafficUI.campaigns.builder.labels.qualify")}
                         value={form.payoutModel === "per-qualified" ? `${form.qualifyDurationSec}s` : "—"}

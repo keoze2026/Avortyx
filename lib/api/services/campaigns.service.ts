@@ -234,6 +234,9 @@ function listWireToCampaign(w: CampaignListWire): Campaign {
     vertical: verticalFromWire(w.vertical),
     status: normalizeStatus(w.status),
     payout: toNum(w.payoutAmount),
+    // The server has always sent this; it was just never read, so nothing in
+    // the app could show or change a campaign's revenue per call.
+    revenue: toNum(w.revenueAmount),
     payoutModel: payoutModelFromWire(w.payoutModel),
     qualifyDurationSec: 0,
     dailyCap: w.cap?.maxCallsDaily ?? 0,
@@ -304,6 +307,7 @@ export const campaignsService = {
       vertical: VERTICAL_TO_WIRE[input.vertical] ?? "other",
       payoutModel: PAYOUT_MODEL_TO_WIRE[input.payoutModel],
       payoutAmount: String(input.payout ?? 0),
+      revenueAmount: String(input.revenue ?? 0),
       minCallDuration: input.qualifyDurationSec || 0,
       cap: {
         maxCallsDaily: input.dailyCap || 0,
@@ -348,6 +352,7 @@ export const campaignsService = {
       body.payoutModel = PAYOUT_MODEL_TO_WIRE[patch.payoutModel];
     }
     if (patch.payout !== undefined) body.payoutAmount = String(patch.payout);
+    if (patch.revenue !== undefined) body.revenueAmount = String(patch.revenue);
     if (patch.qualifyDurationSec !== undefined) body.minCallDuration = patch.qualifyDurationSec;
     if (patch.dailyCap !== undefined || patch.monthlyCap !== undefined) {
       body.cap = {

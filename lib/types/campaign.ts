@@ -23,6 +23,13 @@ export interface Campaign {
   status: CampaignStatus;
 
   payout: number;
+  /**
+   * What the BUYER pays per qualifying call (backend `revenue_amount`). The
+   * Dashboard's Revenue is this price times the campaign's converted calls, and
+   * Profit is Revenue minus Payout - so while this is 0, Revenue stays $0 and
+   * Profit goes negative. Optional: only set where the server's value was read.
+   */
+  revenue?: number;
   payoutModel: PayoutModel;
   /** Minimum call duration in seconds for a call to qualify (per-qualified payouts only). */
   qualifyDurationSec: number;

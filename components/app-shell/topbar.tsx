@@ -12,7 +12,10 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
+import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
+import { startLiveCountSync } from "@/lib/live-count";
+import { prefetchDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 const KPI_POLL_MS = 15_000;
 
@@ -22,10 +25,12 @@ export function Topbar() {
   // hydrated on app mount by <StoreHydrator />. Zero values render until the
   // first response lands; that's accurate, not a degraded state.
   const kpis = useCallsStore((s) => s.kpis);
-  // liveCount is written by useLiveSocket on every WebSocket event, so it
-  // tracks in-flight calls in real time. Falls back to kpis.liveCalls (the
-  // REST snapshot) until the user opens /live and the socket connects.
+  // liveCount is kept fresh by lib/live-count.ts (every 10 s from the server,
+  // and instantly on the Live Monitor). It falls back to kpis.liveCalls only
+  // while it is unknown - before the first answer, or if the server stops
+  // answering - never because it happens to read 0.
   const liveCount = useCallsStore((s) => s.liveCount);
+  const liveCountAt = useCallsStore((s) => s.liveCountAt);
 
   // <StoreHydrator /> fetches kpis exactly once, on app mount — fine for
   // callsToday, but it left "Live" frozen at whatever it was at login on
@@ -40,6 +45,17 @@ export function Topbar() {
     }, KPI_POLL_MS);
     return () => window.clearInterval(id);
   }, []);
+  // Keep the header's Live figure right on every page.
+  useEffect(() => startLiveCountSync(), []);
+
+  // Start loading today's Dashboard figures as soon as the app opens (the
+  // topbar is the first thing mounted after sign-in), so the Dashboard is
+  // ready - or nearly - when the user gets there instead of starting then.
+  const reportTimezone = useUIStore((s) => s.reportTimezone);
+  useEffect(() => {
+    prefetchDashboardSnapshot(reportTimezone);
+  }, [reportTimezone]);
+
   // Wallet balance: the dashboard KPI payload polled above carries it
   // (`balance` on /api/analytics/dashboard), so it's the freshest figure and
   // needs no extra request. The onboarding store's copy (from
@@ -47,7 +63,7 @@ export function Topbar() {
   // the first poll lands. Renders 0 until either response arrives.
   const accountBalance = useOnboardingStore((s) => s.balance);
   const balance = kpis?.balance ?? accountBalance;
-  const liveCalls = liveCount > 0 ? liveCount : (kpis?.liveCalls ?? 0);
+  const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? 0);
   const totalCalls = kpis?.callsToday ?? 0;
 
   return (

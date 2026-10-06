@@ -17,6 +17,7 @@ import { AccessTab } from "./access-tab";
 import { AdvancedSettingsList } from "./advanced-settings-cards";
 import { EnrichmentTab } from "./enrichment-tab";
 import { ForwardCallsSection } from "./forward-calls-section";
+import { PricingSection } from "./pricing-section";
 import { RtbTab } from "./rtb-tab";
 import { TrackingNumbersSection } from "./tracking-numbers-section";
 import { AutoScheduleCard } from "@/components/shared/auto-schedule-card";
@@ -72,6 +73,9 @@ export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
 
       {tab === "general" && (
         <div className="space-y-6">
+          {/* Pricing — revenue and payout per call; what the Dashboard adds up */}
+          <PricingSection campaignId={campaign.id} />
+
           {/* Auto schedule — daily play/pause based on portal timezone */}
           <AutoScheduleCard
             target="campaign"

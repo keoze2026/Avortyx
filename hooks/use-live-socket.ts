@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import { callsService } from "@/lib/api/services/calls.service";
-import { useCallsStore } from "@/lib/store/calls-store";
+import { refreshLiveCountNow } from "@/lib/live-count";
 import {
   createCallSocket,
   type CallEventType,
@@ -270,12 +270,15 @@ export function useLiveSocket({ paused }: UseLiveSocketOptions): UseLiveSocketRe
     };
   }, []);
 
-  // Keep the topbar LIVE badge in sync — write inFlight.length to the global
-  // calls store so the topbar doesn't need its own socket connection.
-  const setLiveCount = useCallsStore((s) => s.setLiveCount);
+  // The topbar LIVE figure is no longer written from here. This list is capped
+  // at 24 cards and holds whatever the socket last said (a missed "call ended"
+  // event leaves a ghost), so its length was not the real live count and was
+  // left behind in the store after leaving this page. Instead, whenever a call
+  // starts or ends here, ask the server for the real number straight away
+  // (lib/live-count.ts keeps it fresh everywhere else).
   useEffect(() => {
-    setLiveCount(state.inFlight.length);
-  }, [state.inFlight.length, setLiveCount]);
+    refreshLiveCountNow();
+  }, [state.inFlight.length, state.totals.completed, state.totals.missed]);
 
   const hangup = useCallback(async (id: string) => {
     const { patch, message } = await callsService.hangup(id);

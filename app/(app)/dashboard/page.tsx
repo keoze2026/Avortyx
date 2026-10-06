@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
@@ -21,14 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { analyticsService, type DashboardSnapshot } from "@/lib/api/services/analytics.service";
+import type { DashboardSnapshot } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
+import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
+import { getCachedSnapshot, loadSnapshotShared, snapshotKey } from "@/lib/dashboard-snapshot";
 
 const NO_CALLS: Call[] = [];
 
@@ -36,7 +40,19 @@ const ALL_DEST = "all";
 
 /** Re-pull the selected day while it's today, so live traffic keeps landing
  *  on the dashboard without a reload. Historical days don't change. */
-const TODAY_REFRESH_MS = 30_000;
+const TODAY_REFRESH_MS = 15_000;
+/** Also re-pull when the live-call count changes (a call started or ended) -
+ *  but never more often than this. */
+const LIVE_CHANGE_MIN_GAP_MS = 8_000;
+/** Coming back to the tab re-pulls if the figures are older than this. */
+const RETURN_REFRESH_MIN_GAP_MS = 10_000;
+
+/** useLayoutEffect on the client (paints cached figures before the first frame),
+ *  useEffect on the server (where layout effects only warn). */
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+const countsOf = (snap: DashboardSnapshot) =>
+  new Map(snap.destinations.map((d) => [toE164(d.tfn), d.dailyCalls] as [string, number]));
 
 export default function DashboardPage() {
   const { t } = useTranslation();
@@ -82,45 +98,91 @@ export default function DashboardPage() {
   // filtered snapshot only carries the chosen destination.
   const [allDestCounts, setAllDestCounts] = useState<Map<string, number> | null>(null);
 
+  const destination = allSelected ? undefined : destinationTfn;
+  const userId = useAuthStore((s) => s.user?.id);
+  const viewKey = snapshotKey({ dateFrom: fromKey, dateTo: toKey, timeZone, destination });
+
+  // A new date range or time zone makes the per-destination counts out of date.
+  // Declared BEFORE the cache effect below so the cache can refill them.
+  useIsoLayoutEffect(() => {
+    setAllDestCounts(null);
+  }, [fromKey, toKey, timeZone]);
+
+  // Show the last snapshot of this view in the same frame the page appears (or
+  // the view changes) - the refresh below then happens behind it. Without this
+  // every visit and every date / destination change started from empty panels.
+  useIsoLayoutEffect(() => {
+    const cached = getCachedSnapshot(viewKey);
+    if (!cached) return;
+    setSnapshot(cached);
+    if (allSelected) setAllDestCounts(countsOf(cached));
+  }, [viewKey, userId, allSelected]);
+
+  const lastLoadAt = useRef(0);
+  const refreshRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     let cancelled = false;
-    setSnapshot(null);
-    const load = async (showSpinner: boolean) => {
-      if (showSpinner) setLoading(true);
+    const view = { dateFrom: fromKey, dateTo: toKey, timeZone, destination };
+    // Only dim the panels when there is nothing of THIS view to show yet.
+    const hadCache = !!getCachedSnapshot(snapshotKey(view));
+
+    const load = async (viewChanged: boolean) => {
+      if (viewChanged && !hadCache) setLoading(true);
       try {
-        const snap = await analyticsService.snapshot({
-          dateFrom: fromKey,
-          dateTo: toKey,
-          timeZone,
-          granularity: "hour",
-          destination: allSelected ? undefined : destinationTfn,
-        });
+        // Shared with the prefetch started at sign-in: one request, not two.
+        const snap = await loadSnapshotShared(view);
         if (cancelled) return;
+        lastLoadAt.current = Date.now();
         setSnapshot(snap);
-        if (allSelected) {
-          setAllDestCounts(new Map(snap.destinations.map((d) => [toE164(d.tfn), d.dailyCalls])));
-        }
+        if (allSelected) setAllDestCounts(countsOf(snap));
       } catch (e) {
         if (cancelled) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load the dashboard for this date range"));
+        // Failed after the user changed the view: don't leave the previous
+        // view's numbers sitting under the new label. A failed background
+        // refresh keeps what is on screen.
+        if (viewChanged && !hadCache) setSnapshot(null);
+        toast.error(friendlyErrorMessage(e, "Couldn't load the dashboard for this date range"), {
+          id: "dashboard-load-error",
+        });
       } finally {
-        if (!cancelled && showSpinner) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
+
     void load(true);
-    if (!includesToday) return () => { cancelled = true; };
-    const id = window.setInterval(() => {
+    if (!includesToday) {
+      refreshRef.current = null;
+      return () => {
+        cancelled = true;
+      };
+    }
+    refreshRef.current = () => {
       if (document.visibilityState === "visible") void load(false);
-    }, TODAY_REFRESH_MS);
+    };
+    const id = window.setInterval(() => refreshRef.current?.(), TODAY_REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastLoadAt.current > RETURN_REFRESH_MIN_GAP_MS) {
+        refreshRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      refreshRef.current = null;
       window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [fromKey, toKey, includesToday, timeZone, allSelected, destinationTfn]);
 
+  // A call started or ended (the live count moved): pull fresh figures now
+  // instead of waiting for the next timer tick.
+  const liveCount = useCallsStore((s) => s.liveCount);
   useEffect(() => {
-    setAllDestCounts(null);
-  }, [fromKey, toKey, timeZone]);
+    if (!includesToday || lastLoadAt.current === 0) return;
+    if (Date.now() - lastLoadAt.current < LIVE_CHANGE_MIN_GAP_MS) return;
+    refreshRef.current?.();
+  }, [liveCount, includesToday]);
 
   // The header shows today's account-wide figures on every page. The
   // snapshot carries exactly that when the view is today with all
@@ -181,6 +243,7 @@ export default function DashboardPage() {
             {updatedLabel && (
               <span className="whitespace-nowrap text-[11px] text-muted-foreground tabular-nums">
                 {updatedPrefix} {updatedLabel}
+                {loading && " · Updating…"}
               </span>
             )}
             <TimezonePicker />
@@ -230,6 +293,17 @@ export default function DashboardPage() {
         </div>
         <div className="flex h-full min-w-0 flex-col gap-4">
           <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
+          {/* Revenue is calculated from each campaign's own "revenue per call".
+              $0 revenue next to a payout means that price was never entered. */}
+          {snapshot && summary.revenue === 0 && summary.payout > 0 && (
+            <p className="rounded-md border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              Revenue shows $0 because the campaigns have no revenue per call set. Open{" "}
+              <Link href={ROUTES.campaigns} className="font-medium text-accent underline-offset-2 hover:underline">
+                Campaigns
+              </Link>
+              , choose a campaign and fill in <span className="font-medium">Pricing</span>.
+            </p>
+          )}
           <div className="min-h-0 flex-1">
             <VerticalDonut totals={donutTotals} />
           </div>

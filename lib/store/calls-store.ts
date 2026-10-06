@@ -29,9 +29,14 @@ interface CallsState {
   kpis: DashboardKpis | null;
   /** Cached time-series for the dashboard hourly/day chart. */
   timeSeries: TimeSeriesPoint[];
-  /** Real-time in-flight call count, written by useLiveSocket on every
-   *  WebSocket event. Topbar reads this instead of the stale kpis.liveCalls. */
+  /** In-flight call count for the header, kept fresh by lib/live-count.ts (one
+   *  writer for the whole app). The topbar reads this in preference to the
+   *  slower kpis.liveCalls - but only while `liveCountAt` is set. */
   liveCount: number;
+  /** When `liveCount` was last confirmed by the server (ms since epoch), or
+   *  null when it is unknown - for example before the first answer, or after
+   *  the server stopped answering. Null makes the header fall back to kpis. */
+  liveCountAt: number | null;
   /** True while the Dashboard supplies the header figures from its snapshot,
    *  so the topbar skips its own poll and both read the same moment. */
   snapshotDrivesKpis: boolean;
@@ -45,6 +50,8 @@ interface CallsState {
   fetchTimeSeries: (query?: { dateFrom?: string; dateTo?: string; granularity?: "hour" | "day" | "week" | "month" }) => Promise<void>;
   fetchPage: (query: CallLogQuery) => Promise<CallLogPage>;
   setLiveCount: (n: number) => void;
+  /** Forget the live count (it can no longer be trusted). */
+  clearLiveCount: () => void;
   setKpis: (kpis: DashboardKpis) => void;
   setSnapshotDrivesKpis: (on: boolean) => void;
 }
@@ -56,6 +63,7 @@ export const useCallsStore = create<CallsState>()((set) => ({
   kpis: null,
   timeSeries: [],
   liveCount: 0,
+  liveCountAt: null,
   snapshotDrivesKpis: false,
   loading: false,
   error: null,
@@ -100,7 +108,9 @@ export const useCallsStore = create<CallsState>()((set) => ({
   // Pass-through to the analytics service; callers manage their own paging UI.
   fetchPage: (query) => analyticsService.calls(query),
 
-  setLiveCount: (n) => set({ liveCount: n }),
+  setLiveCount: (n) => set({ liveCount: n, liveCountAt: Date.now() }),
+
+  clearLiveCount: () => set({ liveCountAt: null }),
 
   setKpis: (kpis) => {
     set({ kpis });
