@@ -22,6 +22,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { formatCompact } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
+import { useUIStore } from "@/lib/store/ui-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 
 type StatusFilter = "all" | "active" | "disabled";
@@ -37,6 +38,7 @@ export default function DestinationsPage() {
   const remove = useDestinationsStore((s) => s.remove);
   const update = useDestinationsStore((s) => s.update);
   const buyers = useBuyersStore((s) => s.buyers);
+  const timeZone = useUIStore((s) => s.reportTimezone);
 
   // Hydrate on first mount. StoreHydrator may have already fired these once,
   // but it's idempotent — calling them again refreshes after the user has
@@ -45,6 +47,16 @@ export default function DestinationsPage() {
     if (!hydrated) void fetchDestinations();
     void fetchStats();
   }, [hydrated, fetchDestinations, fetchStats]);
+
+  // Daily and Monthly are counted in the portal's time zone: re-load the
+  // list and the header numbers when the user changes it.
+  const [loadedZone, setLoadedZone] = useState(timeZone);
+  useEffect(() => {
+    if (timeZone === loadedZone) return;
+    setLoadedZone(timeZone);
+    void fetchDestinations();
+    void fetchStats();
+  }, [timeZone, loadedZone, fetchDestinations, fetchStats]);
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");

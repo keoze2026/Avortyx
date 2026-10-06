@@ -94,8 +94,8 @@ interface ForwardCallsSectionProps {
   campaignId: string;
 }
 
-/** Longest duplicate window offered: one year, in hours. */
-const MAX_DUPLICATE_HOURS = 8760;
+/** Longest duplicate window offered: five years, in hours (5 × 8,760). */
+const MAX_DUPLICATE_HOURS = 43800;
 
 export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   const { t } = useTranslation();
@@ -305,7 +305,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                   aria-label="Duplicate window in hours"
                   className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="text-muted-foreground">hours</span>
+                <span className="text-muted-foreground">hours (up to 43,800 = 5 years)</span>
               </div>
             )}
           </div>

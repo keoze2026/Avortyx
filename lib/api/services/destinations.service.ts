@@ -42,6 +42,9 @@ export type DestinationListQuery = {
   search?: string;
   startDate?: string;
   endDate?: string;
+  /** IANA zone (e.g. "America/New_York") the Daily and Monthly counters are
+   *  counted in. Without it the backend uses UTC midnight. */
+  timezone?: string;
 };
 
 /* ─── Wire shapes ─────────────────────────────────────────────────────── */
@@ -303,8 +306,11 @@ export const destinationsService = {
     );
   },
 
-  async stats(): Promise<DestinationStats> {
-    const w = await http.get<DestinationStatsWire>("/api/destinations/stats/");
+  /** Header roll-ups. `timezone` (IANA) sets where the day starts. */
+  async stats(timezone?: string): Promise<DestinationStats> {
+    const w = await http.get<DestinationStatsWire>("/api/destinations/stats/", {
+      query: { timezone },
+    });
     return {
       activeLive: w.activeLive ?? 0,
       totalLive: w.totalLive ?? 0,

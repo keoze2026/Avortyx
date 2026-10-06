@@ -16,6 +16,12 @@ import {
   type DestinationStats,
 } from "@/lib/api/services/destinations.service";
 import type { Destination } from "@/lib/types";
+import { useUIStore } from "@/lib/store/ui-store";
+
+/** The time zone selected in the portal (same one Reports and the Dashboard
+ *  use). Sent with the destinations list and stats so Daily and Monthly
+ *  reset at the user's midnight, not UTC midnight. */
+const portalTimezone = () => useUIStore.getState().reportTimezone;
 
 interface DestinationsState {
   destinations: Destination[];
@@ -54,7 +60,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       // 500 page size matches our other "fetch the world" calls (numbers,
       // blocked-numbers). For tenants with > 500 destinations we'll need to
       // teach the page to ask the backend for filters; not yet a problem.
-      const page = await destinationsService.list({ page: 1, pageSize: 500 });
+      const page = await destinationsService.list({ page: 1, pageSize: 500, timezone: portalTimezone() });
       set({ destinations: page.items, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e), hydrated: true });
@@ -64,7 +70,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
   fetchStats: async () => {
     set({ statsLoading: true });
     try {
-      const stats = await destinationsService.stats();
+      const stats = await destinationsService.stats(portalTimezone());
       set({ stats, statsLoading: false });
     } catch {
       // Stats are nice-to-have; fall back to client-side computation in the
