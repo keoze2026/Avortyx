@@ -17,6 +17,10 @@
  *     response carries `X-Robots-Tag: noindex, nofollow` so the portal
  *     hostname never appears in a search index.
  *
+ * The public site has three pages: "/", "/careers" and "/request-access" (the
+ * form people fill in to ask for an account). Nothing else is reachable there:
+ * no sign-in, no sign-up, no dashboard.
+ *
  * Next.js API routes (/api/*) and static assets are served on both.
  */
 
@@ -28,7 +32,7 @@ const PORTAL_HOSTS = (process.env.PORTAL_HOSTS ?? "")
   .filter(Boolean);
 
 /** Paths that belong to the public site. Everything else is the portal. */
-const MARKETING_PATHS = new Set(["/", "/careers"]);
+const MARKETING_PATHS = new Set(["/", "/careers", "/request-access"]);
 
 function hostOf(req: NextRequest): string {
   // Behind a proxy / CDN the original host arrives in x-forwarded-host.
@@ -39,7 +43,9 @@ function hostOf(req: NextRequest): string {
 export function proxy(req: NextRequest) {
   if (PORTAL_HOSTS.length === 0) return NextResponse.next();
 
-  const { pathname } = req.nextUrl;
+  // "/careers/" and "/careers" are the same page.
+  const rawPath = req.nextUrl.pathname;
+  const pathname = rawPath.length > 1 ? rawPath.replace(/\/+$/, "") || "/" : rawPath;
   const onPortalHost = PORTAL_HOSTS.includes(hostOf(req));
   const isMarketing = MARKETING_PATHS.has(pathname);
 

@@ -125,11 +125,12 @@ export function rangeForPreset(id: DateRangePresetId, today: Date): DateRange | 
 }
 
 /**
- * A preset's range when nothing after `latest` may be picked (a page that only
- * covers completed days). "Today" has no range then; "Last 7 / 30 days" end on
- * `latest` instead of today; the others are cut off at `latest`, and a preset
- * that would start after `latest` (e.g. "This week" on a Monday) has none.
- * Without a `latest` this is exactly `rangeForPreset`.
+ * A preset's range when nothing after `latest` may be picked. If `latest` is
+ * today (or later) every preset is exactly as normal. If `latest` is earlier
+ * (a page that only covers completed days): "Today" has no range; "Last 7 / 30
+ * days" end on `latest` instead of today; the others are cut off at `latest`,
+ * and a preset that would start after `latest` (e.g. "This week" on a Monday)
+ * has none. Without a `latest` this is exactly `rangeForPreset`.
  */
 export function presetRange(
   id: DateRangePresetId,
@@ -139,6 +140,8 @@ export function presetRange(
   const r = rangeForPreset(id, today);
   if (!latest || !r?.from || !r.to) return r;
   const limit = startOfDay(latest).getTime();
+  // Already inside the limit (for example when the limit IS today): nothing to change.
+  if (r.to.getTime() <= limit) return r;
   if (id === "today") return undefined;
   if (id === "last7" || id === "last30") {
     const span = id === "last7" ? 6 : 29;

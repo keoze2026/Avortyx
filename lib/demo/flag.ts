@@ -34,6 +34,8 @@ const PRODUCTION_HOSTNAMES = new Set([
   "www.avortyx.com",
   "avortyx.io",
   "www.avortyx.io",
+  // The customer portal's own address - a demo build must never run here.
+  "app.avortyx.io",
 ]);
 
 export function isProductionHostname(): boolean {

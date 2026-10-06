@@ -29,7 +29,7 @@ Today the PIN exists only in the user's browser (localStorage, plain digits). It
 | 5 | Once a PIN exists, access is locked for **buyers and publishers as well**, not just the main account. |
 | 6 | Anything configured under the main account (including access given to publishers, buyers or employees) applies everywhere. |
 
-Rules 2 and 3 are handled in the frontend (Reports now covers completed days only, and the live column/chip are gone from it). **Rules 1, 4, 5 and 6 are yours.**
+Rules 2 and 3 are handled in the frontend (Reports opens on **today**, which never needs the PIN; any range that starts **yesterday or earlier** does; and the live column/chip are gone from Reports). **Rules 1, 4, 5 and 6 are yours.**
 
 ---
 
@@ -276,7 +276,7 @@ Ask the client which they want; A needs no code, B needs one extra check in the 
 ## 9. How the frontend behaves (so you can rely on it)
 
 * On sign-in it calls `GET …/status` for **every role** and keeps nothing in the browser. The old browser-stored PIN is deleted on first load.
-* Reports (now yesterday-and-earlier only) sends **no** report requests while locked, and drops what it holds the moment it locks.
+* Reports opens on today, which needs no PIN. For any range starting yesterday or earlier it sends **no** report requests while locked, and drops what it holds the moment it locks.
 * Any `423` + `reports_pin_required` from any endpoint locks the app. The PIN endpoints themselves are exempt from that rule so a `pin_locked_out` 423 is not mistaken for it.
 * If `…/status` is missing (404) the frontend treats PIN protection as "not available" and stays out of the way — so you can deploy in any order.
 * Request shapes it sends (verified by test):

@@ -18,7 +18,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { accessRequestsService } from "@/lib/api/services/access-requests.service";
 import { ApiError } from "@/lib/api/http";
 
-export function SignupForm() {
+/** A referral code is only ever letters, digits, "-" and "_" - anything else is dropped. */
+export function cleanReferralCode(raw: string | null | undefined): string | null {
+  const code = (raw ?? "").trim();
+  return /^[A-Za-z0-9_-]{1,40}$/.test(code) ? code : null;
+}
+
+/**
+ * The access-request API has no referral field, so a referral code (from
+ * /request-access?ref=CODE, the page referral links land on) is added to the
+ * text the reviewer reads when they approve the request.
+ */
+export function withReferral(useCase: string, referralCode?: string | null): string {
+  const code = cleanReferralCode(referralCode);
+  if (!code) return useCase;
+  const note = `[Referral code: ${code}]`;
+  return useCase ? `${useCase}\n\n${note}` : note;
+}
+
+interface SignupFormProps {
+  /** Referral code from the page's ?ref= parameter, if any. */
+  referralCode?: string | null;
+}
+
+export function SignupForm({ referralCode }: SignupFormProps = {}) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [organization, setOrganization] = useState("");
@@ -44,7 +67,7 @@ export function SignupForm() {
         company: organization.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        useCase: useCase.trim(),
+        useCase: withReferral(useCase.trim(), referralCode),
       });
       setSubmitted(true);
       toast.success("Request received — we'll be in touch shortly.");
