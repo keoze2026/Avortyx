@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, CirclePlus, Pencil, Trash2 } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -30,6 +30,8 @@ interface DestinationsTableProps {
   onToggle?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  /** Called when the + (clone) icon is clicked on a row. */
+  onClone?: (id: string) => void;
   onUpdateCap?: (id: string, field: CapField, value: number) => void;
   /** Optional selection lifted to the parent — when provided, renders a
    *  checkbox column. Without it, no checkboxes are shown. */
@@ -89,6 +91,7 @@ export function DestinationsTable({
   onToggle,
   onEdit,
   onDelete,
+  onClone,
   onUpdateCap,
   selectedIds,
   onSelectionChange,
@@ -382,6 +385,13 @@ export function DestinationsTable({
                           ).replace("{name}", destination.name)}
                           onClick={() => onEdit?.(destination.id)}
                         />
+                        {onClone ? (
+                          <RowActionIcon
+                            icon={CirclePlus}
+                            label={`Clone ${destination.name}`}
+                            onClick={() => onClone(destination.id)}
+                          />
+                        ) : null}
                         <RowActionIcon
                           icon={Trash2}
                           label={t(

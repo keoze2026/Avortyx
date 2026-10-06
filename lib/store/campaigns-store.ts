@@ -9,6 +9,7 @@ import { create } from "zustand";
 
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import type { Campaign, CampaignStatus } from "@/lib/types";
+import { cloneName } from "../api/services/clone";
 
 interface CampaignsState {
   campaigns: Campaign[];
@@ -24,6 +25,13 @@ interface CampaignsState {
   setStatus: (id: string, status: CampaignStatus) => Promise<void>;
   /** Set the concurrent-call (CC) limit; 0 = unlimited. Other caps are kept. */
   setConcurrency: (id: string, maxConcurrency: number) => Promise<void>;
+  /**
+   * Create a copy of a campaign named "<name> (Clone)". Copies everything the
+   * campaign itself stores (payout, caps, schedule, call audio, duplicate
+   * blocking and all advanced settings). Tracking numbers are NOT copied.
+   * The copy starts paused. Resolves with the new campaign.
+   */
+  clone: (id: string) => Promise<Campaign>;
 }
 
 export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
@@ -91,6 +99,44 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
       });
     } catch (e) {
       set({ campaigns: prev });
+      throw e;
+    }
+  },
+
+  clone: async (id) => {
+    // Read the FULL campaign from the server. The list the table is built
+    // from leaves out the advanced settings, call audio and schedule.
+    const source = await campaignsService.get(id);
+
+    // Always created paused (see campaignsService.create).
+    const created = await campaignsService.create({
+      ...source,
+      name: cloneName(source.name),
+    } as Omit<Campaign, "id" | "createdAt">);
+
+    try {
+      // create() cannot carry the settings below, so copy them across now.
+      await campaignsService.saveCaps(created.id, {
+        maxConcurrency: source.maxConcurrency ?? 0,
+        dailyCap: source.dailyCap ?? 0,
+        monthlyCap: source.monthlyCap ?? 0,
+        globalCap: source.globalCap ?? 0,
+      });
+      const full = await campaignsService.update(created.id, {
+        advancedSettings: source.advancedSettings,
+        recordingEnabled: source.recordingEnabled,
+        greetingEnabled: source.greetingEnabled,
+        greetingMessage: source.greetingMessage,
+        whisperEnabled: source.whisperEnabled,
+        whisperMessage: source.whisperMessage,
+        duplicateCallBlock: source.duplicateCallBlock,
+        duplicateCallBlockHours: source.duplicateCallBlockHours,
+      });
+      set((s) => ({ campaigns: [full, ...s.campaigns] }));
+      return full;
+    } catch (e) {
+      // Don't leave a half-copied campaign behind.
+      await campaignsService.remove(created.id).catch(() => undefined);
       throw e;
     }
   },

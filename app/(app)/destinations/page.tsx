@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { DestinationBuilder } from "@/components/destinations/destination-builder";
 import { DestinationsTable } from "@/components/destinations/destinations-table";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
+import { CloneDialog } from "@/components/shared/clone-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
@@ -37,8 +38,13 @@ export default function DestinationsPage() {
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
   const remove = useDestinationsStore((s) => s.remove);
   const update = useDestinationsStore((s) => s.update);
+  const cloneDestination = useDestinationsStore((s) => s.clone);
   const buyers = useBuyersStore((s) => s.buyers);
   const timeZone = useUIStore((s) => s.reportTimezone);
+
+  // Clone confirmation (opened from the + icon on a row).
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneTarget, setCloneTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Hydrate on first mount. StoreHydrator may have already fired these once,
   // but it's idempotent — calling them again refreshes after the user has
@@ -148,6 +154,26 @@ export default function DestinationsPage() {
       toast.success(t("networkUI.destinations.toast.removed").replace("{name}", d.name));
     } catch (e) {
       toast.error(friendlyErrorMessage(e, "Couldn't delete destination."));
+    }
+  };
+
+  const handleClone = (id: string) => {
+    const d = destinations.find((x) => x.id === id);
+    if (!d) return;
+    setCloneTarget({ id: d.id, name: d.name });
+    setCloneOpen(true);
+  };
+
+  const handleConfirmClone = async () => {
+    if (!cloneTarget) return;
+    try {
+      const copy = await cloneDestination(cloneTarget.id);
+      toast.success(`Cloned as "${copy.name}"`, {
+        description: "It is switched off. Change its number, or switch the original off, before turning it on.",
+      });
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, "Couldn't clone the destination."));
+      throw e; // keeps the dialog open so the user can try again
     }
   };
 
@@ -304,6 +330,7 @@ export default function DestinationsPage() {
         onToggle={handleToggle}
         onEdit={openEdit}
         onDelete={handleDelete}
+        onClone={handleClone}
         onUpdateCap={handleUpdateCap}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -323,6 +350,15 @@ export default function DestinationsPage() {
           if (!v) setEditId(undefined);
         }}
         editId={editId}
+      />
+
+      <CloneDialog
+        open={cloneOpen}
+        onOpenChange={setCloneOpen}
+        entity="destination"
+        sourceName={cloneTarget?.name ?? ""}
+        note="The copy starts switched off, because two live destinations can't share a number and a buyer can only have one live destination. Change its number, or switch the original off, before turning it on."
+        onConfirm={handleConfirmClone}
       />
     </>
   );

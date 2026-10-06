@@ -1026,7 +1026,7 @@ export const en = {
         pauseCampaign: "Pause campaign",
         activateCampaign: "Activate campaign",
         edit: "Edit",
-        duplicate: "Duplicate",
+        duplicate: "Clone",
         revert: "Revert",
         archive: "Archive",
         ready: "Ready",

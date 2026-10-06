@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/services/destinations.service";
 import type { Destination } from "@/lib/types";
 import { useUIStore } from "@/lib/store/ui-store";
+import { cloneName } from "../api/services/clone";
 
 /** The time zone selected in the portal (same one Reports and the Dashboard
  *  use). Sent with the destinations list and stats so Daily and Monthly
@@ -39,6 +40,13 @@ interface DestinationsState {
   update: (id: string, patch: Partial<Destination>) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setEnabled: (id: string, enabled: boolean) => Promise<void>;
+  /**
+   * Create a copy of a destination named "<name> (Clone)" with the same buyer,
+   * number, caps, ring time, filters, business hours and time zone. The copy
+   * starts switched OFF: the backend refuses two live destinations on one
+   * number and more than one live destination per buyer.
+   */
+  clone: (id: string) => Promise<Destination>;
 }
 
 function messageFromError(e: unknown): string {
@@ -87,6 +95,17 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     // Header stats need a refresh — a new destination changes CC + TFN counts.
     void get().fetchStats();
     return created;
+  },
+
+  clone: async (id) => {
+    // Read the full destination from the server rather than trusting the
+    // (possibly aggregate-shaped) copy in the list.
+    const source = await destinationsService.get(id);
+    return get().add({
+      ...source,
+      name: cloneName(source.name),
+      enabled: false,
+    } as Omit<Destination, "id">);
   },
 
   update: async (id, patch) => {

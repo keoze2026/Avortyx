@@ -373,7 +373,13 @@ function code(raw: string | undefined): string {
  * five-way split of a day's calls that had only ever come from two countries. */
 
 /** Translate a (call, group) pair to a {key, label} bucket — or null to skip. */
-function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string; label: string } | null {
+function deriveGroup(
+  c: Call,
+  group: GroupKey,
+  timeZone: string,
+  /** E.164 number -> the name the user gave that destination. */
+  destinationNames?: ReadonlyMap<string, string>,
+): { key: string; label: string } | null {
   switch (group) {
     case "campaign":
       return { key: c.campaignId, label: c.campaignName };
@@ -392,7 +398,9 @@ function deriveGroup(c: Call, group: GroupKey, timeZone: string): { key: string;
       const raw = c.destinationNumber?.trim();
       if (!raw) return labelOf("Not forwarded");
       const v = toE164(raw);
-      return { key: v, label: v };
+      // The key stays the number (the Live column matches on it); the label is
+      // the name the user set on the destination, or the number if it has none.
+      return { key: v, label: destinationNames?.get(v) ?? v };
     }
     case "numberPool": {
       const digits = c.destinationNumber.replace(/\D/g, "");
@@ -550,10 +558,15 @@ function labelOf(value: string) {
   return { key: value, label: value };
 }
 
-function groupCalls(calls: Call[], group: GroupKey, timeZone: string): SummaryRow[] {
+function groupCalls(
+  calls: Call[],
+  group: GroupKey,
+  timeZone: string,
+  destinationNames?: ReadonlyMap<string, string>,
+): SummaryRow[] {
   const m = new Map<string, SummaryRow>();
   for (const c of calls) {
-    const bucket = deriveGroup(c, group, timeZone);
+    const bucket = deriveGroup(c, group, timeZone, destinationNames);
     if (!bucket || !bucket.key) continue;
     const { key, label } = bucket;
 
@@ -904,11 +917,23 @@ export function CallSummaryTable({
 
   const timeZone = useUIStore((s) => s.reportTimezone);
 
+  // number -> destination name, so the Destination tab shows the name the user
+  // gave each destination instead of its phone number. A disabled copy can share
+  // a number with a live destination, so live ones are written last and win.
+  const destinationNames = React.useMemo(() => {
+    const names = new Map<string, string>();
+    for (const d of [...destinations].sort((a, b) => Number(a.enabled) - Number(b.enabled))) {
+      const name = d.name?.trim();
+      if (name && name !== d.tfn) names.set(toE164(d.tfn), name);
+    }
+    return names;
+  }, [destinations]);
+
   const groupedRows = React.useMemo(() => {
     const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
     const grouped = summary
-      ? applyEntitySummary(groupCalls(calls, tab, timeZone), summary, SUMMARY_ROWS_ONLY.has(tab))
-      : groupCalls(calls, tab, timeZone);
+      ? applyEntitySummary(groupCalls(calls, tab, timeZone, destinationNames), summary, SUMMARY_ROWS_ONLY.has(tab))
+      : groupCalls(calls, tab, timeZone, destinationNames);
     // Merge the per-entity live counters in before sorting / totals / export,
     // so every consumer of these rows sees the same figure. `max`, not
     // "prefer the entity": both sources count the same in-flight calls, and
@@ -922,7 +947,7 @@ export function CallSummaryTable({
       if (live !== undefined) row.live = Math.max(row.live, live);
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations, liveNow, timeZone, summaries]);
+  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.

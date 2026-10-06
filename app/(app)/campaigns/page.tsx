@@ -15,10 +15,12 @@ import {
 } from "@/components/campaigns/campaigns-toolbar";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { EmptyState } from "@/components/shared/empty-state";
+import { CloneDialog } from "@/components/shared/clone-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 
@@ -27,8 +29,13 @@ export default function CampaignsPage() {
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const setCampaignStatus = useCampaignsStore((s) => s.setStatus);
   const remove = useCampaignsStore((s) => s.remove);
+  const cloneCampaign = useCampaignsStore((s) => s.clone);
 
   const [open, setOpen] = useState(false);
+
+  // Clone confirmation (opened from the + icon on a row).
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneTarget, setCloneTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Toolbar state — lifted from the table so search/sort/filter/columns are
   // all wired through the new toolbar above the card.
@@ -103,6 +110,26 @@ export default function CampaignsPage() {
     if (!c) return;
     remove(id);
     toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", c.name));
+  };
+
+  const onClone = (id: string) => {
+    const c = campaigns.find((x) => x.id === id);
+    if (!c) return;
+    setCloneTarget({ id: c.id, name: c.name });
+    setCloneOpen(true);
+  };
+
+  const onConfirmClone = async () => {
+    if (!cloneTarget) return;
+    try {
+      const copy = await cloneCampaign(cloneTarget.id);
+      toast.success(`Cloned as "${copy.name}"`, {
+        description: "It starts paused. Attach a tracking number, then switch it on.",
+      });
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, "Couldn't clone the campaign."));
+      throw e; // keeps the dialog open so the user can try again
+    }
   };
 
   // Resolve the live selection against the current campaigns list so we never
@@ -212,6 +239,7 @@ export default function CampaignsPage() {
                 columns={columns}
                 onToggle={onToggle}
                 onArchive={onArchive}
+                onClone={onClone}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
               />
@@ -228,6 +256,15 @@ export default function CampaignsPage() {
       )}
 
       <CampaignBuilder open={open} onOpenChange={setOpen} />
+
+      <CloneDialog
+        open={cloneOpen}
+        onOpenChange={setCloneOpen}
+        entity="campaign"
+        sourceName={cloneTarget?.name ?? ""}
+        note="The copy starts paused. Tracking numbers are not copied (each number belongs to one campaign), so attach one before switching it on."
+        onConfirm={onConfirmClone}
+      />
     </>
   );
 }

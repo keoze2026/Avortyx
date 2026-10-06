@@ -59,6 +59,8 @@ interface CampaignsTableProps {
   columns?: Record<CampaignColumnKey, boolean>;
   onToggle: (id: string) => void;
   onArchive: (id: string) => void;
+  /** Called when the + (clone) icon is clicked on a row. */
+  onClone?: (id: string) => void;
   /** Optional controlled selection. When provided, the parent owns the set
    *  and the table reports changes via `onSelectionChange`. */
   selectedIds?: Set<string>;
@@ -104,6 +106,7 @@ export function CampaignsTable({
   columns = ALL_CAMPAIGN_COLUMNS,
   onToggle,
   onArchive,
+  onClone,
   selectedIds,
   onSelectionChange,
 }: CampaignsTableProps) {
@@ -256,7 +259,11 @@ export function CampaignsTable({
                         label={t("trafficUI.campaigns.table.edit")}
                         onClick={() => router.push(`${ROUTES.campaigns}/${c.id}`)}
                       />
-                      <ActionIcon icon={CirclePlus} label={t("trafficUI.campaigns.table.duplicate")} />
+                      <ActionIcon
+                        icon={CirclePlus}
+                        label={t("trafficUI.campaigns.table.duplicate")}
+                        onClick={() => onClone?.(c.id)}
+                      />
                       <ActionIcon icon={Undo2} label={t("trafficUI.campaigns.table.revert")} />
                       <ActionIcon
                         icon={Trash2}
