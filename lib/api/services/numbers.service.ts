@@ -69,6 +69,7 @@ interface NumberWire {
   concurrencyCap?: string | number;
   /* Publisher / payout fields */
   publisherId?: string | null;
+  publisherName?: string | null;
   vendorEnabled?: boolean;
   payoutPerCall?: string | number;
   payoutType?: string;
@@ -156,6 +157,7 @@ function wireToNumber(w: NumberWire): TrackingNumber {
         ? toNum(w.concurrencyCap)
         : undefined,
     publisherId: w.publisherId ?? undefined,
+    publisherName: w.publisherName ?? undefined,
     vendorEnabled: w.vendorEnabled,
     payoutPerCall:
       w.payoutPerCall !== undefined && w.payoutPerCall !== null

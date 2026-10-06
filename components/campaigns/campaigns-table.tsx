@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
   CirclePlus,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
+import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { Campaign } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -79,13 +81,13 @@ interface CampaignMetrics {
 /**
  * Real metrics pulled from the Campaign record — see BACKEND-CONTRACT.md
  * §3.8 "Live counter fields" for where `liveCalls`/`callsHour`/`callsMonth`/
- * `callsGlobal` come from. The "live cap" column is the daily-cap value the
- * user configured (0 = unlimited), not a backend-computed count.
+ * `callsGlobal` come from. The Live column shows live calls against the
+ * campaign's concurrent-call (CC) limit, `cap.max_concurrency` (0 = unlimited).
  */
 function makeMetrics(c: Campaign): CampaignMetrics {
   return {
     liveCurrent: c.liveCalls,
-    liveCap: c.dailyCap,
+    liveCap: c.maxConcurrency ?? 0,
     hourly: c.callsHour,
     daily: c.callsToday,
     monthly: c.callsMonth,
@@ -223,7 +225,7 @@ export function CampaignsTable({
                   )}
                   {columns.live && (
                     <TableCell>
-                      <LiveBox current={m.liveCurrent} cap={m.liveCap} />
+                      <LiveBox campaignId={c.id} current={m.liveCurrent} cap={m.liveCap} />
                     </TableCell>
                   )}
                   {columns.hourly && (
@@ -243,8 +245,6 @@ export function CampaignsTable({
                       <Switch
                         checked={isActive}
                         onCheckedChange={() => onToggle(c.id)}
-                        // Green when the campaign is active; off is unchanged.
-                        className="data-[state=checked]:bg-[color:var(--success)]"
                         aria-label={isActive ? t("trafficUI.campaigns.table.pauseCampaign") : t("trafficUI.campaigns.table.activateCampaign")}
                       />
                     </TableCell>
@@ -320,10 +320,83 @@ function ProgressPill({ state }: { state: ProgressState }) {
   );
 }
 
-function LiveBox({ current, cap }: { current: number; cap: number }) {
+/**
+ * Live calls / CC limit. The limit is editable in place, like the caps on the
+ * Destinations page: click it, type a number, Enter or click away to save,
+ * Escape to cancel. 0 = unlimited (shown as ∞). Same font as the other
+ * number cells in the row.
+ */
+function LiveBox({ campaignId, current, cap }: { campaignId: string; current: number; cap: number }) {
+  const setConcurrency = useCampaignsStore((s) => s.setConcurrency);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(String(cap));
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  // Reflect saved / refreshed values while not editing.
+  React.useEffect(() => {
+    if (!editing) setDraft(String(cap));
+  }, [cap, editing]);
+
+  const commit = () => {
+    const next = Math.max(0, Math.floor(Number(draft) || 0));
+    setEditing(false);
+    setDraft(String(next));
+    if (next === cap) return;
+    setConcurrency(campaignId, next).catch(() => {
+      toast.error("Couldn't save the CC limit. Please try again.");
+    });
+  };
+
   return (
-    <span className="inline-flex h-7 min-w-[4.5rem] items-center justify-center rounded-md border border-border bg-secondary/30 px-2 font-mono text-xs tabular-nums">
-      {current} / {cap}
+    <span className="inline-flex h-7 min-w-[4.5rem] items-center justify-center gap-1 rounded-md border border-border bg-secondary/30 px-2 tabular-nums">
+      <span>{current}</span>
+      <span className="text-muted-foreground">/</span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              setDraft(String(cap));
+              setEditing(false);
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="CC limit (0 = unlimited)"
+          className="w-14 rounded border border-accent/50 bg-background px-1 py-0.5 text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDraft(String(cap));
+            setEditing(true);
+          }}
+          title="Click to change the CC limit (0 = unlimited)"
+          aria-label="Change CC limit"
+          className="cursor-text rounded px-1 tabular-nums transition-colors hover:bg-accent/10 hover:ring-1 hover:ring-accent/40"
+        >
+          {cap > 0 ? cap : "∞"}
+        </button>
+      )}
     </span>
   );
 }

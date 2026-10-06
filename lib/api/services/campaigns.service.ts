@@ -238,6 +238,8 @@ function listWireToCampaign(w: CampaignListWire): Campaign {
     qualifyDurationSec: 0,
     dailyCap: w.cap?.maxCallsDaily ?? 0,
     monthlyCap: w.cap?.maxCallsMonthly ?? 0,
+    maxConcurrency: w.cap?.maxConcurrency ?? 0,
+    globalCap: w.cap?.maxCallsGlobal ?? 0,
     schedule: defaultSchedule(),
     numbersCount: 0,
     buyersCount: 0,
@@ -313,6 +315,28 @@ export const campaignsService = {
     return detailWireToCampaign(wire);
   },
 
+  /**
+   * Save a campaign's caps via PATCH /api/campaigns/{id}/cap.
+   *
+   * The backend treats any cap left out of this request as 0 (= unlimited),
+   * so all four are always sent together — changing one never clears the
+   * others. (Separate from `updateCap` below, which sends only daily /
+   * monthly.)
+   */
+  async saveCaps(
+    id: string,
+    caps: { maxConcurrency: number; dailyCap: number; monthlyCap: number; globalCap: number },
+  ): Promise<void> {
+    await http.patch(`/api/campaigns/${id}/cap`, {
+      body: {
+        maxConcurrency: caps.maxConcurrency,
+        maxCallsDaily: caps.dailyCap,
+        maxCallsMonthly: caps.monthlyCap,
+        maxCallsGlobal: caps.globalCap,
+      },
+    });
+  },
+
   async update(id: string, patch: Partial<Campaign>): Promise<Campaign> {
     const body: Record<string, unknown> = {};
     if (patch.name !== undefined) body.name = patch.name;
@@ -344,20 +368,6 @@ export const campaignsService = {
     if (patch.duplicateCallBlock !== undefined) body.duplicateCallBlock = patch.duplicateCallBlock;
     if (patch.duplicateCallBlockHours !== undefined) body.duplicateCallBlockHours = patch.duplicateCallBlockHours;
     if (patch.advancedSettings !== undefined) body.advancedSettings = patch.advancedSettings;
-    // Auto schedule. This method copies field by field, so anything not named
-    // here is dropped before the request is built — the same silent discard
-    // that kept the campaign shields from ever saving.
-    const p = patch as Record<string, unknown>;
-    for (const k of [
-      "autoScheduleEnabled",
-      "playHour",
-      "playMinute",
-      "pauseHour",
-      "pauseMinute",
-      "autoScheduleTimezone",
-    ]) {
-      if (p[k] !== undefined) body[k] = p[k];
-    }
     const wire = await http.patch<CampaignWire>(`/api/campaigns/${id}`, { body });
     return detailWireToCampaign(wire);
   },

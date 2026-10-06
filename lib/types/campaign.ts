@@ -29,6 +29,10 @@ export interface Campaign {
 
   /** Per-day call cap. 0 = unlimited. */
   dailyCap: number;
+  /** Concurrent-call (CC) limit — backend `cap.max_concurrency`; 0 = unlimited. */
+  maxConcurrency?: number;
+  /** Lifetime call cap — backend `cap.max_calls_global`; 0 = unlimited. */
+  globalCap?: number;
   /** Per-month call cap. 0 = unlimited. */
   monthlyCap: number;
 

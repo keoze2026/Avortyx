@@ -18,7 +18,7 @@
  */
 
 import * as React from "react";
-import { ChevronDown, Edit3, Flag, Gauge, Globe, Zap } from "lucide-react";
+import { ChevronDown, Flag, Gauge, Globe, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,9 @@ import type {
   TrackingNumber,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+/** Select value for "no publisher linked" (a Select item can't use an empty string). */
+const NO_PUBLISHER = "__none__";
 
 interface TrackingNumberEditDialogProps {
   /** When non-null, the dialog is open and editing that tracking number. */
@@ -185,20 +188,33 @@ export function TrackingNumberEditDialog({
                 label={t("trafficUI.campaigns.settings.trackingNumbers.edit.vendor.choose")}
                 description={t("trafficUI.campaigns.settings.trackingNumbers.edit.vendor.chooseHint")}
               >
-                <div className="relative w-64">
-                  <Input
-                    value={number.vendor ?? ""}
-                    onChange={(e) => patch({ vendor: e.target.value })}
-                    placeholder={t("trafficUI.campaigns.settings.trackingNumbers.edit.vendor.choosePlaceholder")}
-                    className="pr-16"
-                  />
-                  <div className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 text-muted-foreground">
-                    <Edit3 className="h-3.5 w-3.5" />
-                    {/* Display the linked publisher count so the operator
-                        sees they can also pick from the publishers list. */}
-                    <span className="text-[10px]">{publishers.length}</span>
-                  </div>
-                </div>
+                {/* Pick one of your publishers. Saved as the number's
+                    publisher link (publisher_id) — the earlier free-text box
+                    edited the carrier field instead, which the save never
+                    sent, so typing was undone straight away. */}
+                <Select
+                  value={number.publisherId ?? NO_PUBLISHER}
+                  onValueChange={(v) => {
+                    const chosen = publishers.find((p) => p.id === v);
+                    patch({
+                      publisherId: chosen ? chosen.id : undefined,
+                      publisherName: chosen?.name,
+                      vendorEnabled: Boolean(chosen),
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder={t("trafficUI.campaigns.settings.trackingNumbers.edit.vendor.choosePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_PUBLISHER}>No publisher</SelectItem>
+                    {publishers.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FieldRow>
 
               <FieldRow
