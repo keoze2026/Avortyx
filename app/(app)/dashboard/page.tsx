@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
@@ -24,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import type { DashboardSnapshot } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { ROUTES } from "@/lib/constants";
+import { getCachedSnapshot, loadSnapshotShared, snapshotKey } from "@/lib/dashboard-snapshot";
 import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -32,7 +31,6 @@ import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
-import { getCachedSnapshot, loadSnapshotShared, snapshotKey } from "@/lib/dashboard-snapshot";
 
 const NO_CALLS: Call[] = [];
 
@@ -293,17 +291,6 @@ export default function DashboardPage() {
         </div>
         <div className="flex h-full min-w-0 flex-col gap-4">
           <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
-          {/* Revenue is calculated from each campaign's own "revenue per call".
-              $0 revenue next to a payout means that price was never entered. */}
-          {snapshot && summary.revenue === 0 && summary.payout > 0 && (
-            <p className="rounded-md border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-              Revenue shows $0 because the campaigns have no revenue per call set. Open{" "}
-              <Link href={ROUTES.campaigns} className="font-medium text-accent underline-offset-2 hover:underline">
-                Campaigns
-              </Link>
-              , choose a campaign and fill in <span className="font-medium">Pricing</span>.
-            </p>
-          )}
           <div className="min-h-0 flex-1">
             <VerticalDonut totals={donutTotals} />
           </div>
