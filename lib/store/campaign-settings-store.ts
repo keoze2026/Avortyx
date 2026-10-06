@@ -111,6 +111,18 @@ export function liveCallFields(s: CampaignAdvancedSettings) {
 const SYNC_DELAY_MS = 400;
 const pending = new Map<string, ReturnType<typeof setTimeout>>();
 
+/** Saves that have left the debounce but have not come back yet. */
+const inflight = new Map<string, number>();
+
+/**
+ * True while a toggle for this campaign is waiting to be saved or is being
+ * saved. seed() refuses to run in that window, so a refresh can never
+ * overwrite a click the user has just made.
+ */
+export function isSyncPending(campaignId: string): boolean {
+  return pending.has(campaignId) || (inflight.get(campaignId) ?? 0) > 0;
+}
+
 function scheduleSync(
   campaignId: string,
   settings: CampaignAdvancedSettings,
@@ -119,10 +131,16 @@ function scheduleSync(
   if (prev) clearTimeout(prev);
   const timer = setTimeout(() => {
     pending.delete(campaignId);
+    inflight.set(campaignId, (inflight.get(campaignId) ?? 0) + 1);
     void campaignsService
       .update(campaignId, {
         advancedSettings: settings as unknown as Record<string, unknown>,
         ...liveCallFields(settings),
+      })
+      .finally(() => {
+        const left = (inflight.get(campaignId) ?? 1) - 1;
+        if (left <= 0) inflight.delete(campaignId);
+        else inflight.set(campaignId, left);
       })
       .catch(() => {
         // Backend rejected the PATCH. Say so rather than leave a switch that
@@ -150,10 +168,13 @@ export const useCampaignSettingsStore = create<CampaignSettingsState>()(
         set((s) => ({ byId: { ...s.byId, [campaignId]: merged } }));
         scheduleSync(campaignId, merged);
       },
-      seed: (campaignId, settings) =>
+      seed: (campaignId, settings) => {
+        // Never overwrite a toggle the user just flipped and has not saved yet.
+        if (isSyncPending(campaignId)) return;
         set((s) => ({
           byId: { ...s.byId, [campaignId]: withDefaults(settings) },
-        })),
+        }));
+      },
     }),
     {
       name: "vortyx.campaign-settings",

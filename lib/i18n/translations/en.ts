@@ -2293,7 +2293,7 @@ export const en = {
         totalLive: "Total Live",
         totalCC: "Total CC",
         activeTFNs: "Active TFNs",
-        vacantCC: "Vacant CC",
+        vacantCC: "Unfilled CC",
         ofTotal: "{shown} of {total}",
       },
       toast: {

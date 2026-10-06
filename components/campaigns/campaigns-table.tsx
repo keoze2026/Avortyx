@@ -243,6 +243,8 @@ export function CampaignsTable({
                       <Switch
                         checked={isActive}
                         onCheckedChange={() => onToggle(c.id)}
+                        // Green when the campaign is active; off is unchanged.
+                        className="data-[state=checked]:bg-[color:var(--success)]"
                         aria-label={isActive ? t("trafficUI.campaigns.table.pauseCampaign") : t("trafficUI.campaigns.table.activateCampaign")}
                       />
                     </TableCell>
