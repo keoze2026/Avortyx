@@ -107,6 +107,12 @@ interface ReportsToolbarProps {
    *  Live figure. Shown next to the date range picker so it reads on this
    *  page without a glance up at the topbar. */
   liveNow: number;
+  /** Show the Live chip. Off when Reports isn't meant to show live figures
+   *  (the top bar's Live / Total are the only ones). Defaults to on. */
+  showLive?: boolean;
+  /** The newest day that can be picked; later days and "Today" are removed.
+   *  Leave out for no limit. */
+  latestDay?: Date;
 }
 
 export function ReportsToolbar({
@@ -118,6 +124,8 @@ export function ReportsToolbar({
   visibility,
   onVisibilityChange,
   liveNow,
+  showLive = true,
+  latestDay,
 }: ReportsToolbarProps) {
   const { t } = useTranslation();
   const [refresh, setRefresh] = useState<RefreshOption>("Auto refresh");
@@ -231,26 +239,29 @@ export function ReportsToolbar({
         {/* Live indicator, right before the date range it sits next to.
             liveNow > 0 pulses the dot the same way the auto-refresh chip
             does when armed; at 0 it just reads as a quiet count. */}
-        <span
-          className={cn(
-            "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-sm font-medium tabular-nums",
-            liveNow > 0 ? cn("border-current/30 bg-current/10", LIVE_GREEN) : "border-border text-muted-foreground",
-          )}
-        >
-          {liveNow > 0 && (
-            <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
-            </span>
-          )}
-          {t("toolsUI.reports.toolbar.live")}: {formatNumber(liveNow)}
-        </span>
+        {showLive && (
+          <span
+            className={cn(
+              "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-sm font-medium tabular-nums",
+              liveNow > 0 ? cn("border-current/30 bg-current/10", LIVE_GREEN) : "border-border text-muted-foreground",
+            )}
+          >
+            {liveNow > 0 && (
+              <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+              </span>
+            )}
+            {t("toolsUI.reports.toolbar.live")}: {formatNumber(liveNow)}
+          </span>
+        )}
 
         {/* Date-range picker with preset shortcuts + Cancel/Apply (buffered) */}
         <DateRangePicker
           value={dateRange}
           onChange={onDateRangeChange}
           today={today}
+          latestDay={latestDay}
           className={TOOLBAR_BTN_HOVER}
         />
 

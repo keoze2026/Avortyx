@@ -15,6 +15,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { ApiError } from "@/lib/api/http";
 import { authService } from "@/lib/api/services/auth.service";
 import { clearTokens, hasTokens } from "@/lib/api/tokens";
+import { useSecurityStore } from "@/lib/store/security-store";
 import type { Role, User } from "@/lib/types";
 
 interface AuthState {
@@ -189,6 +190,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         // Optimistically clear local state so the UI flips immediately.
         set({ user: null, isAuthenticated: false, error: null });
+        useSecurityStore.getState().reset();
         try {
           await authService.logout();
         } catch {

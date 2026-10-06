@@ -344,30 +344,73 @@ function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupPro
 /*  Reports PIN                                                         */
 /* ─────────────────────────────────────────────────────────────────── */
 
+type PinMode = "view" | "edit" | "remove";
+
+/**
+ * One PIN for the whole workspace, held and enforced by the backend. Every
+ * login - the main account, buyers, publishers and team members - has to enter
+ * it before reports for yesterday or earlier are shown. Creating, changing or
+ * removing it is only possible for the main account, and always needs the
+ * account password.
+ */
 function ReportsPinCard() {
   const { t } = useTranslation();
-  const reportsPin = useSecurityStore((s) => s.reportsPin);
-  const setReportsPin = useSecurityStore((s) => s.setReportsPin);
-  const clearReportsPin = useSecurityStore((s) => s.clearReportsPin);
+  const load = useSecurityStore((s) => s.load);
+  const configured = useSecurityStore((s) => s.configured);
+  const canManage = useSecurityStore((s) => s.canManage);
+  const fetchStatus = useSecurityStore((s) => s.fetchStatus);
+  const setReportsPin = useSecurityStore((s) => s.setPin);
+  const removeReportsPin = useSecurityStore((s) => s.removePin);
 
-  const [editing, setEditing] = React.useState(false);
+  const [mode, setMode] = React.useState<PinMode>("view");
   const [pin, setPin] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  const onSave = () => {
-    if (!/^\d{4}$/.test(pin)) {
-      toast.error("PIN must be exactly 4 digits");
-      return;
-    }
-    if (pin !== confirm) {
-      toast.error("PINs don't match");
-      return;
-    }
-    setReportsPin(pin);
-    setEditing(false);
+  React.useEffect(() => {
+    if (load === "idle") void fetchStatus();
+  }, [load, fetchStatus]);
+
+  const close = () => {
+    setMode("view");
     setPin("");
     setConfirm("");
-    toast.success(t("settings.securitySection.pinSaved"));
+    setPassword("");
+    setError(null);
+  };
+
+  const onSave = async () => {
+    if (!/^\d{4}$/.test(pin)) return setError("The PIN must be exactly 4 digits.");
+    if (pin !== confirm) return setError("The two PINs don't match.");
+    if (!password) return setError("Enter your account password to continue.");
+    setSubmitting(true);
+    setError(null);
+    try {
+      await setReportsPin(pin, password);
+      toast.success(t("settings.securitySection.pinSaved"));
+      close();
+    } catch (e) {
+      setError(friendlyErrorMessage(e, "Couldn't save the PIN."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onRemove = async () => {
+    if (!password) return setError("Enter your account password to continue.");
+    setSubmitting(true);
+    setError(null);
+    try {
+      await removeReportsPin(password);
+      toast.success(t("settings.securitySection.pinRemoved"));
+      close();
+    } catch (e) {
+      setError(friendlyErrorMessage(e, "Couldn't remove the PIN."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -377,91 +420,107 @@ function ReportsPinCard() {
           <Lock className="h-4 w-4 text-accent" />
           {t("settings.securitySection.reportsPin")}
           <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Screen lock
+            Whole workspace
           </span>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          {t("settings.securitySection.reportsPinFullDescription")}
+          Keeps reports for yesterday and earlier locked until the PIN is entered.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Honest framing — this is a UX screen lock, not a server-enforced
-            access control. Anyone with API access can still read reports
-            directly. Make the limit explicit so the user calibrates
-            expectations. */}
-        <div className="flex items-start gap-2.5 rounded-md border border-border/80 bg-secondary/30 p-3 text-xs">
-          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <div className="space-y-0.5">
-            <div className="font-semibold">UX screen lock — not server-enforced</div>
-            <p className="text-muted-foreground">
-              The PIN guards this browser's view of historical reports against
-              shoulder-surfing. It does <span className="font-medium">not</span>{" "}
-              protect against direct API access — anyone with an API key can
-              still pull reports. Use it as a quick lock, not as a security
-              control.
-            </p>
+        {load === "ready" && (
+          <div className="flex items-start gap-2.5 rounded-md border border-border/80 bg-secondary/30 p-3 text-xs">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <div className="space-y-0.5">
+              <div className="font-semibold">One PIN, enforced by the server</div>
+              <p className="text-muted-foreground">
+                It applies to everyone in this workspace: the main account, buyers, publishers and
+                team members. Only the main account can create, change or remove it, and has to
+                confirm with the account password each time.
+              </p>
+            </div>
           </div>
-        </div>
-        {reportsPin && !editing ? (
-          <div className="flex items-center justify-between rounded-lg border border-[oklch(0.78_0.18_155)]/30 bg-[oklch(0.78_0.18_155)]/8 p-3">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[oklch(0.78_0.18_155)]/15 text-[oklch(0.78_0.18_155)]">
-                <Check className="h-4 w-4" />
-              </span>
-              <div>
-                <div className="text-sm font-medium">{t("settings.securitySection.pinIsSet")}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {t("settings.securitySection.pinIsSetHint")}
-                </div>
+        )}
+
+        {load === "idle" || load === "loading" ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          </div>
+        ) : load === "unavailable" ? (
+          <div className="rounded-lg border border-border bg-secondary/20 p-3 text-xs text-muted-foreground">
+            PIN protection isn't available on this server yet.
+          </div>
+        ) : !canManage ? (
+          <div className="flex items-center gap-2.5 rounded-lg border border-border bg-secondary/20 p-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
+              <Lock className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="text-sm font-medium">
+                {configured ? "A reports PIN is active" : "No reports PIN is set"}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {configured
+                  ? "Managed by your account administrator. Ask them for the PIN if you need it."
+                  : "Your account administrator can set one."}
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditing(true)}
-                className="h-8"
-              >
-                <KeyRound className="h-3.5 w-3.5" />
-                {t("settings.securitySection.change")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  clearReportsPin();
-                  toast.success(t("settings.securitySection.pinRemoved"));
-                }}
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
           </div>
-        ) : !editing ? (
-          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
-                <Lock className="h-4 w-4" />
-              </span>
-              <div>
-                <div className="text-sm font-medium">No PIN set</div>
-                <div className="text-[11px] text-muted-foreground">
-                  Anyone with the session can browse historical reports.
+        ) : mode === "view" ? (
+          configured ? (
+            <div className="flex items-center justify-between rounded-lg border border-[oklch(0.78_0.18_155)]/30 bg-[oklch(0.78_0.18_155)]/8 p-3">
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[oklch(0.78_0.18_155)]/15 text-[oklch(0.78_0.18_155)]">
+                  <Check className="h-4 w-4" />
+                </span>
+                <div>
+                  <div className="text-sm font-medium">{t("settings.securitySection.pinIsSet")}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Required before anyone views yesterday's or older reports.
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={() => setMode("edit")} className="h-8">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  {t("settings.securitySection.change")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMode("remove")}
+                  aria-label="Remove PIN"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <Button size="sm" onClick={() => setEditing(true)}>
-              Set PIN
-            </Button>
-          </div>
-        ) : (
+          ) : (
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
+                  <Lock className="h-4 w-4" />
+                </span>
+                <div>
+                  <div className="text-sm font-medium">No PIN set</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Anyone in this workspace can open past reports.
+                  </div>
+                </div>
+              </div>
+              <Button size="sm" onClick={() => setMode("edit")}>
+                Set PIN
+              </Button>
+            </div>
+          )
+        ) : mode === "edit" ? (
           <div className="space-y-3 rounded-lg border border-border bg-secondary/15 p-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <PinInput
                 id="pin-new"
                 label={
-                  reportsPin
+                  configured
                     ? t("settings.securitySection.newPinLabel")
                     : t("settings.securitySection.choosePinLabel")
                 }
@@ -475,22 +534,33 @@ function ReportsPinCard() {
                 onChange={setConfirm}
               />
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Pick a code different from your phone unlock. Forgot it? Disable
-              and re-set from here.
-            </p>
+            <PasswordField value={password} onChange={setPassword} />
+            {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex items-center gap-2">
-              <Button onClick={onSave} disabled={pin.length !== 4 || confirm.length !== 4}>
-                {t("settings.securitySection.savePin")}
-              </Button>
               <Button
-                variant="ghost"
-                onClick={() => {
-                  setEditing(false);
-                  setPin("");
-                  setConfirm("");
-                }}
+                onClick={onSave}
+                disabled={pin.length !== 4 || confirm.length !== 4 || !password || submitting}
               >
+                {submitting ? "Saving…" : t("settings.securitySection.savePin")}
+              </Button>
+              <Button variant="ghost" onClick={close} disabled={submitting}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <p className="text-xs text-muted-foreground">
+              Removing the PIN unlocks past reports for <span className="font-medium">everyone</span>{" "}
+              in this workspace. Enter your account password to confirm.
+            </p>
+            <PasswordField value={password} onChange={setPassword} />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex items-center gap-2">
+              <Button variant="destructive" onClick={onRemove} disabled={!password || submitting}>
+                {submitting ? "Removing…" : "Remove PIN"}
+              </Button>
+              <Button variant="ghost" onClick={close} disabled={submitting}>
                 Cancel
               </Button>
             </div>
@@ -498,6 +568,31 @@ function ReportsPinCard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** The main account's login password, asked before any PIN change. */
+function PasswordField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor="pin-account-password" className="text-xs">
+        Your account password
+      </Label>
+      <Input
+        id="pin-account-password"
+        type="password"
+        autoComplete="current-password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Enter your login password"
+      />
+    </div>
   );
 }
 

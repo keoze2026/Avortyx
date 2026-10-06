@@ -124,14 +124,38 @@ export function rangeForPreset(id: DateRangePresetId, today: Date): DateRange | 
   }
 }
 
+/**
+ * A preset's range when nothing after `latest` may be picked (a page that only
+ * covers completed days). "Today" has no range then; "Last 7 / 30 days" end on
+ * `latest` instead of today; the others are cut off at `latest`, and a preset
+ * that would start after `latest` (e.g. "This week" on a Monday) has none.
+ * Without a `latest` this is exactly `rangeForPreset`.
+ */
+export function presetRange(
+  id: DateRangePresetId,
+  today: Date,
+  latest?: Date,
+): DateRange | undefined {
+  const r = rangeForPreset(id, today);
+  if (!latest || !r?.from || !r.to) return r;
+  const limit = startOfDay(latest).getTime();
+  if (id === "today") return undefined;
+  if (id === "last7" || id === "last30") {
+    const span = id === "last7" ? 6 : 29;
+    return { from: new Date(limit - span * DAY_MS), to: new Date(limit) };
+  }
+  if (r.from.getTime() > limit) return undefined;
+  return { from: r.from, to: r.to.getTime() > limit ? new Date(limit) : r.to };
+}
+
 /** Recognize a range as a known preset so the dropdown reflects the user's pick. */
-function detectPreset(range: DateRange | undefined, today: Date): DateRangePresetId {
+function detectPreset(range: DateRange | undefined, today: Date, latest?: Date): DateRangePresetId {
   if (!range?.from) return "custom";
   const from = calendarDayKey(range.from);
   const to = calendarDayKey(range.to ?? range.from);
   for (const id of PRESET_IDS) {
     if (id === "custom") continue;
-    const candidate = rangeForPreset(id, today);
+    const candidate = presetRange(id, today, latest);
     if (!candidate?.from || !candidate.to) continue;
     if (from === calendarDayKey(candidate.from) && to === calendarDayKey(candidate.to)) {
       return id;
@@ -149,6 +173,12 @@ interface Props {
   placeholder?: string;
   /** The current calendar day the presets are relative to (defaults to the browser's). */
   today?: Date;
+  /**
+   * The newest day that may be picked. Later days are greyed out in the
+   * calendar and presets are limited to it ("Today" disappears). Leave out for
+   * no limit - the default, and what the Dashboard and Expenses use.
+   */
+  latestDay?: Date;
 }
 
 export function DateRangePicker({
@@ -157,6 +187,7 @@ export function DateRangePicker({
   className,
   placeholder,
   today,
+  latestDay,
 }: Props) {
   const { t } = useTranslation();
   const effectivePlaceholder = placeholder ?? t("sharedUI.dateRange.placeholder");
@@ -166,10 +197,20 @@ export function DateRangePicker({
   // off it would re-run constantly.
   const anchorKey = calendarDayKey(today ?? new Date());
   const anchor = React.useMemo(() => startOfDay(dayKeyToLocalDate(anchorKey)), [anchorKey]);
+  const latestKey = latestDay ? calendarDayKey(latestDay) : null;
+  const latest = React.useMemo(
+    () => (latestKey ? startOfDay(dayKeyToLocalDate(latestKey)) : undefined),
+    [latestKey],
+  );
+  // Presets that still make sense with the limit ("Today" etc. drop out).
+  const presetIds = React.useMemo(
+    () => PRESET_IDS.filter((id) => id === "custom" || !!presetRange(id, anchor, latest)),
+    [anchor, latest],
+  );
 
   // Buffered state — edits live here until the operator hits Apply.
   const [buffer, setBuffer] = React.useState<DateRange | undefined>(value);
-  const [preset, setPreset] = React.useState<DateRangePresetId>(() => detectPreset(value, anchor));
+  const [preset, setPreset] = React.useState<DateRangePresetId>(() => detectPreset(value, anchor, latest));
 
   // Re-sync the buffer to the committed value at the moment the popover
   // opens — and only then. Re-running on parent re-renders (the Reports
@@ -179,10 +220,12 @@ export function DateRangePicker({
   valueRef.current = value;
   const anchorRef = React.useRef(anchor);
   anchorRef.current = anchor;
+  const latestRef = React.useRef(latest);
+  latestRef.current = latest;
   React.useEffect(() => {
     if (!open) return;
     setBuffer(valueRef.current);
-    setPreset(detectPreset(valueRef.current, anchorRef.current));
+    setPreset(detectPreset(valueRef.current, anchorRef.current, latestRef.current));
   }, [open]);
 
   const formatRange = React.useCallback(
@@ -209,7 +252,7 @@ export function DateRangePicker({
       setBuffer(undefined);
       return;
     }
-    const range = rangeForPreset(id, anchor);
+    const range = presetRange(id, anchor, latest);
     setBuffer(range);
     if (!range?.from) return;
     onChange({ from: range.from, to: range.to ?? range.from });
@@ -219,14 +262,14 @@ export function DateRangePicker({
   const onCalendarSelect = (range: DateRange | undefined) => {
     setBuffer(range);
     // Manual edits flip the dropdown to "Custom" unless they happen to match a preset.
-    setPreset(detectPreset(range, anchor));
+    setPreset(detectPreset(range, anchor, latest));
   };
 
   const onCalendarDayClick = (day: Date, _modifiers: unknown, e: React.MouseEvent) => {
     if (e.detail < 2) return;
     const single: DateRange = { from: day, to: day };
     setBuffer(single);
-    setPreset(detectPreset(single, anchor));
+    setPreset(detectPreset(single, anchor, latest));
     onChange(single);
     setOpen(false);
   };
@@ -239,7 +282,7 @@ export function DateRangePicker({
 
   const onCancel = () => {
     setBuffer(value);
-    setPreset(detectPreset(value, anchor));
+    setPreset(detectPreset(value, anchor, latest));
     setOpen(false);
   };
 
@@ -264,7 +307,7 @@ export function DateRangePicker({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PRESET_IDS.map((id) => (
+              {presetIds.map((id) => (
                 <SelectItem key={id} value={id}>
                   {t(PRESET_KEY[id])}
                 </SelectItem>
@@ -284,7 +327,7 @@ export function DateRangePicker({
           onDayClick={onCalendarDayClick}
           numberOfMonths={1}
           defaultMonth={buffer?.from ?? value?.from ?? anchor}
-          disabled={{ after: anchor }}
+          disabled={{ after: latest ?? anchor }}
         />
 
         {/* Footer: the pending selection on its own line, actions beneath.

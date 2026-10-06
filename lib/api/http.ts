@@ -24,6 +24,7 @@
 import { snakeToCamel, camelToSnake } from "./case";
 import { API_BASE_URL } from "./env";
 import { ApiError, normalizeErrorBody } from "./errors";
+import { emitReportsLocked } from "./lock-events";
 import {
   clearTokens,
   getAccessToken,
@@ -333,6 +334,13 @@ async function doRequest<T>({
 
   if (!res.ok) {
     const errBody = await parseBody(res, true); // raw — preserve original snake_case for error parsing
+    // 423 + `reports_pin_required`: the backend is holding back history until
+    // the reports PIN is entered. Tell the whole app so every screen locks,
+    // not only the one that happened to make this request.
+    // The PIN endpoints themselves are exempt (they answer 423 for lock-outs).
+    if (res.status === 423 && errBody && typeof errBody === "object" && !path.startsWith("/api/security/")) {
+      if ((errBody as Record<string, unknown>).code === "reports_pin_required") emitReportsLocked();
+    }
     throw normalizeErrorBody(res.status, res.statusText, errBody);
   }
 

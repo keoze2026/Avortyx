@@ -39,7 +39,7 @@ export function LoginForm() {
   const completeMfa = useAuthStore((s) => s.completeMfa);
   const cancelMfa = useAuthStore((s) => s.cancelMfa);
   const pendingMfa = useAuthStore((s) => s.pendingMfa);
-  const lockReports = useSecurityStore((s) => s.lockReports);
+  const resetSecurity = useSecurityStore((s) => s.reset);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,8 +50,9 @@ export function LoginForm() {
   const [verifying, setVerifying] = useState(false);
 
   const finishLogin = () => {
-    // Reports PIN re-locks at the start of every login session.
-    lockReports();
+    // A new login always starts locked: drop any previous PIN state; the
+    // server is asked again once the session is up.
+    resetSecurity();
     router.push(params.get("from") || ROUTES.dashboard);
   };
 

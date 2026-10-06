@@ -262,6 +262,108 @@ route("POST", "/api/accounts/password-reset/confirm", () => ({ ok: true }));
 route("POST", "/api/accounts/register", () => DEMO_USER_WIRE);
 route("POST", "/api/accounts/mfa/setup", () => ({ ...DEMO_USER_WIRE, mfa_enabled: true }));
 route("POST", "/api/accounts/mfa/disable", () => ({ ...DEMO_USER_WIRE, mfa_enabled: false }));
+
+/* ─── Reports PIN (demo) ─────────────────────────────────────────────
+ * Follows docs/BACKEND-REPORTS-PIN.md closely enough to demo the whole flow:
+ * the PIN sits in localStorage, the unlock in sessionStorage (one tab), and
+ * the demo login counts as the main account (any non-empty password passes).
+ * Five wrong tries block checking for 30 seconds. The mock report data is not
+ * itself gated - this only drives the PIN screens. */
+const DEMO_PIN_KEY = "vortyx.demo.reportsPin";
+const DEMO_PIN_UNLOCK_KEY = "vortyx.demo.reportsPinUnlocked";
+const DEMO_PIN_TRIES_KEY = "vortyx.demo.reportsPinTries";
+const DEMO_PIN_MAX_TRIES = 5;
+const DEMO_PIN_LOCKOUT_MS = 30_000;
+
+function demoPinTries(): { n: number; until: number } {
+  if (typeof window === "undefined") return { n: 0, until: 0 };
+  try {
+    const v = JSON.parse(window.sessionStorage.getItem(DEMO_PIN_TRIES_KEY) ?? "{}");
+    return { n: Number(v.n) || 0, until: Number(v.until) || 0 };
+  } catch {
+    return { n: 0, until: 0 };
+  }
+}
+
+function demoPinStatus() {
+  const w = typeof window === "undefined" ? null : window;
+  const pin = w?.localStorage.getItem(DEMO_PIN_KEY) ?? null;
+  const tries = demoPinTries();
+  const lockedOut = tries.until > Date.now();
+  return {
+    configured: !!pin,
+    unlocked: !!pin && w?.sessionStorage.getItem(DEMO_PIN_UNLOCK_KEY) === "1",
+    unlock_expires_at: null,
+    can_manage: true,
+    locked_out_until: lockedOut ? new Date(tries.until).toISOString() : null,
+    attempts_left: pin ? Math.max(0, DEMO_PIN_MAX_TRIES - tries.n) : null,
+  };
+}
+
+route("GET", "/api/security/reports-pin/status", () => demoPinStatus());
+
+route("PUT", "/api/security/reports-pin", (req) => {
+  const body = (req.body ?? {}) as { pin?: string; currentPassword?: string };
+  if (!body.currentPassword) {
+    throw new ApiError({ status: 400, message: "Enter your account password to continue.", code: "password_required" });
+  }
+  if (!/^\d{4}$/.test(body.pin ?? "")) {
+    throw new ApiError({ status: 400, message: "The PIN must be exactly 4 digits.", code: "pin_invalid" });
+  }
+  window.localStorage.setItem(DEMO_PIN_KEY, body.pin as string);
+  window.sessionStorage.setItem(DEMO_PIN_UNLOCK_KEY, "1"); // whoever sets it stays unlocked
+  window.sessionStorage.removeItem(DEMO_PIN_TRIES_KEY);
+  return demoPinStatus();
+});
+
+route("POST", "/api/security/reports-pin/remove", (req) => {
+  const body = (req.body ?? {}) as { currentPassword?: string };
+  if (!body.currentPassword) {
+    throw new ApiError({ status: 400, message: "Enter your account password to continue.", code: "password_required" });
+  }
+  window.localStorage.removeItem(DEMO_PIN_KEY);
+  window.sessionStorage.removeItem(DEMO_PIN_UNLOCK_KEY);
+  window.sessionStorage.removeItem(DEMO_PIN_TRIES_KEY);
+  return demoPinStatus();
+});
+
+route("POST", "/api/security/reports-pin/verify", (req) => {
+  const body = (req.body ?? {}) as { pin?: string };
+  const stored = window.localStorage.getItem(DEMO_PIN_KEY);
+  const tries = demoPinTries();
+  if (tries.until > Date.now()) {
+    throw new ApiError({
+      status: 423,
+      message: "Too many wrong attempts. Try again shortly.",
+      code: "pin_locked_out",
+      body: {
+        detail: "Too many wrong attempts. Try again shortly.",
+        code: "pin_locked_out",
+        locked_until: new Date(tries.until).toISOString(),
+        retry_after_seconds: Math.ceil((tries.until - Date.now()) / 1000),
+      },
+    });
+  }
+  if (stored && body.pin === stored) {
+    window.sessionStorage.setItem(DEMO_PIN_UNLOCK_KEY, "1");
+    window.sessionStorage.removeItem(DEMO_PIN_TRIES_KEY);
+    return demoPinStatus();
+  }
+  const n = tries.n + 1;
+  const until = n >= DEMO_PIN_MAX_TRIES ? Date.now() + DEMO_PIN_LOCKOUT_MS : 0;
+  window.sessionStorage.setItem(DEMO_PIN_TRIES_KEY, JSON.stringify({ n: until ? 0 : n, until }));
+  throw new ApiError({
+    status: 400,
+    message: "Incorrect PIN.",
+    code: "pin_incorrect",
+    body: { detail: "Incorrect PIN.", code: "pin_incorrect", attempts_left: Math.max(0, DEMO_PIN_MAX_TRIES - n) },
+  });
+});
+
+route("POST", "/api/security/reports-pin/lock", () => {
+  window.sessionStorage.removeItem(DEMO_PIN_UNLOCK_KEY);
+  return demoPinStatus();
+});
 route("POST", "/api/accounts/verify-mfa", () => ({
   access: DEMO_ACCESS_TOKEN,
   refresh: DEMO_REFRESH_TOKEN,

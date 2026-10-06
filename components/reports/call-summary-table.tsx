@@ -878,6 +878,13 @@ interface CallSummaryTableProps {
    * filters active that the aggregate can't be narrowed by.
    */
   summaries?: Partial<Record<SummaryEntity | "none", EntitySummary[]>>;
+  /**
+   * Show the Live column. Turn off on a report that must not carry live
+   * figures: the live counters are TODAY's, so on a past-date report they put
+   * today's in-progress calls into rows that have nothing to do with them.
+   * Defaults to on.
+   */
+  showLive?: boolean;
 }
 
 type SummarySortKey = "label" | ColumnKey;
@@ -897,10 +904,21 @@ export function CallSummaryTable({
   onStatusFilterChange,
   liveNow,
   summaries,
+  showLive = true,
 }: CallSummaryTableProps) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
-  const [visible, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
+  const [visibleState, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
+  // The operator's column choices, with Live forced off when it isn't allowed.
+  const visible = React.useMemo(
+    () => (showLive ? visibleState : { ...visibleState, live: false }),
+    [visibleState, showLive],
+  );
+  // Columns offered in the picker.
+  const columnDefs = React.useMemo(
+    () => (showLive ? COLUMNS : COLUMNS.filter((c) => c.id !== "live")),
+    [showLive],
+  );
   const [pageSize, setPageSize] = React.useState(25);
   const [page, setPage] = React.useState(0);
   // Default: sort by Incoming, biggest first — matches what operators expect
@@ -942,12 +960,16 @@ export function CallSummaryTable({
     // about more of them is closer to the truth. (Preferring the entity
     // outright zeroed every row on a backend that hasn't populated the
     // counter yet, while the totals row beside it still said 6.)
-    for (const row of grouped) {
-      const live = liveForGroup(tab, row.key, campaignsById, destinations, liveNow ?? 0, timeZone);
-      if (live !== undefined) row.live = Math.max(row.live, live);
+    // Skipped when Live isn't shown: these counters are today's, and must not
+    // be mixed into a report for another date.
+    if (showLive) {
+      for (const row of grouped) {
+        const live = liveForGroup(tab, row.key, campaignsById, destinations, liveNow ?? 0, timeZone);
+        if (live !== undefined) row.live = Math.max(row.live, live);
+      }
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries]);
+  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.
@@ -1102,7 +1124,7 @@ export function CallSummaryTable({
                 </button>
               </div>
               <div className="max-h-72 overflow-y-auto px-2 py-2">
-                {COLUMNS.map((col) => {
+                {columnDefs.map((col) => {
                   const id = `col-${col.id}`;
                   return (
                     <Label

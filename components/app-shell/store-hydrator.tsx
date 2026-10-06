@@ -14,6 +14,7 @@ import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useSecurityStore } from "@/lib/store/security-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -33,6 +34,8 @@ export function StoreHydrator() {
     if (!isAuthed) return;
     // Essentials first — what the header and the pages people open first
     // read. Each store handles its own loading + error state.
+    // The reports PIN state applies to every login (buyers and publishers too).
+    void useSecurityStore.getState().fetchStatus();
     void useBuyersStore.getState().fetch();
     void useCampaignsStore.getState().fetch();
     void usePublishersStore.getState().fetch();

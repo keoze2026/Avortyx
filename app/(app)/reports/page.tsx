@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { BarChart3, PieChart, X } from "lucide-react";
@@ -26,10 +27,13 @@ import {
   type EntitySummary,
   type SummaryEntity,
 } from "@/lib/api/services/analytics.service";
-import { friendlyErrorMessage } from "@/lib/api/errors";
+import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
+import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
+import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
 import { useCallsStore } from "@/lib/store/calls-store";
+import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -48,10 +52,24 @@ export default function ReportsPage() {
   // Log's timestamps, the hourly chart's buckets) — "today" has to mean
   // today in that zone too, or an operator ahead of it opens on tomorrow.
   const timeZone = useUIStore((s) => s.reportTimezone);
+  const router = useRouter();
+  // Reports covers completed days only (see lib/reports-policy.ts): the newest
+  // day that can be picked is yesterday, and that is where the page opens.
+  const latestKey = latestReportDayKey(timeZone);
+  const latestDay = useMemo(() => latestReportDay(timeZone), [timeZone, latestKey]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
-    return { from: today, to: today };
+    const day = latestReportDay(timeZone);
+    return { from: day, to: day };
   });
+  // A range that reaches past the newest allowed day (the time zone changed, or
+  // midnight passed while the page was open) is pulled back to it.
+  useEffect(() => {
+    if (!dateRange?.from) return;
+    const to = calendarDayKey(dateRange.to ?? dateRange.from);
+    if (to <= latestKey) return;
+    const from = calendarDayKey(dateRange.from) > latestKey ? latestDay : dateRange.from;
+    setDateRange({ from, to: latestDay });
+  }, [dateRange, latestKey, latestDay]);
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
   const [visibility, setVisibility] = useState<ReportsVisibility>(DEFAULT_REPORTS_VISIBILITY);
   // Set by clicking a Connected / Qualified / Not Connected total in the Call
@@ -79,6 +97,20 @@ export default function ReportsPage() {
   const fromKey = dateRange?.from ? calendarDayKey(dateRange.from) : undefined;
   const toKey = dateRange?.to ? calendarDayKey(dateRange.to) : fromKey;
 
+  // The PIN applies when the requested range starts before today's midnight
+  // *in the report timezone*. Comparing "YYYY-MM-DD" keys instead of raw
+  // timestamps sidesteps the browser-local-vs-report-timezone mismatch a
+  // plain Date comparison would reintroduce.
+  const needsPin = useMemo(() => {
+    if (!fromKey) return false;
+    return fromKey < zonedDayKey(Date.now(), timeZone);
+  }, [fromKey, timeZone]);
+
+  // The PIN is held by the server. Nothing is requested while the range is
+  // locked (the server would refuse it anyway), and what is already on screen
+  // is dropped the moment the page locks.
+  const access = useReportsAccess(needsPin);
+
   // The page's base dataset — every call in the selected range, fetched
   // directly from the backend. This used to read from the shared calls
   // store's `recent` cache (the most recent 200 calls *account-wide*, not
@@ -101,7 +133,7 @@ export default function ReportsPage() {
   });
 
   useEffect(() => {
-    if (!fromKey) {
+    if (!fromKey || !access.canFetch) {
       setSummaries({ campaign: [], buyer: [], publisher: [], carrier: [] });
       return;
     }
@@ -121,7 +153,7 @@ export default function ReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey, timeZone]);
+  }, [fromKey, toKey, timeZone, access.canFetch]);
 
   // An aggregate is per entity for the whole range; it can't be narrowed by
   // the other filters. So a tab only gets its aggregate when the only active
@@ -150,7 +182,7 @@ export default function ReportsPage() {
   }, [filters, summaries]);
 
   useEffect(() => {
-    if (!fromKey) {
+    if (!fromKey || !access.canFetch) {
       setRangeCalls([]);
       return;
     }
@@ -163,7 +195,11 @@ export default function ReportsPage() {
       })
       .catch((e) => {
         if (cancelled) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        // 423: the server wants the PIN. The lock screen takes over, so no
+        // error toast - the security store has already been told.
+        if (!(e instanceof ApiError && e.status === 423)) {
+          toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        }
         setRangeCalls([]);
       })
       .finally(() => {
@@ -172,7 +208,7 @@ export default function ReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey, timeZone]);
+  }, [fromKey, toKey, timeZone, access.canFetch]);
 
   const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);
@@ -237,19 +273,15 @@ export default function ReportsPage() {
     };
   }, [fromKey, toKey, filters, statusFilter]);
 
-  // The PIN gate trips when the requested range starts before today's
-  // midnight *in the report timezone* — Today-only views always pass
-  // through. Comparing "YYYY-MM-DD" keys instead of raw timestamps sidesteps
-  // the browser-local-vs-report-timezone mismatch a plain Date comparison
-  // would reintroduce.
-  const needsPin = useMemo(() => {
-    if (!fromKey) return false;
-    return fromKey < zonedDayKey(Date.now(), timeZone);
-  }, [fromKey, timeZone]);
-
+  // Backing out of the PIN screen. Where today can be shown, drop back to
+  // today; otherwise there is nothing to show here, so go to the Dashboard.
   const cancelHistorical = () => {
-    const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
-    setDateRange({ from: today, to: today });
+    if (REPORTS_POLICY.includeToday) {
+      const today = dayKeyToLocalDate(zonedDayKey(Date.now(), timeZone));
+      setDateRange({ from: today, to: today });
+    } else {
+      router.push(ROUTES.dashboard);
+    }
   };
 
   return (
@@ -268,9 +300,15 @@ export default function ReportsPage() {
         visibility={visibility}
         onVisibilityChange={setVisibility}
         liveNow={liveNow}
+        showLive={REPORTS_POLICY.showLive}
+        latestDay={latestDay}
       />
 
-      <ReportsPinGate needsPin={needsPin} onCancel={cancelHistorical}>
+      <ReportsPinGate
+        needsPin={needsPin}
+        onCancel={cancelHistorical}
+        cancelLabel={REPORTS_POLICY.includeToday ? undefined : "Back to dashboard"}
+      >
         {/* Row 1 — Hourly distribution (2/3) + perf card over donut (1/3).
             On mobile, only one of the two charts is shown at a time and the
             toggle button below the toolbar swaps between them. */}
@@ -346,6 +384,7 @@ export default function ReportsPage() {
             onStatusFilterChange={setStatusFilter}
             liveNow={liveNow}
             summaries={summariesForTable}
+            showLive={REPORTS_POLICY.showLive}
           />
         )}
 
