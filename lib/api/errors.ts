@@ -191,8 +191,22 @@ export function normalizeErrorBody(
  * Convenience for callers that just want a clean message from any caught
  * error — handles `ApiError`, plain `Error`, and unknown values uniformly.
  */
+/**
+ * The browser's own failure for "the request never completed": the connection
+ * dropped, DNS failed, the device went offline, or a CORS/network layer refused
+ * it before any server answered. It carries no server message, only text such
+ * as "Failed to fetch".
+ */
+export function isNetworkFailure(e: unknown): boolean {
+  if (e instanceof ApiError) return false;
+  if (e instanceof TypeError) return true;
+  return e instanceof Error && /^(failed to fetch|networkerror|load failed|network request failed)/i.test(e.message ?? "");
+}
+
 export function friendlyErrorMessage(e: unknown, fallback = "Something went wrong"): string {
   if (e instanceof ApiError) return e.friendlyMessage;
+  // Say what happened instead of printing the browser's "Failed to fetch".
+  if (isNetworkFailure(e)) return "Couldn't reach the server. Check your internet connection and try again.";
   if (e instanceof Error) {
     const raw = e.message ?? "";
     if (!raw || looksLikeHtml(raw) || looksLikeTraceback(raw)) return fallback;
