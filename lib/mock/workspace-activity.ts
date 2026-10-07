@@ -10,7 +10,9 @@ const MIN = 1000 * 60;
 const HOUR = 1000 * 60 * 60;
 const DAY = 1000 * 60 * 60 * 24;
 
-export type ActivityCategory = "member" | "role" | "settings";
+/** "record" = a change to a campaign, buyer, destination, number, ...;
+ *  "account" = sign-ins, sign-outs, passwords, 2FA, API keys. */
+export type ActivityCategory = "member" | "role" | "settings" | "record" | "account";
 
 export type ActivityKind =
   /** member events */
@@ -24,7 +26,23 @@ export type ActivityKind =
   | "role.permissions-updated"
   /** workspace settings events */
   | "workspace.renamed"
-  | "workspace.timezone-changed";
+  | "workspace.timezone-changed"
+  /** a record (campaign, buyer, destination, number, ...) was created / edited / deleted */
+  | "record.created"
+  | "record.updated"
+  | "record.deleted"
+  /** account events */
+  | "account.login"
+  | "account.logout"
+  | "account.security"
+  | "account.other";
+
+/** One field of an edit: its value before and after. null = empty. */
+export interface ActivityChange {
+  field: string;
+  old: string | null;
+  new: string | null;
+}
 
 export interface WorkspaceActivityEvent {
   id: string;
@@ -43,6 +61,13 @@ export interface WorkspaceActivityEvent {
   detail?: string;
   /** Member role change events carry the role pair for richer rendering. */
   rolePair?: { from: MemberRole; to: MemberRole };
+  /** The server's own wording for the action, e.g. "Updated", "Login". */
+  actionLabel?: string;
+  /** What kind of record it was, as the server names it, e.g. "campaign_destination". */
+  targetType?: string;
+  /** For an edit: each field that changed, with old and new value. Empty on
+   *  creates and deletes (there is no previous value). */
+  changes?: ActivityChange[];
 }
 
 const AVERY: WorkspaceActivityEvent["actor"] = {
@@ -179,4 +204,11 @@ export const ACTIVITY_VERBS: Record<ActivityKind, string> = {
   "role.permissions-updated": "updated permissions for",
   "workspace.renamed": "updated",
   "workspace.timezone-changed": "updated",
+  "record.created": "created",
+  "record.updated": "updated",
+  "record.deleted": "deleted",
+  "account.login": "signed in",
+  "account.logout": "signed out",
+  "account.security": "changed security settings",
+  "account.other": "changed",
 };

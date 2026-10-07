@@ -28,6 +28,7 @@ import {
 } from "@/lib/api/services/workspace.service";
 import type {
   ActivityCategory,
+  ActivityChange,
   ActivityKind,
   WorkspaceActivityEvent,
 } from "@/lib/mock/workspace-activity";
@@ -53,6 +54,8 @@ interface WorkspaceMetaState {
   hydrated: boolean;
 
   fetch: () => Promise<void>;
+  /** Re-read only the activity feed (the Activity tab calls this when opened). */
+  refreshActivity: () => Promise<void>;
   revokeSession: (sessionId: string) => Promise<void>;
 }
 
@@ -78,10 +81,29 @@ function avatarGradientFor(seed: string): [string, string] {
   return [`oklch(0.68 0.16 ${a})`, `oklch(0.58 0.20 ${b})`];
 }
 
-/** Map the backend's free-form `action` string onto our ActivityKind enum.
- *  Falls back to `member.invited` for unrecognized actions so the row still
- *  renders something readable. */
+/** The server's action codes (accounts.ActivityLog.Action). */
+const EXACT_ACTIONS: Record<string, ActivityKind> = {
+  record_created: "record.created",
+  record_updated: "record.updated",
+  record_deleted: "record.deleted",
+  login: "account.login",
+  logout: "account.logout",
+  password_change: "account.security",
+  mfa_enabled: "account.security",
+  mfa_disabled: "account.security",
+  api_key_created: "account.security",
+  api_key_revoked: "account.security",
+  profile_updated: "account.other",
+  organization_created: "account.other",
+};
+
+/** Map the backend's `action` onto our ActivityKind. Exact server codes
+ *  first; then older free-form wording. Anything unknown is shown with the
+ *  server's own label ("account.other") - it used to fall back to "invited",
+ *  which made every edit to a campaign or destination read as an invitation. */
 function actionToKind(action: string): ActivityKind {
+  const exact = EXACT_ACTIONS[action];
+  if (exact) return exact;
   const a = action.toLowerCase();
   if (a.includes("invite")) return "member.invited";
   if (a.includes("join")) return "member.joined";
@@ -92,13 +114,38 @@ function actionToKind(action: string): ActivityKind {
   if (a.includes("permission")) return "role.permissions-updated";
   if (a.includes("renam") && a.includes("workspace")) return "workspace.renamed";
   if (a.includes("timezone")) return "workspace.timezone-changed";
-  return "member.invited";
+  return "account.other";
 }
 
 function kindToCategory(k: ActivityKind): ActivityCategory {
+  if (k.startsWith("record.")) return "record";
+  if (k.startsWith("account.")) return "account";
   if (k.startsWith("workspace.")) return "settings";
   if (k.startsWith("role.")) return "role";
   return "member";
+}
+
+/** A changed value as text. null / "" / Python's "None" = empty. */
+function changeValue(v: unknown): string | null {
+  if (v === null || v === undefined || v === "" || v === "None") return null;
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+/** { priority: { old: "3", new: "10" } } -> [{ field: "priority", old: "3", new: "10" }], by field name. */
+function changesFrom(raw: WorkspaceActivityWire["changes"]): ActivityChange[] {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  return Object.entries(raw)
+    .map(([field, pair]) => {
+      const p = pair && typeof pair === "object" ? (pair as { old?: unknown; new?: unknown }) : {};
+      return { field, old: changeValue(p.old), new: changeValue(p.new) };
+    })
+    .sort((a, b) => a.field.localeCompare(b.field));
 }
 
 function wireToActivity(w: WorkspaceActivityWire): WorkspaceActivityEvent {
@@ -113,7 +160,10 @@ function wireToActivity(w: WorkspaceActivityWire): WorkspaceActivityEvent {
       initials: initialsFrom(w.actorName),
       avatar: avatarGradientFor(w.actorId),
     },
-    target: w.targetName ?? w.targetType ?? "—",
+    target: w.targetName || undefined,
+    actionLabel: w.actionLabel || undefined,
+    targetType: w.targetType || undefined,
+    changes: changesFrom(w.changes),
   };
 }
 
@@ -199,6 +249,15 @@ export const useWorkspaceMetaStore = create<WorkspaceMetaState>()((set, get) => 
       });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
+    }
+  },
+
+  refreshActivity: async () => {
+    try {
+      const page = await workspaceService.listActivity({ page: 1, pageSize: 100 });
+      set({ activity: (page?.items ?? []).map(wireToActivity) });
+    } catch {
+      // Keep what is on screen; the next refresh will try again.
     }
   },
 

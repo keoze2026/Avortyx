@@ -231,10 +231,22 @@ export interface WorkspaceActivityWire {
   id: string;
   actorId: string;
   actorName: string;
+  /** Code, e.g. "record_updated", "login", "password_change". */
   action: string;
+  /** The server's readable form of `action`, e.g. "Updated". */
+  actionLabel?: string;
+  /** e.g. "campaign", "buyer", "destination", "campaign_destination". */
   targetType: string;
   targetId?: string;
   targetName?: string;
+  /**
+   * For an edit, each field that changed: { priority: { old: "3", new: "10" } }.
+   * `{}` on creates and deletes. Never includes updated_at, password,
+   * last_login or the live / hourly / daily call counters (the server leaves
+   * those out on purpose).
+   */
+  changes?: Record<string, { old?: unknown; new?: unknown } | null>;
+  ipAddress?: string | null;
   createdAt: string;
 }
 
