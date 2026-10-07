@@ -757,6 +757,9 @@ export const analyticsService = {
       query: {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
+        // Without it the server counts the days - and writes the Date column -
+        // in UTC, not in the time zone the page shows.
+        timezone: query.timezone,
         status: query.status,
         isQualified: query.isQualified,
         campaignId: query.campaignId,

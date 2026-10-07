@@ -507,7 +507,7 @@ export function CallLogTable({
     if (exporting) return;
     setExporting(true);
     try {
-      const blob = await analyticsService.exportCallsCsv(serverQuery);
+      const blob = await analyticsService.exportCallsCsv({ ...serverQuery, timezone: serverQuery.timezone ?? timeZone });
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.

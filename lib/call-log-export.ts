@@ -70,6 +70,8 @@ export function destinationOf(call: Pick<Call, "destinationNumber"> | undefined,
 const norm = (h: string) => h.trim().toLowerCase();
 /** "Duration (s)", "Duration (sec)", "Duration seconds", "duration_seconds" ... */
 const isDurationSeconds = (h: string) => /^duration[\s_]*(\(\s*(s|sec|secs|seconds)\s*\)|seconds|secs|sec)$/.test(norm(h));
+/** "TTC", "TTC (s)", "Time to connect (s)" - time to connect, in seconds from the server. */
+const isTtcSeconds = (h: string) => /^(ttc|time[\s_]*to[\s_]*connect)[\s_]*(\(\s*(s|sec|secs|seconds)\s*\)|seconds|secs|sec)?$/.test(norm(h));
 /** What the server may call these columns -> the names the client wants. */
 const RENAME: Record<string, string> = {
   CALLER: "CALLER ID",
@@ -77,6 +79,8 @@ const RENAME: Record<string, string> = {
   DIALED: "CALLED NUMBER",
   "DIALED NUMBER": "CALLED NUMBER",
   "TRACKING NUMBER": "CALLED NUMBER",
+  "DESTINATION #": DESTINATION_NUMBER_HEADER,
+  "DESTINATION": DESTINATION_NAME_HEADER,
 };
 
 /**
@@ -93,13 +97,16 @@ export function formatCallLogTable(
   const raw = table[0];
   const header = raw.map((h) => {
     if (isDurationSeconds(h)) return DURATION_HEADER;
+    if (isTtcSeconds(h)) return "TTC";
     const up = h.trim().toUpperCase();
     return RENAME[up] ?? up;
   });
   const col = (name: string) => header.indexOf(name);
   const statusCol = col("STATUS");
   const durationCol = raw.findIndex(isDurationSeconds);
+  const ttcCol = raw.findIndex(isTtcSeconds);
   const calledCol = col("CALLED NUMBER");
+  const destNumberCol = col(DESTINATION_NUMBER_HEADER);
   const callIdCol = ["CALL ID", "UUID", "ID"].map(col).find((i) => i >= 0) ?? -1;
   const buyerCol = col("BUYER");
   const addDestination = buyerCol >= 0 && col(DESTINATION_NAME_HEADER) < 0 && col(DESTINATION_NUMBER_HEADER) < 0;
@@ -111,11 +118,12 @@ export function formatCallLogTable(
     if (i === 0) return insertAfterBuyer(header, [DESTINATION_NAME_HEADER, DESTINATION_NUMBER_HEADER]);
     const cells = row.map((cell, j) => {
       if (j === statusCol) return statusLabel(cell);
-      if (j === durationCol) {
+      if (j === durationCol || j === ttcCol) {
+        // Seconds -> 00:00:16. Anything already formatted is left as it is.
         const sec = Number(cell);
         return cell.trim() === "" || !Number.isFinite(sec) ? cell : formatDuration(sec);
       }
-      if (j === calledCol) return exportNumber(cell);
+      if (j === calledCol || j === destNumberCol) return exportNumber(cell);
       return cell;
     });
     const dest = callIdCol >= 0 ? opts.destinationFor?.(row[callIdCol] ?? "") : undefined;
