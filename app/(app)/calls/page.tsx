@@ -105,11 +105,19 @@ export default function CallsPage() {
     if (statuses.size > 0) calls = calls.filter((c) => statuses.has(c.status));
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      calls = calls.filter((c) =>
-        `${c.callerNumber} ${c.campaignName} ${c.publisherName ?? ""} ${c.buyerName ?? ""} ${c.geo.state ?? ""}`
-          .toLowerCase()
-          .includes(q),
-      );
+      // Phone numbers are matched on their digits, so "+1 (877) 489-3778",
+      // "18774893778" and "8774893778" all find the same call. The number that
+      // was DIALLED (the tracking number) and the buyer's destination are
+      // searched as well as the caller - before, searching a tracking number
+      // could never find the calls made to it.
+      const qDigits = q.replace(/\D/g, "");
+      const digitsOf = (s?: string) => (s ?? "").replace(/\D/g, "");
+      calls = calls.filter((c) => {
+        const text = `${c.callerNumber} ${c.calledNumber ?? ""} ${c.destinationNumber ?? ""} ${c.campaignName} ${c.publisherName ?? ""} ${c.buyerName ?? ""} ${c.geo.state ?? ""}`.toLowerCase();
+        if (text.includes(q)) return true;
+        if (qDigits.length < 4) return false;
+        return [c.callerNumber, c.calledNumber, c.destinationNumber].some((n) => digitsOf(n).includes(qDigits));
+      });
     }
     return calls;
   }, [query, campaignFilter, statuses, rangeCalls]);

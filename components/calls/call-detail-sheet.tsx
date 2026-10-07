@@ -178,7 +178,9 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                   <Step
                     icon={Hash}
                     label={t("toolsUI.callLogs.detail.trackingNumber")}
-                    value={toE164(call.destinationNumber)}
+                    // The number the caller dialled. This used to show the buyer's
+                    // destination - the same number as the "Destination" box below.
+                    value={call.calledNumber ? toE164(call.calledNumber) : "—"}
                   />
                   <Step
                     icon={Tag}
