@@ -107,6 +107,55 @@ const CATEGORY_TINT: Record<ActivityCategory, string> = {
   account: "text-slate-500 dark:text-slate-400",
 };
 
+/** The verb's colour: green added, blue changed, red removed, teal sign-ins, amber security. */
+const VERB_TONE: Partial<Record<ActivityKind, string>> = {
+  "record.created": "text-emerald-600 dark:text-emerald-400",
+  "record.updated": "text-sky-600 dark:text-sky-400",
+  "record.deleted": "text-rose-600 dark:text-rose-400",
+  "account.login": "text-teal-600 dark:text-teal-400",
+  "account.logout": "text-slate-500 dark:text-slate-400",
+  "account.security": "text-amber-600 dark:text-amber-400",
+};
+
+/** Security / account actions by their server code -> translation key. */
+const ACTION_DETAIL_KEYS: Record<string, string> = {
+  password_change: "activity.detail.passwordChanged",
+  mfa_enabled: "activity.detail.mfaOn",
+  mfa_disabled: "activity.detail.mfaOff",
+  api_key_created: "activity.detail.apiKeyCreated",
+  api_key_revoked: "activity.detail.apiKeyRevoked",
+  profile_updated: "activity.detail.profileUpdated",
+  organization_created: "activity.detail.workspaceCreated",
+};
+
+/** The Detail column never stays blank: say what happened, and from where. */
+function detailText(e: WorkspaceActivityEvent, type: string, t: (key: string) => string): string {
+  const text = detailTextRaw(e, type, t);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function detailTextRaw(e: WorkspaceActivityEvent, type: string, t: (key: string) => string): string {
+  const where = [e.client, e.ipAddress].filter(Boolean).join(" · ");
+  const typeName = type || t("activity.detail.record");
+  switch (e.kind) {
+    case "record.created":
+      return t("activity.detail.created").replace("{type}", typeName);
+    case "record.deleted":
+      return t("activity.detail.deleted").replace("{type}", typeName);
+    case "record.updated":
+      return t("activity.detail.noChanges");
+    case "account.login":
+      return where ? t("activity.detail.signedInFrom").replace("{where}", where) : t("activity.detail.signedIn");
+    case "account.logout":
+      return where ? t("activity.detail.signedOutFrom").replace("{where}", where) : t("activity.detail.signedOut");
+    default: {
+      const key = e.actionCode ? ACTION_DETAIL_KEYS[e.actionCode] : undefined;
+      const base = key ? t(key) : e.detail || e.actionLabel || t("activity.detail.recorded");
+      return where ? `${base} · ${where}` : base;
+    }
+  }
+}
+
 /** How the server names a record type -> words for the feed. */
 const TYPE_LABELS: Record<string, string> = {
   buyer: "buyer",
@@ -118,6 +167,9 @@ const TYPE_LABELS: Record<string, string> = {
   phone_number: "phone number",
   notification_rule: "notification rule",
   user: "user",
+  role: "role",
+  workspace_role: "role",
+  membership: "membership",
 };
 
 export function typeLabel(type?: string, t?: (key: string) => string): string {
@@ -249,7 +301,7 @@ export function WorkspaceActivityLog() {
                 type="button"
                 onClick={() => setFilter(f.id)}
                 className={cn(
-                  "rounded px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors",
                   filter === f.id
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -352,26 +404,26 @@ function ActivityRow({
             >
               {event.actor.initials}
             </span>
-            <span className="truncate text-sm font-medium">{event.actor.name}</span>
+            <span className="truncate text-[13px] font-medium">{event.actor.name}</span>
           </div>
         </TableCell>
         <TableCell className="text-left">
           <div className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px]">
             <Icon className={cn("h-3.5 w-3.5 shrink-0", CATEGORY_TINT[event.category])} />
-            <span className="text-muted-foreground">
-              {verb}
-              {type && event.category === "record" ? ` ${type}` : ""}
-            </span>
+            <span className={cn("font-medium", VERB_TONE[event.kind] ?? "text-muted-foreground")}>{verb}</span>
+            {type && (event.category === "record" || event.category === "role") && (
+              <span className="text-muted-foreground">{type}</span>
+            )}
             {event.target && <span className="font-medium text-foreground">{event.target}</span>}
           </div>
         </TableCell>
-        <TableCell className="text-left text-[12px] text-muted-foreground">
+        <TableCell className="text-left text-[13px] text-muted-foreground">
           {changes.length > 0 ? (
             <button
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-secondary/60"
+              className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[12px] font-medium text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
             >
               {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {changes.length === 1 ? t("activity.oneFieldChanged") : t("activity.fieldsChanged").replace("{n}", String(changes.length))}
@@ -387,10 +439,10 @@ function ActivityRow({
               </span>
             </span>
           ) : (
-            event.detail ?? "—"
+            detailText(event, type, t)
           )}
         </TableCell>
-        <TableCell className="pr-4 tabular-nums" title={absoluteTime(event.timestamp)}>
+        <TableCell className="pr-4 text-[13px] font-normal tabular-nums text-muted-foreground" title={absoluteTime(event.timestamp)}>
           {formatRelativeTime(event.timestamp)}
         </TableCell>
       </TableRow>

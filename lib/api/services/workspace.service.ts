@@ -247,6 +247,7 @@ export interface WorkspaceActivityWire {
    */
   changes?: Record<string, { old?: unknown; new?: unknown } | null>;
   ipAddress?: string | null;
+  userAgent?: string | null;
   createdAt: string;
 }
 

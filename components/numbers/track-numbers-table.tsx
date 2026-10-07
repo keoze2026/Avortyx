@@ -56,7 +56,8 @@ const DASH = "\u2014";
 export function deriveName(n: TrackingNumber): string {
   const last4 = n.number.replace(/\D/g, "").slice(-4);
   if (n.city) return `${n.city} ${last4}`;
-  return `DID-${last4}`;
+  // Toll-free numbers are TFNs, the others DIDs.
+  return n.type === "tollfree" ? `TFN-${last4}` : `DID-${last4}`;
 }
 
 export function deriveCountry(n: TrackingNumber): string {
@@ -113,7 +114,10 @@ export function deriveAssignedDate(n: TrackingNumber): string {
  * placeholder so empty demos stay readable.
  */
 export function deriveVendor(n: TrackingNumber): string {
-  return n.vendor?.trim() || DASH;
+  // The publisher assigned to this number in the campaign's settings - nothing
+  // else. (`vendor` is where the number was bought - "Other", "Twilio" - and is
+  // not a publisher.)
+  return n.publisherName?.trim() || DASH;
 }
 
 /** Concurrent calls on this number right now, counted by the backend from the
@@ -205,7 +209,7 @@ export function TrackNumbersTable({
                 <TableHead className="text-left">{t("trafficUI.numbers.track.headers.name")}</TableHead>
               )}
               {visibleColumns.has("country") && (
-                <TableHead className="text-left">{t("trafficUI.numbers.track.headers.country")}</TableHead>
+                <TableHead className="text-center">{t("trafficUI.numbers.track.headers.country")}</TableHead>
               )}
               {visibleColumns.has("purchaseStatus") && <TableHead>{t("trafficUI.numbers.track.headers.purchaseStatus")}</TableHead>}
               {visibleColumns.has("type") && <TableHead>{t("trafficUI.numbers.track.headers.type")}</TableHead>}
@@ -259,7 +263,7 @@ export function TrackNumbersTable({
                       </TableCell>
                     )}
                     {visibleColumns.has("country") && (
-                      <TableCell className={cn("text-left", CELL)}>
+                      <TableCell className={cn("text-center", CELL)}>
                         {deriveCountry(n)}
                       </TableCell>
                     )}
@@ -321,9 +325,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("vendor") && (
                       <TableCell className={CELL}>
-                        {/* "Other" is the server's generic provider label - a word, so it is
-                            translated; real provider names (Twilio, ...) are kept as they are. */}
-                        {deriveVendor(n) === "Other" ? t("common.other") : deriveVendor(n)}
+                        {deriveVendor(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("live") && (

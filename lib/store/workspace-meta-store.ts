@@ -148,12 +148,22 @@ function changesFrom(raw: WorkspaceActivityWire["changes"]): ActivityChange[] {
     .sort((a, b) => a.field.localeCompare(b.field));
 }
 
+/** Record types that are about roles and permissions (shown under "Roles"). */
+const ROLE_TARGET_TYPES = new Set(["role", "workspace_role", "custom_role", "permission", "role_permission", "membership"]);
+
 function wireToActivity(w: WorkspaceActivityWire): WorkspaceActivityEvent {
   const kind = actionToKind(w.action);
+  const changes = changesFrom(w.changes);
+  // Role and permission edits belong under "Roles": edits to a role record, or
+  // a user edit whose changed fields include the role.
+  const isRoleEvent =
+    kind.startsWith("record.") &&
+    (ROLE_TARGET_TYPES.has((w.targetType ?? "").toLowerCase()) || changes.some((c) => /(^|_)role$/i.test(c.field)));
+  const ua = w.userAgent ? parseUserAgent(w.userAgent) : null;
   return {
     id: w.id,
     kind,
-    category: kindToCategory(kind),
+    category: isRoleEvent ? "role" : kindToCategory(kind),
     timestamp: toTs(w.createdAt),
     actor: {
       name: w.actorName,
@@ -163,7 +173,10 @@ function wireToActivity(w: WorkspaceActivityWire): WorkspaceActivityEvent {
     target: w.targetName || undefined,
     actionLabel: w.actionLabel || undefined,
     targetType: w.targetType || undefined,
-    changes: changesFrom(w.changes),
+    changes,
+    actionCode: w.action || undefined,
+    ipAddress: w.ipAddress || undefined,
+    client: ua ? `${ua.browser} · ${ua.device}` : undefined,
   };
 }
 

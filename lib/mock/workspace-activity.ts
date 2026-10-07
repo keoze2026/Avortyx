@@ -68,6 +68,11 @@ export interface WorkspaceActivityEvent {
   /** For an edit: each field that changed, with old and new value. Empty on
    *  creates and deletes (there is no previous value). */
   changes?: ActivityChange[];
+  /** The server's action code (login, password_change, record_created, ...). */
+  actionCode?: string;
+  /** Where it happened from: IP address and browser / device, when known. */
+  ipAddress?: string;
+  client?: string;
 }
 
 const AVERY: WorkspaceActivityEvent["actor"] = {

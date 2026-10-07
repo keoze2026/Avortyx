@@ -14,9 +14,10 @@ import type { LocaleId } from "../locales";
 
 import { base } from "./base";
 import { daily } from "./daily";
+import { activity } from "./activity";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily];
+const AREAS: ExtraTranslations[] = [base, daily, activity];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
