@@ -405,17 +405,17 @@ function ActivityRow({
             >
               {event.actor.initials}
             </span>
-            <span className="truncate text-[13px] font-medium">{event.actor.name}</span>
+            <span className="truncate text-[13px] font-normal">{event.actor.name}</span>
           </div>
         </TableCell>
         <TableCell className="text-left">
           <div className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px]">
             <Icon className={cn("h-3.5 w-3.5 shrink-0", CATEGORY_TINT[event.category])} />
-            <span className={cn("font-medium", VERB_TONE[event.kind] ?? "text-muted-foreground")}>{verb}</span>
+            <span className={cn("font-normal", VERB_TONE[event.kind] ?? "text-muted-foreground")}>{verb}</span>
             {type && (event.category === "record" || event.category === "role") && (
               <span className="text-muted-foreground">{type}</span>
             )}
-            {event.target && <span className="font-medium text-foreground">{event.target}</span>}
+            {event.target && <span className="font-normal text-foreground">{event.target}</span>}
           </div>
         </TableCell>
         <TableCell className="text-left text-[13px] text-muted-foreground">
@@ -424,18 +424,18 @@ function ActivityRow({
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[12px] font-medium text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
+              className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[13px] font-normal text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
             >
               {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {changes.length === 1 ? t("activity.oneFieldChanged") : t("activity.fieldsChanged").replace("{n}", String(changes.length))}
             </button>
           ) : event.rolePair ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="rounded border border-border bg-card px-1.5 py-0.5 text-[10px]">
+              <span className="rounded border border-border bg-card px-1.5 py-0.5 text-[13px]">
                 {t(`workspaceUI.members.role.${event.rolePair.from}`)}
               </span>
               <span aria-hidden>→</span>
-              <span className="rounded border border-accent/45 bg-accent/12 px-1.5 py-0.5 text-[10px] text-foreground">
+              <span className="rounded border border-accent/45 bg-accent/12 px-1.5 py-0.5 text-[13px] text-foreground">
                 {t(`workspaceUI.members.role.${event.rolePair.to}`)}
               </span>
             </span>
@@ -463,7 +463,7 @@ function ChangesTable({ changes }: { changes: ActivityChange[] }) {
   const { t } = useTranslation();
   return (
     <div className="overflow-x-auto rounded-md border border-border bg-card">
-      <table className="w-full text-left text-[12px]">
+      <table className="w-full text-left text-[13px] font-normal">
         <thead>
           <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
             <th className="w-1/4 px-3 py-1.5 font-semibold">{t("activity.col.field")}</th>
@@ -474,7 +474,7 @@ function ChangesTable({ changes }: { changes: ActivityChange[] }) {
         <tbody>
           {changes.map((c) => (
             <tr key={c.field} className="border-b border-border/60 last:border-b-0 align-top">
-              <td className="px-3 py-1.5 font-medium text-foreground">{fieldLabel(c.field)}</td>
+              <td className="px-3 py-1.5 font-normal text-foreground">{fieldLabel(c.field)}</td>
               <td className="px-3 py-1.5">
                 <Value value={c.old} tone="old" />
               </td>
@@ -495,7 +495,7 @@ function Value({ value, tone }: { value: string | null; tone: "old" | "new" }) {
     <span
       title={value.length > 160 ? value : undefined}
       className={cn(
-        "whitespace-pre-wrap break-words font-mono text-[11px]",
+        "whitespace-pre-wrap break-words text-[13px] font-normal",
         tone === "old" ? "text-muted-foreground line-through decoration-muted-foreground/50" : "text-foreground",
       )}
     >
