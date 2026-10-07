@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import { invalidateSnapshots } from "@/lib/dashboard-snapshot";
@@ -35,6 +36,7 @@ export function toPrice(text: string): number | null {
  * change it, so it stayed 0 and Revenue read $0 beside a real Payout.
  */
 export function PricingSection({ campaignId }: { campaignId: string }) {
+  const { t } = useTranslation();
   const [load, setLoad] = React.useState<LoadState>("loading");
   const [attempt, setAttempt] = React.useState(0);
   const [saved, setSaved] = React.useState({ revenue: 0, payout: 0 });
@@ -73,7 +75,7 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
 
   const onSave = async () => {
     if (!valid || revenueNum === null || payoutNum === null) {
-      setError("Enter amounts of 0 or more, with at most 2 decimals.");
+      setError(t("pricing.invalidAmounts"));
       return;
     }
     setSaving(true);
@@ -85,9 +87,9 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
       setPayout(String(payoutNum));
       // The Dashboard adds these prices up; don't let it show a stale total.
       invalidateSnapshots();
-      toast.success("Pricing saved", { description: "Dashboard Revenue and Profit use the new prices from the next refresh." });
+      toast.success(t("pricing.saved"), { description: t("pricing.savedDesc") });
     } catch (e) {
-      setError(friendlyErrorMessage(e, "Couldn't save the pricing. Please try again."));
+      setError(friendlyErrorMessage(e, t("pricing.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -96,24 +98,24 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-[13px] font-semibold uppercase tracking-wider">Pricing</h2>
+        <h2 className="text-[13px] font-semibold uppercase tracking-wider">{t("pricing.title")}</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          What each qualifying call earns and costs. The Dashboard&apos;s Revenue and Profit come from these two prices.
+          {t("pricing.subtitle")}
         </p>
       </div>
 
       <Card className="space-y-4 p-5">
         {load === "loading" && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading prices…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("pricing.loading")}
           </div>
         )}
 
         {load === "error" && (
           <div className="flex items-center justify-between gap-3 text-xs">
-            <span className="text-muted-foreground">Couldn&apos;t load this campaign&apos;s prices.</span>
+            <span className="text-muted-foreground">{t("pricing.loadFailed")}</span>
             <Button size="sm" variant="outline" onClick={() => setAttempt((n) => n + 1)}>
-              Retry
+              {t("pricing.retry")}
             </Button>
           </div>
         )}
@@ -122,16 +124,18 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
           <>
             <div className="grid gap-4 sm:grid-cols-2">
               <PriceField
+                invalidText={t("pricing.invalidAmount")}
                 id="pricing-revenue"
-                label="Revenue per call"
-                hint="What the buyer pays you for a qualifying call."
+                label={t("pricing.revenuePerCall")}
+                hint={t("pricing.revenueHint")}
                 value={revenue}
                 onChange={setRevenue}
               />
               <PriceField
+                invalidText={t("pricing.invalidAmount")}
                 id="pricing-payout"
-                label="Payout per call"
-                hint="What you pay the publisher for that call."
+                label={t("pricing.payoutPerCall")}
+                hint={t("pricing.payoutHint")}
                 value={payout}
                 onChange={setPayout}
               />
@@ -139,7 +143,7 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-secondary/20 px-3 py-2 text-xs">
               <span className="text-muted-foreground">
-                Profit per call:{" "}
+                {t("pricing.profitPerCall")}{" "}
                 <span
                   className={
                     profit === null
@@ -154,21 +158,20 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
               </span>
               {revenueNum === 0 && (
                 <span className="text-[color:var(--warning)]">
-                  Revenue is 0, so this campaign adds $0 to Revenue and its Profit is negative.
+                  {t("pricing.revenueZero")}
                 </span>
               )}
             </div>
 
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Totals are calculated from the campaign&apos;s <span className="font-medium">current</span> prices, so
-              changing them also re-prices this campaign&apos;s earlier calls in the reports.
+              {t("pricing.repriceNote")}
             </p>
 
             {error && <p className="text-xs text-destructive">{error}</p>}
 
             <div className="flex items-center gap-2">
               <Button onClick={onSave} disabled={!dirty || saving}>
-                {saving ? "Saving…" : "Save pricing"}
+                {saving ? t("pricing.saving") : t("pricing.save")}
               </Button>
               {dirty && !saving && (
                 <Button
@@ -179,7 +182,7 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
                     setError(null);
                   }}
                 >
-                  Discard
+                  {t("pricing.discard")}
                 </Button>
               )}
             </div>
@@ -191,6 +194,7 @@ export function PricingSection({ campaignId }: { campaignId: string }) {
 }
 
 function PriceField({
+  invalidText,
   id,
   label,
   hint,
@@ -198,6 +202,7 @@ function PriceField({
   onChange,
 }: {
   id: string;
+  invalidText: string;
   label: string;
   hint: string;
   value: string;
@@ -224,7 +229,7 @@ function PriceField({
         />
       </div>
       <p className={bad ? "text-[11px] text-destructive" : "text-[11px] text-muted-foreground"}>
-        {bad ? "Enter 0 or more, up to 2 decimals." : hint}
+        {bad ? invalidText : hint}
       </p>
     </div>
   );

@@ -12,29 +12,33 @@ import { http } from "@/lib/api/http";
 import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useBuyerMembersStore, type BuyerMember } from "@/lib/store/buyer-members-store";
 import type { Buyer } from "@/lib/types";
+import { useTranslation } from "@/hooks/use-translation";
 
 const NO_MEMBERS: BuyerMember[] = [];
 
-const LABELS: PartnerMembersLabels = {
-  title: "Members",
-  description: "People invited to sign in and view this buyer's statistics",
-  searchAria: "Search members",
-  searchPlaceholder: "Search by email",
-  filterAria: "Filter members",
-  filterSoon: "Filtering is coming soon",
-  invite: "Invite",
-  invitePlaceholder: "name@company.com",
-  sendInvite: "Send invite",
-  cancel: "Cancel",
-  email: "Email",
-  status: "Status",
-  actions: "Actions",
-  noData: "No members yet",
-  invalidEmail: "Enter a valid email address",
-  invitedToast: (email) => `Invite sent to ${email}`,
-  removedToast: (email) => `Removed ${email}: their access has ended`,
-  removeAria: (email) => `Remove ${email}`,
-};
+/** Labels in the chosen language (lib/i18n/extra/daily.ts). */
+function buyerMemberLabels(t: (key: string) => string): PartnerMembersLabels {
+  return {
+    title: t("buyerMembers.title"),
+    description: t("buyerMembers.description"),
+    searchAria: t("buyerMembers.searchAria"),
+    searchPlaceholder: t("buyerMembers.searchPlaceholder"),
+    filterAria: t("buyerMembers.filterAria"),
+    filterSoon: t("buyerMembers.filterSoon"),
+    invite: t("buyerMembers.invite"),
+    invitePlaceholder: "name@company.com",
+    sendInvite: t("buyerMembers.sendInvite"),
+    cancel: t("buyerMembers.cancel"),
+    email: t("buyerMembers.email"),
+    status: t("buyerMembers.status"),
+    actions: t("buyerMembers.actions"),
+    noData: t("buyerMembers.noData"),
+    invalidEmail: t("buyerMembers.invalidEmail"),
+    invitedToast: (email) => t("buyerMembers.invitedToast").replace("{email}", email),
+    removedToast: (email) => t("buyerMembers.removedToast").replace("{email}", email),
+    removeAria: (email) => t("buyerMembers.removeAria").replace("{email}", email),
+  };
+}
 
 /**
  * Members of a buyer, with each person's status: "Invited" until they accept,
@@ -42,6 +46,8 @@ const LABELS: PartnerMembersLabels = {
  * backend invites when the buyer is created) is listed automatically.
  */
 export function BuyerMembersCard({ buyer }: { buyer: Buyer }) {
+  const { t } = useTranslation();
+  const labels = React.useMemo(() => buyerMemberLabels(t), [t]);
   const members = useBuyerMembersStore((s) => s.byBuyer[buyer.id]) ?? NO_MEMBERS;
   const addMember = useBuyerMembersStore((s) => s.addMember);
   const removeMember = useBuyerMembersStore((s) => s.removeMember);
@@ -66,7 +72,7 @@ export function BuyerMembersCard({ buyer }: { buyer: Buyer }) {
   return (
     <PartnerMembersSection
       rows={rows}
-      labels={LABELS}
+      labels={labels}
       onInvite={async (email) => {
         await http.post(`/api/buyers/${buyer.id}/invite`, { body: { email } });
         addMember(buyer.id, email);

@@ -125,3 +125,28 @@ export const TIMEZONE_BY_LABEL: Record<string, TimezoneOption> = Object.fromEntr
  * desktop at the same moment.
  */
 export const DEFAULT_DISPLAY_TIMEZONE = "America/New_York";
+
+/**
+ * A time zone's label in the app's language: the "(UTC−05:00)" part is kept and
+ * the name comes from the browser ("Северная Америка, восточное время",
+ * "アメリカ東部時間", "北美东部时间"). English keeps the list's own labels.
+ */
+const LOCALIZED_TZ = new Map<string, string>();
+export function localizedTimezoneLabel(iana: string, englishLabel: string, localeTag: string): string {
+  if (localeTag === "en-US") return englishLabel;
+  const key = `${localeTag}|${iana}`;
+  const hit = LOCALIZED_TZ.get(key);
+  if (hit) return hit;
+  let label = englishLabel;
+  try {
+    const name = new Intl.DateTimeFormat(localeTag, { timeZone: iana, timeZoneName: "longGeneric" })
+      .formatToParts(new Date())
+      .find((p) => p.type === "timeZoneName")?.value;
+    const offset = englishLabel.match(/^\([^)]*\)/)?.[0];
+    if (name && !/^GMT|^UTC/.test(name)) label = offset ? `${offset} ${name}` : name;
+  } catch {
+    /* unknown zone: keep the English label */
+  }
+  LOCALIZED_TZ.set(key, label);
+  return label;
+}

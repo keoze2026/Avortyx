@@ -18,6 +18,7 @@ import { Filter, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import type { RemoveOutcome } from "@/lib/partner-access";
 import type { InviteStatus } from "@/lib/partner-registration";
@@ -31,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatLocalDateTime } from "@/lib/format";
 
 export interface PartnerMemberRow {
   id: string;
@@ -81,6 +83,7 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState("");
+  const { t } = useTranslation();
   const [sending, setSending] = React.useState(false);
   /** Row waiting for "Remove access?" confirmation, and the row being removed. */
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
@@ -91,15 +94,15 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
     try {
       const outcome = await onRemove(m.id);
       if (outcome === "local-only") {
-        toast.warning(`Removed ${m.email} from this list`, {
-          description: "Their sign-in still works: the server cannot remove access yet.",
+        toast.warning(t("members.removedLocalOnly").replace("{email}", m.email), {
+          description: t("members.removedLocalOnlyDesc"),
         });
       } else {
         toast.success(labels.removedToast(m.email));
       }
       setConfirmId(null);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, `Couldn't remove ${m.email}. Please try again.`));
+      toast.error(friendlyErrorMessage(e, t("members.removeFailed").replace("{email}", m.email)));
     } finally {
       setRemovingId(null);
     }
@@ -120,7 +123,7 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
     try {
       await onInvite(trimmed);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not send the invite");
+      toast.error(e instanceof Error ? e.message : t("members.inviteFailed"));
       return;
     } finally {
       setSending(false);
@@ -230,10 +233,10 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
                       <Badge
                         variant="outline"
                         data-status="revoked"
-                        title="Their access was removed. Invite them again to give it back."
+                        title={t("members.accessRemovedHint")}
                         className="border-destructive/40 bg-destructive/10 font-medium text-destructive"
                       >
-                        Access removed
+                        {t("members.accessRemoved")}
                       </Badge>
                     ) : m.registered ? (
                       <Badge
@@ -241,23 +244,23 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
                         data-status="registered"
                         title={
                           m.lastLoginAt
-                            ? `Accepted the invitation. Last login: ${new Date(m.lastLoginAt).toLocaleString()}`
-                            : "Accepted the invitation"
+                            ? t("members.acceptedLastLogin").replace("{date}", formatLocalDateTime(m.lastLoginAt))
+                            : t("members.acceptedHint")
                         }
                         className="border-accent/40 bg-accent/10 font-medium text-accent"
                       >
-                        Registered
+                        {t("members.registered")}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" data-status="invited" title="Invitation sent, not accepted yet">
-                        Invited
+                      <Badge variant="outline" data-status="invited" title={t("members.invitedHint")}>
+                        {t("members.invited")}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell className="pr-4 text-right">
                     {m.canRemove && confirmId === m.id ? (
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="text-[11px] text-muted-foreground">Remove access?</span>
+                        <span className="text-[11px] text-muted-foreground">{t("members.removeAccessQ")}</span>
                         <Button
                           size="sm"
                           variant="destructive"
@@ -265,7 +268,7 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
                           disabled={removingId === m.id}
                           onClick={() => void confirmRemove(m)}
                         >
-                          {removingId === m.id ? "Removing…" : "Remove"}
+                          {removingId === m.id ? t("members.removing") : t("members.remove")}
                         </Button>
                         <Button
                           size="sm"
@@ -274,7 +277,7 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
                           disabled={removingId === m.id}
                           onClick={() => setConfirmId(null)}
                         >
-                          Keep
+                          {t("members.keep")}
                         </Button>
                       </span>
                     ) : m.canRemove ? (
@@ -295,9 +298,19 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
         </Table>
       </div>
       <p className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
-        Shows <span className="font-medium text-accent">Registered</span> once the person has accepted their
-        latest invitation and signed in. This list checks for that by itself. Inviting someone again starts them
-        from scratch.
+        {/* The highlighted word sits where each language puts it. */}
+        {t("members.footnote")
+          .split("{registered}")
+          .map((part, i) =>
+            i === 0 ? (
+              <React.Fragment key={i}>{part}</React.Fragment>
+            ) : (
+              <React.Fragment key={i}>
+                <span className="font-medium text-accent">{t("members.registered")}</span>
+                {part}
+              </React.Fragment>
+            ),
+          )}
       </p>
     </section>
   );

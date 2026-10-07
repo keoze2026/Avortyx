@@ -45,6 +45,7 @@ import {
   type Weekday,
 } from "@/lib/store/scheduled-reports-store";
 import { cn } from "@/lib/utils";
+import { formatLocalDateTime } from "@/lib/format";
 
 const HOURS_12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const MINUTES = [0, 15, 30, 45];
@@ -365,7 +366,7 @@ export function ScheduledReportsSection() {
                 {report.lastSentAt
                   ? t("settings.scheduledReports.lastSent").replace(
                       "{time}",
-                      new Date(report.lastSentAt).toLocaleString(),
+                      formatLocalDateTime(report.lastSentAt),
                     )
                   : t("settings.scheduledReports.neverSent")}
               </div>

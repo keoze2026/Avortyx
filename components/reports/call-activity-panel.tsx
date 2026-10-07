@@ -43,7 +43,7 @@ import {
   type RoutingTrace,
   type TraceDestination,
 } from "@/lib/api/services/calls.service";
-import { formatCallerId, formatCurrency } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatLocalDate } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -80,7 +80,7 @@ function dayOf(iso: string | undefined, timeZone: string): string {
   if (!iso) return "";
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return "";
-  return new Date(ms).toLocaleDateString(undefined, {
+  return formatLocalDate(ms, {
     month: "long",
     day: "numeric",
     timeZone,

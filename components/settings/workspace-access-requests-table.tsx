@@ -49,6 +49,7 @@ import {
 } from "@/lib/api/services/access-requests.service";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { formatLocalDate, formatLocalDateTime } from "@/lib/format";
 
 /** True if the backend rejected an approve/reject call because the request is
  *  already in a terminal state. We treat this as success — the desired
@@ -263,7 +264,7 @@ export function WorkspaceAccessRequestsTable() {
                       </TableCell>
                       <TableCell className="text-left">
                         <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                          {new Date(r.createdAt).toLocaleString()}
+                          {formatLocalDateTime(r.createdAt)}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -310,7 +311,7 @@ export function WorkspaceAccessRequestsTable() {
                         ) : (
                           <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
                             {r.reviewedAt
-                              ? new Date(r.reviewedAt).toLocaleDateString()
+                              ? formatLocalDate(r.reviewedAt)
                               : "—"}
                           </span>
                         )}

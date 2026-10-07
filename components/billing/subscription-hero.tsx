@@ -17,12 +17,12 @@ import { Calendar, Receipt, Wallet } from "lucide-react";
 import { billingService, type BillingAccount } from "@/lib/api/services/billing.service";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatLocalDate } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
 
 function formatDay(ms?: number): string | undefined {
   if (!ms) return undefined;
-  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return formatLocalDate(ms, { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function SubscriptionHero() {

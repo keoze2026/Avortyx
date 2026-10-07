@@ -19,13 +19,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUIStore } from "@/lib/store/ui-store";
-import { TIMEZONES, TIMEZONE_BY_IANA } from "@/lib/timezones";
+import { TIMEZONES, TIMEZONE_BY_IANA, localizedTimezoneLabel } from "@/lib/timezones";
+import { uiLocaleTag } from "@/lib/format";
+import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
 export function TimezonePicker({ className }: { className?: string }) {
   const tzIana = useUIStore((s) => s.reportTimezone);
   const setTzIana = useUIStore((s) => s.setReportTimezone);
-  const tzLabel = TIMEZONE_BY_IANA[tzIana]?.label ?? tzIana;
+  // Re-render when the language changes; names come in the app's language.
+  useTranslation();
+  const tag = uiLocaleTag();
+  const tzLabel = localizedTimezoneLabel(tzIana, TIMEZONE_BY_IANA[tzIana]?.label ?? tzIana, tag);
 
   return (
     <DropdownMenu>
@@ -45,7 +50,7 @@ export function TimezonePicker({ className }: { className?: string }) {
             onSelect={() => setTzIana(tz.iana)}
             className={cn(tzIana === tz.iana && "text-accent")}
           >
-            {tz.label}
+            {localizedTimezoneLabel(tz.iana, tz.label, tag)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

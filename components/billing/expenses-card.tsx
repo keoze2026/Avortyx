@@ -26,7 +26,7 @@ import {
   type BillingAccount,
   type ExpensesReport,
 } from "@/lib/api/services/billing.service";
-import { calendarDayKey, formatCurrency } from "@/lib/format";
+import { calendarDayKey, formatCurrency, formatLocalDate } from "@/lib/format";
 
 interface ExpenseTypeDef {
   key: string;
@@ -48,7 +48,7 @@ interface ExpenseRow extends ExpenseTypeDef {
 
 function formatDay(ms?: number): string | undefined {
   if (!ms) return undefined;
-  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return formatLocalDate(ms, { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function ExpensesCard() {

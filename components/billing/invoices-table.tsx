@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatLocalDate } from "@/lib/format";
 import { billingService, type BillingAccount, type Invoice } from "@/lib/api/services/billing.service";
 import { dateStamped, downloadRows, type ExportColumn } from "@/lib/export";
 import { ExportMenu } from "@/components/shared/export-menu";
@@ -39,7 +39,7 @@ const STATUS_LABEL_KEYS: Record<InvoiceStatus, string> = {
 
 function formatDay(ms?: number): string | undefined {
   if (!ms) return undefined;
-  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return formatLocalDate(ms, { year: "numeric", month: "short", day: "numeric" });
 }
 
 function normalizeInvoiceStatus(raw: string | undefined): InvoiceStatus {
@@ -177,8 +177,8 @@ export function InvoicesTable() {
                 // the backend's CallLogListSchema-style invoice doesn't have a
                 // plain `description` field.
                 const date = inv.periodEnd ? new Date(inv.periodEnd) : new Date();
-                const periodStart = inv.periodStart ? new Date(inv.periodStart).toLocaleDateString() : "";
-                const periodEnd = inv.periodEnd ? new Date(inv.periodEnd).toLocaleDateString() : "";
+                const periodStart = inv.periodStart ? formatLocalDate(inv.periodStart) : "";
+                const periodEnd = inv.periodEnd ? formatLocalDate(inv.periodEnd) : "";
                 const description = periodStart && periodEnd
                   ? `${periodStart} → ${periodEnd} · ${inv.totalCalls} calls`
                   : `${inv.totalCalls} calls`;
@@ -192,7 +192,7 @@ export function InvoicesTable() {
                   >
                     <TableCell className="font-mono text-xs">{inv.invoiceNumber}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {date.toLocaleDateString()}
+                      {formatLocalDate(date)}
                     </TableCell>
                     <TableCell className="text-xs">{description}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">{formatCurrency(inv.totalAmount, true)}</TableCell>

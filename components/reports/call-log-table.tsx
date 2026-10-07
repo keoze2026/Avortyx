@@ -662,7 +662,7 @@ export function CallLogTable({
                   <TableCell colSpan={colSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      {searchingAll && !loading ? "Searching all calls…" : t("toolsUI.reports.callLog.loading")}
+                      {searchingAll && !loading ? t("toolsUI.reports.callLog.searchingAll") : t("toolsUI.reports.callLog.loading")}
                     </span>
                   </TableCell>
                 </TableRow>

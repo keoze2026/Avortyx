@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/sheet";
 import { callsService, type CallDetail } from "@/lib/api/services/calls.service";
 import { ROUTES } from "@/lib/constants";
-import { formatCallerId, formatCurrency, formatDuration, formatRelativeTime, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatDuration, formatLocalDateTime, formatRelativeTime, toE164 } from "@/lib/format";
 import type { Call } from "@/lib/types";
 
 interface Props {
@@ -133,7 +133,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                 <span className="text-muted-foreground/40">·</span>
                 <span>{formatRelativeTime(call.startedAt)}</span>
                 <span className="text-muted-foreground/40">·</span>
-                <span>{new Date(call.startedAt).toLocaleString()}</span>
+                <span>{formatLocalDateTime(call.startedAt)}</span>
               </div>
               <SheetTitle className="font-mono text-lg">{formatCallerId(call.callerNumber)}</SheetTitle>
               <SheetDescription>

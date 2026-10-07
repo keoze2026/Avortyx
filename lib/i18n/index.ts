@@ -10,6 +10,7 @@ import { ja } from "./translations/ja";
 import { ru } from "./translations/ru";
 import { zh } from "./translations/zh";
 import type { LocaleId } from "./locales";
+import { EXTRA } from "./extra";
 
 export { en, ja, ru, zh };
 export type { TranslationShape };
@@ -44,7 +45,12 @@ export function tFor(locale: LocaleId, key: string): string {
   const parts = key.split(".");
   const value = walk(TRANSLATIONS[locale], parts);
   if (typeof value === "string") return value;
+  // Texts missing from the language's dictionary, or added since (lib/i18n/extra).
+  const extra = EXTRA[locale]?.[key];
+  if (extra !== undefined) return extra;
   const fallback = walk(en, parts);
   if (typeof fallback === "string") return fallback;
+  const extraEn = EXTRA.en[key];
+  if (extraEn !== undefined) return extraEn;
   return key;
 }

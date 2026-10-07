@@ -607,7 +607,7 @@ export function HourlyDistribution({
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {g.label}
+              {t(`chart.grain.${g.id}`)}
             </button>
           ))}
         </div>

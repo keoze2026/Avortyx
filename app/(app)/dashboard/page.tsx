@@ -316,7 +316,7 @@ export default function DashboardPage() {
             className="mb-3 flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground"
           >
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Loading {dateLabel}…
+            {t("common.loadingRange").replace("{range}", dateLabel)}
           </div>
         )}
         {/* Row 1 — Hourly CALLS chart (primary) + donut on the right.

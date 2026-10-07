@@ -18,7 +18,7 @@ import { AudioLines, CalendarClock, Percent, PhoneIncoming, Wallet } from "lucid
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { billingService, type BillingAccount } from "@/lib/api/services/billing.service";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatLocalDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface Tile {
@@ -38,7 +38,7 @@ function preciseMoney(n: number): string {
 
 function formatDate(ms?: number): string | undefined {
   if (!ms) return undefined;
-  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return formatLocalDate(ms, { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function RatesCard() {

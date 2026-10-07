@@ -6,6 +6,59 @@
 // separators. formatCurrency() is money, and keeps standard comma grouping:
 // billing figures read as amounts, not as call volume, and losing the
 // separator there makes large dollar figures harder to parse at a glance.
+import { useLocaleStore } from "@/lib/store/locale-store";
+
+/**
+ * Dates, times and "x minutes ago" follow the language chosen in the app (not
+ * the browser's), so a Japanese screen shows Japanese month names. Money and
+ * plain numbers keep the US format on purpose: every amount is in USD and the
+ * exports use the same digits.
+ */
+const LOCALE_TAGS: Record<string, string> = { en: "en-US", ru: "ru-RU", ja: "ja-JP", zh: "zh-CN" };
+
+/** BCP-47 tag of the language chosen in the app ("en-US" until one is picked). */
+export function uiLocaleTag(): string {
+  try {
+    return LOCALE_TAGS[useLocaleStore.getState().locale] ?? "en-US";
+  } catch {
+    return "en-US";
+  }
+}
+
+const isEnglishUi = () => uiLocaleTag() === "en-US";
+
+/** A date in the app's language, e.g. "Oct 7, 2026" / "7 окт. 2026 г." / "2026年10月7日". */
+export function formatLocalDate(
+  value: number | string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" },
+): string {
+  if (value === null || value === undefined || value === "") return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(uiLocaleTag(), options);
+}
+
+/** A date and time in the app's language. */
+export function formatLocalDateTime(
+  value: number | string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" },
+): string {
+  if (value === null || value === undefined || value === "") return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(uiLocaleTag(), options);
+}
+
+const RELATIVE_FORMATTERS = new Map<string, Intl.RelativeTimeFormat>();
+function relativeFormatter(tag: string): Intl.RelativeTimeFormat {
+  let f = RELATIVE_FORMATTERS.get(tag);
+  if (!f) {
+    f = new Intl.RelativeTimeFormat(tag, { numeric: "auto", style: "short" });
+    RELATIVE_FORMATTERS.set(tag, f);
+  }
+  return f;
+}
+
 const NF = new Intl.NumberFormat("en-US", { useGrouping: false });
 const CF = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -73,6 +126,15 @@ const RELATIVE_THRESHOLDS: Array<[number, string]> = [
 /** Timestamp (ms) → "2m ago", "5h ago" — small + monospace-safe. */
 export function formatRelativeTime(timestamp: number, now = Date.now()) {
   const diff = Math.max(0, Math.floor((now - timestamp) / 1000));
+  if (!isEnglishUi()) {
+    // "3 мин. назад" / "3 分前" / "3分钟前" - the browser knows each language's wording.
+    const rtf = relativeFormatter(uiLocaleTag());
+    if (diff < 10) return rtf.format(0, "second");
+    if (diff < 60) return rtf.format(-diff, "second");
+    if (diff < 3600) return rtf.format(-Math.floor(diff / 60), "minute");
+    if (diff < 86400) return rtf.format(-Math.floor(diff / 3600), "hour");
+    return rtf.format(-Math.floor(diff / 86400), "day");
+  }
   if (diff < 10) return "just now";
   if (diff < 60) return `${diff}s ago`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -263,7 +325,25 @@ export function zonedDayKey(timestamp: number, timeZone: string): string {
  * Call-log timestamp → "Aug 29, 8:30:00 AM" rendered in `timeZone`.
  * Replaces the old browser-local `new Date(ts).getHours()` formatting.
  */
+const CALL_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+
 export function formatCallTime(timestamp: number, timeZone: string): string {
+  if (!isEnglishUi()) {
+    // Same instant and zone, in the app's language ("7 окт., 12:42:34").
+    const tag = uiLocaleTag();
+    const key = `${tag}|${timeZone}`;
+    let f = CALL_TIME_FORMATTERS.get(key);
+    if (!f) {
+      const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" };
+      try {
+        f = new Intl.DateTimeFormat(tag, { ...opts, timeZone });
+      } catch {
+        f = new Intl.DateTimeFormat(tag, opts);
+      }
+      CALL_TIME_FORMATTERS.set(key, f);
+    }
+    return f.format(new Date(timestamp));
+  }
   const p = zonedParts(timestamp, timeZone);
   const ampm = p.hour >= 12 ? "PM" : "AM";
   const h12 = p.hour % 12 || 12;

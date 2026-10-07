@@ -40,6 +40,7 @@ import {
 } from "@/lib/api/services/kyc.service";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { cn } from "@/lib/utils";
+import { formatLocalDateTime } from "@/lib/format";
 
 type KycMode = "individual" | "company";
 
@@ -613,9 +614,9 @@ function StatusCard({
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           {(submittedAt || reviewedAt) && (
             <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-              {submittedAt && <>Submitted {new Date(submittedAt).toLocaleString()}</>}
+              {submittedAt && <>Submitted {formatLocalDateTime(submittedAt)}</>}
               {submittedAt && reviewedAt && " · "}
-              {reviewedAt && <>Reviewed {new Date(reviewedAt).toLocaleString()}</>}
+              {reviewedAt && <>Reviewed {formatLocalDateTime(reviewedAt)}</>}
             </p>
           )}
         </div>

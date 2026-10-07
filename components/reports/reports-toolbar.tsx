@@ -168,7 +168,7 @@ export function ReportsToolbar({
 
   const active = intervalSec > 0;
   const refreshLabel = t(REFRESH_LABEL_KEYS[refresh]);
-  const countdownLabel = active ? `${refreshLabel} · ${remaining}s` : refreshLabel;
+  const countdownLabel = active ? `${refreshLabel} · ${t("common.secondsShort").replace("{n}", String(remaining))}` : refreshLabel;
 
   // Section toggles surfaced under the eye button. Order matches the page.
   const SECTION_TOGGLES: Array<{ key: keyof ReportsVisibility; labelKey: string }> = [

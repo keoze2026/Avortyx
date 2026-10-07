@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatRelativeTime } from "@/lib/format";
+import { formatLocalDateTime, formatRelativeTime } from "@/lib/format";
 import {
   type ActivityCategory,
   type ActivityChange,
@@ -47,11 +47,11 @@ type Filter = "all" | ActivityCategory;
 /** `labelKey` for filters that already have translations; `label` for new ones. */
 const FILTERS: Array<{ id: Filter; labelKey?: string; label?: string }> = [
   { id: "all", labelKey: "workspaceUI.activity.filter.all" },
-  { id: "record", label: "Changes" },
+  { id: "record", labelKey: "activity.filter.changes" },
   { id: "member", labelKey: "workspaceUI.activity.filter.member" },
   { id: "role", labelKey: "workspaceUI.activity.filter.role" },
   { id: "settings", labelKey: "workspaceUI.activity.filter.settings" },
-  { id: "account", label: "Sign-ins & security" },
+  { id: "account", labelKey: "activity.filter.account" },
 ];
 
 /** Translation keys for the member / role / workspace verbs. */
@@ -67,15 +67,15 @@ const VERB_KEYS: Partial<Record<ActivityKind, string>> = {
   "workspace.timezone-changed": "workspaceUI.activity.verbs.timezoneChanged",
 };
 
-/** Wording when the server sent no label of its own. */
+/** Translation keys for the record / account verbs (the server's own label is English). */
 const DEFAULT_VERBS: Partial<Record<ActivityKind, string>> = {
-  "record.created": "Created",
-  "record.updated": "Updated",
-  "record.deleted": "Deleted",
-  "account.login": "Signed in",
-  "account.logout": "Signed out",
-  "account.security": "Changed security settings",
-  "account.other": "Changed",
+  "record.created": "activity.verb.created",
+  "record.updated": "activity.verb.updated",
+  "record.deleted": "activity.verb.deleted",
+  "account.login": "activity.verb.signedIn",
+  "account.logout": "activity.verb.signedOut",
+  "account.security": "activity.verb.security",
+  "account.other": "activity.verb.changed",
 };
 
 /** Per-kind icon shown next to the action verb. */
@@ -120,8 +120,13 @@ const TYPE_LABELS: Record<string, string> = {
   user: "user",
 };
 
-export function typeLabel(type?: string): string {
+export function typeLabel(type?: string, t?: (key: string) => string): string {
   if (!type) return "";
+  if (t && TYPE_LABELS[type]) {
+    const key = `activity.type.${type}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
   return TYPE_LABELS[type] ?? type.replace(/[_-]+/g, " ").toLowerCase();
 }
 
@@ -137,7 +142,7 @@ export function fieldLabel(field: string): string {
 }
 
 function absoluteTime(ts: number) {
-  return new Date(ts).toLocaleString(undefined, {
+  return formatLocalDateTime(ts, {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -149,9 +154,9 @@ function useVerb() {
   const { t } = useTranslation();
   return React.useCallback(
     (e: WorkspaceActivityEvent): string => {
-      const key = VERB_KEYS[e.kind];
+      const key = VERB_KEYS[e.kind] ?? DEFAULT_VERBS[e.kind];
       if (key) return t(key);
-      return e.actionLabel || DEFAULT_VERBS[e.kind] || "Changed";
+      return e.actionLabel || t("activity.verb.changed");
     },
     [t],
   );
@@ -209,7 +214,7 @@ export function WorkspaceActivityLog() {
         e.actor.name,
         e.target ?? "",
         verbOf(e),
-        typeLabel(e.targetType),
+        typeLabel(e.targetType, t),
         ...(e.changes ?? []).flatMap((c) => [fieldLabel(c.field), c.old ?? "", c.new ?? ""]),
       ]
         .join(" ")
@@ -261,10 +266,10 @@ export function WorkspaceActivityLog() {
             className="h-8 gap-1.5 text-xs"
             onClick={() => void refresh()}
             disabled={refreshing}
-            aria-label="Refresh activity"
+            aria-label={t("activity.refreshAria")}
           >
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-            Refresh
+            {t("activity.refresh")}
           </Button>
         </div>
       </CardHeader>
@@ -332,7 +337,7 @@ function ActivityRow({
   const { t } = useTranslation();
   const Icon = KIND_ICONS[event.kind] ?? Pencil;
   const changes = event.changes ?? [];
-  const type = typeLabel(event.targetType);
+  const type = typeLabel(event.targetType, t);
 
   return (
     <>
@@ -369,7 +374,7 @@ function ActivityRow({
               className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-secondary/60"
             >
               {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {changes.length === 1 ? "1 field changed" : `${changes.length} fields changed`}
+              {changes.length === 1 ? t("activity.oneFieldChanged") : t("activity.fieldsChanged").replace("{n}", String(changes.length))}
             </button>
           ) : event.rolePair ? (
             <span className="inline-flex items-center gap-1.5">
@@ -402,14 +407,15 @@ function ActivityRow({
 
 /** The FIELD / OLD / NEW table under an edited row. */
 function ChangesTable({ changes }: { changes: ActivityChange[] }) {
+  const { t } = useTranslation();
   return (
     <div className="overflow-x-auto rounded-md border border-border bg-card">
       <table className="w-full text-left text-[12px]">
         <thead>
           <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-            <th className="w-1/4 px-3 py-1.5 font-semibold">Field</th>
-            <th className="w-[37.5%] px-3 py-1.5 font-semibold">Old</th>
-            <th className="w-[37.5%] px-3 py-1.5 font-semibold">New</th>
+            <th className="w-1/4 px-3 py-1.5 font-semibold">{t("activity.col.field")}</th>
+            <th className="w-[37.5%] px-3 py-1.5 font-semibold">{t("activity.col.old")}</th>
+            <th className="w-[37.5%] px-3 py-1.5 font-semibold">{t("activity.col.new")}</th>
           </tr>
         </thead>
         <tbody>

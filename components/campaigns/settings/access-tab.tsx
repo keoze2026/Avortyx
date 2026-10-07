@@ -19,6 +19,7 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { useCampaignSettingsStore } from "@/lib/store/campaign-settings-store";
 import type { AccessGrant } from "@/lib/types";
+import { formatLocalDate } from "@/lib/format";
 
 function makeId() {
   return `ac_${Math.random().toString(36).slice(2, 8)}`;
@@ -119,7 +120,7 @@ export function AccessTab({ campaignId }: { campaignId: string }) {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{g.email}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {t("trafficUI.campaigns.settings.access.grantedOn").replace("{date}", new Date(g.grantedAt).toLocaleDateString())}
+                    {t("trafficUI.campaigns.settings.access.grantedOn").replace("{date}", formatLocalDate(g.grantedAt))}
                   </div>
                 </div>
                 <Badge variant={ROLE_VARIANT[g.role]} className="capitalize">

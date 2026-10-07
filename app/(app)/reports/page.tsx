@@ -368,7 +368,7 @@ export default function ReportsPage() {
             className="mb-3 flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground"
           >
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Loading {fromKey === toKey || !toKey ? fromKey : `${fromKey} – ${toKey}`}…
+            {t("common.loadingRange").replace("{range}", fromKey === toKey || !toKey ? (fromKey ?? "") : `${fromKey} – ${toKey}`)}
           </div>
         )}
         {/* Row 1 — Hourly distribution (2/3) + perf card over donut (1/3).

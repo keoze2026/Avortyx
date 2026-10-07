@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
-import { formatCompact, formatCurrency } from "@/lib/format";
+import { formatCompact, formatCurrency, formatLocalDate } from "@/lib/format";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import type { PayoutStatus } from "@/lib/types";
 
@@ -53,7 +53,7 @@ export function PublisherPayoutsTab({ publisherId }: { publisherId: string }) {
           value={formatCurrency(publisher.pendingPayout)}
           accent="bg-[color:var(--warning)]/15 text-[color:var(--warning)]"
           icon={Clock}
-          subtitle={upcomingDate ? t("networkUI.publishers.payouts.nextPayout").replace("{date}", new Date(upcomingDate).toLocaleDateString()) : "—"}
+          subtitle={upcomingDate ? t("networkUI.publishers.payouts.nextPayout").replace("{date}", formatLocalDate(upcomingDate)) : "—"}
         />
         <SummaryCard
           label={t("networkUI.publishers.payouts.paidThisQuarter")}
@@ -116,8 +116,8 @@ export function PublisherPayoutsTab({ publisherId }: { publisherId: string }) {
                       </TableCell>
                       <TableCell className="text-xs font-mono text-muted-foreground">
                         {p.paidAt
-                          ? new Date(p.paidAt).toLocaleDateString()
-                          : new Date(p.scheduledFor).toLocaleDateString()}
+                          ? formatLocalDate(p.paidAt)
+                          : formatLocalDate(p.scheduledFor)}
                       </TableCell>
                     </motion.tr>
                   );

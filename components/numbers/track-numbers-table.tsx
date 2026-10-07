@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
-import { formatCompact, formatNumber, toE164 } from "@/lib/format";
+import { formatCompact, formatLocalDate, formatNumber, toE164 } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -83,7 +83,7 @@ export function deriveRenewDate(n: TrackingNumber): string {
   // A rental renewal is a date money moves on. Inventing one told somebody a
   // charge was coming on a day nothing happens.
   if (!n.renewsAt) return DASH;
-  return new Date(n.renewsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return formatLocalDate(n.renewsAt, { month: "short", day: "numeric" });
 }
 
 export function deriveLifetimeDays(n: TrackingNumber): number {
@@ -306,7 +306,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("lifetime") && (
                       <TableCell className={CELL}>
-                        {deriveLifetimeDays(n)}d
+                        {t("common.daysShort").replace("{n}", String(deriveLifetimeDays(n)))}
                       </TableCell>
                     )}
                     {visibleColumns.has("carrier") && (
@@ -321,7 +321,9 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("vendor") && (
                       <TableCell className={CELL}>
-                        {deriveVendor(n)}
+                        {/* "Other" is the server's generic provider label - a word, so it is
+                            translated; real provider names (Twilio, ...) are kept as they are. */}
+                        {deriveVendor(n) === "Other" ? t("common.other") : deriveVendor(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("live") && (

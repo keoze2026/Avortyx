@@ -31,6 +31,7 @@ import {
   type WhiteLabel,
   type WhiteLabelDomain,
 } from "@/lib/api/services/white-label.service";
+import { formatLocalDate } from "@/lib/format";
 
 const STATUS_TONE: Record<DomainStatus, { variant: "success" | "outline" | "destructive" | "warning"; icon: typeof CheckCircle2 }> = {
   verified: { variant: "success", icon: CheckCircle2 },
@@ -268,7 +269,7 @@ export default function WhiteLabelPage() {
                             </div>
                             <div className="mt-0.5 text-[11px] text-muted-foreground">
                               {d.verifiedAt
-                                ? `Verified ${new Date(d.verifiedAt).toLocaleDateString()}`
+                                ? `Verified ${formatLocalDate(d.verifiedAt)}`
                                 : "Awaiting DNS verification"}
                             </div>
                           </div>
