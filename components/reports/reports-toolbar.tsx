@@ -98,7 +98,8 @@ export const DEFAULT_REPORTS_VISIBILITY: ReportsVisibility = {
 interface ReportsToolbarProps {
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
-  onRefresh: () => void;
+  /** "auto" when the timer fires, "manual" when the Refresh button is clicked. */
+  onRefresh: (source?: "auto" | "manual") => void;
   filters: ReportFilters;
   onFiltersChange: (filters: ReportFilters) => void;
   visibility: ReportsVisibility;
@@ -156,7 +157,7 @@ export function ReportsToolbar({
       setRemaining((s) => {
         if (s <= 1) {
           // Fire the refresh and rearm.
-          refreshRef.current();
+          refreshRef.current("auto");
           return intervalSec;
         }
         return s - 1;
@@ -272,7 +273,7 @@ export function ReportsToolbar({
           size="icon"
           className={cn("h-8 w-8", TOOLBAR_BTN_HOVER)}
           aria-label={t("toolsUI.reports.toolbar.refresh")}
-          onClick={onRefresh}
+          onClick={() => onRefresh("manual")}
         >
           <RefreshCw className="h-4 w-4" />
         </Button>

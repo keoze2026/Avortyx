@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { BarChart3, PieChart, X } from "lucide-react";
+import { BarChart3, Loader2, PieChart, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { CallLogTable } from "@/components/reports/call-log-table";
@@ -45,6 +45,10 @@ const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
   qualified: "toolsUI.reports.summary.columns.qualified",
   notConnected: "toolsUI.reports.summary.columns.noConnect",
 };
+
+/** Shown while the data on hand belongs to a different range (stable references). */
+const NO_RANGE_CALLS: Call[] = [];
+const NO_SUMMARIES: Record<SummaryEntity, EntitySummary[]> = { campaign: [], buyer: [], publisher: [], carrier: [] };
 
 export default function ReportsPage() {
   const { t } = useTranslation();
@@ -132,28 +136,97 @@ export default function ReportsPage() {
     carrier: [],
   });
 
+  /*
+   * One load per VIEW (range + time zone). The call list and the four
+   * aggregates are fetched together and put on screen together, and the data
+   * on screen is always tagged with the view it belongs to:
+   *
+   *   - the moment the range changes, nothing from the previous range is
+   *     shown any more (it isn't cleared later, when a response lands - it is
+   *     never rendered under the new range at all);
+   *   - every load gets a number; a response from a load that has since been
+   *     replaced is thrown away, so a slow answer for the old day can never
+   *     land on top of the new one;
+   *   - a refresh (auto or manual) is skipped while a load is in flight, and
+   *     re-loads the SAME view, keeping its current figures until the new
+   *     ones arrive - all at once.
+   *
+   * Before, the summary table and the call log each kept the previous day on
+   * screen until their own request finished, at different moments, so for a
+   * few seconds the page showed a mix of two days.
+   */
+  const viewKey = fromKey && access.canFetch ? `${fromKey}|${toKey ?? fromKey}|${timeZone}` : "";
+  const [loadedKey, setLoadedKey] = useState("");
+  const [refreshTick, setRefreshTick] = useState(0);
+  const loadSeq = useRef(0);
+  const loadInFlight = useRef(false);
+  const manualRefresh = useRef(false);
+
   useEffect(() => {
-    if (!fromKey || !access.canFetch) {
-      setSummaries({ campaign: [], buyer: [], publisher: [], carrier: [] });
+    if (!viewKey) {
+      loadSeq.current += 1; // anything still in flight is now stale
+      loadInFlight.current = false;
+      setRangeLoading(false);
       return;
     }
-    let cancelled = false;
+    const seq = ++loadSeq.current;
+    loadInFlight.current = true;
+    setRangeLoading(true);
+    const [dateFrom, dateTo, zone] = viewKey.split("|");
     // The picked days plus the page's timezone, so the backend counts the
     // same days the page shows (it defaults to UTC otherwise).
-    const range = { dateFrom: fromKey, dateTo: toKey, timezone: timeZone };
-    // Each one is independent — a failing endpoint just leaves its tab on
-    // the call-log derivation instead of blanking the others.
-    Promise.all(
-      (["campaign", "buyer", "publisher", "carrier"] as const).map((entity) =>
-        analyticsService.entitySummary(entity, range).catch(() => [] as EntitySummary[]),
+    const range = { dateFrom, dateTo, timezone: zone };
+    Promise.all([
+      analyticsService.allCalls({ dateFrom, dateTo }, { timeZone: zone }),
+      // Each aggregate is independent - a failing endpoint just leaves its tab
+      // on the call-log derivation instead of blanking the others.
+      Promise.all(
+        (["campaign", "buyer", "publisher", "carrier"] as const).map((entity) =>
+          analyticsService.entitySummary(entity, range).catch(() => [] as EntitySummary[]),
+        ),
       ),
-    ).then(([campaign, buyer, publisher, carrier]) => {
-      if (!cancelled) setSummaries({ campaign, buyer, publisher, carrier });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fromKey, toKey, timeZone, access.canFetch]);
+    ])
+      .then(([items, [campaign, buyer, publisher, carrier]]) => {
+        if (seq !== loadSeq.current) return; // replaced by a newer load
+        setRangeCalls(items);
+        setSummaries({ campaign, buyer, publisher, carrier });
+        setLoadedKey(viewKey);
+        if (manualRefresh.current) toast.success(t("page.reports.refreshed"));
+      })
+      .catch((e) => {
+        if (seq !== loadSeq.current) return;
+        // 423: the server wants the PIN. The lock screen takes over, so no
+        // error toast - the security store has already been told.
+        if (!(e instanceof ApiError && e.status === 423)) {
+          toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        }
+      })
+      .finally(() => {
+        if (seq !== loadSeq.current) return;
+        loadInFlight.current = false;
+        manualRefresh.current = false;
+        setRangeLoading(false);
+      });
+    // No cleanup: a newer load bumps loadSeq, which is what discards this one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewKey, refreshTick]);
+
+  /** True only for data that belongs to the range on screen right now. */
+  const showingView = viewKey !== "" && loadedKey === viewKey;
+  const viewCalls = showingView ? rangeCalls : NO_RANGE_CALLS;
+  const viewSummaries = showingView ? summaries : NO_SUMMARIES;
+  /** Loading a different range than the one last shown (not a refresh). */
+  const switchingView = rangeLoading && !showingView;
+
+  // A range that ends before today never changes, so the timer does not reload
+  // it; a click on Refresh always does. Never while a load is running.
+  const includesToday = !!toKey && toKey >= zonedDayKey(Date.now(), timeZone);
+  const onRefresh = (source: "auto" | "manual" = "manual") => {
+    if (!viewKey || loadInFlight.current) return;
+    if (source === "auto" && !includesToday) return;
+    manualRefresh.current = source === "manual";
+    setRefreshTick((n) => n + 1);
+  };
 
   // An aggregate is per entity for the whole range; it can't be narrowed by
   // the other filters. So a tab only gets its aggregate when the only active
@@ -176,39 +249,10 @@ export default function ReportsPage() {
       );
       if (othersActive) continue;
       const own = new Set(active[entity]);
-      out[entity] = own.size > 0 ? summaries[entity].filter((r) => own.has(r.entityId)) : summaries[entity];
+      out[entity] = own.size > 0 ? viewSummaries[entity].filter((r) => own.has(r.entityId)) : viewSummaries[entity];
     }
     return out;
-  }, [filters, summaries]);
-
-  useEffect(() => {
-    if (!fromKey || !access.canFetch) {
-      setRangeCalls([]);
-      return;
-    }
-    let cancelled = false;
-    setRangeLoading(true);
-    analyticsService
-      .allCalls({ dateFrom: fromKey, dateTo: toKey }, { timeZone })
-      .then((items) => {
-        if (!cancelled) setRangeCalls(items);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        // 423: the server wants the PIN. The lock screen takes over, so no
-        // error toast - the security store has already been told.
-        if (!(e instanceof ApiError && e.status === 423)) {
-          toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
-        }
-        setRangeCalls([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRangeLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [fromKey, toKey, timeZone, access.canFetch]);
+  }, [filters, viewSummaries]);
 
   const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);
@@ -219,7 +263,7 @@ export default function ReportsPage() {
     // Date scoping already happened server-side (dateFrom/dateTo above) — no
     // client-side day-boundary re-check here, since that's what applied the
     // wrong (browser-local) timezone in the first place.
-    return rangeCalls.filter((c) => {
+    return viewCalls.filter((c) => {
       if (campaignSet.size > 0 && !campaignSet.has(c.campaignId)) return false;
       if (buyerSet.size > 0 && (!c.buyerId || !buyerSet.has(c.buyerId))) return false;
       if (publisherSet.size > 0 && (!c.publisherId || !publisherSet.has(c.publisherId))) {
@@ -228,7 +272,7 @@ export default function ReportsPage() {
       if (statusSet.size > 0 && !statusSet.has(c.status)) return false;
       return true;
     });
-  }, [filters, rangeCalls]);
+  }, [filters, viewCalls]);
 
   const summary = useMemo(() => {
     const revenue = filtered.reduce((s, c) => s + c.revenue, 0);
@@ -294,7 +338,7 @@ export default function ReportsPage() {
       <ReportsToolbar
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
-        onRefresh={() => toast.success(t("page.reports.refreshed"))}
+        onRefresh={onRefresh}
         filters={filters}
         onFiltersChange={setFilters}
         visibility={visibility}
@@ -309,6 +353,17 @@ export default function ReportsPage() {
         onCancel={cancelHistorical}
         cancelLabel={REPORTS_POLICY.includeToday ? undefined : "Back to dashboard"}
       >
+        {/* A new range is loading: nothing from the previous range is shown,
+            and this says so instead of the panels reading as "no calls". */}
+        {switchingView && (
+          <div
+            role="status"
+            className="mb-3 flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground"
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Loading {fromKey === toKey || !toKey ? fromKey : `${fromKey} – ${toKey}`}…
+          </div>
+        )}
         {/* Row 1 — Hourly distribution (2/3) + perf card over donut (1/3).
             On mobile, only one of the two charts is shown at a time and the
             toggle button below the toolbar swaps between them. */}

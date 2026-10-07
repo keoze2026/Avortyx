@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
@@ -33,7 +34,7 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
-import type { Call } from "@/lib/types";
+import type { Call, Destination } from "@/lib/types";
 
 const NO_CALLS: Call[] = [];
 
@@ -51,6 +52,9 @@ const RETURN_REFRESH_MIN_GAP_MS = 10_000;
 /** useLayoutEffect on the client (paints cached figures before the first frame),
  *  useEffect on the server (where layout effects only warn). */
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+/** Empty, stable: the destinations table while a non-today view is loading. */
+const NO_DESTINATIONS: Destination[] = [];
 
 const countsOf = (snap: DashboardSnapshot) =>
   new Map(snap.destinations.map((d) => [toE164(d.tfn), d.dailyCalls] as [string, number]));
@@ -121,7 +125,13 @@ export default function DashboardPage() {
   useIsoLayoutEffect(() => {
     if (!mayLoad) return;
     const cached = getCachedSnapshot(viewKey);
-    if (!cached) return;
+    if (!cached) {
+      // Nothing saved for this view yet: show nothing rather than the previous
+      // view's figures under the new date (that mix is what read as "both days
+      // on screen"). The load below fills it in.
+      setSnapshot(null);
+      return;
+    }
     setSnapshot(cached);
     if (allSelected) setAllDestCounts(countsOf(cached));
   }, [viewKey, userId, allSelected, mayLoad]);
@@ -298,6 +308,17 @@ export default function DashboardPage() {
       {/* Everything below is the account's history when the range starts before
           today, so it sits behind the reports PIN (today never does). */}
       <ReportsPinGate needsPin={needsPin} onCancel={() => setDateRange({ from: today, to: today })}>
+        {/* A view with nothing saved yet is loading: say so, so its empty
+            panels are not read as real zeros. */}
+        {loading && !snapshot && (
+          <div
+            role="status"
+            className="mb-3 flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground"
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Loading {dateLabel}…
+          </div>
+        )}
         {/* Row 1 — Hourly CALLS chart (primary) + donut on the right.
             Uses the same composed-chart component as the Reports page so the
             two surfaces share an identical visual language. */}
@@ -329,7 +350,9 @@ export default function DashboardPage() {
         {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
         <DestinationSummaryTable
           calls={NO_CALLS}
-          rangeDestinations={snapshot?.destinations}
+          // While a view loads, only TODAY may fall back to the live
+          // destination counters - for any other range they are the wrong day.
+          rangeDestinations={snapshot?.destinations ?? (isToday ? undefined : NO_DESTINATIONS)}
           dateLabel={dateLabel}
           useLiveCounters={isToday}
           destinationFilter={allSelected ? undefined : destinationTfn}
