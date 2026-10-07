@@ -2271,6 +2271,8 @@ export const ja: TranslationShape = {
           title: "トラッキング番号を編集",
           labelName: "名前",
           labelCampaign: "キャンペーン",
+          labelCarrier: "キャリア",
+          carrierNone: "キャリアなし",
           unassigned: "— 未割当のまま —",
           labelAllocated: "割当キャップ",
           labelStatus: "ステータス",

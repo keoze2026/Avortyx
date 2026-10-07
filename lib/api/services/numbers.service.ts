@@ -306,6 +306,9 @@ export const numbersService = {
     if ("campaignId" in patch) body.campaignId = patch.campaignId ?? null;
     if (patch.status !== undefined) body.status = patch.status;
     if (patch.label !== undefined) body.label = patch.label;
+    // `in` rather than `!== undefined`, so clearing the carrier reaches the
+    // wire as an empty string instead of being dropped as a no-op.
+    if ("carrierId" in patch) body.carrierId = patch.carrierId ?? "";
     // Cap fields.
     if (patch.allocatedCapacity !== undefined) body.allocatedCapacity = patch.allocatedCapacity;
     if (patch.capEnabled !== undefined) body.capEnabled = patch.capEnabled;
@@ -476,5 +479,61 @@ export const poolsService = {
 
   async removeNumber(poolId: string, numberId: string): Promise<void> {
     await http.delete(`/api/dni/pools/${poolId}/numbers/${numberId}`);
+  },
+};
+
+/* ===========================================================
+   Carriers
+   =========================================================== */
+
+export interface Carrier {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+  notes: string;
+  numbersCount: number;
+}
+
+interface CarrierWire {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+  notes: string;
+  numbersCount?: number;
+}
+
+function wireToCarrier(w: CarrierWire): Carrier {
+  return {
+    id: w.id,
+    name: w.name,
+    code: w.code,
+    isActive: w.isActive,
+    notes: w.notes ?? "",
+    numbersCount: w.numbersCount ?? 0,
+  };
+}
+
+export const carriersService = {
+  async list(): Promise<Carrier[]> {
+    const rows = await http.get<CarrierWire[]>("/api/carriers/");
+    return (rows ?? []).map(wireToCarrier);
+  },
+
+  async create(input: { name: string; code: string }): Promise<Carrier> {
+    return wireToCarrier(
+      await http.post<CarrierWire>("/api/carriers/", { body: input }),
+    );
+  },
+
+  async update(id: string, patch: Partial<Carrier>): Promise<Carrier> {
+    return wireToCarrier(
+      await http.patch<CarrierWire>(`/api/carriers/${id}`, { body: patch }),
+    );
+  },
+
+  async remove(id: string): Promise<void> {
+    await http.delete(`/api/carriers/${id}`);
   },
 };

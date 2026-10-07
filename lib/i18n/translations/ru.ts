@@ -2272,6 +2272,8 @@ export const ru: TranslationShape = {
           title: "Изменить трекинговый номер",
           labelName: "Название",
           labelCampaign: "Кампания",
+          labelCarrier: "Оператор",
+          carrierNone: "Без оператора",
           unassigned: "— Без кампании —",
           labelAllocated: "Дневной лимит",
           labelStatus: "Статус",

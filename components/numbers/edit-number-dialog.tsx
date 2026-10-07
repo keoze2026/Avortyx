@@ -29,6 +29,7 @@ import { toE164 } from "@/lib/format";
 import type { NumberStatus, TrackingNumber } from "@/lib/types";
 
 import { deriveAllocated, deriveName } from "./track-numbers-table";
+import { carriersService, type Carrier } from "@/lib/api/services/numbers.service";
 
 interface Props {
   number: TrackingNumber | null;
@@ -47,6 +48,8 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
   const [campaignId, setCampaignId] = useState<string>(UNASSIGNED);
   const [allocated, setAllocated] = useState<number>(0);
   const [status, setStatus] = useState<NumberStatus>("active");
+  const [carrierId, setCarrierId] = useState<string>(UNASSIGNED);
+  const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Seed form whenever the dialog opens on a new row. "Allocated" maps to
@@ -58,7 +61,27 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
     setCampaignId(number.campaignId ?? UNASSIGNED);
     setAllocated(number.allocatedCapacity ?? deriveAllocated(number));
     setStatus(number.status);
+    setCarrierId(number.carrierId ?? UNASSIGNED);
   }, [number]);
+
+  // The carrier list is short and changes rarely, so it is fetched when the
+  // dialog opens rather than held in a store. A failure leaves the select
+  // empty instead of blocking the rest of the form.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    carriersService
+      .list()
+      .then((rows) => {
+        if (!cancelled) setCarriers(rows.filter((c) => c.isActive));
+      })
+      .catch(() => {
+        if (!cancelled) setCarriers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   if (!number) return null;
 
@@ -82,6 +105,9 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
         campaignName: campaign?.name,
         allocatedCapacity: allocatedValue,
         status,
+        // Empty string clears it; the service sends it either way so a clear
+        // is not mistaken for "leave as it was".
+        carrierId: carrierId === UNASSIGNED ? "" : carrierId,
       });
       toast.success(
         t("trafficUI.numbers.track.editDialog.saved").replace("{number}", toE164(number.number)),
@@ -137,6 +163,25 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>{t("trafficUI.numbers.track.editDialog.labelCarrier")}</Label>
+            <Select value={carrierId} onValueChange={setCarrierId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>
+                  {t("trafficUI.numbers.track.editDialog.carrierNone")}
+                </SelectItem>
+                {carriers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.code} — {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>

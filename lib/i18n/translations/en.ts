@@ -1641,6 +1641,8 @@ export const en = {
           title: "Edit tracking number",
           labelName: "Name",
           labelCampaign: "Campaign",
+          labelCarrier: "Carrier",
+          carrierNone: "No carrier",
           unassigned: "— Leave unassigned —",
           labelAllocated: "Allocated cap",
           labelStatus: "Status",

@@ -1603,6 +1603,8 @@ export const zh: TranslationShape = {
           title: "编辑跟踪号码",
           labelName: "名称",
           labelCampaign: "活动",
+          labelCarrier: "承运商",
+          carrierNone: "无承运商",
           unassigned: "— 不分配 —",
           labelAllocated: "分配上限",
           labelStatus: "状态",
