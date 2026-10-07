@@ -52,6 +52,13 @@ import {
   type ExportColumn,
   type ExportFormat,
 } from "@/lib/export";
+import {
+  CALL_LOG_NUMERIC_HEADERS,
+  DURATION_MIN_HEADER,
+  formatCallLogTable,
+  secondsToMinutes,
+  upperLabels,
+} from "@/lib/call-log-export";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -310,7 +317,8 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
   }
 }
 
-const SERVER_EXPORT_NUMERIC_HEADERS = ["Duration (s)", "Revenue", "Payout", "Profit"];
+// Numeric columns of the formatted file (headers in capitals, duration in minutes).
+const SERVER_EXPORT_NUMERIC_HEADERS = CALL_LOG_NUMERIC_HEADERS;
 
 /** Header names the backend export may use for the caller's number. */
 const CALLER_HEADERS = new Set(["caller", "callerid", "callernumber"]);
@@ -479,14 +487,15 @@ export function CallLogTable({
     try {
       const blob = await analyticsService.exportCallsCsv(serverQuery);
       const text = await blob.text();
-      // Caller IDs in the file match the screen (with the leading "1").
-      const table = formatExportCallerColumn(parseCSV(text));
+      // Caller IDs in the file match the screen (with the leading "1"); then
+      // capital headers, capitalised Status, and Duration in minutes.
+      const table = formatCallLogTable(formatExportCallerColumn(parseCSV(text)));
       const count = Math.max(table.length - 1, 0);
       const stem = dateStamped("call-log");
       if (format === "csv") {
         triggerDownload(new Blob([rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
       } else {
-        triggerDownload(csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS), `${stem}.xlsx`);
+        triggerDownload(csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS, { boldHeader: true }), `${stem}.xlsx`);
       }
       toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
     } catch (e) {
@@ -505,11 +514,15 @@ export function CallLogTable({
       label: t("toolsUI.reports.callLog.columns.callDate"),
       value: (c) => new Date(c.startedAt).toISOString(),
     };
-    const dataCols: ExportColumn<Call>[] = COLUMNS.filter((c) => columns[c.id]).map((c) => ({
-      label: t(COLUMN_LABEL_KEYS[c.id]),
-      value: (row) => logCellValue(row, c.id, publisherNameById),
-    }));
-    downloadRows(format, [dateCol, ...dataCols], filtered, dateStamped("call-log"), "Call log");
+    const dataCols: ExportColumn<Call>[] = COLUMNS.filter((c) => columns[c.id]).map((c) =>
+      c.id === "duration"
+        ? // Minutes in the file (the screen shows hh:mm:ss).
+          { label: DURATION_MIN_HEADER, value: (row: Call) => secondsToMinutes(row.durationSec) }
+        : { label: t(COLUMN_LABEL_KEYS[c.id]), value: (row: Call) => logCellValue(row, c.id, publisherNameById) },
+    );
+    downloadRows(format, upperLabels([dateCol, ...dataCols]), filtered, dateStamped("call-log"), "Call log", {
+      boldHeader: true,
+    });
     toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(filtered.length)).replace("{format}", format.toUpperCase()));
   };
 

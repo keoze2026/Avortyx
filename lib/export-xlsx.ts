@@ -64,7 +64,7 @@ function colLetter(index: number): string {
    Workbook XML parts
    =========================================================== */
 
-function buildContentTypes(): string {
+function buildContentTypes(withStyles = false): string {
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
@@ -72,7 +72,26 @@ function buildContentTypes(): string {
     `<Default Extension="xml" ContentType="application/xml"/>` +
     `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
     `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+    (withStyles
+      ? `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`
+      : "") +
     `</Types>`
+  );
+}
+
+/** Two cell formats: 0 = normal, 1 = bold (used for the header row). */
+function buildStylesXml(): string {
+  return (
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
+    `<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>` +
+    `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
+    `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+    `<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+    `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>` +
+    `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>` +
+    `</styleSheet>`
   );
 }
 
@@ -85,11 +104,14 @@ function buildRootRels(): string {
   );
 }
 
-function buildWorkbookRels(): string {
+function buildWorkbookRels(withStyles = false): string {
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
     `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>` +
+    (withStyles
+      ? `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`
+      : "") +
     `</Relationships>`
   );
 }
@@ -106,13 +128,14 @@ function buildWorkbookXml(sheetName: string): string {
   );
 }
 
-function buildSheetXml(columns: ExportColumn<unknown>[], rows: unknown[]): string {
+function buildSheetXml(columns: ExportColumn<unknown>[], rows: unknown[], boldHeader = false): string {
+  const headerStyle = boldHeader ? ` s="1"` : "";
   const headerRow =
     `<row r="1">` +
     columns
       .map(
         (c, i) =>
-          `<c r="${colLetter(i + 1)}1" t="inlineStr"><is><t>${escapeXml(c.label)}</t></is></c>`,
+          `<c r="${colLetter(i + 1)}1"${headerStyle} t="inlineStr"><is><t>${escapeXml(c.label)}</t></is></c>`,
       )
       .join("") +
     `</row>`;
@@ -255,24 +278,32 @@ export interface ExportColumn<T> {
   value: (row: T) => string | number | null | undefined;
 }
 
+export interface XLSXOptions {
+  /** Make the header row bold. */
+  boldHeader?: boolean;
+}
+
 /** Build an .xlsx Blob from a typed row set and column definitions. */
 export function toXLSX<T>(
   columns: ExportColumn<T>[],
   rows: T[],
   sheetName = "Sheet1",
+  options: XLSXOptions = {},
 ): Blob {
+  const bold = options.boldHeader === true;
   const cols = columns as ExportColumn<unknown>[];
-  const sheetXml = buildSheetXml(cols, rows as unknown[]);
+  const sheetXml = buildSheetXml(cols, rows as unknown[], bold);
 
   const zip = buildZip([
-    { name: "[Content_Types].xml", content: buildContentTypes() },
+    { name: "[Content_Types].xml", content: buildContentTypes(bold) },
     { name: "_rels/.rels", content: buildRootRels() },
     { name: "xl/workbook.xml", content: buildWorkbookXml(sheetName) },
-    { name: "xl/_rels/workbook.xml.rels", content: buildWorkbookRels() },
+    { name: "xl/_rels/workbook.xml.rels", content: buildWorkbookRels(bold) },
     { name: "xl/worksheets/sheet1.xml", content: sheetXml },
+    ...(bold ? [{ name: "xl/styles.xml", content: buildStylesXml() }] : []),
   ]);
 
-  return new Blob([zip], {
+  return new Blob([new Uint8Array(zip)], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 }

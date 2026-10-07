@@ -4,7 +4,7 @@
  * tables don't have to maintain two parallel mappings.
  */
 
-import { toXLSX, type ExportColumn } from "./export-xlsx";
+import { toXLSX, type ExportColumn, type XLSXOptions } from "./export-xlsx";
 
 export type ExportFormat = "csv" | "xlsx";
 export type { ExportColumn } from "./export-xlsx";
@@ -74,6 +74,7 @@ export function csvRowsToXLSX(
   table: string[][],
   sheetName = "Sheet1",
   numericHeaders: string[] = [],
+  options: XLSXOptions = {},
 ): Blob {
   const [header = [], ...body] = table;
   const numeric = new Set(numericHeaders);
@@ -88,7 +89,7 @@ export function csvRowsToXLSX(
       return v;
     },
   }));
-  return toXLSX(columns, body, sheetName);
+  return toXLSX(columns, body, sheetName, options);
 }
 
 /* ===========================================================
@@ -121,6 +122,7 @@ export function downloadRows<T>(
   rows: T[],
   filenameStem: string,
   sheetName = "Sheet1",
+  options: XLSXOptions = {},
 ) {
   if (format === "csv") {
     const blob = new Blob([toCSV(columns, rows)], {
@@ -128,7 +130,7 @@ export function downloadRows<T>(
     });
     triggerDownload(blob, `${filenameStem}.csv`);
   } else {
-    const blob = toXLSX(columns, rows, sheetName);
+    const blob = toXLSX(columns, rows, sheetName, options);
     triggerDownload(blob, `${filenameStem}.xlsx`);
   }
 }

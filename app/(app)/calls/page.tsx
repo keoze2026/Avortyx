@@ -15,6 +15,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { rangeDayKeys, totals, type DateRange } from "@/lib/analytics";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
+import { DURATION_MIN_HEADER, secondsToMinutes, statusLabel, upperLabels } from "@/lib/call-log-export";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { isPinRequiredError } from "@/lib/reports-scope";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -26,8 +27,10 @@ import type { Call, CallStatus } from "@/lib/types";
 const DEFAULT_VISIBLE = new Set(ALL_COLUMNS.map((c) => c.id));
 
 /** Columns written to the CSV / XLSX file. Shared shape — numeric fields
- *  (duration, payout, revenue) are emitted as numbers so XLSX preserves typing. */
-const CALL_EXPORT_COLUMNS: ExportColumn<Call>[] = [
+ *  (duration, payout, revenue) are emitted as numbers so XLSX preserves typing.
+ *  Headers in capitals, Status capitalised, Duration in minutes (see
+ *  lib/call-log-export.ts). */
+const CALL_EXPORT_COLUMNS: ExportColumn<Call>[] = upperLabels<Call>([
   { label: "ID", value: (c) => c.id },
   { label: "Started", value: (c) => new Date(c.startedAt).toISOString() },
   { label: "Caller", value: (c) => c.callerNumber },
@@ -36,11 +39,11 @@ const CALL_EXPORT_COLUMNS: ExportColumn<Call>[] = [
   { label: "Buyer", value: (c) => c.buyerName ?? "" },
   { label: "Publisher", value: (c) => c.publisherName ?? "" },
   { label: "State", value: (c) => c.geo.state ?? "" },
-  { label: "Status", value: (c) => c.status },
-  { label: "Duration (s)", value: (c) => c.durationSec },
+  { label: "Status", value: (c) => statusLabel(c.statusRaw ?? c.status) },
+  { label: DURATION_MIN_HEADER, value: (c) => secondsToMinutes(c.durationSec) },
   { label: "Payout", value: (c) => c.payout },
   { label: "Revenue", value: (c) => c.revenue },
-];
+]);
 
 export default function CallsPage() {
   const { t } = useTranslation();
@@ -154,6 +157,7 @@ export default function CallsPage() {
       filtered,
       dateStamped(`calls-${range}`),
       "Calls",
+      { boldHeader: true },
     );
     toast.success(
       t("toolsUI.callLogs.toastExport")
