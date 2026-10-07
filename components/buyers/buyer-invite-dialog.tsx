@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { http } from "@/lib/api/http";
 import { useBuyerMembersStore } from "@/lib/store/buyer-members-store";
+import { markInvited } from "@/lib/partner-access";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import type { Buyer } from "@/lib/types";
 
@@ -70,6 +71,9 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
       if (email.trim().toLowerCase() !== (buyer.email ?? "").trim().toLowerCase()) {
         useBuyerMembersStore.getState().addMember(buyer.id, email.trim());
       }
+      // A new invitation starts from scratch, even for an email seen before -
+      // including the buyer's own contact address.
+      markInvited([email]);
       toast.success(`Invite sent to ${email.trim()}`);
       onOpenChange(false);
     } catch (e) {

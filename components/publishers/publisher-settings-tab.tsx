@@ -36,6 +36,7 @@ import {
   type PartnerMembersLabels,
 } from "@/components/network/partner-members-section";
 import { usePartnerRegistration } from "@/hooks/use-partner-registration";
+import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useTranslation } from "@/hooks/use-translation";
 import {
   PERMISSIONS,
@@ -167,9 +168,20 @@ export function PublisherSettingsTab({ publisher }: Props) {
           // made the row read "Invited" when no email had been sent.
           await publishersService.invite(publisher.id, email);
           addMember(publisher.id, email);
+          // A new invitation starts from scratch, even for an email seen before.
+          markInvited([email]);
           registration.refresh();
         }}
-        onRemove={(memberId) => removeMember(publisher.id, memberId)}
+        onRemove={async (memberId) => {
+          const member = members.find((m) => m.id === memberId);
+          if (!member) return;
+          // End their access on the server first; only then drop the row.
+          const outcome = await removePartnerMember("publisher", publisher.id, member.email);
+          removeMember(publisher.id, memberId);
+          forgetEmails([member.email]);
+          registration.refresh();
+          return outcome;
+        }}
       />
 
       <PermissionsSection

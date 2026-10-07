@@ -15,6 +15,7 @@ import {
   publishersService,
   type PayoutWire,
 } from "@/lib/api/services/publishers.service";
+import { forgetPartner, markInvited } from "@/lib/partner-access";
 import type { PayoutRecord, PayoutStatus, Publisher, PublisherStatus } from "@/lib/types";
 
 interface PublishersState {
@@ -120,6 +121,10 @@ export const usePublishersStore = create<PublishersState>()((set, get) => ({
   add: async (input) => {
     const created = await publishersService.create(input);
     set((s) => ({ publishers: [created, ...s.publishers] }));
+    // The server invites the contact email when the publisher is created. If that
+    // email was used before (say, by a deleted publisher), this is still a NEW
+    // invitation: forget anything this browser learned about it.
+    markInvited([created.email ?? (input as { email?: string }).email]);
     return created;
   },
 
@@ -141,6 +146,7 @@ export const usePublishersStore = create<PublishersState>()((set, get) => ({
 
   remove: async (id) => {
     const prev = get().publishers;
+    const removed = prev.find((x) => x.id === id);
     set((s) => ({ publishers: s.publishers.filter((p) => p.id !== id) }));
     try {
       await publishersService.remove(id);
@@ -148,6 +154,9 @@ export const usePublishersStore = create<PublishersState>()((set, get) => ({
       set({ publishers: prev, error: messageFromError(e) });
       throw e;
     }
+    // Deleted: everything this browser kept about its people goes too, so the
+    // same email invited again later starts from scratch.
+    forgetPartner("publisher", id, removed?.email);
   },
 
   setStatus: async (id, status) => {

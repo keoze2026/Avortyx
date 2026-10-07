@@ -9,6 +9,7 @@ import {
 } from "@/components/network/partner-members-section";
 import { usePartnerRegistration } from "@/hooks/use-partner-registration";
 import { http } from "@/lib/api/http";
+import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useBuyerMembersStore, type BuyerMember } from "@/lib/store/buyer-members-store";
 import type { Buyer } from "@/lib/types";
 
@@ -31,7 +32,7 @@ const LABELS: PartnerMembersLabels = {
   noData: "No members yet",
   invalidEmail: "Enter a valid email address",
   invitedToast: (email) => `Invite sent to ${email}`,
-  removedToast: (email) => `Removed ${email} from this list`,
+  removedToast: (email) => `Removed ${email}: their access has ended`,
   removeAria: (email) => `Remove ${email}`,
 };
 
@@ -69,9 +70,20 @@ export function BuyerMembersCard({ buyer }: { buyer: Buyer }) {
       onInvite={async (email) => {
         await http.post(`/api/buyers/${buyer.id}/invite`, { body: { email } });
         addMember(buyer.id, email);
+        // A new invitation starts from scratch, even for an email seen before.
+        markInvited([email]);
         reg.refresh();
       }}
-      onRemove={(id) => removeMember(buyer.id, id)}
+      onRemove={async (id) => {
+        const member = members.find((m) => m.id === id);
+        if (!member) return;
+        // End their access on the server first; only then drop the row.
+        const outcome = await removePartnerMember("buyer", buyer.id, member.email);
+        removeMember(buyer.id, id);
+        forgetEmails([member.email]);
+        reg.refresh();
+        return outcome;
+      }}
     />
   );
 }

@@ -11,7 +11,13 @@
  *      email --(members)--> user id --(sessions)--> has a login  => registered
  *
  * Someone who has not accepted has no usable password and cannot sign in, so
- * they never have a session. Limits (the backend keeps no "accepted" flag):
+ * they never have a session.
+ *
+ * PREFERRED: when the members list carries `invite_status` ("invited" /
+ * "registered" / "revoked") the server's answer is used as is - no guessing.
+ * That is the only way a re-invited email is shown correctly in every browser.
+ *
+ * FALLBACK (older server, no `invite_status`). Limits:
  *   - a session lives 7 days, so a person who accepted longer ago and has not
  *     signed in since drops back to "invited" - the browser therefore
  *     remembers anyone it has seen registered (lib/store/registered-partners-store);
@@ -21,10 +27,16 @@
 import { http } from "@/lib/api/http";
 import { workspaceService } from "@/lib/api/services/workspace.service";
 
+/** Where an invitation stands. "revoked" = access was removed. */
+export type InviteStatus = "invited" | "registered" | "revoked";
+
 export interface RegistrationInfo {
-  /** A login session exists for this person. */
+  /** They accepted THIS invitation (status === "registered"). */
   registered: boolean;
-  /** When their most recent session started (ms since epoch), if any. */
+  status: InviteStatus;
+  /** The server said so (true), or it was worked out from login sessions (false). */
+  fromServer: boolean;
+  /** Their most recent login (ms since epoch), if any. */
   lastLoginAt: number | null;
 }
 
@@ -34,6 +46,10 @@ export type RegistrationMap = Map<string, RegistrationInfo>;
 export interface UserRef {
   id: string;
   email: string;
+  /** From the server, when it reports invitation status. */
+  inviteStatus?: InviteStatus;
+  /** When they accepted the current invitation (ms), when the server reports it. */
+  acceptedAt?: number | null;
 }
 
 export interface SessionRef {
@@ -55,10 +71,12 @@ export function resolveRegistration(
   emails: readonly string[],
   users: readonly UserRef[],
   sessions: readonly SessionRef[],
+  /** email -> when this browser last invited it (ms). Logins before that do not count. */
+  invitedAt: Readonly<Record<string, number>> = {},
 ): RegistrationMap {
-  const idByEmail = new Map<string, string>();
+  const userByEmail = new Map<string, UserRef>();
   for (const u of users) {
-    if (u.email) idByEmail.set(normEmail(u.email), u.id);
+    if (u.email) userByEmail.set(normEmail(u.email), u);
   }
   const lastByUser = new Map<string, number>();
   for (const s of sessions) {
@@ -71,9 +89,29 @@ export function resolveRegistration(
   for (const raw of emails) {
     const email = normEmail(raw);
     if (!email || out.has(email)) continue;
-    const id = idByEmail.get(email);
-    const last = id !== undefined ? lastByUser.get(id) : undefined;
-    out.set(email, { registered: last !== undefined, lastLoginAt: last ? last : null });
+    const user = userByEmail.get(email);
+    const last = user ? lastByUser.get(user.id) : undefined;
+    if (user?.inviteStatus) {
+      // The server knows - use its answer, whatever the sessions say.
+      out.set(email, {
+        registered: user.inviteStatus === "registered",
+        status: user.inviteStatus,
+        fromServer: true,
+        lastLoginAt: last ?? user.acceptedAt ?? null,
+      });
+      continue;
+    }
+    // Older server: a login counts only if it is not older than this browser's
+    // latest invitation of that email - so a re-invited person whose old
+    // account signed in last week is not shown as having accepted the new one.
+    const since = invitedAt[email] ?? 0;
+    const registered = last !== undefined && last >= since;
+    out.set(email, {
+      registered,
+      status: registered ? "registered" : "invited",
+      fromServer: false,
+      lastLoginAt: last ? last : null,
+    });
   }
   return out;
 }
@@ -92,7 +130,19 @@ export async function fetchWorkspaceUsers(): Promise<UserRef[]> {
     for (const it of items) {
       const id = (it.userId ?? it.id) as string | undefined;
       const email = it.email as string | undefined;
-      if (id && email) users.push({ id: String(id), email });
+      if (!id || !email) continue;
+      const rawStatus = String(it.inviteStatus ?? it.invite_status ?? "").trim().toLowerCase();
+      const inviteStatus =
+        rawStatus === "invited" || rawStatus === "registered" || rawStatus === "revoked"
+          ? (rawStatus as InviteStatus)
+          : undefined;
+      const accepted = Date.parse(String(it.acceptedAt ?? it.accepted_at ?? ""));
+      users.push({
+        id: String(id),
+        email,
+        inviteStatus,
+        acceptedAt: Number.isFinite(accepted) ? accepted : null,
+      });
     }
     const pages = Array.isArray(res) ? 1 : Number((res as { pages?: number } | null)?.pages ?? 1);
     if (page >= pages) break;
@@ -102,7 +152,10 @@ export async function fetchWorkspaceUsers(): Promise<UserRef[]> {
 
 /** Look up registration for these emails. Throws if either list can't be read
  *  (the caller keeps what it already knew rather than flipping anyone back). */
-export async function fetchRegistration(emails: readonly string[]): Promise<RegistrationMap> {
+export async function fetchRegistration(
+  emails: readonly string[],
+  invitedAt: Readonly<Record<string, number>> = {},
+): Promise<RegistrationMap> {
   const wanted = normalizeEmails(emails);
   if (wanted.length === 0) return new Map();
   const [users, sessions] = await Promise.all([fetchWorkspaceUsers(), workspaceService.listSessions()]);
@@ -110,6 +163,7 @@ export async function fetchRegistration(emails: readonly string[]): Promise<Regi
     wanted,
     users,
     sessions.map((s) => ({ userId: s.userId, lastActiveAt: s.lastActiveAt })),
+    invitedAt,
   );
 }
 

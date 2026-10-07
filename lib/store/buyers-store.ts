@@ -11,6 +11,7 @@
 import { create } from "zustand";
 
 import { buyersService } from "@/lib/api/services/buyers.service";
+import { forgetPartner, markInvited } from "@/lib/partner-access";
 import type { Buyer, BuyerStatus } from "@/lib/types";
 
 interface BuyersState {
@@ -73,6 +74,10 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
   add: async (input) => {
     const created = await buyersService.create(input);
     set((s) => ({ buyers: [created, ...s.buyers] }));
+    // The server invites the contact email when the buyer is created. If that
+    // email was used before (say, by a deleted buyer), this is still a NEW
+    // invitation: forget anything this browser learned about it.
+    markInvited([created.email ?? (input as { email?: string }).email]);
     return created;
   },
 
@@ -95,6 +100,7 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
 
   remove: async (id) => {
     const prev = get().buyers;
+    const removed = prev.find((x) => x.id === id);
     set((s) => ({ buyers: s.buyers.filter((b) => b.id !== id) }));
     try {
       await buyersService.remove(id);
@@ -102,6 +108,9 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
       set({ buyers: prev, error: messageFromError(e) });
       throw e;
     }
+    // Deleted: everything this browser kept about its people goes too, so the
+    // same email invited again later starts from scratch.
+    forgetPartner("buyer", id, removed?.email);
   },
 
   updateCap: async (id, cap) => {

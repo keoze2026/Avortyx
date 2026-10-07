@@ -7,6 +7,10 @@
  * and signed in, then "Registered" in blue - so the main account can see at a
  * glance who has actually joined. The status comes from
  * lib/partner-registration.ts and refreshes by itself.
+ *
+ * Removing a member ends their access on the server (after a confirmation);
+ * if the server cannot do that yet, the row is removed and the user is told
+ * plainly that the person's login still works.
  */
 
 import * as React from "react";
@@ -14,6 +18,9 @@ import { Filter, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { friendlyErrorMessage } from "@/lib/api/errors";
+import type { RemoveOutcome } from "@/lib/partner-access";
+import type { InviteStatus } from "@/lib/partner-registration";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +37,8 @@ export interface PartnerMemberRow {
   email: string;
   /** The person accepted the invitation and has signed in. */
   registered: boolean;
+  /** "revoked" = their access was removed (shown as "Access removed"). */
+  status?: InviteStatus;
   /** Their most recent login (ms since epoch), if known. */
   lastLoginAt: number | null;
   /** The partner's own contact email can't be removed from this list. */
@@ -63,7 +72,8 @@ interface Props {
   labels: PartnerMembersLabels;
   /** Send the invitation. Throw to report a failure. */
   onInvite: (email: string) => Promise<void>;
-  onRemove: (id: string) => void;
+  /** Remove this person's access. Throw to report a failure. */
+  onRemove: (id: string) => Promise<RemoveOutcome | void> | RemoveOutcome | void;
 }
 
 export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Props) {
@@ -72,6 +82,28 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  /** Row waiting for "Remove access?" confirmation, and the row being removed. */
+  const [confirmId, setConfirmId] = React.useState<string | null>(null);
+  const [removingId, setRemovingId] = React.useState<string | null>(null);
+
+  const confirmRemove = async (m: PartnerMemberRow) => {
+    setRemovingId(m.id);
+    try {
+      const outcome = await onRemove(m.id);
+      if (outcome === "local-only") {
+        toast.warning(`Removed ${m.email} from this list`, {
+          description: "Their sign-in still works: the server cannot remove access yet.",
+        });
+      } else {
+        toast.success(labels.removedToast(m.email));
+      }
+      setConfirmId(null);
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, `Couldn't remove ${m.email}. Please try again.`));
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -194,7 +226,16 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
                 <TableRow key={m.id}>
                   <TableCell className="pl-4 text-left font-medium">{m.email}</TableCell>
                   <TableCell className="text-left">
-                    {m.registered ? (
+                    {m.status === "revoked" ? (
+                      <Badge
+                        variant="outline"
+                        data-status="revoked"
+                        title="Their access was removed. Invite them again to give it back."
+                        className="border-destructive/40 bg-destructive/10 font-medium text-destructive"
+                      >
+                        Access removed
+                      </Badge>
+                    ) : m.registered ? (
                       <Badge
                         variant="outline"
                         data-status="registered"
@@ -214,19 +255,38 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
                     )}
                   </TableCell>
                   <TableCell className="pr-4 text-right">
-                    {m.canRemove && (
+                    {m.canRemove && confirmId === m.id ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-[11px] text-muted-foreground">Remove access?</span>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 px-2 text-[11px]"
+                          disabled={removingId === m.id}
+                          onClick={() => void confirmRemove(m)}
+                        >
+                          {removingId === m.id ? "Removing…" : "Remove"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px]"
+                          disabled={removingId === m.id}
+                          onClick={() => setConfirmId(null)}
+                        >
+                          Keep
+                        </Button>
+                      </span>
+                    ) : m.canRemove ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          onRemove(m.id);
-                          toast.success(labels.removedToast(m.email));
-                        }}
+                        onClick={() => setConfirmId(m.id)}
                         aria-label={labels.removeAria(m.email)}
                         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                    )}
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))
@@ -235,8 +295,9 @@ export function PartnerMembersSection({ rows, labels, onInvite, onRemove }: Prop
         </Table>
       </div>
       <p className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
-        Shows <span className="font-medium text-accent">Registered</span> once the person has accepted the
-        invitation and signed in. This list checks for that by itself.
+        Shows <span className="font-medium text-accent">Registered</span> once the person has accepted their
+        latest invitation and signed in. This list checks for that by itself. Inviting someone again starts them
+        from scratch.
       </p>
     </section>
   );
