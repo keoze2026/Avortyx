@@ -1581,6 +1581,8 @@ export const zh: TranslationShape = {
           allocated: "已分配",
           renew: "续订",
           lifetime: "终身",
+          carrier: "代码",
+          assigned: "已分配",
           vendor: "发布商",
           live: "实时",
           hourly: "每小时",

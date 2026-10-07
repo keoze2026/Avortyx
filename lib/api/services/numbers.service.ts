@@ -55,6 +55,10 @@ interface NumberWire {
   capacity?: string | number;
   /** Renewal date — backend may return ISO string or epoch ms. */
   renewsAt?: string | number;
+  carrierId?: string | null;
+  carrierName?: string | null;
+  carrierCode?: string | null;
+  assignedAt?: string | number | null;
   renewalDate?: string | number;
   provisionedAt?: string | number;
   lastCallAt?: string | number;
@@ -141,6 +145,11 @@ function wireToNumber(w: NumberWire): TrackingNumber {
     allocatedCapacity:
       allocatedRaw !== undefined && allocatedRaw !== null ? toNum(allocatedRaw) : undefined,
     renewsAt: renewRaw !== undefined && renewRaw !== null ? toTs(renewRaw) : undefined,
+    carrierId: w.carrierId ?? undefined,
+    carrierName: w.carrierName ?? undefined,
+    carrierCode: w.carrierCode ?? undefined,
+    assignedAt:
+      w.assignedAt !== undefined && w.assignedAt !== null ? toTs(w.assignedAt) : undefined,
     provisionedAt: toTs(w.provisionedAt),
     lastCallAt: w.lastCallAt !== undefined ? toTs(w.lastCallAt) : undefined,
     // Round-trip the editable fields so a successful PATCH actually changes

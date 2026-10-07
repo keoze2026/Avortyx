@@ -42,6 +42,17 @@ export interface TrackingNumber {
    *  a date money moves on and must never be invented. */
   renewsAt?: number;
 
+  /** The carrier actually carrying this number, and its short code. Distinct
+   *  from `vendor`, which is where the number was bought: two toll-frees from
+   *  different carriers both read `Other` there. */
+  carrierId?: string;
+  carrierName?: string;
+  carrierCode?: string;
+  /** When the number was put on a campaign (ms epoch). Undefined shows a dash
+   *  — an unassigned number has no such date and inventing one is a lie about
+   *  when it started earning. */
+  assignedAt?: number;
+
   provisionedAt: number;
   lastCallAt?: number;
 

@@ -90,6 +90,21 @@ export function deriveLifetimeDays(n: TrackingNumber): number {
   return Math.max(1, Math.floor((Date.now() - n.provisionedAt) / DAY_MS));
 }
 
+/** The carrier's short code, e.g. KMQ. Blank until a carrier is set on the
+ *  number — the code is a row in the backend's carrier table, never a value
+ *  guessed from the number or the vendor. */
+export function deriveCarrierCode(n: TrackingNumber): string {
+  return n.carrierCode?.trim() || DASH;
+}
+
+/** The day this number was put on a campaign. A number that has never been
+ *  assigned has no such date, and showing today's would say it started
+ *  earning today. */
+export function deriveAssignedDate(n: TrackingNumber): string {
+  if (!n.assignedAt) return DASH;
+  return new Date(n.assignedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 /**
  * Resolve the carrier shown in the "Publisher" column (the underlying
  * field is still named `vendor` in our domain types — that's the telecom
@@ -134,6 +149,8 @@ export const TRACK_NUMBERS_COLUMNS = [
   { id: "allocated", label: "Allocated", labelKey: "trafficUI.numbers.track.headers.allocated" },
   { id: "renew", label: "Renew", labelKey: "trafficUI.numbers.track.headers.renew" },
   { id: "lifetime", label: "Lifetime", labelKey: "trafficUI.numbers.track.headers.lifetime" },
+  { id: "carrier", label: "Code", labelKey: "trafficUI.numbers.track.headers.carrier" },
+  { id: "assigned", label: "Assigned", labelKey: "trafficUI.numbers.track.headers.assigned" },
   { id: "vendor", label: "Publisher", labelKey: "trafficUI.numbers.track.headers.vendor" },
   { id: "live", label: "Live", labelKey: "trafficUI.numbers.track.headers.live" },
   { id: "hourly", label: "Hourly", labelKey: "trafficUI.numbers.track.headers.hourly" },
@@ -199,6 +216,8 @@ export function TrackNumbersTable({
               {visibleColumns.has("allocated") && <TableHead>{t("trafficUI.numbers.track.headers.allocated")}</TableHead>}
               {visibleColumns.has("renew") && <TableHead>{t("trafficUI.numbers.track.headers.renew")}</TableHead>}
               {visibleColumns.has("lifetime") && <TableHead>{t("trafficUI.numbers.track.headers.lifetime")}</TableHead>}
+              {visibleColumns.has("carrier") && <TableHead>{t("trafficUI.numbers.track.headers.carrier")}</TableHead>}
+              {visibleColumns.has("assigned") && <TableHead>{t("trafficUI.numbers.track.headers.assigned")}</TableHead>}
               {visibleColumns.has("vendor") && <TableHead>{t("trafficUI.numbers.track.headers.vendor")}</TableHead>}
               {visibleColumns.has("live") && <TableHead>{t("trafficUI.numbers.track.headers.live")}</TableHead>}
               {visibleColumns.has("hourly") && <TableHead>{t("trafficUI.numbers.track.headers.hourly")}</TableHead>}
@@ -288,6 +307,16 @@ export function TrackNumbersTable({
                     {visibleColumns.has("lifetime") && (
                       <TableCell className={CELL}>
                         {deriveLifetimeDays(n)}d
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("carrier") && (
+                      <TableCell className={CELL}>
+                        {deriveCarrierCode(n)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("assigned") && (
+                      <TableCell className={CELL}>
+                        {deriveAssignedDate(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("vendor") && (

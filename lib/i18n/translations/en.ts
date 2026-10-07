@@ -1619,6 +1619,8 @@ export const en = {
           allocated: "Allocated",
           renew: "Renew",
           lifetime: "Lifetime",
+          carrier: "Code",
+          assigned: "Assigned",
           vendor: "Publisher",
           live: "Live",
           hourly: "Hourly",

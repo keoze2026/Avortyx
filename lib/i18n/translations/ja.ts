@@ -2249,6 +2249,8 @@ export const ja: TranslationShape = {
           allocated: "割当",
           renew: "更新",
           lifetime: "稼働期間",
+          carrier: "コード",
+          assigned: "割当日",
           vendor: "パブリッシャー",
           live: "ライブ",
           hourly: "時間",
