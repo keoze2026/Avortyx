@@ -16,6 +16,7 @@ import { rangeDayKeys, totals, type DateRange } from "@/lib/analytics";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { DURATION_MIN_HEADER, secondsToMinutes, statusLabel, upperLabels } from "@/lib/call-log-export";
+import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { isPinRequiredError } from "@/lib/reports-scope";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -102,28 +103,36 @@ export default function CallsPage() {
     };
   }, [fromKey, toKey, timeZone, mayLoad]);
 
+  // A typed phone number is also searched on the server, across the whole log
+  // for these dates and this campaign (lib/call-search.ts). Until it answers,
+  // the on-screen matches show at once.
+  const serverBase = useMemo(
+    () =>
+      mayLoad && fromKey
+        ? { dateFrom: fromKey, dateTo: toKey, campaignId: campaignFilter !== "all" ? campaignFilter : undefined }
+        : null,
+    [mayLoad, fromKey, toKey, campaignFilter],
+  );
+  const server = useServerCallSearch(serverBase, query, timeZone);
+
   const filtered = useMemo(() => {
-    let calls = rangeCalls;
+    let calls = server.results ?? rangeCalls;
     if (campaignFilter !== "all") calls = calls.filter((c) => c.campaignId === campaignFilter);
     if (statuses.size > 0) calls = calls.filter((c) => statuses.has(c.status));
     if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      // Phone numbers are matched on their digits, so "+1 (877) 489-3778",
-      // "18774893778" and "8774893778" all find the same call. The number that
-      // was DIALLED (the tracking number) and the buyer's destination are
-      // searched as well as the caller - before, searching a tracking number
-      // could never find the calls made to it.
-      const qDigits = q.replace(/\D/g, "");
-      const digitsOf = (s?: string) => (s ?? "").replace(/\D/g, "");
-      calls = calls.filter((c) => {
-        const text = `${c.callerNumber} ${c.calledNumber ?? ""} ${c.destinationNumber ?? ""} ${c.campaignName} ${c.publisherName ?? ""} ${c.buyerName ?? ""} ${c.geo.state ?? ""}`.toLowerCase();
-        if (text.includes(q)) return true;
-        if (qDigits.length < 4) return false;
-        return [c.callerNumber, c.calledNumber, c.destinationNumber].some((n) => digitsOf(n).includes(qDigits));
-      });
+      // Names / text as typed; phone numbers on their digits, with or without
+      // the leading 1, in any format - caller, dialled (tracking) number and
+      // the buyer's destination.
+      calls = calls.filter((c) =>
+        callMatches(
+          c,
+          query,
+          `${c.callerNumber} ${c.calledNumber ?? ""} ${c.destinationNumber ?? ""} ${c.campaignName} ${c.publisherName ?? ""} ${c.buyerName ?? ""} ${c.geo.state ?? ""}`,
+        ),
+      );
     }
     return calls;
-  }, [query, campaignFilter, statuses, rangeCalls]);
+  }, [query, campaignFilter, statuses, rangeCalls, server.results]);
 
   const summary = useMemo(() => totals(filtered), [filtered]);
 
@@ -199,7 +208,7 @@ export default function CallsPage() {
           total={rangeCalls.length}
         />
 
-        {filtered.length === 0 && !loading ? (
+        {filtered.length === 0 && !loading && !server.searching ? (
           <EmptyState
             icon={PhoneCall}
             tone="cyan"

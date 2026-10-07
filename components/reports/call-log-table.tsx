@@ -59,6 +59,7 @@ import {
   secondsToMinutes,
   upperLabels,
 } from "@/lib/call-log-export";
+import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -396,17 +397,27 @@ export function CallLogTable({
   const toggleColumn = (id: ColumnKey) =>
     setColumns((v) => ({ ...v, [id]: !v[id] }));
 
+  // A typed phone number is also searched on the server, across the whole log
+  // for this page's dates and filters (see lib/call-search.ts). Until it
+  // answers, the on-screen matches show at once.
+  const server = useServerCallSearch(exportQuery, query, timeZone);
+
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const sorted = [...calls].sort((a, b) => b.startedAt - a.startedAt);
+    const q = query.trim();
+    const source = server.results ?? calls;
+    const sorted = [...source].sort((a, b) => b.startedAt - a.startedAt);
     return q
       ? sorted.filter((c) =>
-          `${c.campaignName} ${resolvePublisherName(c, publisherNameById)} ${c.buyerName ?? ""} ${c.callerNumber} ${c.destinationNumber}`
-            .toLowerCase()
-            .includes(q),
+          callMatches(
+            c,
+            q,
+            `${c.campaignName} ${resolvePublisherName(c, publisherNameById)} ${c.buyerName ?? ""} ${c.callerNumber} ${c.calledNumber ?? ""} ${c.destinationNumber}`,
+          ),
         )
       : sorted;
-  }, [calls, query, publisherNameById]);
+  }, [calls, query, publisherNameById, server.results]);
+  /** Nothing on screen yet, but the server is still looking. */
+  const searchingAll = server.searching && filtered.length === 0;
 
   const visible = React.useMemo(
     () => filtered.slice(page * pageSize, page * pageSize + pageSize),
@@ -618,12 +629,12 @@ export function CallLogTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading || searchingAll ? (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={colSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      {t("toolsUI.reports.callLog.loading")}
+                      {searchingAll && !loading ? "Searching all calls…" : t("toolsUI.reports.callLog.loading")}
                     </span>
                   </TableCell>
                 </TableRow>

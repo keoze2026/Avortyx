@@ -316,6 +316,12 @@ export interface CallLogQuery {
   campaignId?: string;
   buyerId?: string;
   publisherId?: string;
+  /**
+   * Server-side search over the WHOLE log (not just loaded rows): matches the
+   * caller, called and destination numbers in any format ("19196360344",
+   * "9196360344", "6360344", "(919) 636-0344" all find the same calls).
+   */
+  search?: string;
 }
 
 export type Granularity = "hour" | "day" | "week" | "month";
@@ -631,6 +637,7 @@ export const analyticsService = {
         campaignId: query.campaignId,
         buyerId: query.buyerId,
         publisherId: query.publisherId,
+        search: query.search?.trim() || undefined,
       },
     });
     // Same defensive unwrap as time-series — a bare array is a legacy shape.
