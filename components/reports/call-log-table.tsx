@@ -53,15 +53,22 @@ import {
   type ExportFormat,
 } from "@/lib/export";
 import {
+  CALL_LOG_LINK_HEADERS,
   CALL_LOG_NUMERIC_HEADERS,
-  DURATION_MIN_HEADER,
+  DESTINATION_NAME_HEADER,
+  DESTINATION_NUMBER_HEADER,
+  DURATION_HEADER,
+  destinationNameMap,
+  destinationOf,
+  exportNumber,
   formatCallLogTable,
-  secondsToMinutes,
+  formatDuration,
   upperLabels,
 } from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
+import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
@@ -386,6 +393,10 @@ export function CallLogTable({
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
   const [exporting, setExporting] = React.useState(false);
+  // For the export's DESTINATION NAME / NUMBER columns (the server's file has neither).
+  const destinations = useDestinationsStore((s) => s.destinations);
+  const destinationNames = React.useMemo(() => destinationNameMap(destinations), [destinations]);
+  const callsById = React.useMemo(() => new Map(calls.map((c) => [c.id, c])), [calls]);
 
   // Reset to page 0 whenever the result set or page size changes so we never
   // sit past the end of the filtered list.
@@ -500,13 +511,21 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = formatCallLogTable(formatExportCallerColumn(parseCSV(text)));
+      const table = formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
+        destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
+      });
       const count = Math.max(table.length - 1, 0);
       const stem = dateStamped("call-log");
       if (format === "csv") {
         triggerDownload(new Blob([rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
       } else {
-        triggerDownload(csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS, { boldHeader: true }), `${stem}.xlsx`);
+        triggerDownload(
+          csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS, {
+            boldHeader: true,
+            linkColumns: CALL_LOG_LINK_HEADERS,
+          }),
+          `${stem}.xlsx`,
+        );
       }
       toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
     } catch (e) {
@@ -525,14 +544,23 @@ export function CallLogTable({
       label: t("toolsUI.reports.callLog.columns.callDate"),
       value: (c) => new Date(c.startedAt).toISOString(),
     };
-    const dataCols: ExportColumn<Call>[] = COLUMNS.filter((c) => columns[c.id]).map((c) =>
-      c.id === "duration"
-        ? // Minutes in the file (the screen shows hh:mm:ss).
-          { label: DURATION_MIN_HEADER, value: (row: Call) => secondsToMinutes(row.durationSec) }
-        : { label: t(COLUMN_LABEL_KEYS[c.id]), value: (row: Call) => logCellValue(row, c.id, publisherNameById) },
-    );
+    const dataCols: ExportColumn<Call>[] = COLUMNS.filter((c) => columns[c.id]).flatMap((c): ExportColumn<Call>[] => {
+      if (c.id === "duration") return [{ label: DURATION_HEADER, value: (row) => formatDuration(row.durationSec) }];
+      if (c.id === "caller") return [{ label: "CALLER ID", value: (row) => exportNumber(row.callerNumber) }];
+      if (c.id === "dialed") return [{ label: "CALLED NUMBER", value: (row) => exportNumber(row.calledNumber) }];
+      const col: ExportColumn<Call> = { label: t(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) };
+      // Destination name and number sit right after the buyer.
+      return c.id === "buyer"
+        ? [
+            col,
+            { label: DESTINATION_NAME_HEADER, value: (row) => destinationOf(row, destinationNames).name },
+            { label: DESTINATION_NUMBER_HEADER, value: (row) => destinationOf(row, destinationNames).number },
+          ]
+        : [col];
+    });
     downloadRows(format, upperLabels([dateCol, ...dataCols]), filtered, dateStamped("call-log"), "Call log", {
       boldHeader: true,
+      linkColumns: CALL_LOG_LINK_HEADERS,
     });
     toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(filtered.length)).replace("{format}", format.toUpperCase()));
   };

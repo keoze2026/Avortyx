@@ -15,11 +15,23 @@ import { Pagination } from "@/components/shared/pagination";
 import { rangeDayKeys, totals, type DateRange } from "@/lib/analytics";
 import { analyticsService } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { DURATION_MIN_HEADER, secondsToMinutes, statusLabel, upperLabels } from "@/lib/call-log-export";
+import {
+  CALL_LOG_LINK_HEADERS,
+  DESTINATION_NAME_HEADER,
+  DESTINATION_NUMBER_HEADER,
+  DURATION_HEADER,
+  destinationNameMap,
+  destinationOf,
+  exportNumber,
+  formatDuration as formatExportDuration,
+  statusLabel,
+  upperLabels,
+} from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { isPinRequiredError } from "@/lib/reports-scope";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
@@ -27,24 +39,28 @@ import type { Call, CallStatus } from "@/lib/types";
 
 const DEFAULT_VISIBLE = new Set(ALL_COLUMNS.map((c) => c.id));
 
-/** Columns written to the CSV / XLSX file. Shared shape — numeric fields
- *  (duration, payout, revenue) are emitted as numbers so XLSX preserves typing.
- *  Headers in capitals, Status capitalised, Duration in minutes (see
- *  lib/call-log-export.ts). */
-const CALL_EXPORT_COLUMNS: ExportColumn<Call>[] = upperLabels<Call>([
-  { label: "ID", value: (c) => c.id },
-  { label: "Started", value: (c) => new Date(c.startedAt).toISOString() },
-  { label: "Caller", value: (c) => c.callerNumber },
-  { label: "Destination", value: (c) => c.destinationNumber },
-  { label: "Campaign", value: (c) => c.campaignName },
-  { label: "Buyer", value: (c) => c.buyerName ?? "" },
-  { label: "Publisher", value: (c) => c.publisherName ?? "" },
-  { label: "State", value: (c) => c.geo.state ?? "" },
-  { label: "Status", value: (c) => statusLabel(c.statusRaw ?? c.status) },
-  { label: DURATION_MIN_HEADER, value: (c) => secondsToMinutes(c.durationSec) },
-  { label: "Payout", value: (c) => c.payout },
-  { label: "Revenue", value: (c) => c.revenue },
-]);
+/** Columns written to the CSV / XLSX file - the same names, order and formats
+ *  as the Reports call-log export (see lib/call-log-export.ts). Numeric fields
+ *  (payout, revenue) stay numbers so XLSX keeps their type. */
+function callExportColumns(destinationNames: ReadonlyMap<string, string>): ExportColumn<Call>[] {
+  return upperLabels<Call>([
+    { label: "Call ID", value: (c) => c.id },
+    { label: "Started", value: (c) => new Date(c.startedAt).toISOString() },
+    { label: "Caller ID", value: (c) => exportNumber(c.callerNumber) },
+    { label: "Called Number", value: (c) => exportNumber(c.calledNumber) },
+    { label: "Campaign", value: (c) => c.campaignName },
+    { label: "Publisher", value: (c) => c.publisherName ?? "" },
+    { label: "Buyer", value: (c) => c.buyerName ?? "" },
+    { label: DESTINATION_NAME_HEADER, value: (c) => destinationOf(c, destinationNames).name },
+    { label: DESTINATION_NUMBER_HEADER, value: (c) => destinationOf(c, destinationNames).number },
+    { label: "State", value: (c) => c.geo.state ?? "" },
+    { label: "Status", value: (c) => statusLabel(c.statusRaw ?? c.status) },
+    { label: DURATION_HEADER, value: (c) => formatExportDuration(c.durationSec) },
+    { label: "Payout", value: (c) => c.payout },
+    { label: "Revenue", value: (c) => c.revenue },
+    { label: "Recording", value: (c) => c.recordingUrl ?? "" },
+  ]);
+}
 
 export default function CallsPage() {
   const { t } = useTranslation();
@@ -66,6 +82,9 @@ export default function CallsPage() {
   // filter the shared 200-row `recent` cache, which capped every range at
   // whatever happened to be in it ("102 of 200").
   const timeZone = useUIStore((s) => s.reportTimezone);
+  // Destination names for the export's DESTINATION NAME column.
+  const destinations = useDestinationsStore((s) => s.destinations);
+  const destinationNames = useMemo(() => destinationNameMap(destinations), [destinations]);
   const { from: fromKey, to: toKey } = rangeDayKeys(range, timeZone);
   const [rangeCalls, setRangeCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(false);
@@ -162,11 +181,11 @@ export default function CallsPage() {
   const onExport = (format: ExportFormat) => {
     downloadRows(
       format,
-      CALL_EXPORT_COLUMNS,
+      callExportColumns(destinationNames),
       filtered,
       dateStamped(`calls-${range}`),
       "Calls",
-      { boldHeader: true },
+      { boldHeader: true, linkColumns: CALL_LOG_LINK_HEADERS },
     );
     toast.success(
       t("toolsUI.callLogs.toastExport")

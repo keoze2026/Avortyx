@@ -79,17 +79,19 @@ function buildContentTypes(withStyles = false): string {
   );
 }
 
-/** Two cell formats: 0 = normal, 1 = bold (used for the header row). */
+/** Cell formats: 0 = normal, 1 = bold (header row), 2 = link (blue, underlined). */
 function buildStylesXml(): string {
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-    `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
+    `<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font>` +
+    `<font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Calibri"/></font></fonts>` +
     `<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>` +
     `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
     `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-    `<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
-    `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>` +
+    `<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+    `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>` +
+    `<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>` +
     `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>` +
     `</styleSheet>`
   );
@@ -128,8 +130,22 @@ function buildWorkbookXml(sheetName: string): string {
   );
 }
 
-function buildSheetXml(columns: ExportColumn<unknown>[], rows: unknown[], boldHeader = false): string {
+interface SheetLink {
+  ref: string;
+  url: string;
+}
+
+const isWebAddress = (v: string) => /^https?:\/\/\S+$/i.test(v.trim());
+
+function buildSheetXml(
+  columns: ExportColumn<unknown>[],
+  rows: unknown[],
+  boldHeader = false,
+  linkLabels: ReadonlySet<string> = new Set(),
+): { xml: string; links: SheetLink[] } {
   const headerStyle = boldHeader ? ` s="1"` : "";
+  const links: SheetLink[] = [];
+  const linkCol = columns.map((c) => linkLabels.has(c.label.trim().toUpperCase()));
   const headerRow =
     `<row r="1">` +
     columns
@@ -153,6 +169,11 @@ function buildSheetXml(columns: ExportColumn<unknown>[], rows: unknown[], boldHe
             if (typeof v === "number" && Number.isFinite(v)) {
               return `<c r="${ref}"><v>${v}</v></c>`;
             }
+            if (linkCol[colIdx] && typeof v === "string" && isWebAddress(v)) {
+              // A real hyperlink (not just text that looks like one), so a click opens it.
+              links.push({ ref, url: v.trim() });
+              return `<c r="${ref}" s="2" t="inlineStr"><is><t>${escapeXml(v)}</t></is></c>`;
+            }
             return `<c r="${ref}" t="inlineStr"><is><t>${escapeXml(v)}</t></is></c>`;
           })
           .filter(Boolean)
@@ -162,11 +183,33 @@ function buildSheetXml(columns: ExportColumn<unknown>[], rows: unknown[], boldHe
     })
     .join("");
 
+  const hyperlinks = links.length
+    ? `<hyperlinks>${links.map((l, i) => `<hyperlink ref="${l.ref}" r:id="rIdLink${i + 1}"/>`).join("")}</hyperlinks>`
+    : "";
+  return {
+    xml:
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"` +
+      ` xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+      `<sheetData>${headerRow}${bodyRows}</sheetData>` +
+      hyperlinks +
+      `</worksheet>`,
+    links,
+  };
+}
+
+/** The worksheet's links to the outside (one relationship per hyperlink). */
+function buildSheetRels(links: SheetLink[]): string {
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-    `<sheetData>${headerRow}${bodyRows}</sheetData>` +
-    `</worksheet>`
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+    links
+      .map(
+        (l, i) =>
+          `<Relationship Id="rIdLink${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${escapeXml(l.url)}" TargetMode="External"/>`,
+      )
+      .join("") +
+    `</Relationships>`
   );
 }
 
@@ -281,6 +324,8 @@ export interface ExportColumn<T> {
 export interface XLSXOptions {
   /** Make the header row bold. */
   boldHeader?: boolean;
+  /** Column labels (any case) whose web addresses become clickable links. */
+  linkColumns?: string[];
 }
 
 /** Build an .xlsx Blob from a typed row set and column definitions. */
@@ -291,16 +336,19 @@ export function toXLSX<T>(
   options: XLSXOptions = {},
 ): Blob {
   const bold = options.boldHeader === true;
+  const linkLabels = new Set((options.linkColumns ?? []).map((l) => l.trim().toUpperCase()));
   const cols = columns as ExportColumn<unknown>[];
-  const sheetXml = buildSheetXml(cols, rows as unknown[], bold);
+  const sheet = buildSheetXml(cols, rows as unknown[], bold, linkLabels);
+  const withStyles = bold || sheet.links.length > 0;
 
   const zip = buildZip([
-    { name: "[Content_Types].xml", content: buildContentTypes(bold) },
+    { name: "[Content_Types].xml", content: buildContentTypes(withStyles) },
     { name: "_rels/.rels", content: buildRootRels() },
     { name: "xl/workbook.xml", content: buildWorkbookXml(sheetName) },
-    { name: "xl/_rels/workbook.xml.rels", content: buildWorkbookRels(bold) },
-    { name: "xl/worksheets/sheet1.xml", content: sheetXml },
-    ...(bold ? [{ name: "xl/styles.xml", content: buildStylesXml() }] : []),
+    { name: "xl/_rels/workbook.xml.rels", content: buildWorkbookRels(withStyles) },
+    { name: "xl/worksheets/sheet1.xml", content: sheet.xml },
+    ...(sheet.links.length ? [{ name: "xl/worksheets/_rels/sheet1.xml.rels", content: buildSheetRels(sheet.links) }] : []),
+    ...(withStyles ? [{ name: "xl/styles.xml", content: buildStylesXml() }] : []),
   ]);
 
   return new Blob([new Uint8Array(zip)], {
