@@ -301,13 +301,14 @@ export function WorkspaceActivityLog() {
                 type="button"
                 onClick={() => setFilter(f.id)}
                 className={cn(
-                  "rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors",
+                  "rounded px-2.5 py-1 text-[11px] font-medium transition-colors",
                   filter === f.id
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {f.labelKey ? t(f.labelKey) : f.label}
+                {/* Only ROLES is written in capitals. */}
+                {f.id === "role" ? (f.labelKey ? t(f.labelKey) : f.label ?? "").toUpperCase() : f.labelKey ? t(f.labelKey) : f.label}
               </button>
             ))}
           </div>
