@@ -668,12 +668,34 @@ export const analyticsService = {
   ): Promise<Call[]> {
     const PAGE_SIZE = 500;
     const MAX_PAGES = 40;
+    /** Pages fetched at the same time once the total is known. */
+    const PARALLEL = 4;
     const all: Call[] = [];
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      // Ask the backend for the same day boundaries the page shows.
-      const res = await this.calls({ ...query, timezone: query.timezone ?? options.timeZone, page, pageSize: PAGE_SIZE });
-      all.push(...res.items);
-      if (all.length >= res.total || res.items.length < PAGE_SIZE) break;
+    // Ask the backend for the same day boundaries the page shows.
+    const fetchPage = (page: number) =>
+      this.calls({ ...query, timezone: query.timezone ?? options.timeZone, page, pageSize: PAGE_SIZE });
+    const first = await fetchPage(1);
+    all.push(...first.items);
+    if (first.items.length >= PAGE_SIZE) {
+      const knownTotal = Number.isFinite(first.total) && first.total > 0;
+      if (knownTotal) {
+        // The first page says how many there are: fetch the rest side by side
+        // instead of one after another (a long range used to take a round
+        // trip per 500 calls).
+        const pages = Math.min(MAX_PAGES, Math.ceil(first.total / PAGE_SIZE));
+        for (let start = 2; start <= pages; start += PARALLEL) {
+          const batch: Promise<{ items: Call[] }>[] = [];
+          for (let p = start; p < start + PARALLEL && p <= pages; p++) batch.push(fetchPage(p));
+          for (const res of await Promise.all(batch)) all.push(...res.items);
+        }
+      } else {
+        // No usable total: page on until a short page, as before.
+        for (let page = 2; page <= MAX_PAGES; page++) {
+          const res = await fetchPage(page);
+          all.push(...res.items);
+          if (res.items.length < PAGE_SIZE) break;
+        }
+      }
     }
     // Enforce the requested day range on the client as well. The backend is
     // asked for `date_from` / `date_to`, but a server that ignores the

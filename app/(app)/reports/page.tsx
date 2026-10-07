@@ -21,18 +21,15 @@ import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
-import {
-  analyticsService,
-  type CallLogQuery,
-  type EntitySummary,
-  type SummaryEntity,
-} from "@/lib/api/services/analytics.service";
+import type { CallLogQuery, EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.service";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
+import { getCachedReport, loadReportShared, prefetchReport, reportKey, todayAndYesterday } from "@/lib/reports-cache";
 import { useCallsStore } from "@/lib/store/calls-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
@@ -158,6 +155,20 @@ export default function ReportsPage() {
   const viewKey = fromKey && access.canFetch ? `${fromKey}|${toKey ?? fromKey}|${timeZone}` : "";
   const [loadedKey, setLoadedKey] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
+  // Saved data of exactly this view (lib/reports-cache.ts): shown at once while
+  // the fresh copy loads behind it - never another day's figures.
+  const userId = useAuthStore((s) => s.user?.id);
+  const view = useMemo(() => {
+    if (!viewKey) return null;
+    const [dateFrom, dateTo, zone] = viewKey.split("|");
+    return { dateFrom, dateTo, timeZone: zone };
+  }, [viewKey]);
+  const cached = useMemo(
+    () => (view ? getCachedReport(reportKey(view)) : null),
+    // loadedKey: re-read after every load, so the saved copy is the newest one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view, userId, loadedKey],
+  );
   const loadSeq = useRef(0);
   const loadInFlight = useRef(false);
   const manualRefresh = useRef(false);
@@ -172,26 +183,21 @@ export default function ReportsPage() {
     const seq = ++loadSeq.current;
     loadInFlight.current = true;
     setRangeLoading(true);
-    const [dateFrom, dateTo, zone] = viewKey.split("|");
-    // The picked days plus the page's timezone, so the backend counts the
-    // same days the page shows (it defaults to UTC otherwise).
-    const range = { dateFrom, dateTo, timezone: zone };
-    Promise.all([
-      analyticsService.allCalls({ dateFrom, dateTo }, { timeZone: zone }),
-      // Each aggregate is independent - a failing endpoint just leaves its tab
-      // on the call-log derivation instead of blanking the others.
-      Promise.all(
-        (["campaign", "buyer", "publisher", "carrier"] as const).map((entity) =>
-          analyticsService.entitySummary(entity, range).catch(() => [] as EntitySummary[]),
-        ),
-      ),
-    ])
-      .then(([items, [campaign, buyer, publisher, carrier]]) => {
+    const current = view!;
+    // Shared with a prefetch of the same view: one download, not two.
+    loadReportShared(current)
+      .then((data) => {
         if (seq !== loadSeq.current) return; // replaced by a newer load
-        setRangeCalls(items);
-        setSummaries({ campaign, buyer, publisher, carrier });
+        setRangeCalls(data.calls);
+        setSummaries(data.summaries);
         setLoadedKey(viewKey);
         if (manualRefresh.current) toast.success(t("page.reports.refreshed"));
+        // Load the other of today / yesterday in advance - the switch people
+        // make most - so it opens instantly too (skipped while history is
+        // locked behind the reports PIN).
+        for (const other of todayAndYesterday(current.timeZone)) {
+          if (other.dateFrom !== current.dateFrom || other.dateTo !== current.dateTo) prefetchReport(other);
+        }
       })
       .catch((e) => {
         if (seq !== loadSeq.current) return;
@@ -213,10 +219,11 @@ export default function ReportsPage() {
 
   /** True only for data that belongs to the range on screen right now. */
   const showingView = viewKey !== "" && loadedKey === viewKey;
-  const viewCalls = showingView ? rangeCalls : NO_RANGE_CALLS;
-  const viewSummaries = showingView ? summaries : NO_SUMMARIES;
-  /** Loading a different range than the one last shown (not a refresh). */
-  const switchingView = rangeLoading && !showingView;
+  // This view's fresh data, else its saved copy, else nothing - never another view's.
+  const viewCalls = showingView ? rangeCalls : (cached?.calls ?? NO_RANGE_CALLS);
+  const viewSummaries = showingView ? summaries : (cached?.summaries ?? NO_SUMMARIES);
+  /** Loading a range with nothing to show yet (not a refresh, no saved copy). */
+  const switchingView = rangeLoading && !showingView && !cached;
 
   // A range that ends before today never changes, so the timer does not reload
   // it; a click on Refresh always does. Never while a load is running.

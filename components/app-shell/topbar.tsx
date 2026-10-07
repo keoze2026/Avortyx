@@ -9,13 +9,14 @@ import { LanguageToggle } from "@/components/shared/language-toggle";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTranslation } from "@/hooks/use-translation";
+import { prefetchDashboardSnapshot } from "@/lib/dashboard-snapshot";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { startLiveCountSync } from "@/lib/live-count";
+import { prefetchReport, todayAndYesterday } from "@/lib/reports-cache";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
-import { startLiveCountSync } from "@/lib/live-count";
-import { prefetchDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 const KPI_POLL_MS = 15_000;
 
@@ -54,6 +55,10 @@ export function Topbar() {
   const reportTimezone = useUIStore((s) => s.reportTimezone);
   useEffect(() => {
     prefetchDashboardSnapshot(reportTimezone);
+    // Today's Reports view too, a moment later so it doesn't compete with the
+    // Dashboard's first load - Reports then opens instantly.
+    const timer = setTimeout(() => prefetchReport(todayAndYesterday(reportTimezone)[0]), 1500);
+    return () => clearTimeout(timer);
   }, [reportTimezone]);
 
   // Wallet balance: the dashboard KPI payload polled above carries it
