@@ -132,7 +132,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Trust Engine", nameKey: "nav.trustEngine",  href: ROUTES.kyc,          icon: ScanFace,    roles: ALL_ROLES },
       { label: "Integrations", nameKey: "nav.integrations", href: ROUTES.integrations, icon: Plug,        roles: ["admin"] },
       { label: "White Label",  nameKey: "nav.whiteLabel",   href: ROUTES.whiteLabel,   icon: Palette,     roles: ["admin"] },
-      { label: "Billing",      nameKey: "nav.billing",      href: ROUTES.billing,      icon: CreditCard,  roles: ["admin", "buyer", "publisher"] },
+      { label: "Billing",      nameKey: "nav.billing",      href: ROUTES.billing,      icon: CreditCard,  roles: ["admin"] },
       { label: "Settings",     nameKey: "nav.settings",     href: ROUTES.settings,     icon: Settings,    roles: ALL_ROLES },
     ],
   },
