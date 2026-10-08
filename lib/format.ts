@@ -101,9 +101,15 @@ export function formatDuration(seconds: number) {
 
 /** Pad seconds → "MM:SS" timer style */
 export function formatTimer(seconds: number) {
-  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-  const s = (seconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+  // Rolls into hours past 60 minutes: 81069 -> "22:31:09", not "1351:09".
+  // The boss reads TCL off this column; a day of call time printed as
+  // thirteen hundred minutes reads as a wrong number, not a long one.
+  const n = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  const s = (n % 60).toString().padStart(2, "0");
+  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s}`;
+  return `${m.toString().padStart(2, "0")}:${s}`;
 }
 
 /** Pad seconds → "HH:MM:SS" — used for call-log durations.
