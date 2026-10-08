@@ -228,6 +228,12 @@ export default function ReportsPage() {
   // A range that ends before today never changes, so the timer does not reload
   // it; a click on Refresh always does. Never while a load is running.
   const includesToday = !!toKey && toKey >= zonedDayKey(Date.now(), timeZone);
+  // Live figures (the Live chip and the Live column) show only for TODAY.
+  // For yesterday or any range reaching into past days they stay hidden, so
+  // today's in-progress calls never mix into an earlier report.
+  const liveVisible =
+    REPORTS_POLICY.showLive ||
+    (fromKey === zonedDayKey(Date.now(), timeZone) && toKey === zonedDayKey(Date.now(), timeZone));
   const onRefresh = (source: "auto" | "manual" = "manual") => {
     if (!viewKey || loadInFlight.current) return;
     if (source === "auto" && !includesToday) return;
@@ -351,7 +357,7 @@ export default function ReportsPage() {
         visibility={visibility}
         onVisibilityChange={setVisibility}
         liveNow={liveNow}
-        showLive={REPORTS_POLICY.showLive}
+        showLive={liveVisible}
         latestDay={latestDay}
       />
 
@@ -446,7 +452,7 @@ export default function ReportsPage() {
             onStatusFilterChange={setStatusFilter}
             liveNow={liveNow}
             summaries={summariesForTable}
-            showLive={REPORTS_POLICY.showLive}
+            showLive={liveVisible}
           />
         )}
 
