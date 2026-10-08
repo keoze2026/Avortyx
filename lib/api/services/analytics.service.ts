@@ -23,9 +23,9 @@ interface DashboardWire {
   completedCalls: number;
   convertedCalls: number;
   conversionRate: number;
-  totalRevenue: string;
-  totalPayout: string;
-  totalProfit: string;
+  totalRevenue: string | null;
+  totalPayout: string | null;
+  totalProfit: string | null;
   avgCallDuration: number;
   spamBlocked: number;
   duplicateBlocked: number;
@@ -198,9 +198,11 @@ export interface DashboardKpis {
   completedCalls: number;
   convertedCalls: number;
   conversionRate: number;
-  totalRevenue: number;
-  totalPayout: number;
-  totalProfit: number;
+  /** null = withheld for this role: a buyer is not shown payout or profit,
+   *  a publisher is not shown revenue or profit. Render as absent, never $0. */
+  totalRevenue: number | null;
+  totalPayout: number | null;
+  totalProfit: number | null;
   avgCallDurationSec: number;
   spamBlocked: number;
   duplicateBlocked: number;
@@ -520,9 +522,9 @@ function dashboardWireToKpis(w: DashboardWire): DashboardKpis {
     completedCalls: w.completedCalls,
     convertedCalls: w.convertedCalls,
     conversionRate: w.conversionRate,
-    totalRevenue: toNum(w.totalRevenue),
-    totalPayout: toNum(w.totalPayout),
-    totalProfit: toNum(w.totalProfit),
+    totalRevenue: w.totalRevenue == null ? null : toNum(w.totalRevenue),
+    totalPayout: w.totalPayout == null ? null : toNum(w.totalPayout),
+    totalProfit: w.totalProfit == null ? null : toNum(w.totalProfit),
     avgCallDurationSec: w.avgCallDuration,
     spamBlocked: w.spamBlocked,
     duplicateBlocked: w.duplicateBlocked,

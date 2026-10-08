@@ -48,6 +48,7 @@ const NO_RANGE_CALLS: Call[] = [];
 const NO_SUMMARIES: Record<SummaryEntity, EntitySummary[]> = { campaign: [], buyer: [], publisher: [], carrier: [] };
 
 export default function ReportsPage() {
+  const role = useAuthStore((st) => st.user?.role);
   const { t } = useTranslation();
   // Every reporting surface on this page renders in this timezone (the Call
   // Log's timestamps, the hourly chart's buckets) — "today" has to mean
@@ -433,7 +434,10 @@ export default function ReportsPage() {
             {(visibility.perf || visibility.donut) && (
               <div className="flex flex-col gap-4 lg:h-full">
                 {visibility.perf && (
-                  <CallPerfCard revenue={summary.revenue} payout={summary.payout} />
+                  <CallPerfCard
+                    revenue={role === "publisher" ? null : summary.revenue}
+                    payout={role === "buyer" ? null : summary.payout}
+                  />
                 )}
                 {visibility.donut && (
                   <div className="hidden min-h-0 flex-1 lg:block">

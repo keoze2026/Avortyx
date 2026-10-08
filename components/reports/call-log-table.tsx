@@ -73,6 +73,7 @@ import { usePublishersStore } from "@/lib/store/publishers-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
@@ -389,7 +390,16 @@ export function CallLogTable({
   const [query, setQuery] = React.useState("");
   // The call whose activity ("X-ray") panel is open, if any.
   const [activityCall, setActivityCall] = React.useState<Call | null>(null);
-  const [columns, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
+  const [columnsState, setColumns] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
+  // Money a partner is not told: the backend sends null for these, and a
+  // hidden column beats rendering null as $0.00. Buyer loses Payout,
+  // publisher loses Revenue; everyone else keeps their picker choices.
+  const role = useAuthStore((st) => st.user?.role);
+  const columns = React.useMemo(() => {
+    if (role === "buyer") return { ...columnsState, payout: false };
+    if (role === "publisher") return { ...columnsState, revenue: false };
+    return columnsState;
+  }, [columnsState, role]);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
   const [exporting, setExporting] = React.useState(false);
