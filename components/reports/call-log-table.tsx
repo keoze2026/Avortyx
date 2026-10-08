@@ -229,29 +229,12 @@ function callHash(id: string): number {
   return Math.abs(h);
 }
 
-/**
- * Time-to-connect derived per status:
- *  - connected calls → 1-6s typical SIP handshake + ring-pickup
- *  - missed         → 20-39s (caller waited through the no-answer timeout)
- *  - rejected       → near-instant (1-4s)
- *  - failed         → near-instant (0-2s)
- */
-function getTTCSeconds(c: Call): number {
-  const h = callHash(c.id);
-  switch (c.status) {
-    case "completed":
-      return 1 + (h % 6);
-    case "in-progress":
-      return 1 + (h % 4);
-    case "ringing":
-      return 1 + (h % 3);
-    case "missed":
-      return 20 + (h % 20);
-    case "rejected":
-      return 1 + (h % 4);
-    case "failed":
-      return h % 3;
-  }
+/** Seconds the caller waited before pickup — the backend's figure, measured
+ *  from the call records. This used to be `hash(id) % 6` per status: numbers
+ *  that never moved and were never real, the same disease as the old Live
+ *  counter. null = never answered, shown as a dash rather than invented. */
+function getTTCSeconds(c: Call): number | null {
+  return typeof c.ttc === "number" ? c.ttc : null;
 }
 
 /**
@@ -308,8 +291,10 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
       return c.revenue;
     case "payout":
       return customerPayout(c);
-    case "ttc":
-      return formatHMS(getTTCSeconds(c));
+    case "ttc": {
+      const ttcSec = getTTCSeconds(c);
+      return ttcSec === null ? "" : formatHMS(ttcSec);
+    }
     case "duration":
       return formatHMS(c.durationSec);
     case "hangUp":
@@ -749,7 +734,7 @@ export function CallLogTable({
                       )}
                       {columns.ttc && (
                         <TableCell className={NUMBER_CELL}>
-                          {formatHMS(getTTCSeconds(c))}
+                          {getTTCSeconds(c) === null ? "\u2014" : formatHMS(getTTCSeconds(c)!)}
                         </TableCell>
                       )}
                       {columns.duration && (
@@ -952,7 +937,8 @@ function CallRowActions({
   };
 
   const onBill = () => {
-    const ttc = formatHMS(getTTCSeconds(call));
+    const ttcSec = getTTCSeconds(call);
+    const ttc = ttcSec === null ? "\u2014" : formatHMS(ttcSec);
     if (call.status === "completed" || call.status === "in-progress") {
       toast.success(t("toolsUI.reports.callLog.actions.toastPayoutReview").replace("{number}", caller), {
         description: t("toolsUI.reports.callLog.actions.toastPayoutReviewDesc")

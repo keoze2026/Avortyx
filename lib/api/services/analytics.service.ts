@@ -56,6 +56,7 @@ type TimeSeriesResponseWire =
   | { items?: TimeSeriesPointWire[] | null };
 
 interface CallRecordWire {
+  ttc?: number | null;
   id: string;
   callerNumber: string;
   calledNumber?: string;
@@ -439,6 +440,7 @@ function callRecordToCall(w: CallRecordWire): Call {
     destinationNumber: w.destinationNumber || "",
     startedAt: toTs(w.startedAt ?? w.createdAt),
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
+    ttc: typeof w.ttc === "number" ? w.ttc : null,
     status: normalizeStatus(w.status),
     statusRaw: w.status ? statusKey(w.status) : undefined,
     lineType: w.ipqsLineType?.trim() || undefined,

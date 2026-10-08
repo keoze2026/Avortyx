@@ -7,6 +7,9 @@ export type CallStatus =
   | "failed";
 
 export interface Call {
+  /** Seconds the caller waited before pickup, from the backend. undefined =
+   *  never answered (or an older backend); shown as a dash, never invented. */
+  ttc?: number | null;
   id: string;
   campaignId: string;
   campaignName: string;
