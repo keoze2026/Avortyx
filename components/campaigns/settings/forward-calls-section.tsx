@@ -122,6 +122,14 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         setDupHours(String(c.duplicateCallBlockHours ?? 24));
         setDupSavedHours(c.duplicateCallBlockHours ?? 24);
         setDupLoaded(true);
+        // The other four controls were component state with hardcoded
+        // defaults - selected, never saved, reset on every load. The boss
+        // picked Different and duplicates kept forwarding because the choice
+        // never left the browser tab.
+        const h = (c.duplicateHandling ?? "normal");
+        setDuplicate(h === "original" ? "Original" : h === "different" ? "Different" : "Normal");
+        setDirection((c.duplicateDirection ?? "destination") === "buyer" ? "Buyer" : "Destination");
+        setStrict(Boolean(c.duplicateStrict));
       })
       .catch(() => {
         if (!cancelled) toast.error("Couldn't load the duplicate call setting.");
@@ -155,9 +163,23 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     }
   };
   const [routing, setRouting] = useState<RoutingOption>("Standard");
-  const [duplicate, setDuplicate] = useState<DuplicateHandling>("Different");
+  // Seeded from the campaign once it loads; defaults mirror the backend's.
+  const [duplicate, setDuplicate] = useState<DuplicateHandling>("Normal");
   const [direction, setDirection] = useState<DirectionScope>("Destination");
-  const [strict, setStrict] = useState(true);
+  const [strict, setStrict] = useState(false);
+
+  const saveDuplicateHandling = async (patch: {
+    duplicateHandling?: string;
+    duplicateDirection?: string;
+    duplicateStrict?: boolean;
+  }) => {
+    try {
+      await updateCampaign(campaignId, patch);
+      toast.success(t("trafficUI.campaigns.settings.forward.duplicateSaved"));
+    } catch {
+      toast.error("Couldn't save the duplicate routing setting. Please try again.");
+    }
+  };
   const routingLabel: Record<RoutingOption, string> = {
     Standard: t("trafficUI.campaigns.settings.forward.options.standard"),
     Menu: t("trafficUI.campaigns.settings.forward.options.menu"),
@@ -260,7 +282,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           value={duplicate}
           options={DUPLICATE_OPTIONS}
           labels={duplicateLabel}
-          onChange={setDuplicate}
+          onChange={(v) => {
+            setDuplicate(v);
+            void saveDuplicateHandling({ duplicateHandling: v.toLowerCase() });
+          }}
         />
         <ChoiceRow
           label={t("trafficUI.campaigns.settings.forward.directionScope")}
@@ -268,14 +293,17 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           value={direction}
           options={DIRECTION_OPTIONS}
           labels={directionLabel}
-          onChange={setDirection}
+          onChange={(v) => {
+            setDirection(v);
+            void saveDuplicateHandling({ duplicateDirection: v.toLowerCase() });
+          }}
         />
         <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
           <div>
             <div className="text-xs font-medium">{t("trafficUI.campaigns.settings.forward.strictMode")}</div>
             <div className="text-[11px] text-muted-foreground">{t("trafficUI.campaigns.settings.forward.strictModeHint")}</div>
           </div>
-          <Switch className="data-[state=checked]:bg-accent" checked={strict} onCheckedChange={setStrict} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
+          <Switch className="data-[state=checked]:bg-accent" checked={strict} onCheckedChange={(on) => { setStrict(on); void saveDuplicateHandling({ duplicateStrict: on }); }} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
         </div>
         <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
           <div>

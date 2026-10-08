@@ -76,6 +76,12 @@ export interface Campaign {
   duplicateCallBlock?: boolean;
   /** Duplicate-window in hours — only meaningful when duplicateCallBlock=true. */
   duplicateCallBlockHours?: number;
+  /** How a repeat caller routes: normal | original | different. */
+  duplicateHandling?: string;
+  /** Whether "different" means a different destination or a different buyer. */
+  duplicateDirection?: string;
+  /** Strict: only never-reached destinations; nowhere new = the call drops. */
+  duplicateStrict?: boolean;
 
   /**
    * Per-campaign advanced settings — a free-form JSON blob the backend

@@ -81,6 +81,9 @@ interface CampaignWire extends CampaignListWire {
   minCallDuration?: number;
   duplicateCallBlock?: boolean;
   duplicateCallBlockHours?: number;
+  duplicateHandling?: string;
+  duplicateDirection?: string;
+  duplicateStrict?: boolean;
   bidFloor?: string;
   rtbTimeoutSeconds?: number;
   organizationId?: string;
@@ -276,6 +279,9 @@ function detailWireToCampaign(w: CampaignWire): Campaign {
     whisperMessage: w.whisperMessage,
     duplicateCallBlock: w.duplicateCallBlock,
     duplicateCallBlockHours: w.duplicateCallBlockHours,
+    duplicateHandling: w.duplicateHandling,
+    duplicateDirection: w.duplicateDirection,
+    duplicateStrict: w.duplicateStrict,
     // Advanced-settings JSON blob — backend ships back what we sent.
     // Schema lives in `CampaignAdvancedSettings`; we treat the wire as opaque.
     advancedSettings: w.advancedSettings,
@@ -372,6 +378,9 @@ export const campaignsService = {
     if (patch.whisperMessage !== undefined) body.whisperMessage = patch.whisperMessage;
     if (patch.duplicateCallBlock !== undefined) body.duplicateCallBlock = patch.duplicateCallBlock;
     if (patch.duplicateCallBlockHours !== undefined) body.duplicateCallBlockHours = patch.duplicateCallBlockHours;
+    if (patch.duplicateHandling !== undefined) body.duplicateHandling = patch.duplicateHandling;
+    if (patch.duplicateDirection !== undefined) body.duplicateDirection = patch.duplicateDirection;
+    if (patch.duplicateStrict !== undefined) body.duplicateStrict = patch.duplicateStrict;
     if (patch.advancedSettings !== undefined) body.advancedSettings = patch.advancedSettings;
     const wire = await http.patch<CampaignWire>(`/api/campaigns/${id}`, { body });
     return detailWireToCampaign(wire);

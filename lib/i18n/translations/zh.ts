@@ -1187,6 +1187,8 @@ export const zh: TranslationShape = {
           directionScopeHint: "决定重复路由是在原通话的目的地级别还是买家级别生效",
           strictMode: "使用严格模式",
           strictModeHint: "重复来电只连接到新目的地",
+          duplicateSaved: "重复路由已保存。",
+          duplicateSaved: "重复呼叫路由已保存。",
           toggleStrict: "使用严格模式",
           options: {
             standard: "标准",

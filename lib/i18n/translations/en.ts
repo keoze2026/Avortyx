@@ -1225,6 +1225,8 @@ export const en = {
           directionScopeHint: "Defines whether duplicate routing is applied at the Destination or Buyer level of the original call",
           strictMode: "Use Strict Mode",
           strictModeHint: "Connect repeat calls to new destinations only",
+          duplicateSaved: "Duplicate routing saved.",
+          duplicateSaved: "Duplicate routing saved.",
           toggleStrict: "Use strict mode",
           options: {
             standard: "Standard",

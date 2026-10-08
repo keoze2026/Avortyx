@@ -1856,6 +1856,8 @@ export const ru: TranslationShape = {
           directionScopeHint: "Определяет, применяется ли логика дубликатов на уровне направления или покупателя исходного звонка",
           strictMode: "Строгий режим",
           strictModeHint: "Соединять повторные звонки только с новыми направлениями",
+          duplicateSaved: "Маршрутизация дубликатов сохранена.",
+          duplicateSaved: "Маршрутизация дубликатов сохранена.",
           toggleStrict: "Строгий режим",
           options: {
             standard: "Стандарт",

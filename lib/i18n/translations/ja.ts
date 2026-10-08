@@ -1855,6 +1855,8 @@ export const ja: TranslationShape = {
           directionScopeHint: "重複ルーティングを元の通話の宛先レベル/バイヤーレベルどちらに適用するか定義します",
           strictMode: "ストリクトモードを使用",
           strictModeHint: "リピート通話は新しい宛先にのみ接続します",
+          duplicateSaved: "重複ルーティングを保存しました。",
+          duplicateSaved: "重複ルーティングを保存しました。",
           toggleStrict: "ストリクトモード",
           options: {
             standard: "標準",
