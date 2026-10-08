@@ -281,7 +281,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("region") && (
                       <TableCell className={CELL}>
-                        {n.state ?? "—"}
+                        {n.state?.trim() || n.country?.trim() || "—"}
                       </TableCell>
                     )}
                     {visibleColumns.has("campaign") && (
