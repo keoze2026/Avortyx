@@ -238,7 +238,18 @@ export function ProfileSection() {
               <Input id="prof-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
             <Field id="prof-role" label={t("settings.profileSection.role")} icon={Shield}>
-              <Input id="prof-role" value={t("settings.profileSection.adminOwner")} readOnly className="bg-secondary/40" />
+              <Input
+                id="prof-role"
+                value={
+                  user?.role === "admin"
+                    ? t("settings.profileSection.adminOwner")
+                    : user?.role
+                      ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+                      : "—"
+                }
+                readOnly
+                className="bg-secondary/40"
+              />
             </Field>
           </div>
 
