@@ -36,6 +36,7 @@ export default function DestinationsPage() {
   const fetchDestinations = useDestinationsStore((s) => s.fetch);
   const fetchStats = useDestinationsStore((s) => s.fetchStats);
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
+  const setEnabledMany = useDestinationsStore((s) => s.setEnabledMany);
   const remove = useDestinationsStore((s) => s.remove);
   const update = useDestinationsStore((s) => s.update);
   const cloneDestination = useDestinationsStore((s) => s.clone);
@@ -184,29 +185,49 @@ export default function DestinationsPage() {
     [destinations, selectedIds],
   );
 
-  const onBulkPlay = async () => {
+  /**
+   * Play / pause the selected TFNs one at a time and say exactly what happened.
+   * Before, all were sent at once (so the server's "one live destination per
+   * number / per buyer" rule refused most of them), one refusal put the whole
+   * list back on screen, and a "done" message showed even when nothing changed.
+   */
+  const runBulk = async (enabled: boolean) => {
     if (selectedDestinations.length === 0) return;
     const targets = selectedDestinations;
-    await Promise.allSettled(targets.map((d) => setEnabled(d.id, true)));
-    toast.success(
-      t("common.bulk.toast.activated")
-        .replace("{count}", String(targets.length))
-        .replace("{entity}", t("common.bulk.entities.destinations")),
+    const nameOf = (id: string) => targets.find((d) => d.id === id)?.name ?? id;
+    const { ok, failed } = await setEnabledMany(
+      targets.map((d) => d.id),
+      enabled,
     );
-    setSelectedIds(new Set());
+    const entity = t("common.bulk.entities.destinations");
+    if (failed.length === 0) {
+      toast.success(
+        t(enabled ? "common.bulk.toast.activated" : "common.bulk.toast.paused")
+          .replace("{count}", String(ok.length))
+          .replace("{entity}", entity),
+      );
+      setSelectedIds(new Set());
+      return;
+    }
+    toast.error(
+      t(enabled ? "bulk.destinations.playPartial" : "bulk.destinations.pausePartial")
+        .replace("{ok}", String(ok.length))
+        .replace("{total}", String(targets.length))
+        .replace("{failed}", String(failed.length)),
+      {
+        description: failed
+          .slice(0, 3)
+          .map((f) => `${nameOf(f.id)}: ${f.message}`)
+          .join("\n"),
+        duration: 10000,
+      },
+    );
+    // Keep the ones that could not be changed selected, so they are easy to find.
+    setSelectedIds(new Set(failed.map((f) => f.id)));
   };
 
-  const onBulkPause = async () => {
-    if (selectedDestinations.length === 0) return;
-    const targets = selectedDestinations;
-    await Promise.allSettled(targets.map((d) => setEnabled(d.id, false)));
-    toast.success(
-      t("common.bulk.toast.paused")
-        .replace("{count}", String(targets.length))
-        .replace("{entity}", t("common.bulk.entities.destinations")),
-    );
-    setSelectedIds(new Set());
-  };
+  const onBulkPlay = () => runBulk(true);
+  const onBulkPause = () => runBulk(false);
 
   const onBulkDelete = async () => {
     if (selectedDestinations.length === 0) return;

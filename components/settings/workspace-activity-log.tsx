@@ -335,8 +335,8 @@ export function WorkspaceActivityLog() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {/* Only ROLES is written in capitals. */}
-                {f.id === "role" ? (f.labelKey ? t(f.labelKey) : f.label ?? "").toUpperCase() : f.labelKey ? t(f.labelKey) : f.label}
+                {/* Every filter in capitals: ALL, CHANGES, MEMBERS, ROLES, SETTINGS, ... */}
+                {(f.labelKey ? t(f.labelKey) : f.label ?? "").toUpperCase()}
               </button>
             ))}
           </div>

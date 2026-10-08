@@ -41,6 +41,16 @@ interface DestinationsState {
   remove: (id: string) => Promise<void>;
   setEnabled: (id: string, enabled: boolean) => Promise<void>;
   /**
+   * Play / pause several destinations (the bulk bar). One at a time, so the
+   * server's "one live destination per number / per buyer" check sees each
+   * change in turn; a refused one is put back on its own and reported, the
+   * others keep their new state.
+   */
+  setEnabledMany: (
+    ids: string[],
+    enabled: boolean,
+  ) => Promise<{ ok: string[]; failed: { id: string; message: string }[] }>;
+  /**
    * Create a copy of a destination named "<name> (Clone)" with the same buyer,
    * number, caps, ring time, filters, business hours and time zone. The copy
    * starts switched OFF: the backend refuses two live destinations on one
@@ -141,7 +151,9 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
   },
 
   setEnabled: async (id, enabled) => {
-    const prev = get().destinations;
+    // Remember only THIS destination's state: putting the whole list back on
+    // a failure used to undo every other change made in the meantime.
+    const before = get().destinations.find((d) => d.id === id)?.enabled;
     set((s) => ({
       destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)),
     }));
@@ -152,8 +164,37 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       }));
       void get().fetchStats();
     } catch (e) {
-      set({ destinations: prev, error: messageFromError(e) });
+      set((s) => ({
+        destinations: s.destinations.map((d) => (d.id === id && before !== undefined ? { ...d, enabled: before } : d)),
+        error: messageFromError(e),
+      }));
       throw e;
     }
+  },
+
+  setEnabledMany: async (ids, enabled) => {
+    const ok: string[] = [];
+    const failed: { id: string; message: string }[] = [];
+    for (const id of ids) {
+      const current = get().destinations.find((d) => d.id === id);
+      if (!current) continue;
+      if (current.enabled === enabled) {
+        ok.push(id); // already in that state - nothing to ask the server
+        continue;
+      }
+      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)) }));
+      try {
+        const fresh = await destinationsService.setEnabled(id, enabled);
+        set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+        ok.push(id);
+      } catch (e) {
+        set((s) => ({
+          destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled: current.enabled } : d)),
+        }));
+        failed.push({ id, message: messageFromError(e) });
+      }
+    }
+    void get().fetchStats();
+    return { ok, failed };
   },
 }));
