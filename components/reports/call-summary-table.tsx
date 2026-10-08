@@ -38,6 +38,7 @@ import { useUIStore } from "@/lib/store/ui-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 
 type GroupKey =
@@ -909,15 +910,28 @@ export function CallSummaryTable({
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
   const [visibleState, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
-  // The operator's column choices, with Live forced off when it isn't allowed.
-  const visible = React.useMemo(
-    () => (showLive ? visibleState : { ...visibleState, live: false }),
-    [visibleState, showLive],
-  );
+  // Money a partner is not told. The backend already sends null for these
+  // (CH-088 extended to every Reports surface); hiding the columns keeps the
+  // page from rendering a null as $0.00, which would be a claim, not a fact.
+  const role = useAuthStore((st) => st.user?.role);
+  const hiddenForRole: ReadonlySet<ColumnKey> =
+    role === "buyer"
+      ? new Set<ColumnKey>(["payout", "profit", "cost"])
+      : role === "publisher"
+        ? new Set<ColumnKey>(["revenue", "profit", "cost"])
+        : new Set<ColumnKey>();
+  // The operator's column choices, with Live forced off when it isn't allowed
+  // and the partner-hidden money forced off whatever the picker says.
+  const visible = React.useMemo(() => {
+    const v = showLive ? { ...visibleState } : { ...visibleState, live: false };
+    for (const k of hiddenForRole) v[k] = false;
+    return v;
+  }, [visibleState, showLive, hiddenForRole]);
   // Columns offered in the picker.
   const columnDefs = React.useMemo(
-    () => (showLive ? COLUMNS : COLUMNS.filter((c) => c.id !== "live")),
-    [showLive],
+    () =>
+      COLUMNS.filter((c) => (showLive || c.id !== "live") && !hiddenForRole.has(c.id)),
+    [showLive, hiddenForRole],
   );
   const [pageSize, setPageSize] = React.useState(25);
   const [page, setPage] = React.useState(0);
