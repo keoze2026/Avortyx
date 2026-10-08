@@ -103,7 +103,7 @@ export function deriveCarrierCode(n: TrackingNumber): string {
  *  earning today. */
 export function deriveAssignedDate(n: TrackingNumber): string {
   if (!n.assignedAt) return DASH;
-  return new Date(n.assignedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return formatLocalDate(n.assignedAt, { month: "short", day: "numeric" });
 }
 
 /**
