@@ -3,6 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const activity: ExtraTranslations = {
   en: {
+    "activity.value.unknown": "Unknown {type}",
     "activity.detail.created": "New {type} added",
     "activity.detail.deleted": "{type} removed",
     "activity.detail.record": "record",
@@ -24,6 +25,7 @@ export const activity: ExtraTranslations = {
     "activity.type.membership": "membership",
   },
   ru: {
+    "activity.value.unknown": "Неизвестно: {type}",
     "activity.detail.created": "Добавлен(а) новый объект: {type}",
     "activity.detail.deleted": "Удалено: {type}",
     "activity.detail.record": "запись",
@@ -45,6 +47,7 @@ export const activity: ExtraTranslations = {
     "activity.type.membership": "участие",
   },
   ja: {
+    "activity.value.unknown": "不明な{type}",
     "activity.detail.created": "{type} を新規追加",
     "activity.detail.deleted": "{type} を削除",
     "activity.detail.record": "レコード",
@@ -66,6 +69,7 @@ export const activity: ExtraTranslations = {
     "activity.type.membership": "メンバーシップ",
   },
   zh: {
+    "activity.value.unknown": "未知{type}",
     "activity.detail.created": "新增{type}",
     "activity.detail.deleted": "已删除{type}",
     "activity.detail.record": "记录",

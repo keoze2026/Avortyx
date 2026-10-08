@@ -38,6 +38,10 @@ import {
   type ActivityKind,
   type WorkspaceActivityEvent,
 } from "@/lib/mock/workspace-activity";
+import { useBuyersStore } from "@/lib/store/buyers-store";
+import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useDestinationsStore } from "@/lib/store/destinations-store";
+import { usePublishersStore } from "@/lib/store/publishers-store";
 import { useWorkspaceMetaStore } from "@/lib/store/workspace-meta-store";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
@@ -180,6 +184,30 @@ export function typeLabel(type?: string, t?: (key: string) => string): string {
     if (translated !== key) return translated;
   }
   return TYPE_LABELS[type] ?? type.replace(/[_-]+/g, " ").toLowerCase();
+}
+
+/** First letter in capitals ("phone number" -> "Phone number"). */
+function capitalize(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+/** Plain words get a capital; emails, links, IDs, numbers and dates stay exactly as stored. */
+function displayWord(value: string): string {
+  const v = value.trim();
+  if (!v || /@|:\/\/|^[\d+(]/.test(v) || UUID.test(v)) return value;
+  return capitalize(value);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Which list a changed field points into, by its name ("publisher", "campaignId", "buyer_id"...). */
+function referenceKind(field: string): "publisher" | "campaign" | "buyer" | "destination" | null {
+  const f = field.replace(/[_\s-]/g, "").toLowerCase();
+  if (/publisher(id)?$/.test(f)) return "publisher";
+  if (/campaign(id)?$/.test(f)) return "campaign";
+  if (/buyer(id)?$/.test(f)) return "buyer";
+  if (/destination(id)?$/.test(f)) return "destination";
+  return null;
 }
 
 /** "max_calls_daily" / "maxCallsDaily" -> "Max calls daily". */
@@ -413,7 +441,7 @@ function ActivityRow({
             <Icon className={cn("h-3.5 w-3.5 shrink-0", CATEGORY_TINT[event.category])} />
             <span className={cn("font-normal", VERB_TONE[event.kind] ?? "text-muted-foreground")}>{verb}</span>
             {type && (event.category === "record" || event.category === "role") && (
-              <span className="text-muted-foreground">{type}</span>
+              <span className="text-muted-foreground">{capitalize(type)}</span>
             )}
             {event.target && <span className="font-normal text-foreground">{event.target}</span>}
           </div>
@@ -461,6 +489,30 @@ function ActivityRow({
 /** The FIELD / OLD / NEW table under an edited row. */
 function ChangesTable({ changes }: { changes: ActivityChange[] }) {
   const { t } = useTranslation();
+  // IDs of publishers, campaigns, buyers and destinations are shown by name.
+  const publishers = usePublishersStore((s) => s.publishers);
+  const campaigns = useCampaignsStore((s) => s.campaigns);
+  const buyers = useBuyersStore((s) => s.buyers);
+  const destinations = useDestinationsStore((s) => s.destinations);
+  const names = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of publishers) m.set(`publisher:${p.id}`, p.name);
+    for (const c of campaigns) m.set(`campaign:${c.id}`, c.name);
+    for (const b of buyers) m.set(`buyer:${b.id}`, b.name);
+    for (const d of destinations) m.set(`destination:${d.id}`, d.name || d.tfn);
+    return m;
+  }, [publishers, campaigns, buyers, destinations]);
+  const show = (field: string, value: string | null): string | null => {
+    if (value === null) return null;
+    const kind = referenceKind(field);
+    if (kind) {
+      const name = names.get(`${kind}:${value.trim()}`);
+      if (name) return name;
+      // An ID we can't find (deleted since?) - say what it was, not the raw ID.
+      if (UUID.test(value.trim())) return t("activity.value.unknown").replace("{type}", t(`activity.type.${kind}`));
+    }
+    return displayWord(value);
+  };
   return (
     <div className="overflow-x-auto rounded-md border border-border bg-card">
       <table className="w-full text-left text-[13px] font-normal">
@@ -476,10 +528,10 @@ function ChangesTable({ changes }: { changes: ActivityChange[] }) {
             <tr key={c.field} className="border-b border-border/60 last:border-b-0 align-top">
               <td className="px-3 py-1.5 font-normal text-foreground">{fieldLabel(c.field)}</td>
               <td className="px-3 py-1.5">
-                <Value value={c.old} tone="old" />
+                <Value value={show(c.field, c.old)} tone="old" />
               </td>
               <td className="px-3 py-1.5">
-                <Value value={c.new} tone="new" />
+                <Value value={show(c.field, c.new)} tone="new" />
               </td>
             </tr>
           ))}
