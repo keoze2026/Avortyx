@@ -56,7 +56,14 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
 
   // Admins and superusers bypass both gates entirely — no KYC, no balance
   // check, full access. Backend confirmed this on 2026-06-11.
-  const isPrivileged = user?.role === "admin" || user?.isSuperuser === true;
+  //
+  // Buyers and publishers bypass them too, for a different reason: they are
+  // guests in someone else's workspace. KYC and funding belong to the
+  // workspace owner — a partner cannot even read the billing account (403 by
+  // role), so their balance read as zero for ever and every invited partner
+  // landed on "Add funds to activate your panel" instead of their data.
+  const isPartner = user?.role === "buyer" || user?.role === "publisher";
+  const isPrivileged = user?.role === "admin" || user?.isSuperuser === true || isPartner;
 
   // Fetch once on mount (only when the user is authenticated AND not a
   // privileged user — privileged users skip the gate so the fetch is wasted).
