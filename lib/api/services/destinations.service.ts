@@ -196,9 +196,8 @@ function wireToDestination(w: DestinationWire): Destination {
     concurrencyCap: w.concurrencyCap ?? w.maxConcurrency ?? 0,
     dailyCap: w.dailyCap ?? w.maxCallsDaily ?? 0,
     monthlyCap: w.monthlyCap ?? w.maxCallsMonthly ?? 0,
-    // `enabled` on the contract shape; `status: "active"` on the aggregate
-    // row. A row with neither is treated as enabled — it was returned.
-    enabled: w.enabled ?? (w.status ? w.status.toLowerCase() === "active" : true),
+    // On / off, whichever way the server spells it (see enabledFromWire).
+    enabled: enabledFromWire(w),
     ringDurationSec: w.ringDurationSec ?? 25,
     filterEnabled: !!w.filterEnabled,
     filterGroups: Array.isArray(w.filterGroups) ? w.filterGroups : [],
@@ -271,6 +270,36 @@ function destinationToWire(patch: Partial<Destination>): Record<string, unknown>
 }
 
 /* ─── Public service ──────────────────────────────────────────────────── */
+
+/**
+ * Is this destination switched on? Servers spell it differently: `enabled`,
+ * `is_enabled`, `is_active`, `active`, `paused` (the opposite), or a `status`
+ * word - and sometimes as "true" / 1. Before, anything but `enabled` or
+ * `status: "active"` read as ON, so paused destinations showed switched on.
+ */
+function enabledFromWire(w: DestinationWire): boolean {
+  const raw = w as unknown as Record<string, unknown>;
+  const asBool = (v: unknown): boolean | undefined => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return v !== 0;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      if (["true", "1", "yes", "on"].includes(s)) return true;
+      if (["false", "0", "no", "off"].includes(s)) return false;
+    }
+    return undefined;
+  };
+  for (const key of ["enabled", "isEnabled", "is_enabled", "isActive", "is_active", "active"]) {
+    const b = asBool(raw[key]);
+    if (b !== undefined) return b;
+  }
+  const paused = asBool(raw.paused ?? raw.isPaused ?? raw.is_paused);
+  if (paused !== undefined) return !paused;
+  const status = typeof raw.status === "string" ? raw.status.trim().toLowerCase() : "";
+  if (["active", "enabled", "live", "on", "running"].includes(status)) return true;
+  if (["paused", "disabled", "inactive", "off", "stopped", "archived"].includes(status)) return false;
+  return true; // a row with no on/off field at all was returned, so it exists - treat as on
+}
 
 export const destinationsService = {
   async list(query: DestinationListQuery = {}): Promise<Paginated<Destination>> {

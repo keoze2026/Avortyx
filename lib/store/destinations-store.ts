@@ -73,6 +73,12 @@ interface DestinationsState {
   clone: (id: string) => Promise<Destination>;
 }
 
+/** A number's last 10 digits; an incomplete number only ever matches itself. */
+function numberKey(tfn: string): string {
+  const digits = (tfn ?? "").replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : `raw:${tfn ?? ""}`;
+}
+
 function messageFromError(e: unknown): string {
   if (e instanceof Error) return e.message;
   return "Destinations request failed";
@@ -174,7 +180,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     try {
       const fresh = await destinationsService.setEnabled(id, enabled);
       set((s) => ({
-        destinations: s.destinations.map((d) => (d.id === id ? fresh : d)),
+        destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled } : d)),
       }));
       void get().fetchStats();
     } catch (e) {
@@ -189,7 +195,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
   enableExclusive: async (id) => {
     const target = get().destinations.find((d) => d.id === id);
     if (!target) return [];
-    const sameNumber = (a: string, b: string) => a.replace(/\D/g, "").slice(-10) === b.replace(/\D/g, "").slice(-10);
+    const sameNumber = (a: string, b: string) => numberKey(a) === numberKey(b);
     const blockers = () =>
       get().destinations.filter(
         (d) => d.id !== id && d.enabled && (d.buyerId === target.buyerId || sameNumber(d.tfn, target.tfn)),
@@ -198,14 +204,14 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     const clear = async () => {
       for (const b of blockers()) {
         const fresh = await destinationsService.setEnabled(b.id, false);
-        set((s) => ({ destinations: s.destinations.map((d) => (d.id === b.id ? fresh : d)) }));
+        set((s) => ({ destinations: s.destinations.map((d) => (d.id === b.id ? { ...fresh, enabled: false } : d)) }));
         switchedOff.push(b);
       }
     };
     await clear();
     try {
       const fresh = await destinationsService.setEnabled(id, true);
-      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: true } : d)) }));
     } catch (e) {
       // The list on screen may be out of date (someone else switched one on):
       // reload it, clear again and try once more.
@@ -214,7 +220,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       const fresh = await destinationsService.setEnabled(id, true).catch(() => {
         throw e;
       });
-      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: true } : d)) }));
     }
     void get().fetchStats();
     return switchedOff;
@@ -230,7 +236,6 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     // the rest are skipped (not an error - the rule allows only one).
     const takenBuyers = new Set<string>();
     const takenNumbers = new Set<string>();
-    const numberKey = (tfn: string) => tfn.replace(/\D/g, "").slice(-10);
     for (const id of ids) {
       const current = get().destinations.find((d) => d.id === id);
       if (!current) continue;
@@ -252,7 +257,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
         } else {
           set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)) }));
           const fresh = await destinationsService.setEnabled(id, false);
-          set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+          set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: false } : d)) }));
         }
         ok.push(id);
       } catch (e) {
