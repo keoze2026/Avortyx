@@ -136,7 +136,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 text-left">{t("workspaceUI.members.columnName")}</TableHead>
                   <TableHead className="text-left">{t("workspaceUI.members.columnEmail")}</TableHead>
-                  <TableHead className="w-32 text-center">{t("workspaceUI.members.columnRole")}</TableHead>
+                  <TableHead className="w-32 pl-6 text-left">{t("workspaceUI.members.columnRole")}</TableHead>
                   <TableHead className="w-32 text-center">{t("workspaceUI.members.columnStatus")}</TableHead>
                   <TableHead className="pr-4">{t("workspaceUI.members.columnActions")}</TableHead>
                 </TableRow>
@@ -162,7 +162,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
                     <TableCell className="text-left font-mono text-[11px] text-muted-foreground">
                       {m.email}
                     </TableCell>
-                    <TableCell className="w-32 text-center">{t(`workspaceUI.members.role.${m.role}`)}</TableCell>
+                    <TableCell className="w-32 pl-6 text-left">{t(`workspaceUI.members.role.${m.role}`)}</TableCell>
                     <TableCell className="w-32 text-center">
                       {/* One width for every status, so the boxes line up. */}
                       <Badge
