@@ -606,8 +606,10 @@ function groupCalls(
       row.converted += 1;
     }
     if (matchesCallStatusFilter(c, "notConnected")) row.noConnect += 1;
-    // Same rule as the backend's Dupe: a duplicate that was answered.
-    if (c.isDuplicate && (c.status === "completed" || c.status === "in-progress")) row.dupe += 1;
+    // Same rule as the backend's Dupe: every duplicate that came in,
+    // answered or dropped. A campaign with blocking on used to read Dupe 0
+    // precisely because the blocking worked.
+    if (c.isDuplicate) row.dupe += 1;
     row.tcl += c.durationSec;
     row.payout += c.payout;
     row.revenue += c.revenue;
