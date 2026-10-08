@@ -37,6 +37,7 @@ export default function DestinationsPage() {
   const fetchStats = useDestinationsStore((s) => s.fetchStats);
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
   const setEnabledMany = useDestinationsStore((s) => s.setEnabledMany);
+  const enableExclusive = useDestinationsStore((s) => s.enableExclusive);
   const remove = useDestinationsStore((s) => s.remove);
   const update = useDestinationsStore((s) => s.update);
   const cloneDestination = useDestinationsStore((s) => s.clone);
@@ -136,12 +137,19 @@ export default function DestinationsPage() {
     const d = destinations.find((x) => x.id === id);
     if (!d) return;
     try {
-      await setEnabled(id, !d.enabled);
-      toast.success(
-        d.enabled
-          ? t("networkUI.destinations.toast.paused").replace("{name}", d.name)
-          : t("networkUI.destinations.toast.enabled").replace("{name}", d.name),
-      );
+      if (d.enabled) {
+        await setEnabled(id, false);
+        toast.success(t("networkUI.destinations.toast.paused").replace("{name}", d.name));
+      } else {
+        // Switching ON: whatever blocks it (the buyer's other live destination,
+        // or another one live on this number) is switched off first.
+        const off = await enableExclusive(id);
+        toast.success(t("networkUI.destinations.toast.enabled").replace("{name}", d.name), {
+          description: off.length
+            ? t("bulk.destinations.switchedOff").replace("{names}", off.map((o) => o.name).join(", "))
+            : undefined,
+        });
+      }
     } catch (e) {
       toast.error(friendlyErrorMessage(e, "Couldn't update destination."));
     }
@@ -195,16 +203,27 @@ export default function DestinationsPage() {
     if (selectedDestinations.length === 0) return;
     const targets = selectedDestinations;
     const nameOf = (id: string) => targets.find((d) => d.id === id)?.name ?? id;
-    const { ok, failed } = await setEnabledMany(
+    const { ok, failed, skipped, switchedOff } = await setEnabledMany(
       targets.map((d) => d.id),
       enabled,
     );
     const entity = t("common.bulk.entities.destinations");
     if (failed.length === 0) {
+      // Skipping (one live per buyer / number) and switching off are the rule
+      // working, not errors - one calm summary.
+      const notes = [
+        switchedOff.length
+          ? t("bulk.destinations.switchedOff").replace("{names}", switchedOff.map((o) => o.name).join(", "))
+          : "",
+        skipped.length
+          ? t("bulk.destinations.skipped").replace("{names}", skipped.map(nameOf).join(", "))
+          : "",
+      ].filter(Boolean);
       toast.success(
         t(enabled ? "common.bulk.toast.activated" : "common.bulk.toast.paused")
           .replace("{count}", String(ok.length))
           .replace("{entity}", entity),
+        { description: notes.length ? notes.join("\n") : undefined, duration: notes.length ? 8000 : undefined },
       );
       setSelectedIds(new Set());
       return;

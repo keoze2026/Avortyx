@@ -49,7 +49,21 @@ interface DestinationsState {
   setEnabledMany: (
     ids: string[],
     enabled: boolean,
-  ) => Promise<{ ok: string[]; failed: { id: string; message: string }[] }>;
+  ) => Promise<{
+    ok: string[];
+    failed: { id: string; message: string }[];
+    /** Selected, but another selected destination of the same buyer / number went live instead. */
+    skipped: string[];
+    /** Live destinations that were switched off to make room. */
+    switchedOff: Destination[];
+  }>;
+  /**
+   * Switch a destination ON. The server allows one live destination per buyer
+   * and per number, so whichever live destination stands in the way (same
+   * buyer, or same number) is switched OFF first - what the server's own
+   * message asks the user to do by hand. Returns those it switched off.
+   */
+  enableExclusive: (id: string) => Promise<Destination[]>;
   /**
    * Create a copy of a destination named "<name> (Clone)" with the same buyer,
    * number, caps, ring time, filters, business hours and time zone. The copy
@@ -172,20 +186,74 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     }
   },
 
+  enableExclusive: async (id) => {
+    const target = get().destinations.find((d) => d.id === id);
+    if (!target) return [];
+    const sameNumber = (a: string, b: string) => a.replace(/\D/g, "").slice(-10) === b.replace(/\D/g, "").slice(-10);
+    const blockers = () =>
+      get().destinations.filter(
+        (d) => d.id !== id && d.enabled && (d.buyerId === target.buyerId || sameNumber(d.tfn, target.tfn)),
+      );
+    const switchedOff: Destination[] = [];
+    const clear = async () => {
+      for (const b of blockers()) {
+        const fresh = await destinationsService.setEnabled(b.id, false);
+        set((s) => ({ destinations: s.destinations.map((d) => (d.id === b.id ? fresh : d)) }));
+        switchedOff.push(b);
+      }
+    };
+    await clear();
+    try {
+      const fresh = await destinationsService.setEnabled(id, true);
+      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+    } catch (e) {
+      // The list on screen may be out of date (someone else switched one on):
+      // reload it, clear again and try once more.
+      await get().fetch();
+      await clear();
+      const fresh = await destinationsService.setEnabled(id, true).catch(() => {
+        throw e;
+      });
+      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+    }
+    void get().fetchStats();
+    return switchedOff;
+  },
+
   setEnabledMany: async (ids, enabled) => {
     const ok: string[] = [];
     const failed: { id: string; message: string }[] = [];
+    const skipped: string[] = [];
+    const switchedOff: Destination[] = [];
+    // Playing: only one per buyer / per number can be live, so of several
+    // selected ones that share a buyer or number, the first is played and
+    // the rest are skipped (not an error - the rule allows only one).
+    const takenBuyers = new Set<string>();
+    const takenNumbers = new Set<string>();
+    const numberKey = (tfn: string) => tfn.replace(/\D/g, "").slice(-10);
     for (const id of ids) {
       const current = get().destinations.find((d) => d.id === id);
       if (!current) continue;
+      if (enabled) {
+        if (takenBuyers.has(current.buyerId) || takenNumbers.has(numberKey(current.tfn))) {
+          skipped.push(id);
+          continue;
+        }
+        takenBuyers.add(current.buyerId);
+        takenNumbers.add(numberKey(current.tfn));
+      }
       if (current.enabled === enabled) {
         ok.push(id); // already in that state - nothing to ask the server
         continue;
       }
-      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)) }));
       try {
-        const fresh = await destinationsService.setEnabled(id, enabled);
-        set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+        if (enabled) {
+          switchedOff.push(...(await get().enableExclusive(id)));
+        } else {
+          set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)) }));
+          const fresh = await destinationsService.setEnabled(id, false);
+          set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? fresh : d)) }));
+        }
         ok.push(id);
       } catch (e) {
         set((s) => ({
@@ -195,6 +263,6 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       }
     }
     void get().fetchStats();
-    return { ok, failed };
+    return { ok, failed, skipped, switchedOff };
   },
 }));
