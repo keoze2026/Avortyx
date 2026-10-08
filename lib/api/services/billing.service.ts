@@ -25,6 +25,11 @@ export interface BillingAccount {
     markupPercent: number;
     tfnPurchaseFee: number;
     monthlyPortalFee: number;
+    /** Service fees from the pricing page: recording per minute, VoIP Shield
+     *  and rejected call per call. Undefined on a backend that predates them. */
+    recordingFeePerMinute?: number;
+    voipShieldFeePerCall?: number;
+    rejectedCallFee?: number;
     /** When the portal fee was last charged / falls due next (ms epoch). */
     portalFeeChargedAt?: number;
     portalFeeNextDue?: number;
@@ -132,6 +137,9 @@ interface BillingAccountWire {
   markupPercent?: string | number;
   tfnPurchaseFee?: string | number;
   monthlyPortalFee?: string | number;
+  recordingFeePerMinute?: string | number;
+  voipShieldFeePerCall?: string | number;
+  rejectedCallFee?: string | number;
   portalFeeChargedAt?: string;
   portalFeeNextDue?: string;
 }
@@ -236,6 +244,11 @@ function wireToAccount(w: BillingAccountWire): BillingAccount {
         monthlyPortalFee: toNum(w.monthlyPortalFee),
         portalFeeChargedAt: w.portalFeeChargedAt ? toTs(w.portalFeeChargedAt) : undefined,
         portalFeeNextDue: w.portalFeeNextDue ? toTs(w.portalFeeNextDue) : undefined,
+        recordingFeePerMinute:
+          w.recordingFeePerMinute !== undefined ? toNum(w.recordingFeePerMinute) : undefined,
+        voipShieldFeePerCall:
+          w.voipShieldFeePerCall !== undefined ? toNum(w.voipShieldFeePerCall) : undefined,
+        rejectedCallFee: w.rejectedCallFee !== undefined ? toNum(w.rejectedCallFee) : undefined,
       }
     : undefined;
   return {

@@ -13,7 +13,7 @@
  */
 
 import * as React from "react";
-import { AudioLines, CalendarClock, Percent, PhoneIncoming, Wallet } from "lucide-react";
+import { AudioLines, CalendarClock, Disc, Percent, PhoneIncoming, PhoneOff, ShieldCheck, Wallet } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
@@ -94,6 +94,36 @@ export function RatesCard() {
     },
   ];
 
+  // The three service fees from the pricing page. Shown only when the backend
+  // sends them, same rule as the card itself: nothing invented.
+  if (rates.recordingFeePerMinute !== undefined) {
+    tiles.push({
+      key: "recordingFee",
+      icon: Disc,
+      label: t("billing.rateRows.recordingFee"),
+      value: preciseMoney(rates.recordingFeePerMinute),
+      hint: t("billing.rateRows.perMinuteUnit"),
+    });
+  }
+  if (rates.voipShieldFeePerCall !== undefined) {
+    tiles.push({
+      key: "voipShieldFee",
+      icon: ShieldCheck,
+      label: t("billing.rateRows.voipShieldFee"),
+      value: preciseMoney(rates.voipShieldFeePerCall),
+      hint: t("billing.rateRows.perCallUnit"),
+    });
+  }
+  if (rates.rejectedCallFee !== undefined) {
+    tiles.push({
+      key: "rejectedCallFee",
+      icon: PhoneOff,
+      label: t("billing.rateRows.rejectedCallFee"),
+      value: preciseMoney(rates.rejectedCallFee),
+      hint: t("billing.rateRows.perCallUnit"),
+    });
+  }
+
   const charged = formatDate(rates.portalFeeChargedAt);
   const nextDue = formatDate(rates.portalFeeNextDue);
 
@@ -102,7 +132,7 @@ export function RatesCard() {
       <h2 className="mb-5 text-xl font-semibold tracking-tight">{t("billing.rates")}</h2>
 
       <div className="overflow-hidden rounded-lg border border-border">
-        <ul className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 [&>li]:border-b [&>li]:border-border lg:[&>li:nth-last-child(-n+3)]:border-b-0">
           {tiles.map((tile, i) => (
             <RateTile key={tile.key} tile={tile} last={i === tiles.length - 1} />
           ))}
