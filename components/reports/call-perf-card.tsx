@@ -6,14 +6,18 @@ import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
 interface CallPerfCardProps {
-  revenue: number;
-  payout: number;
+  /** null = the backend withheld the figure for this role (a partner is not
+   *  told the workspace's economics). The cell is hidden, not shown as $0 -
+   *  zero would be a claim, absence is the truth. */
+  revenue: number | null;
+  payout: number | null;
 }
 
 export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
   const { t } = useTranslation();
-  const profit = revenue - payout;
-  const profitNegative = profit < 0;
+  const profit = revenue !== null && payout !== null ? revenue - payout : null;
+  const profitNegative = (profit ?? 0) < 0;
+  const cells = [revenue !== null, payout !== null, profit !== null].filter(Boolean).length || 1;
 
   return (
     <Card>
@@ -25,14 +29,23 @@ export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
       <CardContent>
         {/* Hairline rules separate the three figures so they don't read as
             one run of numbers. `divide-x` borders every cell after the first. */}
-        <div className="grid grid-cols-3 divide-x divide-border text-center">
-          <Cell label={t("toolsUI.reports.perfCard.revenue")} value={formatCurrency(revenue, true)} />
-          <Cell label={t("toolsUI.reports.perfCard.payout")} value={formatCurrency(payout, true)} />
-          <Cell
-            label={t("toolsUI.reports.perfCard.profit")}
-            value={formatCurrency(profit, true)}
-            valueClass={profitNegative ? "text-destructive" : "text-[color:var(--success)]"}
-          />
+        <div
+          className="grid divide-x divide-border text-center"
+          style={{ gridTemplateColumns: `repeat(${cells}, minmax(0, 1fr))` }}
+        >
+          {revenue !== null && (
+            <Cell label={t("toolsUI.reports.perfCard.revenue")} value={formatCurrency(revenue, true)} />
+          )}
+          {payout !== null && (
+            <Cell label={t("toolsUI.reports.perfCard.payout")} value={formatCurrency(payout, true)} />
+          )}
+          {profit !== null && (
+            <Cell
+              label={t("toolsUI.reports.perfCard.profit")}
+              value={formatCurrency(profit, true)}
+              valueClass={profitNegative ? "text-destructive" : "text-[color:var(--success)]"}
+            />
+          )}
         </div>
       </CardContent>
     </Card>

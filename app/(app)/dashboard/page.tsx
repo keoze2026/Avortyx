@@ -238,8 +238,10 @@ export default function DashboardPage() {
   }, [allDestCounts, destinations, isToday]);
 
   const summary = useMemo(() => ({
-    revenue: snapshot?.kpis.totalRevenue ?? 0,
-    payout: snapshot?.kpis.totalPayout ?? 0,
+    // While the snapshot is loading the card shows zeros; once it arrives,
+    // null means withheld for this role and the cell disappears entirely.
+    revenue: snapshot ? snapshot.kpis.totalRevenue : 0,
+    payout: snapshot ? snapshot.kpis.totalPayout : 0,
   }), [snapshot]);
 
   const donutTotals = useMemo(() => {
