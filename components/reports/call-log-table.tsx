@@ -256,22 +256,10 @@ function getHangUpSide(c: Call): HangUpSide {
 }
 
 /**
- * Why a call didn't go through, as the backend recorded it (`block_reason`):
- * "Duplicate call", "Campaign cap reached", ... A duplicate is shown as a
- * missed call, so any "blocked" wording is dropped. "" = no reason.
- */
-function failReasonText(c: Call): string {
-  const raw = (c.failReason ?? "").trim();
-  if (!raw) return "";
-  if (/duplicate/i.test(raw)) return "Duplicate call";
-  return raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
-}
-
-/**
- * The server's export file and the screen measure TTC the same way, but the
- * file can lag behind (an older backend wrote 0 for every answered call).
- * Where this page holds the call, its TTC column is taken from the call list,
- * so the file always matches what the Call Log shows.
+ * TTC in the exported file. The server's file can lag behind the screen (an
+ * older backend wrote 0 for every answered call), so for every call this page
+ * holds, the file's TTC column is taken from the same value the Call Log
+ * shows: hh:mm:ss, blank when the call was never answered.
  */
 function withScreenTtc(table: string[][], callsById: Map<string, Call>): string[][] {
   if (table.length < 2) return table;
@@ -337,8 +325,10 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "status":
       return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
     case "failReason":
-      // The backend's own reason (block_reason) - never a guessed one.
-      return failReasonText(c);
+      // No trustworthy backend fail-reason field exists yet — showing a
+      // fabricated one (e.g. "Carrier error") read as real diagnostic data.
+      // A dash here is accurate; a guessed reason isn't.
+      return "—";
     case "recording":
       return c.recordingUrl ?? "";
   }
@@ -794,7 +784,7 @@ export function CallLogTable({
                       )}
                       {columns.failReason && (
                         <TableCell className={CELL}>
-                          {failReasonText(c) || "—"}
+                          —
                         </TableCell>
                       )}
                       {columns.recording && (
