@@ -74,6 +74,23 @@ interface DestinationsState {
 }
 
 /** A number's last 10 digits; an incomplete number only ever matches itself. */
+/**
+ * Which buyer owns this destination, for the "one live destination per buyer"
+ * rule. The list rows often carry only the buyer's NAME (buyer_id empty), so
+ * compare by id when both have one, otherwise by name. A destination with no
+ * buyer id and no name never matches anything: before, every row with an
+ * empty buyer id counted as "the same buyer", so a bulk Play of 100 played
+ * only the ~40 rows that had an id and skipped the rest.
+ */
+function sameBuyer(a: { buyerId?: string; buyerName?: string }, b: { buyerId?: string; buyerName?: string }): boolean {
+  const idA = (a.buyerId ?? "").trim();
+  const idB = (b.buyerId ?? "").trim();
+  if (idA && idB) return idA === idB;
+  const nameA = (a.buyerName ?? "").trim().toLowerCase();
+  const nameB = (b.buyerName ?? "").trim().toLowerCase();
+  return !!nameA && nameA === nameB;
+}
+
 function numberKey(tfn: string): string {
   const digits = (tfn ?? "").replace(/\D/g, "");
   return digits.length >= 10 ? digits.slice(-10) : `raw:${tfn ?? ""}`;
@@ -198,7 +215,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     const sameNumber = (a: string, b: string) => numberKey(a) === numberKey(b);
     const blockers = () =>
       get().destinations.filter(
-        (d) => d.id !== id && d.enabled && (d.buyerId === target.buyerId || sameNumber(d.tfn, target.tfn)),
+        (d) => d.id !== id && d.enabled && (sameBuyer(d, target) || sameNumber(d.tfn, target.tfn)),
       );
     const switchedOff: Destination[] = [];
     const clear = async () => {
@@ -234,18 +251,16 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     // Playing: only one per buyer / per number can be live, so of several
     // selected ones that share a buyer or number, the first is played and
     // the rest are skipped (not an error - the rule allows only one).
-    const takenBuyers = new Set<string>();
-    const takenNumbers = new Set<string>();
+    const taken: Destination[] = [];
     for (const id of ids) {
       const current = get().destinations.find((d) => d.id === id);
       if (!current) continue;
       if (enabled) {
-        if (takenBuyers.has(current.buyerId) || takenNumbers.has(numberKey(current.tfn))) {
+        if (taken.some((x) => sameBuyer(x, current) || numberKey(x.tfn) === numberKey(current.tfn))) {
           skipped.push(id);
           continue;
         }
-        takenBuyers.add(current.buyerId);
-        takenNumbers.add(numberKey(current.tfn));
+        taken.push(current);
       }
       if (current.enabled === enabled) {
         ok.push(id); // already in that state - nothing to ask the server
