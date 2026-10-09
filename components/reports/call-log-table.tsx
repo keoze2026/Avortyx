@@ -259,6 +259,18 @@ function getHangUpSide(c: Call): HangUpSide {
 }
 
 /**
+ * Why a call didn't go through, as the backend recorded it (`block_reason`):
+ * "Duplicate call", "Campaign cap reached", ... A dropped duplicate is shown
+ * as a missed call, so no "blocked" wording. "" = no reason.
+ */
+function failReasonText(c: Call): string {
+  const raw = (c.failReason ?? "").trim();
+  if (!raw) return "";
+  if (/duplicate/i.test(raw)) return "Duplicate call";
+  return raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
+}
+
+/**
  * TTC in the exported file. The server's file can lag behind the screen (an
  * older backend wrote 0 for every answered call), so for every call this page
  * holds, the file's TTC column is taken from the same value the Call Log
@@ -430,10 +442,8 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "status":
       return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
     case "failReason":
-      // No trustworthy backend fail-reason field exists yet — showing a
-      // fabricated one (e.g. "Carrier error") read as real diagnostic data.
-      // A dash here is accurate; a guessed reason isn't.
-      return "—";
+      // The backend's own reason (block_reason) - never a guessed one.
+      return failReasonText(c);
     case "recording":
       return c.recordingUrl ?? "";
   }
@@ -900,7 +910,7 @@ export function CallLogTable({
                       )}
                       {columns.failReason && (
                         <TableCell className={CELL}>
-                          —
+                          {failReasonText(c) || "—"}
                         </TableCell>
                       )}
                       {columns.recording && (

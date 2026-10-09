@@ -57,6 +57,8 @@ type TimeSeriesResponseWire =
 
 interface CallRecordWire {
   ttc?: number | null;
+  /** Why the call didn't go through ("Duplicate call", "Campaign cap reached"). */
+  blockReason?: string | null;
   id: string;
   callerNumber: string;
   calledNumber?: string;
@@ -441,6 +443,7 @@ function callRecordToCall(w: CallRecordWire): Call {
     startedAt: toTs(w.startedAt ?? w.createdAt),
     durationSec: firstNum(w.durationSec, w.durationSeconds, w.duration),
     ttc: typeof w.ttc === "number" ? w.ttc : null,
+    failReason: w.blockReason || undefined,
     status: normalizeStatus(w.status),
     statusRaw: w.status ? statusKey(w.status) : undefined,
     lineType: w.ipqsLineType?.trim() || undefined,
