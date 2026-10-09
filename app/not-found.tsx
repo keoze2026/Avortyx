@@ -1,12 +1,32 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { ArrowRight, Radio, RotateCcw, Search } from "lucide-react";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants";
+import { REQUEST_ACCESS_HREF } from "@/lib/portal-access";
 import { cn } from "@/lib/utils";
 
-export default function NotFound() {
+/**
+ * Is this request on the public site (avortyx.com) rather than the portal?
+ * With PORTAL_HOSTS set (see proxy.ts), every host not in that list is the
+ * public site - where the portal must not be advertised, so its buttons
+ * (Dashboard, Live Monitor) are not shown there.
+ */
+async function onPublicSite(): Promise<boolean> {
+  const portalHosts = (process.env.PORTAL_HOSTS ?? "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  if (portalHosts.length === 0) return false; // no split: one site, keep the portal buttons
+  const h = await headers();
+  const host = (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
+  return !portalHosts.includes(host);
+}
+
+export default async function NotFound() {
+  const publicSite = await onPublicSite();
   return (
     <main className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
       {/* Ambient glows */}
@@ -68,22 +88,40 @@ export default function NotFound() {
 
             {/* Actions */}
             <div className="mt-7 flex flex-col items-center justify-center gap-2 sm:flex-row">
-              <Link href={ROUTES.dashboard}>
-                <Button size="sm" className="gap-1.5">
-                  <ArrowRight className="h-3.5 w-3.5" />
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href={ROUTES.live}>
-                <Button size="sm" variant="outline" className="gap-1.5">
-                  <Radio className="h-3.5 w-3.5" /> Live Monitor
-                </Button>
-              </Link>
-              <Link href={ROUTES.home}>
-                <Button size="sm" variant="ghost" className="gap-1.5">
-                  <RotateCcw className="h-3.5 w-3.5" /> Home
-                </Button>
-              </Link>
+              {publicSite ? (
+                <>
+                  {/* Public site: only ways back to the website - never the portal. */}
+                  <Link href={ROUTES.home}>
+                    <Button size="sm" className="gap-1.5">
+                      <RotateCcw className="h-3.5 w-3.5" /> Home
+                    </Button>
+                  </Link>
+                  <Link href={REQUEST_ACCESS_HREF}>
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      <ArrowRight className="h-3.5 w-3.5" /> Request access
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href={ROUTES.dashboard}>
+                    <Button size="sm" className="gap-1.5">
+                      <ArrowRight className="h-3.5 w-3.5" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Link href={ROUTES.live}>
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      <Radio className="h-3.5 w-3.5" /> Live Monitor
+                    </Button>
+                  </Link>
+                  <Link href={ROUTES.home}>
+                    <Button size="sm" variant="ghost" className="gap-1.5">
+                      <RotateCcw className="h-3.5 w-3.5" /> Home
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Coordinate footer */}
