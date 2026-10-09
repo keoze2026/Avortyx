@@ -264,10 +264,30 @@ function getHangUpSide(c: Call): HangUpSide {
  * as a missed call, so no "blocked" wording. "" = no reason.
  */
 function failReasonText(c: Call): string {
-  const raw = (c.failReason ?? "").trim();
-  if (!raw) return "";
-  if (/duplicate/i.test(raw)) return "Duplicate call";
-  return raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
+  return failReasonLabel(c.failReason);
+}
+
+/**
+ * The words the portal uses for a fail reason (screen and export):
+ *   "Duplicate call" / "Duplicate call blocked"  ->  "Duplicate Call"
+ *   "Campaign cap reached" (any cap)              ->  "Overflow Missed"
+ * Anything else: each word starts with a capital, "blocked" dropped.
+ */
+function failReasonLabel(reason: string | null | undefined): string {
+  const raw = (reason ?? "").trim();
+  if (!raw || raw === "—") return "";
+  if (/duplicate/i.test(raw)) return "Duplicate Call";
+  if (/cap\s*reached|overflow/i.test(raw)) return "Overflow Missed";
+  const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
+  return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+}
+
+/** The server's export file uses the backend's own wording; give it the same labels as the screen. */
+function withFailReasonLabels(table: string[][]): string[][] {
+  if (table.length < 2) return table;
+  const col = table[0].findIndex((h) => h.trim().toUpperCase() === "FAIL REASON");
+  if (col < 0) return table;
+  return table.map((row, i) => (i === 0 ? row : row.map((cell, j) => (j === col ? failReasonLabel(cell) : cell))));
 }
 
 /**
@@ -655,12 +675,12 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = withScreenTtc(
+      const table = withFailReasonLabels(withScreenTtc(
         formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
           destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
         }),
         callsById,
-      );
+      ));
       const count = Math.max(table.length - 1, 0);
       const stem = dateStamped("call-log");
       if (format === "csv") {
@@ -798,7 +818,7 @@ export function CallLogTable({
                 {columns.duration && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
                 {columns.status && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.failReason && <TableHead className="pl-4 text-left">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
+                {columns.failReason && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
                 <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
               </TableRow>
@@ -909,7 +929,7 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.failReason && (
-                        <TableCell className={`${CELL} pl-4 text-left`}>
+                        <TableCell className={`${CELL} text-center`}>
                           {failReasonText(c) || "—"}
                         </TableCell>
                       )}

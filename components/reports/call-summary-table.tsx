@@ -1173,14 +1173,14 @@ export function CallSummaryTable({
           <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-6 text-left">
+                <TableHead className="text-center">
                   <SortHeader
                     label={(() => { const k = TABS.find((td) => td.id === tab)?.labelKey; return k ? t(k) : t("toolsUI.reports.summary.columns.group"); })()}
                     sortKey="label"
                     active={sortKey}
                     dir={sortDir}
                     onClick={requestSort}
-                    align="left"
+                    align="center"
                   />
                 </TableHead>
                 {visible.live && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.live")} sortKey="live" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -1194,10 +1194,10 @@ export function CallSummaryTable({
                 {visible.conversionRate && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.conversionRate")} sortKey="conversionRate" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.tcl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.tcl")} sortKey="tcl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.payout && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.revenue && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.profit && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {visible.cost && <TableHead className="text-right"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
+                {visible.payout && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.revenue && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.profit && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.cost && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1212,7 +1212,7 @@ export function CallSummaryTable({
                   const profit = rowProfit(r);
                   return (
                     <TableRow key={r.key}>
-                      <TableCell className="pl-6 text-left font-medium">{r.label}</TableCell>
+                      <TableCell className="text-center font-medium">{r.label}</TableCell>
                       {visible.live && (
                         <TableCell
                           className={cn(
@@ -1256,15 +1256,15 @@ export function CallSummaryTable({
                         <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.acl)}</TableCell>
                       )}
                       {visible.payout && (
-                        <TableCell className="text-right tabular-nums">{formatCurrency(r.payout, true)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatCurrency(r.payout, true)}</TableCell>
                       )}
                       {visible.revenue && (
-                        <TableCell className="text-right tabular-nums">{formatCurrency(r.revenue, true)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatCurrency(r.revenue, true)}</TableCell>
                       )}
                       {visible.profit && (
                         <TableCell
                           className={cn(
-                            "text-right tabular-nums",
+                            "text-center tabular-nums",
                             profit < 0 ? "text-destructive" : "text-[color:var(--success)]",
                           )}
                         >
@@ -1272,7 +1272,7 @@ export function CallSummaryTable({
                         </TableCell>
                       )}
                       {visible.cost && (
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                        <TableCell className="text-center tabular-nums text-muted-foreground">
                           <Money value={rowCost(r)} />
                         </TableCell>
                       )}
@@ -1284,7 +1284,7 @@ export function CallSummaryTable({
                   current page, so paginating doesn't make the footer shift. */}
               {allRows.length > 0 && (
                 <TableRow className="border-t-2 border-border bg-muted/40 hover:bg-muted/40 font-semibold">
-                  <TableCell className="pl-6 text-left">{t("toolsUI.reports.summary.totals")}</TableCell>
+                  <TableCell className="text-center">{t("toolsUI.reports.summary.totals")}</TableCell>
                   {/* The Live total is the sum of the rows above, so the
                       column always adds up. For groupings whose rows carry
                       the account-wide figure (campaign, destination, buyer,
@@ -1379,15 +1379,15 @@ export function CallSummaryTable({
                     <TableCell className="text-center font-mono tabular-nums">{formatTimer(totals.acl)}</TableCell>
                   )}
                   {visible.payout && (
-                    <TableCell className="text-right tabular-nums">{formatCurrency(totals.payout, true)}</TableCell>
+                    <TableCell className="text-center tabular-nums">{formatCurrency(totals.payout, true)}</TableCell>
                   )}
                   {visible.revenue && (
-                    <TableCell className="text-right tabular-nums">{formatCurrency(totals.revenue, true)}</TableCell>
+                    <TableCell className="text-center tabular-nums">{formatCurrency(totals.revenue, true)}</TableCell>
                   )}
                   {visible.profit && (
                     <TableCell
                       className={cn(
-                        "text-right tabular-nums",
+                        "text-center tabular-nums",
                         rowProfit(totals) < 0
                           ? "text-destructive"
                           : "text-[color:var(--success)]",
@@ -1397,7 +1397,7 @@ export function CallSummaryTable({
                     </TableCell>
                   )}
                   {visible.cost && (
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                    <TableCell className="text-center tabular-nums text-muted-foreground">
                       <Money value={rowCost(totals)} />
                     </TableCell>
                   )}
