@@ -1,7 +1,7 @@
 import type { Call } from "@/lib/types";
 
 /** The three headline outcome buckets surfaced on the Reports page. */
-export type CallStatusFilter = "connected" | "qualified" | "notConnected";
+export type CallStatusFilter = "connected" | "qualified" | "notConnected" | "live";
 
 /**
  * Single source of truth for what "Connected", "Qualified" and "Not
@@ -15,6 +15,10 @@ export type CallStatusFilter = "connected" | "qualified" | "notConnected";
  * eventually drift apart.
  */
 export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): boolean {
+  if (filter === "live") {
+    // Calls still going on right now: ringing or talking.
+    return call.status === "ringing" || call.status === "in-progress";
+  }
   if (filter === "connected") {
     return call.status === "completed" || call.status === "in-progress";
   }

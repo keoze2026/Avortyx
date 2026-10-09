@@ -47,6 +47,9 @@ const REFRESH_OPTIONS: RefreshOption[] = [
   "Every 5 min",
 ];
 
+/** Where the auto-refresh choice is kept between page loads. */
+const REFRESH_STORAGE_KEY = "avortyx.reports.autoRefresh";
+
 const REFRESH_LABEL_KEYS: Record<RefreshOption, string> = {
   "Off": "toolsUI.reports.toolbar.refreshOptions.off",
   "Auto refresh": "toolsUI.reports.toolbar.refreshOptions.auto",
@@ -129,7 +132,25 @@ export function ReportsToolbar({
   latestDay,
 }: ReportsToolbarProps) {
   const { t } = useTranslation();
-  const [refresh, setRefresh] = useState<RefreshOption>("Auto refresh");
+  // The auto-refresh choice is remembered in this browser, so "Off" stays
+  // off after a page reload instead of switching back on.
+  const [refresh, setRefreshState] = useState<RefreshOption>("Auto refresh");
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(REFRESH_STORAGE_KEY);
+      if (saved && (REFRESH_OPTIONS as string[]).includes(saved)) setRefreshState(saved as RefreshOption);
+    } catch {
+      /* storage blocked: keep the default */
+    }
+  }, []);
+  const setRefresh = (r: RefreshOption) => {
+    setRefreshState(r);
+    try {
+      window.localStorage.setItem(REFRESH_STORAGE_KEY, r);
+    } catch {
+      /* storage blocked: the choice lasts until reload */
+    }
+  };
   // Presets ("Today", "This week", …) are relative to today *in the report
   // timezone*, the same day the charts and Call Log are drawn in.
   const timeZone = useUIStore((s) => s.reportTimezone);

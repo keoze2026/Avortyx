@@ -41,6 +41,7 @@ const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
   connected: "toolsUI.reports.summary.columns.connected",
   qualified: "toolsUI.reports.summary.columns.qualified",
   notConnected: "toolsUI.reports.summary.columns.noConnect",
+  live: "toolsUI.reports.summary.columns.live",
 };
 
 /** Shown while the data on hand belongs to a different range (stable references). */
@@ -319,7 +320,7 @@ export default function ReportsPage() {
       return null;
     }
     if (filters.statuses.length > 0) return null;
-    if (statusFilter === "notConnected") return null;
+    if (statusFilter === "notConnected" || statusFilter === "live") return null;
     return {
       dateFrom: fromKey,
       dateTo: toKey,
@@ -453,7 +454,12 @@ export default function ReportsPage() {
           <CallSummaryTable
             calls={filtered}
             activeStatusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
+            onStatusFilterChange={(next) => {
+              setStatusFilter(next);
+              // Live calls change by the second: fetch the latest list (quietly)
+              // so the filter shows the calls going on right now.
+              if (next === "live") onRefresh("auto");
+            }}
             liveNow={liveNow}
             summaries={summariesForTable}
             showLive={liveVisible}

@@ -1294,12 +1294,18 @@ export function CallSummaryTable({
                       traffic source, caller profile, …) the rows are the only
                       honest figure — a total the rows don't add up to just
                       reads as a bug. */}
+                  {/* Live doubles as a filter too: click it to list only the
+                      calls going on right now (ringing or talking). */}
                   {visible.live && (
-                    <TableCell className="text-center tabular-nums">
-                      {formatNumber(
-                        LIVE_ATTRIBUTABLE.has(tab) ? Math.max(liveNow ?? 0, totals.live) : totals.live,
-                      )}
-                    </TableCell>
+                    <TotalsFilterCell
+                      count={LIVE_ATTRIBUTABLE.has(tab) ? Math.max(liveNow ?? 0, totals.live) : totals.live}
+                      tone="success"
+                      active={activeStatusFilter === "live"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() => onStatusFilterChange(activeStatusFilter === "live" ? null : "live"))
+                      }
+                    />
                   )}
                   {visible.incoming && (
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.incoming)}</TableCell>
