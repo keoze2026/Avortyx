@@ -171,7 +171,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                     className="h-2 w-2 rounded-full"
                     style={{ background: s.swatch }}
                   />
-                  <span className={isActive ? "text-foreground" : "text-muted-foreground"}>
+                  <span className={isActive ? "font-bold text-foreground" : "text-muted-foreground"}>
                     {s.label}
                   </span>
                 </button>
