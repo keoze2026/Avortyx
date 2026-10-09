@@ -60,7 +60,7 @@ export function Footer() {
               Real-time call scoring, routing and analytics for pay-per-call networks.
             </p>
             <div className="mt-6 flex items-center gap-3">
-              <a href="https://t.me/Avortyx_Sup" target="_blank" rel="noreferrer" aria-label="Telegram" className={SOCIAL_CLASS}>
+              <a href="https://t.me/AVSPTBOT" target="_blank" rel="noreferrer" aria-label="Telegram" className={SOCIAL_CLASS}>
                 <TelegramLogo weight="fill" className="h-4 w-4 text-[var(--color-baltic-sea-500)]" />
               </a>
               <a href="#" aria-label="X" className={SOCIAL_CLASS}>
