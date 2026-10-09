@@ -10,6 +10,9 @@ export interface Call {
   /** Seconds the caller waited before pickup, from the backend. undefined =
    *  never answered (or an older backend); shown as a dash, never invented. */
   ttc?: number | null;
+  /** Why the call didn't go through, from the backend (`block_reason`), e.g.
+   *  "Duplicate call", "Campaign cap reached". Empty / undefined = no reason. */
+  failReason?: string;
   id: string;
   campaignId: string;
   campaignName: string;

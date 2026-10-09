@@ -255,6 +255,41 @@ function getHangUpSide(c: Call): HangUpSide {
   return callHash(c.id) % 10 < 6 ? "caller" : "callee";
 }
 
+/**
+ * Why a call didn't go through, as the backend recorded it (`block_reason`):
+ * "Duplicate call", "Campaign cap reached", ... A duplicate is shown as a
+ * missed call, so any "blocked" wording is dropped. "" = no reason.
+ */
+function failReasonText(c: Call): string {
+  const raw = (c.failReason ?? "").trim();
+  if (!raw) return "";
+  if (/duplicate/i.test(raw)) return "Duplicate call";
+  return raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
+}
+
+/**
+ * The server's export file and the screen measure TTC the same way, but the
+ * file can lag behind (an older backend wrote 0 for every answered call).
+ * Where this page holds the call, its TTC column is taken from the call list,
+ * so the file always matches what the Call Log shows.
+ */
+function withScreenTtc(table: string[][], callsById: Map<string, Call>): string[][] {
+  if (table.length < 2) return table;
+  const header = table[0].map((h) => h.trim().toUpperCase());
+  const ttcCol = header.indexOf("TTC");
+  const idCol = ["CALL ID", "UUID", "ID"].map((h) => header.indexOf(h)).find((i) => i >= 0) ?? -1;
+  if (ttcCol < 0 || idCol < 0) return table;
+  return table.map((row, i) => {
+    if (i === 0) return row;
+    const call = callsById.get((row[idCol] ?? "").trim());
+    if (!call) return row;
+    const ttc = getTTCSeconds(call);
+    const next = [...row];
+    next[ttcCol] = ttc === null ? "" : formatHMS(ttc);
+    return next;
+  });
+}
+
 const HANG_UP_LABEL: Record<HangUpSide, string> = {
   caller: "Caller hung up",
   callee: "Buyer hung up",
@@ -302,10 +337,8 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "status":
       return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
     case "failReason":
-      // No trustworthy backend fail-reason field exists yet — showing a
-      // fabricated one (e.g. "Carrier error") read as real diagnostic data.
-      // A dash here is accurate; a guessed reason isn't.
-      return "—";
+      // The backend's own reason (block_reason) - never a guessed one.
+      return failReasonText(c);
     case "recording":
       return c.recordingUrl ?? "";
   }
@@ -506,9 +539,12 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
-        destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
-      });
+      const table = withScreenTtc(
+        formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
+          destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
+        }),
+        callsById,
+      );
       const count = Math.max(table.length - 1, 0);
       const stem = dateStamped("call-log");
       if (format === "csv") {
@@ -758,7 +794,7 @@ export function CallLogTable({
                       )}
                       {columns.failReason && (
                         <TableCell className={CELL}>
-                          —
+                          {failReasonText(c) || "—"}
                         </TableCell>
                       )}
                       {columns.recording && (
