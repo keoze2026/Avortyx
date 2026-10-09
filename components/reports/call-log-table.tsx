@@ -367,7 +367,7 @@ function LogSortHeader({
   active,
   dir,
   onClick,
-  align = "left",
+  align = "center",
 }: {
   label: string;
   sortKey: LogSortKey;
@@ -776,18 +776,18 @@ export function CallLogTable({
               <TableRow className="hover:bg-transparent">
                 {/* Row expander — opens the call's activity panel. */}
                 <TableHead className="w-9 pl-4" />
-                <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.callDate")} sortKey="date" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>
-                {columns.campaign && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.publisher && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.caller && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.dialed && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.buyer && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callDate")} sortKey="date" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>
+                {columns.campaign && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.publisher && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.caller && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.revenue && <TableHead className="text-right"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
                 {columns.payout && <TableHead className="text-right"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
-                {columns.ttc && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.duration && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.duration && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
-                {columns.status && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.status && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.failReason && <TableHead>{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
                 <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
