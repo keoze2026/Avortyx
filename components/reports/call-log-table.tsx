@@ -2,7 +2,10 @@
 
 import * as React from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   Ban,
+  ChevronsUpDown,
   Copy,
   ListTree,
   DollarSign,
@@ -297,6 +300,108 @@ function resolvePublisherName(c: Call, publisherNameById: Map<string, string>): 
   return "";
 }
 
+/* ─── Sorting (click a column header; same arrows as the Call Summary) ─── */
+
+/** Columns the Call Log can be sorted by: the call date plus every data
+ *  column except Hang up, Fail reason and Recording. */
+type LogSortKey = "date" | Exclude<ColumnKey, "hangUp" | "failReason" | "recording">;
+type SortDir = "asc" | "desc";
+
+/** Text columns start A → Z; numbers, dates and status start highest first. */
+const TEXT_SORT_KEYS = new Set<LogSortKey>(["campaign", "publisher", "buyer"]);
+
+/** Live calls sort above finished ones (highest first = Live, Ringing,
+ *  Completed, No answer, Rejected, Failed). */
+const STATUS_RANK: Record<CallStatus, number> = {
+  "in-progress": 5,
+  ringing: 4,
+  completed: 3,
+  missed: 2,
+  rejected: 1,
+  failed: 0,
+};
+
+const digitsOf = (s: string | undefined) => Number((s ?? "").replace(/\D/g, "")) || 0;
+
+function sortValue(c: Call, key: LogSortKey, publisherNameById: Map<string, string>): number | string {
+  switch (key) {
+    case "date":
+      return c.startedAt;
+    case "campaign":
+      return (c.campaignName ?? "").toLowerCase();
+    case "publisher":
+      return resolvePublisherName(c, publisherNameById).toLowerCase();
+    case "buyer":
+      return (c.buyerName ?? "").toLowerCase();
+    case "caller":
+      return digitsOf(c.callerNumber);
+    case "dialed":
+      return digitsOf(c.destinationNumber);
+    case "revenue":
+      return c.revenue;
+    case "payout":
+      return customerPayout(c);
+    case "ttc":
+      // Never answered sorts below every answered call.
+      return getTTCSeconds(c) ?? -1;
+    case "duration":
+      return c.durationSec;
+    case "status":
+      return STATUS_RANK[c.status];
+  }
+}
+
+function compareCalls(a: Call, b: Call, key: LogSortKey, dir: SortDir, publisherNameById: Map<string, string>): number {
+  const va = sortValue(a, key, publisherNameById);
+  const vb = sortValue(b, key, publisherNameById);
+  let r = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb));
+  if (dir === "desc") r = -r;
+  // Ties: most recent call first, so equal values stay in time order.
+  return r !== 0 ? r : b.startedAt - a.startedAt;
+}
+
+/** A column header that sorts the Call Log; arrow shows the current order. */
+function LogSortHeader({
+  label,
+  sortKey,
+  active,
+  dir,
+  onClick,
+  align = "left",
+}: {
+  label: string;
+  sortKey: LogSortKey;
+  active: LogSortKey;
+  dir: SortDir;
+  onClick: (key: LogSortKey) => void;
+  align?: "left" | "center" | "right";
+}) {
+  const isActive = active === sortKey;
+  const justify = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(sortKey)}
+      className={cn(
+        "inline-flex w-full items-center gap-1 uppercase transition-colors focus-visible:outline-none",
+        justify,
+        isActive ? "text-foreground" : "hover:text-foreground",
+      )}
+    >
+      <span>{label}</span>
+      {isActive ? (
+        dir === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : (
+          <ArrowDown className="h-3 w-3" />
+        )
+      ) : (
+        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+      )}
+    </button>
+  );
+}
+
 /** Single source of truth for export cell values. Numbers stay numeric. */
 function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, string>): number | string {
   switch (key) {
@@ -410,6 +515,17 @@ export function CallLogTable({
   }, [columnsState, role]);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
+  // Most recent call first until a column header is clicked.
+  const [sortKey, setSortKey] = React.useState<LogSortKey>("date");
+  const [sortDir, setSortDir] = React.useState<SortDir>("desc");
+  const requestSort = (key: LogSortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(TEXT_SORT_KEYS.has(key) ? "asc" : "desc");
+    }
+  };
   const [exporting, setExporting] = React.useState(false);
   // For the export's DESTINATION NAME / NUMBER columns (the server's file has neither).
   const destinations = useDestinationsStore((s) => s.destinations);
@@ -420,7 +536,7 @@ export function CallLogTable({
   // sit past the end of the filtered list.
   React.useEffect(() => {
     setPage(0);
-  }, [query, pageSize, calls.length]);
+  }, [query, pageSize, calls.length, sortKey, sortDir]);
 
   const colSpan = 3 + COLUMNS.filter((c) => columns[c.id]).length; // +expander +Call date +actions
   const toggleColumn = (id: ColumnKey) =>
@@ -434,7 +550,7 @@ export function CallLogTable({
   const filtered = React.useMemo(() => {
     const q = query.trim();
     const source = server.results ?? calls;
-    const sorted = [...source].sort((a, b) => b.startedAt - a.startedAt);
+    const sorted = [...source].sort((a, b) => compareCalls(a, b, sortKey, sortDir, publisherNameById));
     return q
       ? sorted.filter((c) =>
           callMatches(
@@ -444,7 +560,7 @@ export function CallLogTable({
           ),
         )
       : sorted;
-  }, [calls, query, publisherNameById, server.results]);
+  }, [calls, query, publisherNameById, server.results, sortKey, sortDir]);
   /** Nothing on screen yet, but the server is still looking. */
   const searchingAll = server.searching && filtered.length === 0;
 
@@ -660,18 +776,18 @@ export function CallLogTable({
               <TableRow className="hover:bg-transparent">
                 {/* Row expander — opens the call's activity panel. */}
                 <TableHead className="w-9 pl-4" />
-                <TableHead>{t("toolsUI.reports.callLog.columns.callDate")}</TableHead>
-                {columns.campaign && <TableHead>{t("toolsUI.reports.callLog.columns.campaign")}</TableHead>}
-                {columns.publisher && <TableHead>{t("toolsUI.reports.callLog.columns.publisher")}</TableHead>}
-                {columns.caller && <TableHead>{t("toolsUI.reports.callLog.columns.callerId")}</TableHead>}
-                {columns.dialed && <TableHead>{t("toolsUI.reports.callLog.columns.dialed")}</TableHead>}
-                {columns.buyer && <TableHead>{t("toolsUI.reports.callLog.columns.buyer")}</TableHead>}
-                {columns.revenue && <TableHead className="text-right">{t("toolsUI.reports.callLog.columns.revenue")}</TableHead>}
-                {columns.payout && <TableHead className="text-right">{t("toolsUI.reports.callLog.columns.payout")}</TableHead>}
-                {columns.ttc && <TableHead>{t("toolsUI.reports.callLog.columns.ttc")}</TableHead>}
-                {columns.duration && <TableHead>{t("toolsUI.reports.callLog.columns.duration")}</TableHead>}
+                <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.callDate")} sortKey="date" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>
+                {columns.campaign && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.publisher && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.caller && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.dialed && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.buyer && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.revenue && <TableHead className="text-right"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
+                {columns.payout && <TableHead className="text-right"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} align="right" /></TableHead>}
+                {columns.ttc && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.duration && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
-                {columns.status && <TableHead>{t("toolsUI.reports.callLog.columns.status")}</TableHead>}
+                {columns.status && <TableHead><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.failReason && <TableHead>{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
                 <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
