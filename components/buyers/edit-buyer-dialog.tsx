@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 
+import { BuyerAccessSettings } from "@/components/buyers/buyer-access-settings";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -86,7 +87,9 @@ export function EditBuyerDialog({ buyerId, onOpenChange }: EditBuyerDialogProps)
 
   return (
     <Dialog open={!!buyer} onOpenChange={onOpenChange}>
-      <DialogContent>
+      {/* Wider and scrollable: the buyer access part (same as a publisher's
+          settings) sits under the details. */}
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
@@ -189,6 +192,19 @@ export function EditBuyerDialog({ buyerId, onOpenChange }: EditBuyerDialogProps)
             )}
           </Button>
         </DialogFooter>
+
+        {/* Buyer access - Members, Permissions (Block Numbers, Download
+            Reports), Reporting visibility, time zone. Each change saves at
+            once, like the publisher settings; Save changes above is only
+            for the details. */}
+        {buyer && (
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {t("buyerAccess.sectionTitle")}
+            </h3>
+            <BuyerAccessSettings buyer={buyer} embedded />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

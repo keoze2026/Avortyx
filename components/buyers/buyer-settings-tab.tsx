@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Building2, DollarSign, Eye, Gauge, Mail, UserSquare } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Building2, DollarSign, Gauge, Mail, UserSquare } from "lucide-react";
 import { toast } from "sonner";
 
-import { BuyerMembersCard } from "@/components/buyers/buyer-members-card";
+import { BuyerAccessSettings } from "@/components/buyers/buyer-access-settings";
 import { ErrorLine, SaveBar } from "@/components/campaigns/campaign-settings-tab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,10 +19,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
 import { useBuyersStore } from "@/lib/store/buyers-store";
-import {
-  REPORTING_COLUMNS,
-  useBuyerReportingStore,
-} from "@/lib/store/buyer-reporting-store";
 import type { Buyer, BuyerPayoutModel } from "@/lib/types";
 
 interface FormState {
@@ -58,24 +53,6 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
   const { t } = useTranslation();
   const update = useBuyersStore((s) => s.update);
   const updateCap = useBuyersStore((s) => s.updateCap);
-  const reporting = useBuyerReportingStore((s) => s.byBuyer[buyer.id]) ?? {
-    incoming: true,
-    connected: true,
-    qualified: true,
-    converted: true,
-    notConnected: true,
-    acl: true,
-    tcl: true,
-    cost: true,
-  };
-  const toggleReportingColumn = useBuyerReportingStore(
-    (s) => s.toggleReportingColumn,
-  );
-  const fetchReporting = useBuyerReportingStore((s) => s.fetchReporting);
-  useEffect(() => {
-    void fetchReporting(buyer.id);
-  }, [buyer.id, fetchReporting]);
-  const visibleCount = REPORTING_COLUMNS.filter((c) => reporting[c.key]).length;
   const [form, setForm] = useState<FormState>(() => fromBuyer(buyer));
   const [submitting, setSubmitting] = useState(false);
 
@@ -132,8 +109,10 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
 
   return (
     <div className="space-y-4">
-      {/* Members - who was invited, and who has registered */}
-      <BuyerMembersCard buyer={buyer} />
+      {/* Buyer access - laid out like a publisher's settings: name + time
+          zone, Members (Invited / Registered), Permissions (Block Numbers,
+          Download Reports) and Reporting visibility. Saves on each change. */}
+      <BuyerAccessSettings buyer={buyer} />
 
       {/* Identity */}
       <Card>
@@ -303,53 +282,6 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
             />
             <p className="text-[10px] text-muted-foreground">{t("networkUI.buyers.settings.unlimitedHint")}</p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Reporting visibility — admin-controlled column allowlist for the
-          buyer's view of reporting. Defaults to every column on. */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Eye className="h-4 w-4 text-accent" />
-            {t("networkUI.buyers.settings.reportingTitle")}
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            {t("networkUI.buyers.settings.reportingDesc")
-              .replace("{visible}", String(visibleCount))
-              .replace("{total}", String(REPORTING_COLUMNS.length))}
-          </p>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-            {REPORTING_COLUMNS.map((col) => {
-              const id = `brpt-${col.key}`;
-              const checked = !!reporting[col.key];
-              return (
-                <li key={col.key}>
-                  <label
-                    htmlFor={id}
-                    className="flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-secondary/40"
-                  >
-                    <Checkbox
-                      id={id}
-                      checked={checked}
-                      onCheckedChange={() => toggleReportingColumn(buyer.id, col.key)}
-                      className="mt-0.5"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium leading-tight">
-                        {t(col.labelKey)}
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        {t(col.descriptionKey)}
-                      </div>
-                    </div>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
         </CardContent>
       </Card>
 
