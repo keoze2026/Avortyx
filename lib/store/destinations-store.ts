@@ -84,6 +84,40 @@ function numberKey(tfn: string): string {
 /** The bulk endpoint takes at most this many ids per request. */
 const BULK_LIMIT = 500;
 
+/**
+ * On / off changes made on this screen that the server may not have caught up
+ * with yet. The app re-loads the whole list every 15 seconds; a load that was
+ * already on its way when Play / Pause was clicked came back with the OLD
+ * state and flipped the switch back, so the change seemed to take 5-15
+ * seconds to "stick". Such a load now keeps what was clicked.
+ */
+const lastLocalChange = new Map<string, number>(); // id -> when it was last switched here
+const inFlight = new Map<string, number>(); // id -> requests still running for it
+
+function markLocal(ids: Iterable<string>) {
+  const now = Date.now();
+  for (const id of ids) lastLocalChange.set(id, now);
+}
+function startFlight(ids: Iterable<string>) {
+  for (const id of ids) inFlight.set(id, (inFlight.get(id) ?? 0) + 1);
+}
+function endFlight(ids: Iterable<string>) {
+  for (const id of ids) {
+    const left = (inFlight.get(id) ?? 1) - 1;
+    if (left > 0) inFlight.set(id, left);
+    else inFlight.delete(id);
+  }
+}
+/** Did this row change here after `since`, or is a change for it still on its way? */
+function changedLocallySince(id: string, since: number): boolean {
+  return inFlight.has(id) || (lastLocalChange.get(id) ?? 0) >= since;
+}
+
+/** Put `enabled` on these rows (one state update, so the switches move at once). */
+function withEnabled(list: Destination[], changes: Map<string, boolean>): Destination[] {
+  return list.map((d) => (changes.has(d.id) ? { ...d, enabled: changes.get(d.id)! } : d));
+}
+
 function messageFromError(e: unknown): string {
   if (e instanceof Error) return e.message;
   return "Destinations request failed";
@@ -103,8 +137,15 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       // 500 page size matches our other "fetch the world" calls (numbers,
       // blocked-numbers). For tenants with > 500 destinations we'll need to
       // teach the page to ask the backend for filters; not yet a problem.
+      const startedAt = Date.now();
       const page = await destinationsService.list({ page: 1, pageSize: 500, timezone: portalTimezone() });
-      set({ destinations: page.items, loading: false, hydrated: true });
+      // Keep the on / off of rows switched here while this load was running:
+      // the list can be older than the click.
+      const onScreen = new Map(get().destinations.map((d) => [d.id, d.enabled] as const));
+      const items = page.items.map((d) =>
+        changedLocallySince(d.id, startedAt) && onScreen.has(d.id) ? { ...d, enabled: onScreen.get(d.id)! } : d,
+      );
+      set({ destinations: items, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e), hydrated: true });
     }
@@ -179,21 +220,27 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     // Remember only THIS destination's state: putting the whole list back on
     // a failure used to undo every other change made in the meantime.
     const before = get().destinations.find((d) => d.id === id)?.enabled;
+    markLocal([id]);
+    startFlight([id]);
     set((s) => ({
       destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)),
     }));
     try {
       const fresh = await destinationsService.setEnabled(id, enabled);
+      markLocal([id]);
       set((s) => ({
         destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled } : d)),
       }));
       void get().fetchStats();
     } catch (e) {
+      markLocal([id]);
       set((s) => ({
         destinations: s.destinations.map((d) => (d.id === id && before !== undefined ? { ...d, enabled: before } : d)),
         error: messageFromError(e),
       }));
       throw e;
+    } finally {
+      endFlight([id]);
     }
   },
 
@@ -207,27 +254,54 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
         // them); only one may be live on the SAME number.
         (d) => d.id !== id && d.enabled && sameNumber(d.tfn, target.tfn),
       );
+    const first = blockers();
+    const touched = [id, ...first.map((b) => b.id)];
+
+    // Move the switches NOW; the server catches up behind it. Before, nothing
+    // moved until every request had come back.
+    markLocal(touched);
+    startFlight(touched);
+    set((s) => ({
+      destinations: withEnabled(s.destinations, new Map([[id, true], ...first.map((b) => [b.id, false] as const)])),
+    }));
+
     const switchedOff: Destination[] = [];
-    const clear = async () => {
-      for (const b of blockers()) {
+    const clear = async (list: Destination[]) => {
+      for (const b of list) {
         const fresh = await destinationsService.setEnabled(b.id, false);
         set((s) => ({ destinations: s.destinations.map((d) => (d.id === b.id ? { ...fresh, enabled: false } : d)) }));
         switchedOff.push(b);
       }
     };
-    await clear();
     try {
-      const fresh = await destinationsService.setEnabled(id, true);
-      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: true } : d)) }));
+      try {
+        await clear(first);
+        const fresh = await destinationsService.setEnabled(id, true);
+        set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: true } : d)) }));
+      } catch (e) {
+        // The list on screen may be out of date (someone else switched one on):
+        // reload it, clear again and try once more.
+        await get().fetch();
+        await clear(blockers());
+        const fresh = await destinationsService.setEnabled(id, true).catch(() => {
+          throw e;
+        });
+        set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: true } : d)) }));
+      }
     } catch (e) {
-      // The list on screen may be out of date (someone else switched one on):
-      // reload it, clear again and try once more.
-      await get().fetch();
-      await clear();
-      const fresh = await destinationsService.setEnabled(id, true).catch(() => {
-        throw e;
-      });
-      set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: true } : d)) }));
+      // Refused: put back what was not really changed on the server.
+      const off = new Set(switchedOff.map((b) => b.id));
+      set((s) => ({
+        destinations: withEnabled(
+          s.destinations,
+          new Map([[id, target.enabled], ...first.filter((b) => !off.has(b.id)).map((b) => [b.id, true] as const)]),
+        ),
+        error: messageFromError(e),
+      }));
+      throw e;
+    } finally {
+      markLocal(touched);
+      endFlight(touched);
     }
     void get().fetchStats();
     return switchedOff;
@@ -306,32 +380,49 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     // Playing: a live destination that is NOT selected but holds the same
     // number would make the server refuse ours, so switch it off first - the
     // same thing a single Play does.
-    if (enabled) {
-      const sendNumbers = new Set(send.map((id) => numberKey(byId.get(id)?.tfn ?? "")));
-      const blockers = all.filter((d) => d.enabled && !selected.has(d.id) && sendNumbers.has(numberKey(d.tfn)));
+    const sendNumbers = new Set(send.map((id) => numberKey(byId.get(id)?.tfn ?? "")));
+    const blockers = enabled
+      ? all.filter((d) => d.enabled && !selected.has(d.id) && sendNumbers.has(numberKey(d.tfn)))
+      : [];
+
+    // Move every switch NOW, in one update; the server catches up behind it
+    // and anything it refuses is put back below. Before, the switches waited
+    // for the server (and a list re-load could flip them back meanwhile).
+    const touched = [...send, ...blockers.map((d) => d.id)];
+    markLocal(touched);
+    startFlight(touched);
+    set((s) => ({
+      destinations: withEnabled(
+        s.destinations,
+        new Map([...send.map((id) => [id, enabled] as const), ...blockers.map((d) => [d.id, false] as const)]),
+      ),
+    }));
+
+    try {
       if (blockers.length) {
         const { done } = await applyMany(blockers.map((d) => d.id), false);
         const off = new Set(done);
-        set((s) => ({ destinations: s.destinations.map((d) => (off.has(d.id) ? { ...d, enabled: false } : d)) }));
         switchedOff.push(...blockers.filter((d) => off.has(d.id)));
+        const stillOn = blockers.filter((d) => !off.has(d.id));
+        if (stillOn.length) {
+          set((s) => ({ destinations: withEnabled(s.destinations, new Map(stillOn.map((d) => [d.id, true] as const))) }));
+        }
       }
-    }
 
-    // Show the change straight away; anything refused is put back below.
-    const sending = new Set(send);
-    set((s) => ({ destinations: s.destinations.map((d) => (sending.has(d.id) ? { ...d, enabled } : d)) }));
-
-    const { done, bad } = await applyMany(send, enabled);
-    ok.push(...done);
-    failed.push(...bad);
-    if (bad.length) {
-      const back = new Map(bad.map((f) => [f.id, byId.get(f.id)?.enabled] as const));
-      set((s) => ({
-        destinations: s.destinations.map((d) => {
-          const prev = back.get(d.id);
-          return prev !== undefined ? { ...d, enabled: prev } : d;
-        }),
-      }));
+      const { done, bad } = await applyMany(send, enabled);
+      ok.push(...done);
+      failed.push(...bad);
+      if (bad.length) {
+        const back = new Map<string, boolean>();
+        for (const f of bad) {
+          const prev = byId.get(f.id)?.enabled;
+          if (prev !== undefined) back.set(f.id, prev);
+        }
+        set((s) => ({ destinations: withEnabled(s.destinations, back) }));
+      }
+    } finally {
+      markLocal(touched);
+      endFlight(touched);
     }
     void get().fetchStats();
     return { ok, failed, skipped, switchedOff };
