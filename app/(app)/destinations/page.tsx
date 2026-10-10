@@ -141,8 +141,8 @@ export default function DestinationsPage() {
         await setEnabled(id, false);
         toast.success(t("networkUI.destinations.toast.paused").replace("{name}", d.name));
       } else {
-        // Switching ON: whatever blocks it (the buyer's other live destination,
-        // or another one live on this number) is switched off first.
+        // Switching ON: a buyer can have many live TFNs, so only another
+        // destination live on this same number is switched off first.
         const off = await enableExclusive(id);
         toast.success(t("networkUI.destinations.toast.enabled").replace("{name}", d.name), {
           description: off.length
@@ -195,8 +195,8 @@ export default function DestinationsPage() {
 
   /**
    * Play / pause the selected TFNs one at a time and say exactly what happened.
-   * Before, all were sent at once (so the server's "one live destination per
-   * number / per buyer" rule refused most of them), one refusal put the whole
+   * Before, all were sent at once (so the server's old "one live destination
+   * per buyer" rule refused most of them), one refusal put the whole
    * list back on screen, and a "done" message showed even when nothing changed.
    */
   const runBulk = async (enabled: boolean) => {
@@ -209,7 +209,7 @@ export default function DestinationsPage() {
     );
     const entity = t("common.bulk.entities.destinations");
     if (failed.length === 0) {
-      // Skipping (one live per buyer / number) and switching off are the rule
+      // Skipping (one live per number) and switching off are the rule
       // working, not errors - one calm summary.
       const notes = [
         switchedOff.length
@@ -397,7 +397,7 @@ export default function DestinationsPage() {
         onOpenChange={setCloneOpen}
         entity="destination"
         sourceName={cloneTarget?.name ?? ""}
-        note="The copy starts switched off, because two live destinations can't share a number and a buyer can only have one live destination. Change its number, or switch the original off, before turning it on."
+        note="The copy starts switched off, because two live destinations can't share a number. Change its number, or switch the original off, before turning it on."
         onConfirm={handleConfirmClone}
       />
     </>

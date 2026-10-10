@@ -335,6 +335,28 @@ export const destinationsService = {
     );
   },
 
+  /**
+   * Play / Pause many TFNs in ONE request (POST /api/destinations/bulk-enable,
+   * at most 500 ids). The answer lists, per id, which were changed and which
+   * were refused with the reason (e.g. the number is already live elsewhere).
+   */
+  async bulkEnable(
+    ids: string[],
+    enabled: boolean,
+  ): Promise<{ updated: string[]; failed: { id: string; reason: string }[] }> {
+    const res = await http.post<{
+      updated?: unknown[];
+      failed?: { id?: unknown; reason?: unknown }[];
+    }>("/api/destinations/bulk-enable", { body: { ids, enabled } });
+    return {
+      updated: (res?.updated ?? []).map(String),
+      failed: (res?.failed ?? []).map((f) => ({
+        id: String(f?.id ?? ""),
+        reason: typeof f?.reason === "string" && f.reason ? f.reason : "Refused by the server",
+      })),
+    };
+  },
+
   /** Header roll-ups. `timezone` (IANA) sets where the day starts. */
   async stats(timezone?: string): Promise<DestinationStats> {
     const w = await http.get<DestinationStatsWire>("/api/destinations/stats/", {

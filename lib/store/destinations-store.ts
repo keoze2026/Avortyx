@@ -41,10 +41,11 @@ interface DestinationsState {
   remove: (id: string) => Promise<void>;
   setEnabled: (id: string, enabled: boolean) => Promise<void>;
   /**
-   * Play / pause several destinations (the bulk bar). One at a time, so the
-   * server's "one live destination per number / per buyer" check sees each
-   * change in turn; a refused one is put back on its own and reported, the
-   * others keep their new state.
+   * Play / pause several destinations (the bulk bar) in ONE request to
+   * /api/destinations/bulk-enable (falls back to one request per TFN if that
+   * endpoint is not there). A buyer may have many live TFNs; only two live
+   * destinations on the SAME number are refused. A refused one is put back on
+   * its own and reported, the others keep their new state.
    */
   setEnabledMany: (
     ids: string[],
@@ -52,49 +53,36 @@ interface DestinationsState {
   ) => Promise<{
     ok: string[];
     failed: { id: string; message: string }[];
-    /** Selected, but another selected destination of the same buyer / number went live instead. */
+    /** Selected, but another selected destination with the same number went live instead. */
     skipped: string[];
     /** Live destinations that were switched off to make room. */
     switchedOff: Destination[];
   }>;
   /**
-   * Switch a destination ON. The server allows one live destination per buyer
-   * and per number, so whichever live destination stands in the way (same
-   * buyer, or same number) is switched OFF first - what the server's own
-   * message asks the user to do by hand. Returns those it switched off.
+   * Switch a destination ON. A buyer can have many live TFNs (calls rotate
+   * across them), but one number can be live on only one destination, so a
+   * live destination on the SAME number is switched OFF first - what the
+   * server's own message asks the user to do by hand. Returns those it
+   * switched off (usually none).
    */
   enableExclusive: (id: string) => Promise<Destination[]>;
   /**
    * Create a copy of a destination named "<name> (Clone)" with the same buyer,
    * number, caps, ring time, filters, business hours and time zone. The copy
    * starts switched OFF: the backend refuses two live destinations on one
-   * number and more than one live destination per buyer.
+   * number, and the copy has the same number as the original.
    */
   clone: (id: string) => Promise<Destination>;
 }
 
 /** A number's last 10 digits; an incomplete number only ever matches itself. */
-/**
- * Which buyer owns this destination, for the "one live destination per buyer"
- * rule. The list rows often carry only the buyer's NAME (buyer_id empty), so
- * compare by id when both have one, otherwise by name. A destination with no
- * buyer id and no name never matches anything: before, every row with an
- * empty buyer id counted as "the same buyer", so a bulk Play of 100 played
- * only the ~40 rows that had an id and skipped the rest.
- */
-function sameBuyer(a: { buyerId?: string; buyerName?: string }, b: { buyerId?: string; buyerName?: string }): boolean {
-  const idA = (a.buyerId ?? "").trim();
-  const idB = (b.buyerId ?? "").trim();
-  if (idA && idB) return idA === idB;
-  const nameA = (a.buyerName ?? "").trim().toLowerCase();
-  const nameB = (b.buyerName ?? "").trim().toLowerCase();
-  return !!nameA && nameA === nameB;
-}
-
 function numberKey(tfn: string): string {
   const digits = (tfn ?? "").replace(/\D/g, "");
   return digits.length >= 10 ? digits.slice(-10) : `raw:${tfn ?? ""}`;
 }
+
+/** The bulk endpoint takes at most this many ids per request. */
+const BULK_LIMIT = 500;
 
 function messageFromError(e: unknown): string {
   if (e instanceof Error) return e.message;
@@ -215,7 +203,9 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     const sameNumber = (a: string, b: string) => numberKey(a) === numberKey(b);
     const blockers = () =>
       get().destinations.filter(
-        (d) => d.id !== id && d.enabled && (sameBuyer(d, target) || sameNumber(d.tfn, target.tfn)),
+        // A buyer may have several live destinations (calls rotate across
+        // them); only one may be live on the SAME number.
+        (d) => d.id !== id && d.enabled && sameNumber(d.tfn, target.tfn),
       );
     const switchedOff: Destination[] = [];
     const clear = async () => {
@@ -248,39 +238,100 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     const failed: { id: string; message: string }[] = [];
     const skipped: string[] = [];
     const switchedOff: Destination[] = [];
-    // Playing: only one per buyer / per number can be live, so of several
-    // selected ones that share a buyer or number, the first is played and
-    // the rest are skipped (not an error - the rule allows only one).
-    const taken: Destination[] = [];
-    for (const id of ids) {
-      const current = get().destinations.find((d) => d.id === id);
-      if (!current) continue;
-      if (enabled) {
-        if (taken.some((x) => sameBuyer(x, current) || numberKey(x.tfn) === numberKey(current.tfn))) {
-          skipped.push(id);
-          continue;
-        }
-        taken.push(current);
+
+    const all = get().destinations;
+    const byId = new Map(all.map((d) => [d.id, d] as const));
+    const selected = new Set(ids);
+
+    // A buyer can have many live TFNs now, so every selected destination is
+    // played. The one rule left: a number can be live on only one destination,
+    // so of several selected ones on the SAME number, only one is played.
+    // Ones already live keep their number first.
+    const takenNumbers = new Set<string>();
+    if (enabled) {
+      for (const id of ids) {
+        const d = byId.get(id);
+        if (d?.enabled) takenNumbers.add(numberKey(d.tfn));
       }
+    }
+    const send: string[] = [];
+    for (const id of ids) {
+      const current = byId.get(id);
+      if (!current) continue;
       if (current.enabled === enabled) {
         ok.push(id); // already in that state - nothing to ask the server
         continue;
       }
-      try {
-        if (enabled) {
-          switchedOff.push(...(await get().enableExclusive(id)));
-        } else {
-          set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled } : d)) }));
-          const fresh = await destinationsService.setEnabled(id, false);
-          set((s) => ({ destinations: s.destinations.map((d) => (d.id === id ? { ...fresh, enabled: false } : d)) }));
+      if (enabled) {
+        const key = numberKey(current.tfn);
+        if (takenNumbers.has(key)) {
+          skipped.push(id);
+          continue;
         }
-        ok.push(id);
-      } catch (e) {
-        set((s) => ({
-          destinations: s.destinations.map((d) => (d.id === id ? { ...d, enabled: current.enabled } : d)),
-        }));
-        failed.push({ id, message: messageFromError(e) });
+        takenNumbers.add(key);
       }
+      send.push(id);
+    }
+    if (send.length === 0) return { ok, failed, skipped, switchedOff };
+
+    /** Turn many on / off: one request per 500, or one per TFN if the bulk endpoint is missing. */
+    const applyMany = async (list: string[], on: boolean) => {
+      const done: string[] = [];
+      const bad: { id: string; message: string }[] = [];
+      for (let i = 0; i < list.length; i += BULK_LIMIT) {
+        const chunk = list.slice(i, i + BULK_LIMIT);
+        try {
+          const res = await destinationsService.bulkEnable(chunk, on);
+          const updated = new Set(res.updated);
+          const refused = new Map(res.failed.map((f) => [f.id, f.reason] as const));
+          for (const id of chunk) {
+            if (updated.has(id)) done.push(id);
+            else bad.push({ id, message: refused.get(id) ?? "No answer from the server for this destination" });
+          }
+        } catch {
+          // Bulk endpoint not deployed yet (or it failed): the old way, one at a time.
+          for (const id of chunk) {
+            try {
+              await destinationsService.setEnabled(id, on);
+              done.push(id);
+            } catch (e) {
+              bad.push({ id, message: messageFromError(e) });
+            }
+          }
+        }
+      }
+      return { done, bad };
+    };
+
+    // Playing: a live destination that is NOT selected but holds the same
+    // number would make the server refuse ours, so switch it off first - the
+    // same thing a single Play does.
+    if (enabled) {
+      const sendNumbers = new Set(send.map((id) => numberKey(byId.get(id)?.tfn ?? "")));
+      const blockers = all.filter((d) => d.enabled && !selected.has(d.id) && sendNumbers.has(numberKey(d.tfn)));
+      if (blockers.length) {
+        const { done } = await applyMany(blockers.map((d) => d.id), false);
+        const off = new Set(done);
+        set((s) => ({ destinations: s.destinations.map((d) => (off.has(d.id) ? { ...d, enabled: false } : d)) }));
+        switchedOff.push(...blockers.filter((d) => off.has(d.id)));
+      }
+    }
+
+    // Show the change straight away; anything refused is put back below.
+    const sending = new Set(send);
+    set((s) => ({ destinations: s.destinations.map((d) => (sending.has(d.id) ? { ...d, enabled } : d)) }));
+
+    const { done, bad } = await applyMany(send, enabled);
+    ok.push(...done);
+    failed.push(...bad);
+    if (bad.length) {
+      const back = new Map(bad.map((f) => [f.id, byId.get(f.id)?.enabled] as const));
+      set((s) => ({
+        destinations: s.destinations.map((d) => {
+          const prev = back.get(d.id);
+          return prev !== undefined ? { ...d, enabled: prev } : d;
+        }),
+      }));
     }
     void get().fetchStats();
     return { ok, failed, skipped, switchedOff };
