@@ -23,8 +23,8 @@ import { AlertTriangle, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { BuyerMembersCard } from "@/components/buyers/buyer-members-card";
+import { PartnerReportingVisibility } from "@/components/network/partner-access-sections";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -40,24 +40,8 @@ import {
   useBuyerAccessStore,
   type BuyerPermissionKey,
 } from "@/lib/store/buyer-access-store";
-import {
-  REPORTING_COLUMNS,
-  useBuyerReportingStore,
-  type ReportingVisibility,
-} from "@/lib/store/buyer-reporting-store";
 import { TIMEZONES } from "@/lib/store/publisher-access-store";
 import type { Buyer } from "@/lib/types";
-
-const ALL_COLUMNS_ON: ReportingVisibility = {
-  incoming: true,
-  connected: true,
-  qualified: true,
-  converted: true,
-  notConnected: true,
-  acl: true,
-  tcl: true,
-  cost: true,
-};
 
 interface Props {
   buyer: Buyer;
@@ -75,15 +59,9 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
   const setTimezone = useBuyerAccessStore((s) => s.setTimezone);
   const togglePermission = useBuyerAccessStore((s) => s.togglePermission);
 
-  // Reporting visibility (already saved on the server)
-  const reporting = useBuyerReportingStore((s) => s.byBuyer[buyer.id]) ?? ALL_COLUMNS_ON;
-  const fetchReporting = useBuyerReportingStore((s) => s.fetchReporting);
-  const toggleReportingColumn = useBuyerReportingStore((s) => s.toggleReportingColumn);
-
   React.useEffect(() => {
     void fetchAccess(buyer.id);
-    void fetchReporting(buyer.id);
-  }, [buyer.id, fetchAccess, fetchReporting]);
+  }, [buyer.id, fetchAccess]);
 
   const onToggle = async (key: BuyerPermissionKey) => {
     try {
@@ -159,38 +137,16 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
         </ul>
       </Section>
 
-      {/* Reporting visibility */}
-      <Section
+      {/* Reporting visibility: which columns this buyer's OWN login sees.
+          Saved to the field the buyer's login reads, so unticking a column
+          hides it for the buyer. The admin's Reports are never affected. */}
+      <PartnerReportingVisibility
+        kind="buyer"
+        id={buyer.id}
+        idPrefix={`brv-${embedded ? "d" : "t"}`}
         title={t("buyerAccess.reportingTitle")}
-        description={t("buyerAccess.reportingDesc")
-          .replace("{visible}", String(REPORTING_COLUMNS.filter((c) => reporting[c.key]).length))
-          .replace("{total}", String(REPORTING_COLUMNS.length))}
-      >
-        <ul className="grid grid-cols-1 gap-1 px-2 py-2 sm:grid-cols-2">
-          {REPORTING_COLUMNS.map((col) => {
-            const id = `brv-${embedded ? "d" : "t"}-${col.key}`;
-            return (
-              <li key={col.key}>
-                <label
-                  htmlFor={id}
-                  className="flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-secondary/40"
-                >
-                  <Checkbox
-                    id={id}
-                    checked={!!reporting[col.key]}
-                    onCheckedChange={() => void toggleReportingColumn(buyer.id, col.key)}
-                    className="mt-0.5"
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium leading-tight">{t(col.labelKey)}</div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">{t(col.descriptionKey)}</div>
-                  </div>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </Section>
+        description={t("buyerAccess.reportingDesc")}
+      />
     </>
   );
 

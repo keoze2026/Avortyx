@@ -12,7 +12,10 @@
  *   ├──────────── ADVANCED SETTINGS ───────────────┤
  *   └─────────────────────────────────────────────┘
  *
- * All state persists per-publisher via `usePublisherAccessStore`.
+ * Permissions and Reporting visibility are saved on the server
+ * (`/api/accounts/publisher/{id}/settings`) - the fields the publisher's own
+ * login reads. Time zone and the cap switch still live in this browser
+ * (`usePublisherAccessStore`) until the backend has them.
  */
 
 import * as React from "react";
@@ -21,7 +24,6 @@ import { AlertTriangle, ChevronDown, ChevronUp, Gauge, Info } from "lucide-react
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -31,6 +33,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  PartnerPermissions,
+  PartnerReportingVisibility,
+} from "@/components/network/partner-access-sections";
+import {
   PartnerMembersSection,
   type PartnerMemberRow,
   type PartnerMembersLabels,
@@ -39,13 +45,8 @@ import { usePartnerRegistration } from "@/hooks/use-partner-registration";
 import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useTranslation } from "@/hooks/use-translation";
 import {
-  PERMISSIONS,
-  REPORTING_COLUMNS,
   TIMEZONES,
   usePublisherAccessStore,
-  type PermissionKey,
-  type ReportingColumnKey,
-  type ReportingVisibility,
 } from "@/lib/store/publisher-access-store";
 import type { Publisher } from "@/lib/types";
 
@@ -56,31 +57,12 @@ interface Props {
 export function PublisherSettingsTab({ publisher }: Props) {
   const access = usePublisherAccessStore((s) => s.byPublisher[publisher.id]);
   const setTimezone = usePublisherAccessStore((s) => s.setTimezone);
-  const togglePermission = usePublisherAccessStore((s) => s.togglePermission);
-  const toggleReportingColumn = usePublisherAccessStore((s) => s.toggleReportingColumn);
   const setCapEnabled = usePublisherAccessStore((s) => s.setCapEnabled);
   const addMember = usePublisherAccessStore((s) => s.addMember);
   const removeMember = usePublisherAccessStore((s) => s.removeMember);
 
   const timezone = access?.timezone ?? "UTC";
   const members = access?.members ?? [];
-  const permissions = access?.permissions ?? {
-    manageTraffic: false,
-    numberCreation: false,
-    audioRecording: false,
-    blockNumbers: false,
-    downloadReports: false,
-  };
-  const reporting: ReportingVisibility = access?.reporting ?? {
-    incoming: true,
-    connected: true,
-    qualified: true,
-    converted: true,
-    notConnected: true,
-    acl: true,
-    tcl: true,
-    cost: true,
-  };
   const capEnabled = access?.cap.enabled ?? false;
 
   // Who is listed: the publisher's own contact email (the address the backend
@@ -141,14 +123,12 @@ export function PublisherSettingsTab({ publisher }: Props) {
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--warning)]" />
         <div className="space-y-1">
           <div className="font-semibold text-[color:var(--warning)]">
-            Preview — these settings save to this browser only
+            Time zone and cap setting save to this browser only
           </div>
           <p className="text-muted-foreground">
-            Permissions, reporting visibility, and the cap toggle don't yet
-            round-trip to the server. Member invites now do — a real invite
-            email is sent. Other parts of the publisher record (payout rate,
-            status, campaign assignments) are wired correctly via Network →
-            Publishers → list/detail.
+            Members, Permissions and Reporting visibility are saved on the
+            server and apply to this publisher's own login. The time zone and
+            the cap switch below will follow once the backend supports them.
           </p>
         </div>
       </div>
@@ -184,14 +164,22 @@ export function PublisherSettingsTab({ publisher }: Props) {
         }}
       />
 
-      <PermissionsSection
-        permissions={permissions}
-        onToggle={(key) => togglePermission(publisher.id, key)}
+      {/* Saved on the server: what this publisher's OWN login may do and
+          which report columns it sees. The admin's Reports are never affected. */}
+      <PartnerPermissions
+        kind="publisher"
+        id={publisher.id}
+        title={t("networkUI.publishers.settings.permissionsTitle")}
+        description={t("networkUI.publishers.settings.permissionsDesc")}
+        toggleAria={t("networkUI.publishers.settings.permToggle")}
       />
 
-      <ReportingVisibilitySection
-        visibility={reporting}
-        onToggle={(key) => toggleReportingColumn(publisher.id, key)}
+      <PartnerReportingVisibility
+        kind="publisher"
+        id={publisher.id}
+        idPrefix="rpt"
+        title={t("networkUI.publishers.settings.reportingTitle")}
+        description={t("networkUI.publishers.settings.reportingDesc")}
       />
 
       <AdvancedSection
@@ -238,97 +226,6 @@ function HeaderRow({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-
-/* ─── Permissions ────────────────────────────────────────────────────── */
-
-function PermissionsSection({
-  permissions,
-  onToggle,
-}: {
-  permissions: Record<PermissionKey, boolean>;
-  onToggle: (key: PermissionKey) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Section
-      title={t("networkUI.publishers.settings.permissionsTitle")}
-      description={t("networkUI.publishers.settings.permissionsDesc")}
-    >
-      <ul className="divide-y divide-border">
-        {PERMISSIONS.map((p) => (
-          <li
-            key={p.key}
-            className="flex items-center justify-between gap-4 px-4 py-3.5"
-          >
-            <div>
-              <div className="text-sm font-medium leading-tight">{p.label}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {p.description}
-              </div>
-            </div>
-            <Switch
-              checked={!!permissions[p.key]}
-              onCheckedChange={() => onToggle(p.key)}
-              aria-label={t("networkUI.publishers.settings.permToggle").replace("{label}", p.label)}
-            />
-          </li>
-        ))}
-      </ul>
-    </Section>
-  );
-}
-
-/* ─── Reporting visibility ───────────────────────────────────────────── */
-
-function ReportingVisibilitySection({
-  visibility,
-  onToggle,
-}: {
-  visibility: ReportingVisibility;
-  onToggle: (key: ReportingColumnKey) => void;
-}) {
-  const { t } = useTranslation();
-  const visibleCount = REPORTING_COLUMNS.filter((c) => visibility[c.key]).length;
-
-  return (
-    <Section
-      title={t("networkUI.publishers.settings.reportingTitle")}
-      description={t("networkUI.publishers.settings.reportingDesc")
-        .replace("{visible}", String(visibleCount))
-        .replace("{total}", String(REPORTING_COLUMNS.length))}
-    >
-      <ul className="grid grid-cols-1 gap-1 px-2 py-2 sm:grid-cols-2">
-        {REPORTING_COLUMNS.map((col) => {
-          const id = `rpt-${col.key}`;
-          const checked = !!visibility[col.key];
-          return (
-            <li key={col.key}>
-              <label
-                htmlFor={id}
-                className="flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-secondary/40"
-              >
-                <Checkbox
-                  id={id}
-                  checked={checked}
-                  onCheckedChange={() => onToggle(col.key)}
-                  className="mt-0.5"
-                />
-                <div className="min-w-0">
-                  <div className="text-sm font-medium leading-tight">
-                    {t(col.labelKey)}
-                  </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
-                    {t(col.descriptionKey)}
-                  </div>
-                </div>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-    </Section>
   );
 }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAuthStore } from "@/lib/store/auth-store";
 import { Command, Search, Wallet } from "lucide-react";
 
 import { NotificationsMenu } from "./notifications-menu";
@@ -69,8 +68,6 @@ export function Topbar() {
   // the first poll lands. Renders 0 until either response arrives.
   const accountBalance = useOnboardingStore((s) => s.balance);
   const balance = kpis?.balance ?? accountBalance;
-  const role = useAuthStore((st) => st.user?.role);
-  const isPartner = role === "buyer" || role === "publisher";
   const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? 0);
   const totalCalls = kpis?.callsToday ?? 0;
 
@@ -89,8 +86,11 @@ export function Topbar() {
           </div>
         </div>
 
-        {/* CENTER — command search */}
-        <div className="relative mx-auto hidden w-full max-w-lg lg:block">
+        {/* CENTER — command search. On wide screens it sits in the exact
+            middle of the bar (boss request), whatever is on the left and the
+            right; on smaller screens it keeps to the free space between them
+            so it never covers the stats. */}
+        <div className="relative mx-auto hidden w-full max-w-lg lg:block 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:mx-0 2xl:max-w-md 2xl:-translate-x-1/2 2xl:-translate-y-1/2 min-[1700px]:max-w-lg">
           <CommandSearch placeholder={t("topbar.searchPlaceholder")} />
         </div>
 
@@ -121,24 +121,19 @@ export function Topbar() {
           <div className="flex min-w-0 flex-col items-end gap-1 overflow-x-auto scrollbar-hide sm:flex-row sm:items-center sm:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
-            {/* The wallet is the workspace owner's. A partner's backend sends
-                no balance at all, and printing the fallback as $0 told every
-                buyer and publisher the company was broke. No figure, no chip. */}
-            {!isPartner && (
-              <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
-                <span className="hidden h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground sm:inline-flex">
-                  <Wallet className="h-3.5 w-3.5" />
-                </span>
-                <span
-                  className={cn(
-                    "text-[13px] font-bold leading-none tabular-nums",
-                    GREEN_TEXT,
-                  )}
-                >
-                  {formatCurrency(balance ?? 0)}
-                </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <span className="hidden h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground sm:inline-flex">
+                <Wallet className="h-3.5 w-3.5" />
               </span>
-            )}
+              <span
+                className={cn(
+                  "text-[13px] font-bold leading-none tabular-nums",
+                  GREEN_TEXT,
+                )}
+              >
+                {formatCurrency(balance ?? 0)}
+              </span>
+            </span>
 
             {/* Counters sit closer to each other than to the balance — they're
                 one category (live call activity), the balance is another.

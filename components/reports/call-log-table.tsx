@@ -77,6 +77,7 @@ import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { cn } from "@/lib/utils";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
@@ -538,11 +539,16 @@ export function CallLogTable({
   // hidden column beats rendering null as $0.00. Buyer loses Payout,
   // publisher loses Revenue; everyone else keeps their picker choices.
   const role = useAuthStore((st) => st.user?.role);
+  // Plus the columns the admin unticked under this partner's Reporting
+  // visibility (buyer / publisher logins only; never the admin's own view).
+  const partnerHidden = usePartnerHiddenColumns().log;
   const columns = React.useMemo(() => {
-    if (role === "buyer") return { ...columnsState, payout: false };
-    if (role === "publisher") return { ...columnsState, revenue: false };
-    return columnsState;
-  }, [columnsState, role]);
+    const out = { ...columnsState };
+    if (role === "buyer") out.payout = false;
+    if (role === "publisher") out.revenue = false;
+    for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
+    return out;
+  }, [columnsState, role, partnerHidden]);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
   // Most recent call first until a column header is clicked.

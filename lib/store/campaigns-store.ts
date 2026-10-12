@@ -8,6 +8,8 @@
 import { create } from "zustand";
 
 import { campaignsService } from "@/lib/api/services/campaigns.service";
+import { allowedCampaignIds } from "@/lib/partner-campaign-scope";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Campaign, CampaignStatus } from "@/lib/types";
 import { cloneName } from "../api/services/clone";
 
@@ -44,7 +46,13 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const page = await campaignsService.list({ page: 1, pageSize: 200 });
-      set({ campaigns: page.items, loading: false, hydrated: true });
+      // A publisher / buyer login sees only the campaigns assigned to it. The
+      // server still sends every campaign (backend fix pending), so the
+      // others are dropped here, before any screen, filter or dropdown sees them.
+      const user = useAuthStore.getState().user;
+      const allowed = await allowedCampaignIds(user?.role, user?.id);
+      const campaigns = allowed ? page.items.filter((c) => allowed.has(c.id)) : page.items;
+      set({ campaigns, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
     }
