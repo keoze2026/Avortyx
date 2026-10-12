@@ -127,21 +127,22 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
             {activeSlice ? (
               <>
                 <span
-                  className="max-w-[7rem] truncate text-[11px] uppercase tracking-wider"
+                  // The label inside the ring (CONNECTED / NO ANSWER): bold (boss request).
+                  className="max-w-[8rem] truncate text-xs font-extrabold uppercase tracking-wider"
                   style={{ color: activeSlice.swatch }}
                 >
                   {activeSlice.label}
                 </span>
-                <span className="text-2xl font-semibold tabular-nums">
+                <span className="text-2xl font-bold tabular-nums">
                   {formatNumber(activeSlice.count)}
                 </span>
               </>
             ) : (
               <>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
                   {t("toolsUI.reports.totalDonut.total")}
                 </span>
-                <span className="text-2xl font-semibold tabular-nums">
+                <span className="text-2xl font-bold tabular-nums">
                   {formatNumber(total)}
                 </span>
               </>
