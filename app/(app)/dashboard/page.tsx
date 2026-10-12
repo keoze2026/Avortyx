@@ -60,7 +60,6 @@ const countsOf = (snap: DashboardSnapshot) =>
   new Map(snap.destinations.map((d) => [toE164(d.tfn), d.dailyCalls] as [string, number]));
 
 export default function DashboardPage() {
-  const role = useAuthStore((st) => st.user?.role);
   const { t } = useTranslation();
   const destinations = useDestinationsStore((s) => s.destinations);
   // Buyers (live) — for the destination-dropdown label "buyer name" column.
@@ -347,12 +346,12 @@ export default function DashboardPage() {
         {/* Row 2 — Top campaigns + Revenue by hour (secondary) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
-          {/* A publisher is not told revenue; the backend nulls it and this
-              panel would render the nulls as a flat $0 day - a claim, not a
-              fact. The panel goes, rather than lying politely. */}
-          {role !== "publisher" && (
-            <RevenueChart calls={NO_CALLS} series={snapshot?.timeSeries ?? []} dateLabel={dateLabel} />
-          )}
+          {/* Shown to every login, each with its own money from its own calls:
+              admin -> Revenue, publisher -> Earnings (their payout),
+              buyer -> Spend. The chart picks the figure itself (see
+              revenue-chart.tsx), so a publisher no longer gets a flat $0
+              revenue line and the card no longer needs hiding. */}
+          <RevenueChart calls={NO_CALLS} series={snapshot?.timeSeries ?? []} dateLabel={dateLabel} />
         </div>
 
         {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
