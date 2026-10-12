@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 /**
- * Avortyx AI — the landing-page chat. Proxies to Groq's OpenAI-compatible
+ * AVO AI — the landing-page chat. Proxies to Groq's OpenAI-compatible
  * chat endpoint so the API key never reaches the browser.
  *
  * Models are tried in order: Groq retires models on a schedule (a retired
@@ -19,7 +19,7 @@ const MODELS = [
   "openai/gpt-oss-20b",
 ];
 
-const SYSTEM_PROMPT = `You are Avortyx AI, the friendly assistant embedded on the Avortyx landing page.
+const SYSTEM_PROMPT = `You are AVO AI, the friendly assistant embedded on the Avortyx landing page.
 
 Avortyx is a real-time pay-per-call routing and intelligence platform for
 modern call networks. It combines:

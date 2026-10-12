@@ -5,7 +5,7 @@
  *
  * Pattern:
  *   • Floating FAB bottom-right. Click to expand the panel.
- *   • The AI assistant ("Avortyx AI") handles the opening exchange via the
+ *   • The AI assistant ("AVO AI") handles the opening exchange via the
  *     Anthropic-proxy /api/chat endpoint.
  *   • After the AI replies, a "Talk to a person" escalation row offers the
  *     visitor 3 live team members or a direct path to Sales / Support.

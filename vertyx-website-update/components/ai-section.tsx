@@ -62,7 +62,7 @@ export function AISection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-zinc-400 max-w-md mb-8"
           >
-            <span className="text-white font-medium">Avortyx AI.</span> Suggests where to scale, pause, rebalance, or alert — automatically based on your network&apos;s performance patterns.
+            <span className="text-white font-medium">AVO AI.</span> Suggests where to scale, pause, rebalance, or alert — automatically based on your network&apos;s performance patterns.
           </motion.p>
 
           {/* Learn more button */}

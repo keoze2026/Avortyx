@@ -23,7 +23,7 @@ import { AlertTriangle, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { BuyerMembersCard } from "@/components/buyers/buyer-members-card";
-import { PartnerReportingVisibility } from "@/components/network/partner-access-sections";
+import { PartnerPermissions, PartnerReportingVisibility } from "@/components/network/partner-access-sections";
 import { Card } from "@/components/ui/card";
 import {
   Select,
@@ -32,13 +32,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import {
-  BUYER_PERMISSIONS,
   emptyBuyerAccess,
   useBuyerAccessStore,
-  type BuyerPermissionKey,
 } from "@/lib/store/buyer-access-store";
 import { TIMEZONES } from "@/lib/store/publisher-access-store";
 import type { Buyer } from "@/lib/types";
@@ -52,24 +49,16 @@ interface Props {
 export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
   const { t } = useTranslation();
 
-  // Time zone + permissions
+  // Time zone (permissions are in <PartnerPermissions> below)
   const access = useBuyerAccessStore((s) => s.byBuyer[buyer.id]) ?? emptyBuyerAccess();
   const serverBacked = useBuyerAccessStore((s) => s.serverBacked[buyer.id]);
   const fetchAccess = useBuyerAccessStore((s) => s.fetchAccess);
   const setTimezone = useBuyerAccessStore((s) => s.setTimezone);
-  const togglePermission = useBuyerAccessStore((s) => s.togglePermission);
 
   React.useEffect(() => {
     void fetchAccess(buyer.id);
   }, [buyer.id, fetchAccess]);
 
-  const onToggle = async (key: BuyerPermissionKey) => {
-    try {
-      await togglePermission(buyer.id, key);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("buyerAccess.saveFailed"));
-    }
-  };
   const onTimezone = async (tz: string) => {
     try {
       await setTimezone(buyer.id, tz);
@@ -115,27 +104,17 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
       {/* Members (same table as publishers: Invited / Registered) */}
       <BuyerMembersCard buyer={buyer} />
 
-      {/* Permissions: Block Numbers, Download Reports */}
-      <Section title={t("buyerAccess.permissionsTitle")} description={t("buyerAccess.permissionsDesc")}>
-        <ul className="divide-y divide-border">
-          {BUYER_PERMISSIONS.map((p) => {
-            const label = t(p.labelKey);
-            return (
-              <li key={p.key} className="flex items-center justify-between gap-4 px-4 py-3.5">
-                <div>
-                  <div className="text-sm font-medium leading-tight">{label}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{t(p.descriptionKey)}</div>
-                </div>
-                <Switch
-                  checked={!!access.permissions[p.key]}
-                  onCheckedChange={() => void onToggle(p.key)}
-                  aria-label={label}
-                />
-              </li>
-            );
-          })}
-        </ul>
-      </Section>
+      {/* Permissions: Block Numbers, Download Reports. Saved through the
+          partner settings endpoint - the one store the backend now enforces
+          (the old Buyer booleans are only mirrors of it). */}
+      <PartnerPermissions
+        kind="buyer"
+        id={buyer.id}
+        only={["block_numbers", "download_reports"]}
+        title={t("buyerAccess.permissionsTitle")}
+        description={t("buyerAccess.permissionsDesc")}
+        toggleAria="{label}"
+      />
 
       {/* Reporting visibility: which columns this buyer's OWN login sees.
           Saved to the field the buyer's login reads, so unticking a column
@@ -152,25 +131,4 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
 
   if (embedded) return <div className="space-y-4">{body}</div>;
   return <Card className="space-y-6 p-6">{body}</Card>;
-}
-
-/* Same sub-card shell as the publisher settings. */
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="overflow-hidden rounded-lg border border-border bg-background/30">
-      <header className="px-4 py-3">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-foreground">{title}</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-      </header>
-      {children}
-    </section>
-  );
 }

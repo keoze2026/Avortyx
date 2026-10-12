@@ -1226,7 +1226,7 @@ export const en = {
           strictMode: "Use Strict Mode",
           strictModeHint: "Connect repeat calls to new destinations only",
           duplicateSaved: "Duplicate routing saved.",
-          duplicateSaved: "Duplicate routing saved.",
+         // duplicateSaved: "Duplicate routing saved.",
           toggleStrict: "Use strict mode",
           options: {
             standard: "Standard",
@@ -4310,7 +4310,7 @@ export const en = {
     code: {
       sectionLabel: "AI-powered intelligence",
       heading: "AI optimization that learns your network",
-      descriptionLead: "Avortyx AI.",
+      descriptionLead: "AVO AI.",
       descriptionRest:
         " Suggests where to scale, pause, rebalance, or alert — automatically based on your network's performance patterns.",
       cta: "Explore AI features",
@@ -4460,15 +4460,15 @@ export const en = {
     chat: {
       openLabel: "Open chat",
       closeLabel: "Close chat",
-      title: "Avortyx AI",
+      title: "AVO AI",
       status: "Online · usually replies instantly",
       greeting:
-        "Hey — I'm Avortyx AI. Ask me anything about the platform, or just chat.",
-      typing: "Avortyx AI is typing…",
+        "Hey — I'm AVO AI. Ask me anything about the platform, or just chat.",
+      typing: "AVO AI is typing…",
       placeholder: "Ask me anything…",
       sendLabel: "Send message",
       closeButton: "Close",
-      dialogLabel: "Avortyx AI chat",
+      dialogLabel: "AVO AI chat",
       networkError: "Network hiccup — please try that again.",
       modelUnreachable: "Sorry, I couldn't reach the model. Try again in a moment.",
       errorPrefix: "Sorry — ",
@@ -4477,7 +4477,7 @@ export const en = {
       pollLost: "Lost connection to support — please refresh to reconnect.",
       sending: "Sending…",
       disclaimer: "Powered by Anthropic · Conversations aren't saved.",
-      aiSender: "Avortyx AI",
+      aiSender: "AVO AI",
       you: "You",
       replyingNow: "Replying now",
       teamOnline: "{count} teammates online",
