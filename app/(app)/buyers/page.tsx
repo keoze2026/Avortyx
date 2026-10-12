@@ -48,7 +48,8 @@ export default function BuyersPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BuyerTableStatusFilter>("all");
   const [sort, setSort] = useState<BuyerTableSortKey>("recent");
-  const [pageSize, setPageSize] = useState(25);
+  // 50 buyers per page by default (boss request); 10 / 25 / 100 still selectable.
+  const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(0);
   const [columns, setColumns] =
     useState<Record<BuyerColumnKey, boolean>>(ALL_BUYER_COLUMNS);

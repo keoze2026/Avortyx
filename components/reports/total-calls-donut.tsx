@@ -150,7 +150,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
         </div>
 
         <ul
-          className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs"
+          className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-sm"
           onClick={(e) => e.stopPropagation()}
         >
           {slices.map((s) => {
@@ -164,19 +164,19 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                   }
                   // Both labels always bold and bright (boss request); the
                   // selected one is underlined instead of dimming the other.
-                  className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex items-center gap-2 rounded px-1 py-0.5 font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-pressed={isActive}
                 >
                   <span
                     aria-hidden
-                    className="h-2 w-2 rounded-full"
+                    className="h-2.5 w-2.5 rounded-full"
                     style={{ background: s.swatch }}
                   />
                   <span
                     className={
                       isActive
-                        ? "font-bold text-foreground underline underline-offset-4"
-                        : "font-bold text-foreground"
+                        ? "font-extrabold text-foreground underline underline-offset-4"
+                        : "font-extrabold text-foreground"
                     }
                   >
                     {s.label}
