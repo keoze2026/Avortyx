@@ -139,14 +139,12 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
               </>
             ) : (
               <>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {t("dashboard.donut.total")}
+                {/* "TOTAL CALLS" on top, the number under it (boss request). */}
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {t("dashboard.donut.totalCalls")}
                 </span>
-                <span className="text-xl font-semibold tabular-nums">
+                <span className="text-xl font-bold tabular-nums">
                   {formatNumber(total)}
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {t("dashboard.donut.callsSuffix")}
                 </span>
               </>
             )}

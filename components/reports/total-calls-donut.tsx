@@ -139,8 +139,9 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
               </>
             ) : (
               <>
+                {/* "TOTAL CALLS" on top, the number under it - same as the Dashboard. */}
                 <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
-                  {t("toolsUI.reports.totalDonut.total")}
+                  {t("dashboard.donut.totalCalls")}
                 </span>
                 <span className="text-2xl font-bold tabular-nums">
                   {formatNumber(total)}

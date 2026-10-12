@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { Plus, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +19,21 @@ import { ROUTES } from "@/lib/constants";
 import { useWorkspaceMetaStore } from "@/lib/store/workspace-meta-store";
 import {
   countEnabledPermissions,
+  PERMISSION_GROUPS,
   seedForRole,
   TOTAL_PERMISSIONS,
 } from "@/lib/workspace-permissions";
+
+/** Every tick on the Roles screen, as the dotted keys the server stores. */
+const ALL_KEYS = new Set(PERMISSION_GROUPS.flatMap((g) => g.permissions.map((p) => `${g.id}.${p.id}`)));
+
+/** How many of the 55 ticks a saved role has, or null when the server only
+ *  has the old broad rights ("view", "edit", ...) that don't map to ticks.
+ *  Counting those broad rights is what showed Manager as "7 / 55". */
+function countTicks(caps: string[] | undefined): number | null {
+  if (!caps || !caps.some((c) => c.includes("."))) return null;
+  return caps.filter((c) => ALL_KEYS.has(c)).length;
+}
 import type { Member, MemberRole } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -64,11 +76,17 @@ export function WorkspaceRolesTable({ members }: WorkspaceRolesTableProps) {
     };
     const beById = new Map(backendRoles.map((r) => [r.id, r]));
     for (const role of ROLES_IN_ORDER) {
-      const be = beById.get(role);
-      counts[role] = be ? be.capabilities.length : countEnabledPermissions(seedForRole(role));
+      const saved = countTicks(beById.get(role)?.capabilities);
+      counts[role] = saved ?? (role === "admin" ? TOTAL_PERMISSIONS : countEnabledPermissions(seedForRole(role)));
     }
     return counts;
   }, [backendRoles]);
+
+  // Roles created with "New role" (not one of the built-in ones).
+  const customRoles = useMemo(
+    () => backendRoles.filter((r) => !r.isBuiltin && !(ROLES_IN_ORDER as string[]).includes(r.id)),
+    [backendRoles],
+  );
 
   return (
     <Card className="overflow-hidden p-0">
@@ -79,6 +97,14 @@ export function WorkspaceRolesTable({ members }: WorkspaceRolesTableProps) {
             {t("workspaceUI.roles.description")}
           </p>
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1.5 text-xs"
+          onClick={() => router.push(`${ROUTES.workspace}/roles/new`)}
+        >
+          <Plus className="h-3.5 w-3.5" /> New role
+        </Button>
       </CardHeader>
 
       <CardContent className="p-0">
@@ -115,6 +141,33 @@ export function WorkspaceRolesTable({ members }: WorkspaceRolesTableProps) {
                       size="sm"
                       className="h-7 text-xs"
                       onClick={() => router.push(`${ROUTES.workspace}/roles/${role}`)}
+                    >
+                      {t("workspaceUI.roles.edit")}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {customRoles.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="pl-4 text-left">
+                    <div className="inline-flex items-center gap-2 font-medium">
+                      <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+                      {r.name}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-left text-[12px] text-muted-foreground">{r.description}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {members.filter((m) => m.status === "active" && (m.role as string) === r.id).length}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {countTicks(r.capabilities) ?? 0} / {TOTAL_PERMISSIONS}
+                  </TableCell>
+                  <TableCell className="pr-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => router.push(`${ROUTES.workspace}/roles/${r.id}`)}
                     >
                       {t("workspaceUI.roles.edit")}
                     </Button>

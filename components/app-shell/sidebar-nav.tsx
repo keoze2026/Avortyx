@@ -15,8 +15,10 @@
  *   └─────────────────────────────┘
  */
 
+import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Logo } from "@/components/brand/logo";
 import {
@@ -28,7 +30,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useTranslation } from "@/hooks/use-translation";
-import { BRAND } from "@/lib/constants";
+import { BRAND, ROUTES } from "@/lib/constants";
+import { usePermissions } from "@/lib/my-permissions";
 import { NAV_GROUPS, type NavItem } from "@/lib/nav";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Role } from "@/lib/types";
@@ -41,7 +44,18 @@ function isVisibleForRole(item: NavItem, role: Role | undefined) {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const role = useAuthStore((s) => s.user?.role);
+  // Workspace role permissions (employees only): an area with nothing ticked
+  // is left out of the menu, and opening its page directly goes back to the
+  // Dashboard. Until the backend sends permissions, nothing changes.
+  const { canSeePath } = usePermissions();
+  React.useEffect(() => {
+    if (!canSeePath(pathname)) {
+      toast.error("Your role doesn't have access to this page.");
+      router.replace(ROUTES.dashboard);
+    }
+  }, [pathname, canSeePath, router]);
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { t } = useTranslation();
@@ -56,7 +70,7 @@ export function AppSidebar() {
       {/* Content — clean grouped sections without numeric prefixes */}
       <SidebarContent className="gap-0 px-3 py-4 group-data-[collapsible=icon]:px-1">
         {NAV_GROUPS.map((group, idx) => {
-          const visible = group.items.filter((i) => isVisibleForRole(i, role));
+          const visible = group.items.filter((i) => isVisibleForRole(i, role) && canSeePath(i.href));
           if (visible.length === 0) return null;
           return (
             <section key={group.label ?? `g-${idx}`} className="mb-3">

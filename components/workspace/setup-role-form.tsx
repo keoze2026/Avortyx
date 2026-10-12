@@ -27,12 +27,28 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 
 interface SetupRoleFormProps {
-  /** URL parameter — used to seed the permission tree from the matching
-   *  built-in role's defaults (admin, manager, etc.). Custom roles created
-   *  here always land as new rows; we don't try to inline-edit existing
-   *  ones from this form yet. */
+  /** URL parameter: a built-in role slug (manager, viewer, ...), a custom
+   *  role's id, or "new" to create a role.
+   *
+   *  Before, Edit on any role opened an empty "create a role" form: saving it
+   *  made a NEW role and the role being "edited" never changed. Now Edit loads
+   *  that role's saved permissions and Save updates that same role. */
   roleId: string;
 }
+
+/** Turn saved dotted permissions ("reporting.view") back into the tick state. */
+function capabilitiesToState(caps: string[]): PermissionState {
+  const on = new Set(caps);
+  const state: PermissionState = {};
+  for (const g of PERMISSION_GROUPS) {
+    state[g.id] = {};
+    for (const p of g.permissions) state[g.id][p.id] = on.has(`${g.id}.${p.id}`);
+  }
+  return state;
+}
+
+/** Only dotted permissions count; the old coarse ones ("view", "edit") don't map to ticks. */
+const isDotted = (caps: string[] | undefined) => !!caps && caps.some((c) => c.includes("."));
 
 /** Flatten the nested `{groupId: {permId: bool}}` state into the dotted
  *  capability strings the backend stores (e.g. "reporting.view"). */
@@ -50,10 +66,49 @@ function stateToCapabilities(state: PermissionState): string[] {
 export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const [state, setState] = React.useState<PermissionState>(() => seedForRole(roleId));
-  const [name, setName] = React.useState("");
+  const isNew = roleId === "new";
+  // Admin always has everything, so nobody can lock the workspace out of itself.
+  const isAdmin = roleId.toLowerCase() === "admin";
+  const [state, setState] = React.useState<PermissionState>(() => seedForRole(isNew ? "viewer" : roleId));
+  const [name, setName] = React.useState(() =>
+    isNew ? "" : roleId.charAt(0).toUpperCase() + roleId.slice(1).toLowerCase(),
+  );
   const [description, setDescription] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  // The id the server knows this role by (custom roles: their id; built-ins: the slug).
+  const [serverId, setServerId] = React.useState<string>(roleId);
+  const [loading, setLoading] = React.useState(!isNew);
+
+  // Load the role being edited: its name, description and saved ticks.
+  React.useEffect(() => {
+    if (isNew) return;
+    let alive = true;
+    workspaceService
+      .listWorkspaceRoles()
+      .then((roles) => {
+        if (!alive) return;
+        const key = roleId.toLowerCase();
+        const role = roles.find(
+          (r) =>
+            r.id === roleId ||
+            String((r as { slug?: string }).slug ?? "").toLowerCase() === key ||
+            r.name.toLowerCase() === key,
+        );
+        if (!role) return;
+        setServerId(role.id);
+        setName(role.name);
+        setDescription(role.description ?? "");
+        // Use the saved ticks when the server has them; otherwise keep the defaults.
+        if (isDotted(role.capabilities)) setState(capabilitiesToState(role.capabilities));
+      })
+      .catch(() => {
+        /* keep the defaults; Save will report any problem */
+      })
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [roleId, isNew]);
 
   // Determine if every permission across every group is enabled.
   const allEnabled = React.useMemo(
@@ -91,6 +146,7 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
   };
 
   const onSave = async () => {
+    if (isAdmin) return;
     const trimmedName = name.trim();
     if (!trimmedName) {
       toast.error("Give the role a name first.");
@@ -103,15 +159,25 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
     }
     setSaving(true);
     try {
-      await workspaceService.createWorkspaceRole({
-        name: trimmedName,
-        description: description.trim(),
-        capabilities,
-      });
-      toast.success(`Role "${trimmedName}" created`);
+      if (isNew) {
+        await workspaceService.createWorkspaceRole({
+          name: trimmedName,
+          description: description.trim(),
+          capabilities,
+        });
+        toast.success(`Role "${trimmedName}" created`);
+      } else {
+        // Update THIS role. Everyone who has it gets the new permissions.
+        await workspaceService.updateWorkspaceRole(serverId, {
+          name: trimmedName,
+          description: description.trim(),
+          capabilities,
+        });
+        toast.success(`Role "${trimmedName}" saved. Its members get the new permissions on their next page load.`);
+      }
       router.push(ROUTES.workspace);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't create role"));
+      toast.error(friendlyErrorMessage(e, isNew ? "Couldn't create role" : "Couldn't save the role"));
     } finally {
       setSaving(false);
     }
@@ -133,6 +199,11 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
       </CardHeader>
 
       <CardContent className="p-0">
+        {isAdmin && (
+          <p className="border-b border-border bg-secondary/20 px-5 py-2.5 text-xs text-muted-foreground">
+            Admin always has every permission, so the workspace can never be locked out. Edit the other roles instead.
+          </p>
+        )}
         {/* Identity inputs — required by the backend POST. The permission
             tree below seeds from whichever built-in role's defaults match
             the URL param so the user starts with a sensible baseline. */}
@@ -146,7 +217,7 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Compliance Reviewer"
-              autoFocus
+              autoFocus={isNew}
             />
           </div>
           <div className="space-y-1.5">
@@ -162,7 +233,7 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
           </div>
         </div>
 
-        <div className="divide-y divide-border">
+        <div className={cn("divide-y divide-border", (isAdmin || loading) && "pointer-events-none opacity-60")}>
           {PERMISSION_GROUPS.map((group) => {
             const groupState = state[group.id] ?? {};
             const enabledCount = group.permissions.filter((p) => groupState[p.id]).length;
@@ -236,10 +307,10 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
           >
             {t("workspaceUI.setupRole.cancel")}
           </Button>
-          <Button onClick={onSave} disabled={saving}>
+          <Button onClick={onSave} disabled={saving || loading || isAdmin}>
             {saving ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Creating…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
               </>
             ) : (
               t("workspaceUI.setupRole.save")
