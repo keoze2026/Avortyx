@@ -14,6 +14,35 @@ import { buyersService } from "@/lib/api/services/buyers.service";
 import { forgetPartner, markInvited } from "@/lib/partner-access";
 import type { Buyer, BuyerStatus } from "@/lib/types";
 
+/**
+ * Per-buyer /stats requests, a few at a time.
+ *
+ * The Buyers page asks for every buyer's counters as soon as the list loads.
+ * Sent all at once (60+ requests) the server's rate limit kicked in, and its
+ * "slow down" replies carry no CORS header - so the browser reported EVERY
+ * request on the page (snapshot, numbers, analytics...) as a CORS error.
+ * Now: at most STATS_CONCURRENCY at a time, the same buyer is never asked
+ * twice at once, and if the endpoint itself is failing (5xx) the rest of the
+ * queue is dropped for a minute instead of hammering it.
+ */
+const STATS_CONCURRENCY = 4;
+const STATS_PAUSE_MS = 60_000;
+const statsQueue: Array<() => Promise<void>> = [];
+const statsPending = new Set<string>();
+let statsRunning = 0;
+let statsPausedUntil = 0;
+
+function runStatsQueue() {
+  while (statsRunning < STATS_CONCURRENCY && statsQueue.length) {
+    const job = statsQueue.shift()!;
+    statsRunning += 1;
+    void job().finally(() => {
+      statsRunning -= 1;
+      runStatsQueue();
+    });
+  }
+}
+
 interface BuyersState {
   buyers: Buyer[];
   loading: boolean;
@@ -58,15 +87,33 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
     }
   },
 
-  fetchStats: async (id) => {
-    try {
-      const stats = await buyersService.getStats(id);
-      set((s) => ({
-        buyers: s.buyers.map((b) => (b.id === id ? { ...b, ...stats } : b)),
-      }));
-    } catch {
-      // Keep the cached counters; don't surface an error for a side-panel stat.
-    }
+  fetchStats: (id) => {
+    // Already queued or on its way, or the endpoint is failing: nothing to do.
+    if (statsPending.has(id) || Date.now() < statsPausedUntil) return Promise.resolve();
+    statsPending.add(id);
+    return new Promise<void>((resolve) => {
+      statsQueue.push(async () => {
+        try {
+          if (Date.now() < statsPausedUntil) return;
+          const stats = await buyersService.getStats(id);
+          set((s) => ({
+            buyers: s.buyers.map((b) => (b.id === id ? { ...b, ...stats } : b)),
+          }));
+        } catch (e) {
+          // Keep the cached counters; don't surface an error for a side-panel stat.
+          // The server itself failing (500...): stop asking for a minute.
+          const status = (e as { status?: number })?.status ?? 0;
+          if (status >= 500) {
+            // The jobs still queued see the pause and finish without a request.
+            statsPausedUntil = Date.now() + STATS_PAUSE_MS;
+          }
+        } finally {
+          statsPending.delete(id);
+          resolve();
+        }
+      });
+      runStatsQueue();
+    });
   },
 
   getById: (id) => get().buyers.find((b) => b.id === id),

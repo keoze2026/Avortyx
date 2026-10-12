@@ -61,6 +61,22 @@ function fromWire(w: AccessWire | null | undefined, fallback: BuyerAccessState):
   };
 }
 
+/**
+ * PATCH the access settings. The server's first version reads the body from a
+ * field named `payload` (it answers 422 to the plain body), so on 422 the
+ * same values are sent once more wrapped as { payload: ... }. Once the
+ * backend reads the plain body, the first request simply succeeds.
+ */
+async function patchAccess(buyerId: string, body: BuyerAccessState): Promise<AccessWire> {
+  const url = `/api/buyers/${buyerId}/access`;
+  try {
+    return await http.patch<AccessWire>(url, { body });
+  } catch (e) {
+    if ((e as { status?: number })?.status !== 422) throw e;
+    return await http.patch<AccessWire>(url, { body: { payload: body } });
+  }
+}
+
 interface Store {
   byBuyer: Record<string, BuyerAccessState>;
   /** true once the server answered for this buyer; false = kept in this browser only. */
@@ -79,9 +95,7 @@ export const useBuyerAccessStore = create<Store>()(
         const prev = get().byBuyer[buyerId] ?? emptyBuyerAccess();
         set((s) => ({ byBuyer: { ...s.byBuyer, [buyerId]: next } }));
         try {
-          const w = await http.patch<AccessWire>(`/api/buyers/${buyerId}/access`, {
-            body: { timezone: next.timezone, permissions: next.permissions },
-          });
+          const w = await patchAccess(buyerId, { timezone: next.timezone, permissions: next.permissions });
           set((s) => ({
             byBuyer: { ...s.byBuyer, [buyerId]: fromWire(w, next) },
             serverBacked: { ...s.serverBacked, [buyerId]: true },

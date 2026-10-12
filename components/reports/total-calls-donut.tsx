@@ -162,8 +162,9 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                   onClick={() =>
                     setActiveKey((prev) => (prev === s.key ? null : s.key))
                   }
+                  // Both labels always bold and bright (boss request); the
+                  // selected one is underlined instead of dimming the other.
                   className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  style={{ opacity: activeKey === null || isActive ? 1 : 0.65 }}
                   aria-pressed={isActive}
                 >
                   <span
@@ -171,7 +172,13 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                     className="h-2 w-2 rounded-full"
                     style={{ background: s.swatch }}
                   />
-                  <span className={isActive ? "font-bold text-foreground" : "text-muted-foreground"}>
+                  <span
+                    className={
+                      isActive
+                        ? "font-bold text-foreground underline underline-offset-4"
+                        : "font-bold text-foreground"
+                    }
+                  >
                     {s.label}
                   </span>
                 </button>
