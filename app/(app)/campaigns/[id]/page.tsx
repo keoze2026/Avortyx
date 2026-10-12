@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Hash } from "lucide-react";
 
 import { CampaignDetailHeader } from "@/components/campaigns/campaign-detail-header";
@@ -51,6 +51,9 @@ export default function CampaignDetailPage() {
   const router = useRouter();
   const id = params.id;
   const campaign = useCampaignsStore((s) => s.getById(id));
+  const campaignsHydrated = useCampaignsStore((s) => s.hydrated);
+  const campaignsLoading = useCampaignsStore((s) => s.loading);
+  const fetchCampaigns = useCampaignsStore((s) => s.fetch);
 
   useBreadcrumbOverride(campaign?.name);
 
@@ -82,12 +85,34 @@ export default function CampaignDetailPage() {
     };
   }, [id, attempt, seedSettings]);
 
+  const triedLoad = useRef(false);
+  // After a hard refresh (Ctrl+Shift+R) the list isn't loaded yet, so the
+  // record isn't found for a moment. The page used to give up after 600 ms
+  // and jump back to the list. Now it loads the list and only leaves once it
+  // has really loaded and the record truly doesn't exist.
   useEffect(() => {
+    if (!campaignsHydrated) {
+      // One load attempt per visit; a failed load must not retry in a loop.
+      if (!campaignsLoading && !triedLoad.current) {
+        triedLoad.current = true;
+        void fetchCampaigns();
+      }
+      return;
+    }
     if (!campaign) {
       const timer = setTimeout(() => router.replace("/campaigns"), 600);
       return () => clearTimeout(timer);
     }
-  }, [campaign, router]);
+  }, [campaignsHydrated, campaignsLoading, campaign, fetchCampaigns, router]);
+
+  if (!campaign && !campaignsHydrated && (campaignsLoading || !triedLoad.current)) {
+    return (
+      <div className="mx-auto w-full max-w-[928px] space-y-4">
+        <div className="h-28 w-full animate-pulse rounded-lg bg-secondary/40" />
+        <div className="h-[420px] w-full animate-pulse rounded-lg bg-secondary/40" />
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (

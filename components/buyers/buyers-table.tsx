@@ -83,10 +83,10 @@ export function BuyersTable({
                 />
               </TableHead>
               <TableHead className="text-left">{t("networkUI.common.name")}</TableHead>
-              {columns.hourly && <TableHead className="!text-left">{t("networkUI.common.hourly")}</TableHead>}
-              {columns.daily && <TableHead className="!text-left">{t("networkUI.common.daily")}</TableHead>}
-              {columns.monthly && <TableHead className="!text-left">{t("networkUI.common.monthly")}</TableHead>}
-              {columns.global && <TableHead className="!text-left">{t("networkUI.common.global")}</TableHead>}
+              {columns.hourly && <TableHead className="!text-center">{t("networkUI.common.hourly")}</TableHead>}
+              {columns.daily && <TableHead className="!text-center">{t("networkUI.common.daily")}</TableHead>}
+              {columns.monthly && <TableHead className="!text-center">{t("networkUI.common.monthly")}</TableHead>}
+              {columns.global && <TableHead className="!text-center">{t("networkUI.common.global")}</TableHead>}
               {columns.status && <TableHead>{t("networkUI.common.status")}</TableHead>}
               <TableHead className="pr-4">{t("networkUI.common.actions")}</TableHead>
             </TableRow>
@@ -113,22 +113,22 @@ export function BuyersTable({
                     {b.name}
                   </TableCell>
                   {columns.hourly && (
-                    <TableCell className="!text-left tabular-nums text-muted-foreground">
+                    <TableCell className="!text-center tabular-nums text-muted-foreground">
                       {formatCurrency(hourly, true)}
                     </TableCell>
                   )}
                   {columns.daily && (
-                    <TableCell className="!text-left tabular-nums text-muted-foreground">
+                    <TableCell className="!text-center tabular-nums text-muted-foreground">
                       {formatCurrency(b.spendToday, true)}
                     </TableCell>
                   )}
                   {columns.monthly && (
-                    <TableCell className="!text-left tabular-nums text-muted-foreground">
+                    <TableCell className="!text-center tabular-nums text-muted-foreground">
                       {formatCurrency(b.spendMonth, true)}
                     </TableCell>
                   )}
                   {columns.global && (
-                    <TableCell className="!text-left tabular-nums text-muted-foreground">
+                    <TableCell className="!text-center tabular-nums text-muted-foreground">
                       {formatCurrency(b.lifetimeSpend, true)}
                     </TableCell>
                   )}

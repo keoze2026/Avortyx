@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Building2, Gauge, LayoutDashboard, Megaphone, Settings as SettingsIcon, Target } from "lucide-react";
 
 import { BuyerCampaignsTab } from "@/components/buyers/buyer-campaigns-tab";
@@ -12,6 +12,7 @@ import { BuyerDetailHeader } from "@/components/buyers/buyer-detail-header";
 import { BuyerOverviewTab } from "@/components/buyers/buyer-overview-tab";
 import { BuyerSettingsTab } from "@/components/buyers/buyer-settings-tab";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -19,11 +20,23 @@ import { cn } from "@/lib/utils";
 
 type TabId = "overview" | "campaigns" | "destinations" | "caps" | "settings";
 
+function DetailLoading() {
+  return (
+    <div className="mx-auto w-full max-w-[928px] space-y-4">
+      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-[420px] w-full" />
+    </div>
+  );
+}
+
 export default function BuyerDetailPage() {
   const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const buyer = useBuyersStore((s) => s.getById(params.id));
+  const hydrated = useBuyersStore((s) => s.hydrated);
+  const loading = useBuyersStore((s) => s.loading);
+  const fetchBuyers = useBuyersStore((s) => s.fetch);
   const fetchStats = useBuyersStore((s) => s.fetchStats);
   const [tab, setTab] = useState<TabId>("overview");
 
@@ -48,12 +61,27 @@ export default function BuyerDetailPage() {
 
   useBreadcrumbOverride(buyer?.name);
 
+  const triedLoad = useRef(false);
+  // After a hard refresh (Ctrl+Shift+R) the list isn't loaded yet, so the
+  // record isn't found for a moment. The page used to give up after 600 ms
+  // and jump back to the list. Now it loads the list and only leaves once it
+  // has really loaded and the record truly doesn't exist.
   useEffect(() => {
+    if (!hydrated) {
+      // One load attempt per visit; a failed load must not retry in a loop.
+      if (!loading && !triedLoad.current) {
+        triedLoad.current = true;
+        void fetchBuyers();
+      }
+      return;
+    }
     if (!buyer) {
       const t = setTimeout(() => router.replace("/buyers"), 600);
       return () => clearTimeout(t);
     }
-  }, [buyer, router]);
+  }, [hydrated, loading, buyer, fetchBuyers, router]);
+
+  if (!buyer && !hydrated && (loading || !triedLoad.current)) return <DetailLoading />;
 
   if (!buyer) {
     return (

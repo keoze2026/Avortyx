@@ -17,6 +17,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { CHART_TOOLTIP_PROPS } from "@/lib/chart-tooltip";
 import { bucketHourlyZoned } from "@/lib/dashboard-buckets";
 import { formatCurrency } from "@/lib/format";
+import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 
@@ -28,7 +30,28 @@ interface RevenueChartProps {
   /** Hourly points (e.g. from the dashboard snapshot). When passed, revenue
    *  per hour is read from these instead of summing `calls`. `period` carries
    *  the report timezone's offset, so its hour is read as-is. */
-  series?: Array<{ period: string; revenue: number }>;
+  series?: Array<{ period: string; revenue: number; payout?: number }>;
+}
+
+/**
+ * Which money this login is shown, from its own calls only (the server
+ * already sends a partner only their own calls):
+ *   admin / staff -> Revenue  (what the calls were sold for)
+ *   publisher     -> Earnings (their payout - what we pay them)
+ *   buyer         -> Spend    (what they pay us for the calls they received)
+ * A publisher never gets revenue and a buyer never gets payout from the
+ * server, which is why this card used to be empty for them.
+ */
+function useMoneyView() {
+  const role = useAuthStore((s) => s.user?.role);
+  const hidden = usePartnerHiddenColumns().summary;
+  if (role === "publisher") {
+    return { metric: "payout" as const, titleKey: "partnerMoney.earnings", hidden: hidden.has("payout") };
+  }
+  if (role === "buyer") {
+    return { metric: "revenue" as const, titleKey: "partnerMoney.spend", hidden: hidden.has("revenue") };
+  }
+  return { metric: "revenue" as const, titleKey: "dashboard.revenue", hidden: false };
 }
 
 /**
@@ -43,28 +66,47 @@ interface RevenueChartProps {
 export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
+  const view = useMoneyView();
+  const title = t(view.titleKey);
+  // The plotted value is kept in the `revenue` field so the chart below is unchanged.
   const data = React.useMemo(() => {
     if (series) {
       const hours = bucketHourlyZoned([], timeZone).map((p) => ({ x: p.label, revenue: 0 }));
       for (const p of series) {
         const h = Number(p.period.slice(11, 13));
         if (!Number.isFinite(h) || h < 0 || h >= 24) continue;
-        hours[h].revenue += p.revenue;
+        hours[h].revenue += (view.metric === "payout" ? p.payout : p.revenue) || 0;
       }
       return hours;
     }
-    return bucketHourlyZoned(calls, timeZone).map((p) => ({ x: p.label, revenue: p.revenue }));
-  }, [calls, series, timeZone]);
+    const source =
+      view.metric === "payout" ? calls.map((c) => ({ ...c, revenue: c.payout || 0 })) : calls;
+    return bucketHourlyZoned(source, timeZone).map((p) => ({ x: p.label, revenue: p.revenue || 0 }));
+  }, [calls, series, timeZone, view.metric]);
 
   const total = data.reduce((s, p) => s + p.revenue, 0);
   const peak = data.length ? Math.max(...data.map((p) => p.revenue)) : 0;
   const avg = Math.round(total / Math.max(data.length, 1));
 
+  // The admin unticked this money under the partner's Reporting visibility.
+  if (view.hidden) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="py-10 text-center text-xs text-muted-foreground">{t("partnerMoney.notShown")}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-2">
         <div>
-          <CardTitle className="text-sm font-semibold">{t("dashboard.revenue")}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
           <div className="mt-1.5 flex items-baseline gap-2">
             <span className="text-2xl font-semibold tracking-tight tabular-nums">
               {formatCurrency(total)}
@@ -120,7 +162,7 @@ export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
               <Tooltip
                 {...CHART_TOOLTIP_PROPS}
                 cursor={{ stroke: "var(--accent)", strokeOpacity: 0.4, strokeWidth: 1 }}
-                formatter={(value: number) => [formatCurrency(value), t("dashboard.revenue")]}
+                formatter={(value: number) => [formatCurrency(value), title]}
               />
               <Area
                 type="stepAfter"

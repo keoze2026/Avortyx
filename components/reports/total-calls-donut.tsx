@@ -123,7 +123,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
             {activeSlice ? (
               <>
                 <span
@@ -133,7 +133,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                 >
                   {activeSlice.label}
                 </span>
-                <span className="text-2xl font-bold tabular-nums">
+                <span className="text-xl font-bold tabular-nums leading-tight w-full text-center">
                   {formatNumber(activeSlice.count)}
                 </span>
               </>
@@ -143,7 +143,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                 <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
                   {t("dashboard.donut.totalCalls")}
                 </span>
-                <span className="text-2xl font-bold tabular-nums">
+                <span className="text-xl font-bold tabular-nums leading-tight w-full text-center">
                   {formatNumber(total)}
                 </span>
               </>

@@ -3,6 +3,9 @@ import type { ExtraTranslations } from "./types";
 
 export const buyerAccess: ExtraTranslations = {
   en: {
+    "partnerMoney.earnings": "Earnings",
+    "partnerMoney.spend": "Spend",
+    "partnerMoney.notShown": "Not shown for your account.",
     "buyerAccess.sectionTitle": "Buyer access",
     "buyerAccess.manage": "Manage access for this buyer",
     "buyerAccess.timezone": "Buyer time zone",
@@ -18,6 +21,9 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.saveFailed": "Couldn't save buyer access",
   },
   ru: {
+    "partnerMoney.earnings": "Заработок",
+    "partnerMoney.spend": "Расходы",
+    "partnerMoney.notShown": "Недоступно для вашего аккаунта.",
     "buyerAccess.sectionTitle": "Доступ покупателя",
     "buyerAccess.manage": "Управление доступом этого покупателя",
     "buyerAccess.timezone": "Часовой пояс покупателя",
@@ -33,6 +39,9 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.saveFailed": "Не удалось сохранить доступ покупателя",
   },
   ja: {
+    "partnerMoney.earnings": "収益",
+    "partnerMoney.spend": "支出",
+    "partnerMoney.notShown": "このアカウントでは表示されません。",
     "buyerAccess.sectionTitle": "バイヤーのアクセス",
     "buyerAccess.manage": "このバイヤーのアクセスを管理",
     "buyerAccess.timezone": "バイヤーのタイムゾーン",
@@ -48,6 +57,9 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.saveFailed": "バイヤーのアクセスを保存できませんでした",
   },
   zh: {
+    "partnerMoney.earnings": "收入",
+    "partnerMoney.spend": "支出",
+    "partnerMoney.notShown": "您的账户不显示此项。",
     "buyerAccess.sectionTitle": "买家访问权限",
     "buyerAccess.manage": "管理此买家的访问权限",
     "buyerAccess.timezone": "买家时区",

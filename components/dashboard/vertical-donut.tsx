@@ -124,7 +124,7 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
             {activeSlice ? (
               <>
                 <span
@@ -133,7 +133,7 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
                 >
                   {activeSlice.label}
                 </span>
-                <span className="text-xl font-semibold tabular-nums">
+                <span className="text-lg font-semibold tabular-nums leading-tight w-full text-center">
                   {formatNumber(activeSlice.count)}
                 </span>
               </>
@@ -143,7 +143,7 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   {t("dashboard.donut.totalCalls")}
                 </span>
-                <span className="text-xl font-bold tabular-nums">
+                <span className="text-lg font-bold tabular-nums leading-tight w-full text-center">
                   {formatNumber(total)}
                 </span>
               </>
