@@ -284,7 +284,7 @@ export const en = {
     donut: {
       total: "Total",
       callsSuffix: "calls",
-      totalCalls: "Total calls",
+      totalCalls: "Total Calls",
       notConnected: "No Answer",
       completed: "Completed",
     },
@@ -3921,7 +3921,7 @@ export const en = {
           revenue: "Revenue",
         },
         tooltip: {
-          totalCalls: "Total calls",
+          totalCalls: "Total Calls",
           converted: "Connected",
           notConverted: "Not Converted",
           noAnswer: "No Answer",
