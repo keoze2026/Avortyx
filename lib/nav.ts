@@ -87,7 +87,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Campaigns",     nameKey: "nav.campaigns",    href: ROUTES.campaigns, icon: Megaphone,       roles: ["admin", "publisher"] },
       { label: "Phone Numbers", nameKey: "nav.phoneNumbers", href: ROUTES.numbers,   icon: Hash,            roles: ["admin"] },
-      { label: "Routing",       nameKey: "nav.routing",      href: ROUTES.routing,   icon: GitFork,         roles: ["admin"] },
       { label: "IVR",           nameKey: "nav.ivr",          href: ROUTES.ivr,       icon: PhoneForwarded,  roles: ["admin"] },
       { label: "Call Queue",    nameKey: "nav.callQueue",    href: ROUTES.queue,     icon: PhoneIncoming,   roles: ["admin"] },
     ],
@@ -137,6 +136,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "White Label",  nameKey: "nav.whiteLabel",   href: ROUTES.whiteLabel,   icon: Palette,     roles: ["admin"] },
       { label: "Billing",      nameKey: "nav.billing",      href: ROUTES.billing,      icon: CreditCard,  roles: ["admin"] },
       { label: "Settings",     nameKey: "nav.settings",     href: ROUTES.settings,     icon: Settings,    roles: ALL_ROLES },
+      // Routing left the Traffic menu: calls are set up inside each campaign
+      // (numbers -> Send calls to). The full routing editor stays available
+      // here, and from every campaign, as Advanced Routing.
+      { label: "Advanced Routing", nameKey: "nav.advancedRouting", href: ROUTES.routing, icon: GitFork, roles: ["admin"] },
     ],
   },
 ];

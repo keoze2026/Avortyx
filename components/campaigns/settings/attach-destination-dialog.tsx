@@ -41,6 +41,17 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Called after a successful attach so the parent can refetch its rows. */
   onAttached?: () => void;
+  /**
+   * The campaign's Simple setup rule id, creating it if needed. Passed by the
+   * Call Setup ("Send calls to") so destinations always land in that one rule
+   * and never in an Advanced Routing plan. Without it the dialog falls back to
+   * the campaign's first rule, as before.
+   */
+  ensureRule?: () => Promise<string>;
+  /** Numbers (E.164) already receiving this campaign's calls - not offered again. */
+  excludeNumbers?: Set<string>;
+  /** Priority given to the first added destination (the next free position). */
+  startPriority?: number;
 }
 
 export function AttachDestinationDialog({
@@ -49,6 +60,9 @@ export function AttachDestinationDialog({
   open,
   onOpenChange,
   onAttached,
+  ensureRule,
+  excludeNumbers,
+  startPriority = 1,
 }: Props) {
   const destinations = useDestinationsStore((s) => s.destinations);
   const fetchDestinations = useDestinationsStore((s) => s.fetch);
@@ -68,8 +82,8 @@ export function AttachDestinationDialog({
   // destination, so offering one here would attach something that cannot
   // take a call.
   const available = useMemo(
-    () => destinations.filter((d) => d.enabled),
-    [destinations],
+    () => destinations.filter((d) => d.enabled && !excludeNumbers?.has(toE164(d.tfn))),
+    [destinations, excludeNumbers],
   );
 
   const filtered = useMemo(() => {
@@ -95,10 +109,16 @@ export function AttachDestinationDialog({
     if (selected.size === 0) return;
     setSubmitting(true);
     try {
-      // Reuse the campaign's rule when it has one; a second rule would add a
-      // competing set of destinations rather than extending this one.
-      const rules = await routingService.listRules({ campaignId, pageSize: 1 });
-      let ruleId = rules.items[0]?.id;
+      // The Call Setup hands us its Simple setup rule (created if needed).
+      // Otherwise reuse the campaign's rule when it has one; a second rule
+      // would add a competing set of destinations rather than extending this one.
+      let ruleId: string | undefined;
+      if (ensureRule) {
+        ruleId = await ensureRule();
+      } else {
+        const rules = await routingService.listRules({ campaignId, pageSize: 1 });
+        ruleId = rules.items[0]?.id;
+      }
 
       if (!ruleId) {
         const created = await routingService.createRule({
@@ -114,7 +134,7 @@ export function AttachDestinationDialog({
       const attached: string[] = [];
       try {
         // Sequential so a failure half way names what already landed.
-        let priority = 1;
+        let priority = startPriority;
         for (const d of chosen) {
           await routingService.addDestination(ruleId, {
             destination: toE164(d.tfn),

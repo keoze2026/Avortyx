@@ -17,9 +17,10 @@ import { daily } from "./daily";
 import { activity } from "./activity";
 import { bulk } from "./bulk";
 import { buyerAccess } from "./buyer-access";
+import { routing } from "./routing";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
