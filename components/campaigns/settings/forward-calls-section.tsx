@@ -36,51 +36,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { campaignsService } from "@/lib/api/services/campaigns.service";
+import {
+  campaignRouting,
+  SIMPLE_TYPES,
+  type Distribution,
+  type RoutedDestination,
+  type RuleSummary,
+} from "@/lib/api/services/campaign-routing";
 import { AttachDestinationDialog } from "./attach-destination-dialog";
-
-// Fallback local definitions for the routing API so this screen can compile in
-// environments where the backend module is not present yet.
-type Distribution = "priority" | "weighted" | "round_robin";
-type RuleSummary = {
-  id: string;
-  name?: string;
-  ruleType?: string | null;
-  campaignId?: string;
-};
-type RoutedDestination = {
-  id: string;
-  number: string;
-  buyerId?: string;
-  buyerName?: string;
-  priority: number;
-  weight: number;
-};
-
-const SIMPLE_TYPES: Distribution[] = ["priority", "weighted", "round_robin"];
-
-const campaignRouting = {
-  listRules: async (_campaignId: string): Promise<RuleSummary[]> => [],
-  pickSimple: (rules: RuleSummary[]): RuleSummary | null =>
-    rules.find((rule) => SIMPLE_TYPES.includes((rule.ruleType ?? "priority") as Distribution)) ?? null,
-  listDestinations: async (_ruleId: string): Promise<RoutedDestination[]> => [],
-  createSimple: async (
-    campaignId: string,
-    _campaignName: string,
-    _rules: RuleSummary[],
-  ): Promise<RuleSummary> => ({
-    id: `simple-${campaignId}`,
-    name: "Simple setup",
-    ruleType: "priority",
-    campaignId,
-  }),
-  setDistribution: async (_ruleId: string, _distribution: Distribution): Promise<void> => undefined,
-  updateDestination: async (
-    _ruleId: string,
-    _destinationId: string,
-    _updates: Partial<RoutedDestination>,
-  ): Promise<void> => undefined,
-  removeDestination: async (_ruleId: string, _destinationId: string): Promise<void> => undefined,
-};
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
