@@ -270,15 +270,28 @@ function failReasonText(c: Call): string {
 
 /**
  * The words the portal uses for a fail reason (screen and export):
- *   "Duplicate call" / "Duplicate call blocked"  ->  "Duplicate Call"
- *   "Campaign cap reached" (any cap)              ->  "Overflow Missed"
+ *   "Duplicate call" / "Duplicate call blocked"   ->  "Duplicate Call"
+ *   concurrency (CC) cap full / "overflow"        ->  "Overflow Missed"
+ *   daily / hourly / monthly / global cap reached ->  "Daily Cap Reached" ...
+ *   "Campaign cap reached" (cap not named)        ->  "Campaign Cap Reached"
  * Anything else: each word starts with a capital, "blocked" dropped.
+ *
+ * "Overflow Missed" means one thing only: every concurrent-call slot (CC) was
+ * in use. Before, every cap - daily, monthly, global - was shown as "Overflow
+ * Missed", so a campaign at 4 / 5 live calls appeared to overflow when it had
+ * actually hit a different limit.
  */
 function failReasonLabel(reason: string | null | undefined): string {
   const raw = (reason ?? "").trim();
   if (!raw || raw === "—") return "";
   if (/duplicate/i.test(raw)) return "Duplicate Call";
-  if (/cap\s*reached|overflow/i.test(raw)) return "Overflow Missed";
+  if (/overflow|concurren|\bcc\b/i.test(raw)) return "Overflow Missed";
+  const cap = raw.match(/\b(hourly|daily|monthly|global)\b.*cap|cap.*\b(hourly|daily|monthly|global)\b/i);
+  if (cap) {
+    const which = (cap[1] ?? cap[2]).toLowerCase();
+    return `${which[0].toUpperCase()}${which.slice(1)} Cap Reached`;
+  }
+  if (/cap\s*reached/i.test(raw)) return /buyer/i.test(raw) ? "Buyer Cap Reached" : "Campaign Cap Reached";
   const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
   return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
 }
