@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { BarChart3, Loader2, PieChart, X } from "lucide-react";
 import { toast } from "sonner";
@@ -309,10 +309,21 @@ export default function ReportsPage() {
   // `is_qualified` field the CDR payload doesn't carry. Two definitions meant
   // the total said 64 and the list underneath it showed something else. One
   // predicate over one dataset makes that disagreement impossible.
+  // The calls the open Call Summary tab counts (on Buyer: only calls that
+  // reached a buyer), so a clicked total lists exactly the calls it counted.
+  const [summaryScope, setSummaryScope] = useState<((c: Call) => boolean) | null>(null);
+  // Stored through an updater: a function handed straight to setState would
+  // be called as one.
+  const onSummaryScope = useCallback(
+    (scope: ((c: Call) => boolean) | null) => setSummaryScope(() => scope),
+    [],
+  );
   const logCalls = useMemo(() => {
     if (!statusFilter) return filtered;
-    return filtered.filter((c) => matchesCallStatusFilter(c, statusFilter));
-  }, [filtered, statusFilter]);
+    return filtered.filter(
+      (c) => (!summaryScope || summaryScope(c)) && matchesCallStatusFilter(c, statusFilter),
+    );
+  }, [filtered, statusFilter, summaryScope]);
 
   const exportQuery = useMemo<Omit<CallLogQuery, "page" | "pageSize"> | null>(() => {
     if (!fromKey) return null;
@@ -461,6 +472,7 @@ export default function ReportsPage() {
               if (next === "live") onRefresh("auto");
             }}
             liveNow={liveNow}
+            onScopeChange={onSummaryScope}
             summaries={summariesForTable}
             showLive={liveVisible}
           />

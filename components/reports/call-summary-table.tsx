@@ -642,6 +642,19 @@ const SUMMARY_ENTITY_FOR_TAB: Partial<Record<GroupKey, SummaryEntity>> = {
 const SUMMARY_ROWS_ONLY = new Set<GroupKey>(["profile-carrier", "identity-carrier"]);
 
 /**
+ * Tabs whose counters come from the calls themselves (the same records the
+ * Call Log lists), taking only the telco Cost from the backend aggregate.
+ *
+ * Buyer: GET /api/analytics/buyers returned Qualified 0, Converted 0 and
+ * Revenue $0 for buyers whose calls were answered and billed ($1.00 revenue
+ * per call in the Call Log), a Conv. rate that disagreed with its own
+ * Converted, and a Live count well above the calls actually live. The page
+ * loads every call of the range, so counting the buyer's own calls gives
+ * figures that match the Call Log line for line.
+ */
+const SUMMARY_COST_ONLY = new Set<GroupKey>(["buyer"]);
+
+/**
  * Overlay the backend's per-entity aggregate (GET /api/analytics/campaigns
  * | /buyers | /publishers) onto the rows the call log produced for that
  * tab.
@@ -663,8 +676,22 @@ function applyEntitySummary(
   rows: SummaryRow[],
   summary: EntitySummary[],
   summaryRowsOnly = false,
+  costOnly = false,
 ): SummaryRow[] {
   if (summary.length === 0) return rows;
+  if (costOnly) {
+    // Only the telco cost (billed per minute with the account markup) comes
+    // from the aggregate; every other figure stays the count of the calls.
+    const byId = new Map(rows.map((r) => [r.key, r]));
+    const byName = new Map(rows.map((r) => [r.label.trim().toLowerCase(), r]));
+    for (const c of summary) {
+      const row = byId.get(c.entityId) ?? byName.get(c.entityName.trim().toLowerCase());
+      if (!row) continue;
+      row.cost = c.totalCost;
+      row.billableMinutes = c.billableMinutes;
+    }
+    return rows;
+  }
   const kept = new Set<SummaryRow>();
   const byId = new Map(rows.map((r) => [r.key, r]));
   // Production /campaigns rows carry only `campaign_name` (no id), so fall
@@ -763,11 +790,11 @@ function liveForGroup(
     case "dialed":
     case "destination":
       return destinations.find((d) => toE164(d.tfn) === key)?.liveCalls;
-    case "buyer": {
-      // A buyer's live calls are the live calls across its destinations.
-      const own = destinations.filter((d) => d.buyerId === key);
-      return own.length ? own.reduce((s, d) => s + d.liveCalls, 0) : undefined;
-    }
+    case "buyer":
+      // Counted from the buyer's own live calls (the rows "Live" filters the
+      // Call Log to). The destination counters kept calls whose hang-up never
+      // arrived, so a buyer read 8 live while 4 calls were actually live.
+      return undefined;
     default:
       return undefined;
   }
@@ -875,6 +902,13 @@ interface CallSummaryTableProps {
    */
   liveNow?: number;
   /**
+   * Which calls the open tab counts, so a clicked total filters the Call Log
+   * to the same calls: on Buyer, only calls that reached a buyer (a call
+   * with no buyer is in no buyer row, so it is not in the buyer Totals
+   * either). null = every call.
+   */
+  onScopeChange?: (scope: ((c: Call) => boolean) | null) => void;
+  /**
    * GET /api/analytics/campaigns | /buyers | /publishers for the same date
    * range — the backend's own per-entity totals, keyed by tab. When a tab
    * has an entry here its counters come from it rather than from summing
@@ -907,6 +941,7 @@ export function CallSummaryTable({
   activeStatusFilter = null,
   onStatusFilterChange,
   liveNow,
+  onScopeChange,
   summaries,
   showLive = true,
 }: CallSummaryTableProps) {
@@ -973,7 +1008,12 @@ export function CallSummaryTable({
   const groupedRows = React.useMemo(() => {
     const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
     const grouped = summary
-      ? applyEntitySummary(groupCalls(calls, tab, timeZone, destinationNames), summary, SUMMARY_ROWS_ONLY.has(tab))
+      ? applyEntitySummary(
+          groupCalls(calls, tab, timeZone, destinationNames),
+          summary,
+          SUMMARY_ROWS_ONLY.has(tab),
+          SUMMARY_COST_ONLY.has(tab),
+        )
       : groupCalls(calls, tab, timeZone, destinationNames);
     // Merge the per-entity live counters in before sorting / totals / export,
     // so every consumer of these rows sees the same figure. `max`, not
@@ -1019,6 +1059,16 @@ export function CallSummaryTable({
     () => allRows.slice(page * pageSize, page * pageSize + pageSize),
     [allRows, page, pageSize],
   );
+
+  // Tell the page which calls this tab counts (see `onScopeChange`).
+  React.useEffect(() => {
+    if (!onScopeChange) return;
+    if (SUMMARY_ROWS_ONLY.has(tab)) {
+      onScopeChange(null);
+      return;
+    }
+    onScopeChange((c: Call) => Boolean(deriveGroup(c, tab, timeZone, destinationNames)?.key));
+  }, [onScopeChange, tab, timeZone, destinationNames]);
 
   // Reset to page 0 whenever the result set, page size, or sort changes.
   React.useEffect(() => {
