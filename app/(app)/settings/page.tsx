@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
@@ -9,13 +9,36 @@ import { ProfileSection } from "@/components/settings/profile-section";
 import { ScheduledReportsSection } from "@/components/settings/scheduled-reports-section";
 import { SecuritySection } from "@/components/settings/security-section";
 import { SessionsSection } from "@/components/settings/sessions-section";
-import { SettingsRail, type SettingsSection } from "@/components/settings/settings-rail";
+import {
+  SETTINGS_SECTIONS,
+  SettingsRail,
+  useCanSeeAdvancedRouting,
+  type SettingsSection,
+} from "@/components/settings/settings-rail";
+import { AdvancedRoutingSection } from "@/components/routing/advanced-routing-section";
 import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
   const [section, setSection] = useState<SettingsSection>("profile");
+  const canSeeAdvanced = useCanSeeAdvancedRouting();
+
+  // Open the section named in the link, e.g. /settings?section=advanced-routing
+  // (the Routing page and a routing plan's "All plans" button link there).
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("section") as SettingsSection | null;
+    if (wanted && SETTINGS_SECTIONS.includes(wanted)) setSection(wanted);
+  }, []);
+
+  /** Keep the address in step with the open section, so refresh / back keep it. */
+  const select = (next: SettingsSection) => {
+    setSection(next);
+    const url = new URL(window.location.href);
+    if (next === "profile") url.searchParams.delete("section");
+    else url.searchParams.set("section", next);
+    window.history.replaceState(window.history.state, "", url.toString());
+  };
 
   return (
     <>
@@ -26,7 +49,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-[5.5rem] lg:self-start">
-          <SettingsRail active={section} onSelect={setSection} />
+          <SettingsRail active={section} onSelect={select} />
         </div>
 
         <div className="min-w-0">
@@ -44,6 +67,7 @@ export default function SettingsPage() {
               {section === "notifications" && <NotificationsSection />}
               {section === "sessions" && <SessionsSection />}
               {section === "scheduled-reports" && <ScheduledReportsSection />}
+              {section === "advanced-routing" && canSeeAdvanced && <AdvancedRoutingSection />}
             </motion.div>
           </AnimatePresence>
         </div>

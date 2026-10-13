@@ -2,9 +2,12 @@
 
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
-import { Bell, CalendarClock, KeyRound, Monitor, ShieldCheck, UserCog } from "lucide-react";
+import { Bell, CalendarClock, GitFork, KeyRound, Monitor, ShieldCheck, UserCog } from "lucide-react";
 
 import { useTranslation } from "@/hooks/use-translation";
+import { ROUTES } from "@/lib/constants";
+import { usePermissions } from "@/lib/my-permissions";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 
 export type SettingsSection =
@@ -13,7 +16,19 @@ export type SettingsSection =
   | "api-keys"
   | "notifications"
   | "sessions"
-  | "scheduled-reports";
+  | "scheduled-reports"
+  | "advanced-routing";
+
+/** Sections that can be opened from a link: /settings?section=<id>. */
+export const SETTINGS_SECTIONS: SettingsSection[] = [
+  "profile",
+  "security",
+  "api-keys",
+  "notifications",
+  "sessions",
+  "scheduled-reports",
+  "advanced-routing",
+];
 
 interface RailItem {
   id: SettingsSection;
@@ -31,7 +46,16 @@ const ITEMS: RailItem[] = [
   { id: "notifications",      labelKey: "settings.rail.notifications.label", descriptionKey: "settings.rail.notifications.description", icon: Bell },
   { id: "sessions",           labelKey: "settings.rail.sessions.label",      descriptionKey: "settings.rail.sessions.description",      icon: Monitor },
   { id: "scheduled-reports",  labelKey: "settings.scheduledReports.railLabel", descriptionKey: "settings.scheduledReports.railDescription", icon: CalendarClock },
+  // The rule-based routing editor, moved here from the Routing page (admins only).
+  { id: "advanced-routing",   labelKey: "settings.rail.advancedRouting.label", descriptionKey: "settings.rail.advancedRouting.description", icon: GitFork },
 ];
+
+/** Advanced Routing is for the workspace admin (and employees whose role can see call flows). */
+export function useCanSeeAdvancedRouting(): boolean {
+  const role = useAuthStore((s) => s.user?.role);
+  const { canSeePath } = usePermissions();
+  return role === "admin" && canSeePath(ROUTES.routing);
+}
 
 interface Props {
   active: SettingsSection;
@@ -40,13 +64,15 @@ interface Props {
 
 export function SettingsRail({ active, onSelect }: Props) {
   const { t } = useTranslation();
+  const showAdvanced = useCanSeeAdvancedRouting();
+  const items = ITEMS.filter((i) => i.id !== "advanced-routing" || showAdvanced);
   return (
     <aside className="space-y-1.5">
       <h2 className="px-1 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
         {t("settings.rail.title")}
       </h2>
       <ul className="space-y-1">
-        {ITEMS.map((item, i) => {
+        {items.map((item, i) => {
           const Icon = item.icon;
           const isActive = active === item.id;
           return (

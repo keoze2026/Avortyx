@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LiveBadge } from "@/components/shared/live-badge";
 import { useTranslation } from "@/hooks/use-translation";
-import { ROUTES } from "@/lib/constants";
+import { ADVANCED_ROUTING_HREF } from "@/lib/api/services/campaign-routing";
 import { formatRelativeTime } from "@/lib/format";
 import type { RoutingPlan, RoutingPlanStatus } from "@/lib/types";
 
@@ -37,7 +37,7 @@ export function RoutingToolbar({ plan, dirty, saving, onSave, onPublishToggle, o
         variant="ghost"
         size="sm"
         className="-ml-1 h-8 text-muted-foreground"
-        onClick={() => router.push(ROUTES.routing)}
+        onClick={() => router.push(ADVANCED_ROUTING_HREF)}
       >
         <ArrowLeft className="h-3.5 w-3.5" /> {t("trafficUI.routing.toolbar.allPlans")}
       </Button>

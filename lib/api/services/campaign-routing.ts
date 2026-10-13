@@ -1,6 +1,6 @@
 /**
- * Simple call setup for one campaign, built on the backend's existing routing
- * rules (/api/routing/rules/*) - no new backend work.
+ * Simple call setup (the Routing page), built on the backend's existing
+ * routing rules (/api/routing/rules/*) - no new backend work.
  *
  * Every call is routed through the campaign's active routing rules; a campaign
  * with none drops every call ("No matching rule found"). The campaign page
@@ -20,8 +20,12 @@ export type Distribution = "priority" | "weighted" | "round_robin";
 export const SIMPLE_TYPES: Distribution[] = ["priority", "weighted", "round_robin"];
 export const SIMPLE_SUFFIX = " — Simple setup";
 
+/** Where the full rule editor lives now: Settings -> Advanced Routing. */
+export const ADVANCED_ROUTING_HREF = "/settings?section=advanced-routing";
+
 export interface RuleSummary {
   id: string;
+  campaignId?: string;
   name: string;
   ruleType: string;
   priority: number;
@@ -43,6 +47,7 @@ export interface RoutedDestination {
 
 type RuleListWire = {
   id: string;
+  campaignId?: string;
   name: string;
   ruleType: string;
   priority: number;
@@ -58,6 +63,19 @@ type DestWire = {
   priority?: number;
   weight?: number;
 };
+
+function ruleFromWire(r: RuleListWire): RuleSummary {
+  return {
+    id: String(r.id),
+    campaignId: r.campaignId ? String(r.campaignId) : undefined,
+    name: r.name,
+    ruleType: r.ruleType,
+    priority: r.priority ?? 1,
+    status: r.status,
+    destinationCount: r.destinationCount ?? 0,
+    conditionCount: r.conditionCount ?? 0,
+  };
+}
 
 function destFromWire(d: DestWire): RoutedDestination {
   return {
@@ -76,17 +94,21 @@ export const campaignRouting = {
     const res = await http.get<Paginated<RuleListWire>>("/api/routing/rules", {
       query: { campaignId, pageSize: 100 },
     });
-    return (res.items ?? [])
-      .map((r) => ({
-        id: String(r.id),
-        name: r.name,
-        ruleType: r.ruleType,
-        priority: r.priority ?? 1,
-        status: r.status,
-        destinationCount: r.destinationCount ?? 0,
-        conditionCount: r.conditionCount ?? 0,
-      }))
-      .sort((a, b) => a.priority - b.priority);
+    return (res.items ?? []).map(ruleFromWire).sort((a, b) => a.priority - b.priority);
+  },
+
+  /** Every routing rule in the account (all campaigns), page by page. */
+  async listAllRules(): Promise<RuleSummary[]> {
+    const out: RuleSummary[] = [];
+    for (let page = 1; page <= 50; page++) {
+      const res = await http.get<Paginated<RuleListWire>>("/api/routing/rules", {
+        query: { page, pageSize: 200 },
+      });
+      const items = res.items ?? [];
+      out.push(...items.map(ruleFromWire));
+      if (items.length < 200) break;
+    }
+    return out.sort((a, b) => a.priority - b.priority);
   },
 
   /**
@@ -113,19 +135,16 @@ export const campaignRouting = {
     const r = await http.post<RuleListWire>("/api/routing/rules", {
       body: { campaignId, name: `${campaignName}${SIMPLE_SUFFIX}`, ruleType: "priority", priority },
     });
-    return {
-      id: String(r.id),
-      name: r.name,
-      ruleType: r.ruleType,
-      priority: r.priority ?? priority,
-      status: r.status,
-      destinationCount: 0,
-      conditionCount: 0,
-    };
+    return { ...ruleFromWire(r), campaignId, priority: r.priority ?? priority, destinationCount: 0, conditionCount: 0 };
   },
 
   async setDistribution(ruleId: string, distribution: Distribution): Promise<void> {
     await http.patch(`/api/routing/rules/${ruleId}`, { body: { ruleType: distribution } });
+  },
+
+  /** Switch a rule on ("active") or off ("paused"); the router skips paused rules. */
+  async setRuleStatus(ruleId: string, status: "active" | "paused"): Promise<void> {
+    await http.patch(`/api/routing/rules/${ruleId}`, { body: { status } });
   },
 
   async addDestination(

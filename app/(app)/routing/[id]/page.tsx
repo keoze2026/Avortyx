@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingEdge, RoutingNode, RoutingNodeData } from "@/lib/types";
-import { ROUTES } from "@/lib/constants";
+import { ADVANCED_ROUTING_HREF } from "@/lib/api/services/campaign-routing";
 
 export default function RoutingEditorPage() {
   const params = useParams<{ id: string }>();
@@ -181,7 +181,7 @@ export default function RoutingEditorPage() {
     try {
       await remove(plan.id);
       toast.success(`${plan.name} deleted`);
-      router.replace(ROUTES.routing);
+      router.replace(ADVANCED_ROUTING_HREF);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Delete failed");
     }
