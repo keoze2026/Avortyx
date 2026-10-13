@@ -156,7 +156,8 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
 
         {/* Legend — click a row to focus that slice; click again to revert. */}
         <ul
-          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm"
+          // Legend a size smaller than before (boss request), still bold.
+          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs"
           onClick={(e) => e.stopPropagation()}
         >
           <li>
@@ -171,7 +172,7 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
             >
               <span
                 aria-hidden
-                className="h-2.5 w-2.5 rounded-sm"
+                className="h-2 w-2 rounded-sm"
                 style={{ background: SUCCESS_SWATCH }}
               />
               <span>{t("dashboard.donut.totalCalls")}</span>
@@ -190,7 +191,7 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
             >
               <span
                 aria-hidden
-                className="h-2.5 w-2.5 rounded-sm"
+                className="h-2 w-2 rounded-sm"
                 style={{ background: DROP_SWATCH }}
               />
               <span>{t("dashboard.donut.notConnected")}</span>

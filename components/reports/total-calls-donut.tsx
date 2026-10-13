@@ -155,7 +155,8 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
         </div>
 
         <ul
-          className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-sm"
+          // Legend a size smaller than before (boss request), still bold.
+          className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs"
           onClick={(e) => e.stopPropagation()}
         >
           {slices.map((s) => {
@@ -174,7 +175,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                 >
                   <span
                     aria-hidden
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="h-2 w-2 rounded-full"
                     style={{ background: s.swatch }}
                   />
                   <span
