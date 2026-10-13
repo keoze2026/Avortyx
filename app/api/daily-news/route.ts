@@ -1,23 +1,27 @@
 /**
- * Live daily-news aggregator — fetches RSS feeds from ~8 reputable sources
- * in parallel, normalizes the items into the shared `NewsItem` shape, and
- * returns the freshest 60 entries.
+ * Live daily-news aggregator — fetches RSS feeds from ~13 reputable sources
+ * (BBC, NPR, TechCrunch, The Verge and Bloomberg) in parallel, normalizes the
+ * items into the shared `NewsItem` shape, and returns the freshest 60 entries.
  *
  * Speed:
- *   - Stale-while-revalidate. Whatever batch is in memory is returned
- *     immediately — even past its 10-minute freshness — and a refresh is
- *     kicked off in the background (single-flight). A visitor only ever
- *     waits on the upstream feeds when the server has nothing at all.
+ *   - Stale-while-revalidate. A batch up to 10 minutes old is returned as
+ *     is. Between 10 and 15 minutes it is returned immediately and refreshed
+ *     in the background with `after()`, which keeps the server running until
+ *     the refresh finishes (a plain fire-and-forget promise could be cut off
+ *     by the host as soon as the response was sent, leaving the same news on
+ *     screen for hours). Older than 15 minutes, the request waits for the
+ *     fresh batch, so the page never shows news more than ~15 minutes old.
  *   - Every feed has a hard 4 s deadline, so one slow outlet can no longer
  *     hold the whole response; the fast ones are served and the slow one
  *     just misses this batch.
- *   - `next: { revalidate: 600 }` on each fetch so Next's data cache also
- *     respects the 10-minute window.
+ *   - Each feed is fetched with `cache: "no-store"`: the 10-minute window is
+ *     this file's own cache. Next's data cache on top of it could hand a
+ *     refresh a copy of the feed that was itself up to 10 minutes old.
  *
  * No API key required — every source is publicly accessible RSS / Atom.
  */
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import type { NewsCategory, NewsItem } from "@/lib/mock/news";
 
@@ -25,6 +29,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_MS = 10 * 60 * 1000; // 10 minutes
+/** Past this age a request waits for the fresh batch instead of serving the old one. */
+const MAX_STALE_MS = 15 * 60 * 1000; // 15 minutes
 const PER_FEED_LIMIT = 12; // most-recent N per source
 const TOTAL_LIMIT = 60;
 /** Per-feed deadline. Past this a source is skipped for the batch. */
@@ -51,6 +57,13 @@ const FEEDS: FeedSource[] = [
   { url: "https://feeds.npr.org/1014/rss.xml",                            source: "NPR Politics", category: "Politics" },
   { url: "https://techcrunch.com/feed/",                                  source: "TechCrunch",   category: "Tech" },
   { url: "https://www.theverge.com/rss/index.xml",                        source: "The Verge",    category: "Tech" },
+  // Bloomberg's official public feeds: headline, one-line summary and a link
+  // to the story on bloomberg.com (which may ask the reader to subscribe).
+  { url: "https://www.bloomberg.com/feeds/markets/news.rss",              source: "Bloomberg Markets",    category: "Business" },
+  { url: "https://www.bloomberg.com/feeds/business/news.rss",             source: "Bloomberg Business",   category: "Business" },
+  { url: "https://www.bloomberg.com/feeds/economics/news.rss",            source: "Bloomberg Economics",  category: "Business" },
+  { url: "https://www.bloomberg.com/feeds/technology/news.rss",           source: "Bloomberg Technology", category: "Tech" },
+  { url: "https://www.bloomberg.com/feeds/politics/news.rss",             source: "Bloomberg Politics",   category: "Politics" },
 ];
 
 /** Deterministic gradient tint per item — uses the title hash so the same
@@ -80,7 +93,7 @@ let inflight: Promise<void> | null = null;
 
 async function fetchFeed(feed: FeedSource): Promise<NewsItem[]> {
   const res = await fetch(feed.url, {
-    next: { revalidate: 600 },
+    cache: "no-store",
     signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
     headers: {
       // Some feeds (notably TechCrunch) 403 a default-UA fetch.
@@ -116,15 +129,21 @@ function refresh(): Promise<void> {
 export async function GET() {
   const age = cache ? Date.now() - cache.at : Infinity;
 
+  // Too old to show: wait for the fresh batch (bounded by the per-feed
+  // deadline). If every source fails, the old batch is still served below.
+  if (cache && age >= MAX_STALE_MS) await refresh();
+
   if (cache) {
-    // Serve what we have straight away; refresh behind the response when
-    // the batch is past its freshness window.
-    if (age >= CACHE_MS) void refresh();
+    const nowAge = Date.now() - cache.at;
+    // Serve what we have straight away; refresh behind the response when the
+    // batch is past its freshness window. after() keeps the server alive
+    // until that refresh is done.
+    if (nowAge >= CACHE_MS) after(() => refresh());
     return NextResponse.json(
       {
         items: cache.items,
         cached: true,
-        stale: age >= CACHE_MS,
+        stale: nowAge >= CACHE_MS,
         fetchedAt: cache.at,
         failedSources: cache.failedSources,
       },
