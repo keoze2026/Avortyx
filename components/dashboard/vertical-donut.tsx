@@ -124,26 +124,29 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          {/* Centre label: both lines as one block in the exact middle of the
+              ring. The letter-spacing adds space after the last letter, so the
+              same amount is added before the first (pl) to keep it centred. */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center">
             {activeSlice ? (
               <>
                 <span
-                  className="max-w-[7rem] truncate text-[10px] uppercase tracking-wider"
+                  className="max-w-[6.5rem] truncate pl-[0.05em] text-[9px] uppercase leading-none tracking-wider"
                   style={{ color: activeSlice.swatch }}
                 >
                   {activeSlice.label}
                 </span>
-                <span className="text-lg font-semibold tabular-nums leading-tight w-full text-center">
+                <span className="w-full text-center text-base font-semibold tabular-nums leading-none">
                   {formatNumber(activeSlice.count)}
                 </span>
               </>
             ) : (
               <>
                 {/* "TOTAL CALLS" on top, the number under it (boss request). */}
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="pl-[0.05em] text-[9px] font-bold uppercase leading-none tracking-wider text-muted-foreground">
                   {t("dashboard.donut.totalCalls")}
                 </span>
-                <span className="text-lg font-bold tabular-nums leading-tight w-full text-center">
+                <span className="w-full text-center text-base font-bold tabular-nums leading-none">
                   {formatNumber(total)}
                 </span>
               </>
