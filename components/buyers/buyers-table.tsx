@@ -135,6 +135,8 @@ export function BuyersTable({
                   {columns.status && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Switch
+                        // Green when the buyer is active (taking calls).
+                        className="data-[state=checked]:bg-[color:var(--success)] dark:data-[state=checked]:bg-[color:var(--success)]"
                         checked={isActive}
                         onCheckedChange={() => onToggle(b.id)}
                         aria-label={isActive ? t("networkUI.buyers.table.pauseAria") : t("networkUI.buyers.table.activateAria")}
