@@ -222,6 +222,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   // not where the calls went, and "+ Add" only said "coming soon".
   const campaignName = useCampaignsStore((s) => s.getById(campaignId)?.name) ?? "this campaign";
   const [ruleId, setRuleId] = useState<string | null>(null);
+  /** The rule's status: anything but "active" is skipped by the router. */
+  const [ruleStatus, setRuleStatus] = useState<string | null>(null);
+  const [turningOn, setTurningOn] = useState(false);
   const [routed, setRouted] = useState<RoutingDestination[]>([]);
   const [routedLoaded, setRoutedLoaded] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
@@ -231,8 +234,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
 
   const loadRouted = useCallback(async () => {
     try {
-      const rules = await routingService.listRules({ campaignId, pageSize: 1 });
-      const rule = rules.items[0];
+      // Same pick as "+ Add": the live (active) rule first.
+      const rules = await routingService.listRules({ campaignId, pageSize: 50 });
+      const rule = rules.items.find((r) => r.status === "active") ?? rules.items[0];
+      setRuleStatus(rule?.status ?? null);
       const rows = rule ? await routingService.listDestinations(rule.id) : [];
       rows.sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1));
       setRuleId(rule?.id ?? null);
@@ -266,6 +271,21 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       };
     });
   }, [routed, allDestinations]);
+
+  /** Switch the campaign's routing back on (a paused / draft rule drops every call). */
+  const turnRoutingOn = async () => {
+    if (!ruleId) return;
+    setTurningOn(true);
+    try {
+      await routingService.updateRule(ruleId, { status: "active" });
+      setRuleStatus("active");
+      toast.success("Routing is on — calls will go to the destinations below.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't turn routing on.");
+    } finally {
+      setTurningOn(false);
+    }
+  };
 
   /** Save a row's Priority or Weight when the box is left. */
   const saveRow = async (rowId: string, field: "priority" | "weight") => {
@@ -451,6 +471,29 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             {t("trafficUI.common.add")}
           </Button>
         </div>
+        {/* Why calls would drop "No matching rule found", said where it can be fixed. */}
+        {routedLoaded && ruleId && ruleStatus !== "active" && (
+          <div className="flex flex-col gap-2 border-b border-border bg-destructive/10 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-destructive">
+              Routing for this campaign is switched off ({ruleStatus ?? "off"}), so every call is dropped with
+              &quot;No matching rule found&quot;.
+            </p>
+            <Button size="sm" variant="destructive" disabled={turningOn} onClick={() => void turnRoutingOn()}>
+              {turningOn && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Turn routing on
+            </Button>
+          </div>
+        )}
+        {routedLoaded && (!ruleId || destinations.length === 0) && (
+          <div className="border-b border-border bg-destructive/10 px-6 py-3 text-xs text-destructive">
+            No destination is routed to this campaign, so every call is dropped with &quot;No matching rule
+            found&quot;. Click <span className="font-semibold">+ Add</span> to route destinations.
+          </div>
+        )}
+        {routedLoaded && destinations.length > 0 && destinations.every((d) => !d.enabled) && (
+          <div className="border-b border-border bg-destructive/10 px-6 py-3 text-xs text-destructive">
+            Every routed destination is switched off, so calls are dropped. Switch at least one on under Status.
+          </div>
+        )}
         {/* Compact density mode — shrink every cell's font + padding so a
             100-row page fits without each row chewing up vertical space.
             `[&_td]:py-1.5` + `[&_th]:py-2` overrides the table primitive's

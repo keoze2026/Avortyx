@@ -119,8 +119,10 @@ export function AttachDestinationDialog({
     try {
       // Reuse the campaign's rule when it has one; a second rule would add a
       // competing set of destinations rather than extending this one.
-      const rules = await routingService.listRules({ campaignId, pageSize: 1 });
-      let ruleId = rules.items[0]?.id;
+      // The live (active) rule first - the router ignores paused / draft ones,
+      // so destinations added there would never take a call.
+      const rules = await routingService.listRules({ campaignId, pageSize: 50 });
+      let ruleId = (rules.items.find((r) => r.status === "active") ?? rules.items[0])?.id;
 
       if (!ruleId) {
         const created = await routingService.createRule({
