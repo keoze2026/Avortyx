@@ -123,27 +123,30 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          {/* Centre label: both lines as one block in the exact middle of the
+              ring. The letter-spacing adds space after the last letter, so the
+              same amount is added before the first (pl) to keep it centred. */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center">
             {activeSlice ? (
               <>
                 <span
                   // The label inside the ring (CONNECTED / NO ANSWER): bold (boss request).
-                  className="max-w-[8rem] truncate text-xs font-extrabold uppercase tracking-wider"
+                  className="max-w-[7rem] truncate pl-[0.05em] text-[10px] font-extrabold uppercase leading-none tracking-wider"
                   style={{ color: activeSlice.swatch }}
                 >
                   {activeSlice.label}
                 </span>
-                <span className="text-xl font-bold tabular-nums leading-tight w-full text-center">
+                <span className="w-full text-center text-lg font-bold tabular-nums leading-none">
                   {formatNumber(activeSlice.count)}
                 </span>
               </>
             ) : (
               <>
                 {/* "TOTAL CALLS" on top, the number under it - same as the Dashboard. */}
-                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+                <span className="pl-[0.05em] text-[10px] font-extrabold uppercase leading-none tracking-wider text-muted-foreground">
                   {t("dashboard.donut.totalCalls")}
                 </span>
-                <span className="text-xl font-bold tabular-nums leading-tight w-full text-center">
+                <span className="w-full text-center text-lg font-bold tabular-nums leading-none">
                   {formatNumber(total)}
                 </span>
               </>
