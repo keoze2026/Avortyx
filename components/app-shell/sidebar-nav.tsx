@@ -37,8 +37,11 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function isVisibleForRole(item: NavItem, role: Role | undefined) {
+function isVisibleForRole(item: NavItem, role: Role | undefined, isSuperuser: boolean) {
   if (!role) return false;
+  // Owner-only entries never render for anyone else - the item simply does
+  // not exist in a workspace admin's sidebar, same as partner-hidden pages.
+  if (item.superuserOnly && !isSuperuser) return false;
   return item.roles.includes(role);
 }
 
@@ -46,6 +49,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const role = useAuthStore((s) => s.user?.role);
+  const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
   // Workspace role permissions (employees only): an area with nothing ticked
   // is left out of the menu, and opening its page directly goes back to the
   // Dashboard. Until the backend sends permissions, nothing changes.
@@ -70,7 +74,7 @@ export function AppSidebar() {
       {/* Content — clean grouped sections without numeric prefixes */}
       <SidebarContent className="gap-0 px-3 py-4 group-data-[collapsible=icon]:px-1">
         {NAV_GROUPS.map((group, idx) => {
-          const visible = group.items.filter((i) => isVisibleForRole(i, role) && canSeePath(i.href));
+          const visible = group.items.filter((i) => isVisibleForRole(i, role, isSuperuser) && canSeePath(i.href));
           if (visible.length === 0) return null;
           return (
             <section key={group.label ?? `g-${idx}`} className="mb-3">

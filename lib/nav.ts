@@ -9,7 +9,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import {
+import { Crown,
   LayoutDashboard,
   Radio,
   Megaphone,
@@ -42,6 +42,8 @@ import { ROUTES } from "./constants";
 import type { Role } from "./types/auth";
 
 export interface NavItem {
+  /** Shown only to the system owner (is_superuser), whatever the role says. */
+  superuserOnly?: boolean;
   /** English fallback used by code that runs outside React (breadcrumbs etc.). */
   label: string;
   /** Dotted translation key under `nav.*`. */
@@ -67,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     items: [
       { label: "Workspace", nameKey: "nav.workspace", href: ROUTES.workspace, icon: Briefcase, roles: ["admin"] },
+      { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true },
     ],
   },
   {

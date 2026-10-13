@@ -5,9 +5,62 @@
  */
 
 export const en = {
+  /* ─── Owner (system owner's area) ────────────────────────── */
+  owner: {
+    title: "Owner",
+    description: "Platform control — clients, money, access.",
+    checking: "Checking the gate…",
+    connected: "Owner API connected",
+    notYours: {
+      title: "This area belongs to the system owner.",
+      body: "Your account doesn't have owner access.",
+    },
+    orgs: {
+      title: "Organizations",
+      searchPlaceholder: "Search name or slug…",
+      newOrg: "New organization",
+      name: "Name",
+      status: "Status",
+      balance: "Balance",
+      rate: "Rate/min",
+      markup: "Markup %",
+      users: "Users",
+      callsToday: "Calls today",
+      revenueToday: "Revenue today",
+      active: "Active",
+      suspended: "Suspended",
+      editRates: "Edit rates & fees",
+      credit: "Credit balance",
+      debit: "Debit balance",
+      suspend: "Suspend",
+      activate: "Activate",
+      created: "Organization created",
+      saved: "Saved",
+      moved: "Balance updated",
+      suspendTitle: "Suspend this organization?",
+      suspendBody:
+        "Every login in this workspace stops working immediately. You can activate it again at any time.",
+      orgName: "Organization name",
+      adminEmail: "Admin email (optional — sends a set-password invite)",
+      amount: "Amount",
+      note: "Note (shows on the transaction)",
+      empty: "No organizations match.",
+      fees: {
+        per_minute_rate: "Per-minute rate",
+        markup_percent: "Markup %",
+        recording_fee_per_minute: "Recording fee / min",
+        voip_shield_fee_per_call: "VoIP Shield fee / call",
+        rejected_call_fee: "Rejected call fee",
+        tfn_purchase_fee: "TFN purchase fee",
+        monthly_portal_fee: "Monthly portal fee",
+        credit_limit: "Credit limit",
+      },
+    },
+  },
   /* ─── Sidebar / nav ──────────────────────────────────────── */
   nav: {
     workspace: "Workspace",
+    owner: "Owner",
     dashboard: "Dashboard",
     liveMonitor: "Live Monitor",
     reports: "Reports",
