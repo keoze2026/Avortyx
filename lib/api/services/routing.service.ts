@@ -78,6 +78,8 @@ interface RoutingRuleWire {
   conditions?: Array<{ id: string; conditions: Record<string, unknown> }>;
   destinations?: Array<{
     id: string;
+    destination?: string;
+    destinationType?: string;
     buyerId?: string;
     buyerName?: string;
     weight?: number;
@@ -106,6 +108,8 @@ function wireToRule(w: RoutingRuleWire): RoutingRule {
     })),
     destinations: (w.destinations ?? []).map((d) => ({
       id: d.id,
+      destination: d.destination,
+      destinationType: d.destinationType,
       buyerId: d.buyerId,
       buyerName: d.buyerName,
       weight: d.weight,
@@ -181,6 +185,28 @@ export const routingService = {
         priority: destination.priority ?? 1,
       },
     });
+  },
+
+  /** Every destination of a rule (the numbers it sends calls to). */
+  async listDestinations(ruleId: string): Promise<RoutingDestination[]> {
+    const list = await http.get<RoutingDestination[]>(`/api/routing/rules/${ruleId}/destinations`);
+    return Array.isArray(list) ? list : [];
+  },
+
+  /** Change a rule destination's priority and/or weight. */
+  async updateDestination(
+    ruleId: string,
+    destinationId: string,
+    patch: { priority?: number; weight?: number },
+  ): Promise<RoutingDestination> {
+    return http.patch<RoutingDestination>(`/api/routing/rules/${ruleId}/destinations/${destinationId}`, {
+      body: patch,
+    });
+  },
+
+  /** Stop the rule sending calls to this destination (the Destination record itself stays). */
+  async removeDestination(ruleId: string, destinationId: string): Promise<void> {
+    await http.delete(`/api/routing/rules/${ruleId}/destinations/${destinationId}`);
   },
 
   /**

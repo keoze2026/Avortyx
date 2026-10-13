@@ -15,6 +15,7 @@ import {
 } from "@/components/campaigns/campaigns-toolbar";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ListLoading } from "@/components/shared/list-loading";
 import { CloneDialog } from "@/components/shared/clone-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
@@ -27,6 +28,12 @@ import { useNumbersStore } from "@/lib/store/numbers-store";
 export default function CampaignsPage() {
   const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
+  // Until the first load finishes, show a loading table - not "No campaigns
+  // yet" (which flashed on every refresh before the real list arrived).
+  const hydrated = useCampaignsStore((s) => s.hydrated);
+  const loadError = useCampaignsStore((s) => s.error);
+  const refetch = useCampaignsStore((s) => s.fetch);
+  const waiting = !hydrated && campaigns.length === 0;
   const setCampaignStatus = useCampaignsStore((s) => s.setStatus);
   const remove = useCampaignsStore((s) => s.remove);
   const cloneCampaign = useCampaignsStore((s) => s.clone);
@@ -184,7 +191,9 @@ export default function CampaignsPage() {
         }
       />
 
-      {campaigns.length === 0 ? (
+      {waiting ? (
+        <ListLoading error={loadError} onRetry={() => void refetch()} />
+      ) : campaigns.length === 0 ? (
         <EmptyState
           icon={Megaphone}
           tone="emerald"

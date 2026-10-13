@@ -16,6 +16,7 @@ import { EditBuyerDialog } from "@/components/buyers/edit-buyer-dialog";
 import { InviteBuyerDialog } from "@/components/buyers/invite-buyer-dialog";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ListLoading } from "@/components/shared/list-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +27,12 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 export default function BuyersPage() {
   const { t } = useTranslation();
   const buyers = useBuyersStore((s) => s.buyers);
+  // Until the first load finishes, show a loading table and "—" in the
+  // summary - not "No buyers match" and zeros, which flashed on every refresh.
+  const hydrated = useBuyersStore((s) => s.hydrated);
+  const loadError = useBuyersStore((s) => s.error);
+  const refetch = useBuyersStore((s) => s.fetch);
+  const waiting = !hydrated && buyers.length === 0;
   const setBuyerStatus = useBuyersStore((s) => s.setStatus);
   const remove = useBuyersStore((s) => s.remove);
   const fetchStats = useBuyersStore((s) => s.fetchStats);
@@ -160,10 +167,10 @@ export default function BuyersPage() {
       {/* Inventory summary */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: t("networkUI.buyers.stats.total"), value: formatCompact(stats.total) },
-          { label: t("networkUI.buyers.stats.active"), value: formatCompact(stats.active) },
-          { label: t("networkUI.buyers.stats.capped"), value: formatCompact(stats.capped) },
-          { label: t("networkUI.buyers.stats.spendToday"), value: formatCurrency(stats.spend) },
+          { label: t("networkUI.buyers.stats.total"), value: waiting ? "—" : formatCompact(stats.total) },
+          { label: t("networkUI.buyers.stats.active"), value: waiting ? "—" : formatCompact(stats.active) },
+          { label: t("networkUI.buyers.stats.capped"), value: waiting ? "—" : formatCompact(stats.capped) },
+          { label: t("networkUI.buyers.stats.spendToday"), value: waiting ? "—" : formatCurrency(stats.spend) },
         ].map((s) => (
           <Card key={s.label}>
             <CardContent className="p-4">
@@ -200,7 +207,9 @@ export default function BuyersPage() {
         />
       )}
 
-      {filtered.length === 0 ? (
+      {waiting ? (
+        <ListLoading error={loadError} onRetry={() => void refetch()} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={Building2}
           tone="emerald"

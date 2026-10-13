@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Pencil, Plus, Unlink } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { campaignsService } from "@/lib/api/services/campaigns.service";
+import { routingService, type RoutingDestination } from "@/lib/api/services/routing.service";
+import { AttachDestinationDialog } from "./attach-destination-dialog";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -92,6 +94,19 @@ interface ConversionSettings {
 
 interface ForwardCallsSectionProps {
   campaignId: string;
+}
+
+/** One row of ROUTED DESTINATIONS: a number this campaign really sends calls to. */
+interface RoutedRow {
+  /** The routing-rule destination id (priority / weight / unlink act on this). */
+  id: string;
+  name: string;
+  tfn: string;
+  buyerId: string;
+  buyerName?: string;
+  /** The Destination record behind the number, when there is one. */
+  destId?: string;
+  enabled: boolean;
 }
 
 /** Longest duplicate window offered: five years, in hours (5 × 8,760). */
@@ -201,16 +216,82 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   const buyers = useBuyersStore((s) => s.buyers);
   const buyerById = useMemo(() => new Map(buyers.map((b) => [b.id, b])), [buyers]);
 
-  // Show every active destination — a real router pick is determined by the
-  // campaign↔buyer↔destination chain; for this UI we list all enabled ones
-  // so the user can reorder them by priority/weight.
-  const destinations = useMemo(
-    () => (allDestinations ?? []).filter((d) => d.enabled),
-    [allDestinations],
-  );
+  // ─── Routed destinations: the numbers this campaign's calls really go to ──
+  // Read from the campaign's routing rule (the same one "+ Add" fills). This
+  // table used to list every enabled destination in the account, which was
+  // not where the calls went, and "+ Add" only said "coming soon".
+  const campaignName = useCampaignsStore((s) => s.getById(campaignId)?.name) ?? "this campaign";
+  const [ruleId, setRuleId] = useState<string | null>(null);
+  const [routed, setRouted] = useState<RoutingDestination[]>([]);
+  const [routedLoaded, setRoutedLoaded] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
 
   const [priorities, setPriorities] = useState<Record<string, number>>({});
   const [weights, setWeights] = useState<Record<string, number>>({});
+
+  const loadRouted = useCallback(async () => {
+    try {
+      const rules = await routingService.listRules({ campaignId, pageSize: 1 });
+      const rule = rules.items[0];
+      const rows = rule ? await routingService.listDestinations(rule.id) : [];
+      rows.sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1));
+      setRuleId(rule?.id ?? null);
+      setRouted(rows);
+      setPriorities(Object.fromEntries(rows.map((r) => [r.id, r.priority ?? 1])));
+      setWeights(Object.fromEntries(rows.map((r) => [r.id, r.weight ?? 100])));
+    } catch {
+      toast.error("Couldn't load this campaign's routed destinations.");
+    } finally {
+      setRoutedLoaded(true);
+    }
+  }, [campaignId]);
+
+  useEffect(() => {
+    void loadRouted();
+  }, [loadRouted]);
+
+  const destinations = useMemo<RoutedRow[]>(() => {
+    const byNumber = new Map((allDestinations ?? []).map((d) => [toE164(d.tfn), d]));
+    return routed.map((r) => {
+      const number = r.destination ?? "";
+      const dest = byNumber.get(toE164(number));
+      return {
+        id: r.id,
+        name: dest?.name ?? toE164(number),
+        tfn: number,
+        buyerId: r.buyerId ?? dest?.buyerId ?? "",
+        buyerName: r.buyerName ?? dest?.buyerName,
+        destId: dest?.id,
+        enabled: dest ? dest.enabled : true,
+      };
+    });
+  }, [routed, allDestinations]);
+
+  /** Save a row's Priority or Weight when the box is left. */
+  const saveRow = async (rowId: string, field: "priority" | "weight") => {
+    if (!ruleId) return;
+    const before = routed.find((r) => r.id === rowId);
+    if (!before) return;
+    const old = field === "priority" ? before.priority ?? 1 : before.weight ?? 100;
+    const typed = field === "priority" ? priorities[rowId] : weights[rowId];
+    const value =
+      field === "priority"
+        ? Math.max(1, Math.floor(typed ?? old))
+        : Math.max(0, Math.min(100, Math.floor(typed ?? old)));
+    (field === "priority" ? setPriorities : setWeights)((p) => ({ ...p, [rowId]: value }));
+    if (value === old) return;
+    try {
+      await routingService.updateDestination(ruleId, rowId, { [field]: value });
+      setRouted((rows) =>
+        rows
+          .map((r) => (r.id === rowId ? { ...r, [field]: value } : r))
+          .sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1)),
+      );
+    } catch (e) {
+      (field === "priority" ? setPriorities : setWeights)((p) => ({ ...p, [rowId]: old }));
+      toast.error(e instanceof Error ? e.message : "Couldn't save the change.");
+    }
+  };
   // Per-destination conversion settings entered via the pencil-icon modal.
   // Survives until the user reploads — sufficient for the demo surface.
   const [conversions, setConversions] = useState<Record<string, ConversionSettings>>({});
@@ -247,15 +328,27 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     setConversions((prev) => ({ ...prev, [id]: next }));
     setPriorities((prev) => ({ ...prev, [id]: next.priority }));
     setWeights((prev) => ({ ...prev, [id]: next.weight }));
+    if (ruleId) {
+      void routingService
+        .updateDestination(ruleId, id, { priority: next.priority, weight: next.weight })
+        .then(() => loadRouted())
+        .catch(() => toast.error("Couldn't save priority / weight."));
+    }
     closeEdit();
     toast.success(t("trafficUI.campaigns.settings.forward.toast.convSaved"));
   };
 
-  const onDetach = (id: string, name: string) => {
-    // Demo behavior: flip the destination to disabled so it drops out of the
-    // routed list (the section already filters by `enabled`).
-    setEnabled(id, false);
-    toast.success(t("trafficUI.campaigns.settings.forward.toast.detached").replace("{name}", name));
+  const onDetach = async (id: string, name: string) => {
+    // Stops THIS campaign sending calls there. It used to switch the
+    // destination off everywhere, for every campaign.
+    if (!ruleId) return;
+    try {
+      await routingService.removeDestination(ruleId, id);
+      setRouted((rows) => rows.filter((r) => r.id !== id));
+      toast.success(t("trafficUI.campaigns.settings.forward.toast.detached").replace("{name}", name));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't remove the destination.");
+    }
   };
 
   return (
@@ -353,11 +446,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
             {t("trafficUI.campaigns.settings.forward.routedDestinations")}
           </div>
-          <Button
-            size="sm"
-            onClick={() => toast.info(t("trafficUI.campaigns.settings.forward.addDestSoon"))}
-          >
-            <Plus className="h-4 w-4" /> {t("trafficUI.common.add")}
+          <Button size="sm" disabled={!routedLoaded} onClick={() => setAttachOpen(true)}>
+            {routedLoaded ? <Plus className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}{" "}
+            {t("trafficUI.common.add")}
           </Button>
         </div>
         {/* Compact density mode — shrink every cell's font + padding so a
@@ -381,7 +472,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             {destinations.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={8} className="pl-6 py-6 text-xs text-muted-foreground">
-                  {t("trafficUI.campaigns.settings.forward.empty")}
+                  {routedLoaded ? t("trafficUI.campaigns.settings.forward.empty") : "Loading…"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -401,6 +492,8 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         onChange={(e) =>
                           setPriorities((p) => ({ ...p, [d.id]: Number(e.target.value) }))
                         }
+                        onBlur={() => void saveRow(d.id, "priority")}
+                        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                       />
                     </TableCell>
                     <TableCell>
@@ -415,17 +508,19 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         onChange={(e) =>
                           setWeights((p) => ({ ...p, [d.id]: Number(e.target.value) }))
                         }
+                        onBlur={() => void saveRow(d.id, "weight")}
+                        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                       />
                     </TableCell>
                     <TableCell>
                       <Link
-                        href={`${ROUTES.destinations}/${d.id}`}
+                        href={d.destId ? `${ROUTES.destinations}/${d.destId}` : ROUTES.destinations}
                         className="text-xs font-medium transition-colors hover:text-accent"
                       >
                         {d.name}
                       </Link>
                       <div className="mt-0.5 text-[10px] text-muted-foreground">
-                        {buyer?.name ?? "—"}
+                        {buyer?.name ?? d.buyerName ?? "—"}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-[9.5px] font-medium tabular-nums text-foreground">
@@ -449,8 +544,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                     <TableCell className="text-center">
                       <Switch className="data-[state=checked]:bg-accent"
                         checked={d.enabled}
+                        disabled={!d.destId}
                         onCheckedChange={(v) => {
-                          setEnabled(d.id, v);
+                          if (!d.destId) return;
+                          void setEnabled(d.destId, v);
                           toast.success(
                             v
                               ? t("trafficUI.campaigns.settings.forward.row.enabled").replace("{name}", d.name)
@@ -465,7 +562,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         <RowAction
                           icon={ExternalLink}
                           label={t("trafficUI.campaigns.settings.forward.row.open").replace("{name}", d.name)}
-                          asLink={`${ROUTES.destinations}/${d.id}`}
+                          asLink={d.destId ? `${ROUTES.destinations}/${d.destId}` : ROUTES.destinations}
                         />
                         <RowAction
                           icon={Pencil}
@@ -476,7 +573,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                           icon={Unlink}
                           label={t("trafficUI.campaigns.settings.forward.row.detach").replace("{name}", d.name)}
                           tone="destructive"
-                          onClick={() => onDetach(d.id, d.name)}
+                          onClick={() => void onDetach(d.id, d.name)}
                         />
                       </div>
                     </TableCell>
@@ -502,6 +599,17 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           </div>
         )}
       </Card>
+
+      {/* "+ Add": route destinations to this campaign (all at once with Select all). */}
+      <AttachDestinationDialog
+        campaignId={campaignId}
+        campaignName={campaignName}
+        open={attachOpen}
+        onOpenChange={setAttachOpen}
+        excludeNumbers={new Set(routed.map((r) => toE164(r.destination ?? "")))}
+        startPriority={routed.reduce((m, r) => Math.max(m, r.priority ?? 1), 0) + 1}
+        onAttached={() => void loadRouted()}
+      />
 
       {/* Conversion settings — opens when a row's pencil action is clicked. */}
       {editingDest && (

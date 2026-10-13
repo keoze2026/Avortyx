@@ -13,6 +13,11 @@
  * "No matching rule found" — the carrier test on C-11 failed six times for
  * this reason while the carrier itself was working. So this creates the rule
  * when the campaign has none, rather than asking the user to go and make one.
+ *
+ * Every destination is offered (switched-off ones are marked "Off" and can
+ * be switched on from the table afterwards), numbers already routed to the
+ * campaign are left out, and "Select all" picks everything in the list, so
+ * the team can route all their destinations in one go.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +46,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Called after a successful attach so the parent can refetch its rows. */
   onAttached?: () => void;
+  /** Numbers (E.164) already routed to this campaign - not offered again. */
+  excludeNumbers?: ReadonlySet<string>;
+  /** Priority for the first new destination (after the existing ones). */
+  startPriority?: number;
 }
 
 export function AttachDestinationDialog({
@@ -49,6 +58,8 @@ export function AttachDestinationDialog({
   open,
   onOpenChange,
   onAttached,
+  excludeNumbers,
+  startPriority = 1,
 }: Props) {
   const destinations = useDestinationsStore((s) => s.destinations);
   const fetchDestinations = useDestinationsStore((s) => s.fetch);
@@ -64,12 +75,14 @@ export function AttachDestinationDialog({
     void fetchDestinations();
   }, [open, fetchDestinations]);
 
-  // Only destinations that are switched on. Routing now refuses a disabled
-  // destination, so offering one here would attach something that cannot
-  // take a call.
+  // Every destination not already routed here, switched-on ones first. A
+  // switched-off one can be routed too; it takes calls once it is switched on.
   const available = useMemo(
-    () => destinations.filter((d) => d.enabled),
-    [destinations],
+    () =>
+      destinations
+        .filter((d) => !excludeNumbers?.has(toE164(d.tfn)))
+        .sort((a, b) => Number(b.enabled) - Number(a.enabled) || a.name.localeCompare(b.name)),
+    [destinations, excludeNumbers],
   );
 
   const filtered = useMemo(() => {
@@ -82,6 +95,15 @@ export function AttachDestinationDialog({
         (d.buyerName ?? "").toLowerCase().includes(q),
     );
   }, [available, query]);
+
+  const allShownSelected = filtered.length > 0 && filtered.every((d) => selected.has(d.id));
+  const toggleAll = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allShownSelected) for (const d of filtered) next.delete(d.id);
+      else for (const d of filtered) next.add(d.id);
+      return next;
+    });
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -114,7 +136,7 @@ export function AttachDestinationDialog({
       const attached: string[] = [];
       try {
         // Sequential so a failure half way names what already landed.
-        let priority = 1;
+        let priority = startPriority;
         for (const d of chosen) {
           await routingService.addDestination(ruleId, {
             destination: toE164(d.tfn),
@@ -167,18 +189,31 @@ export function AttachDestinationDialog({
           </div>
         </DialogHeader>
 
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by number, name or buyer"
-          className="h-8"
-        />
+        <div className="flex items-center gap-3">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by number, name or buyer"
+            className="h-8 flex-1"
+          />
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-medium">
+            <Checkbox
+              checked={allShownSelected}
+              disabled={filtered.length === 0}
+              onCheckedChange={toggleAll}
+              aria-label="Select all"
+            />
+            Select all ({filtered.length})
+          </label>
+        </div>
 
         <div className="max-h-[320px] overflow-y-auto rounded-md border">
           {filtered.length === 0 ? (
             <p className="p-4 text-center text-xs text-muted-foreground">
               {available.length === 0
-                ? "No enabled destinations. Switch one on under Destinations first."
+                ? destinations.length === 0
+                  ? "No destinations yet. Create one under Destinations first."
+                  : "Every destination is already routed to this campaign."
                 : "Nothing matches that search."}
             </p>
           ) : (
@@ -199,6 +234,11 @@ export function AttachDestinationDialog({
                     {d.buyerName ? ` · ${d.buyerName}` : ""}
                   </span>
                 </span>
+                {!d.enabled && (
+                  <span className="rounded border border-border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Off
+                  </span>
+                )}
               </label>
             ))
           )}
