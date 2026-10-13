@@ -111,11 +111,15 @@ function refresh(): Promise<void> {
   if (inflight) return inflight;
   inflight = (async () => {
     const results = await Promise.allSettled(FEEDS.map(fetchFeed));
-    const items = results
+    const newest = results
       .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
       .sort((a, b) => b.publishedAt - a.publishedAt)
       .slice(0, TOTAL_LIMIT);
-    await fillMissingImages(items);
+    await fillMissingImages(newest);
+    // Bloomberg's feeds carry no picture and its site blocks the picture
+    // lookup, so its stories showed as empty coloured cards. Only Bloomberg
+    // stories that do have a picture are shown.
+    const items = newest.filter((i) => !i.source.startsWith("Bloomberg") || Boolean(i.imageUrl));
     const failedSources = results
       .map((r, i) => (r.status === "rejected" ? FEEDS[i].source : null))
       .filter((x): x is string => x !== null);
