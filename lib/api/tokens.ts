@@ -14,6 +14,15 @@
 
 const STORAGE_KEY = "avortyx.tokens";
 
+/** Where the tokens live in localStorage (other tabs watch it to sign out together). */
+export const TOKEN_STORAGE_KEY = STORAGE_KEY;
+/**
+ * Fired on `window` when a signed-in session's tokens are thrown away - for
+ * example when the server refuses them because the account was removed. The
+ * auth guard listens and sends the user to the login page straight away.
+ */
+export const TOKENS_CLEARED_EVENT = "avortyx:tokens-cleared";
+
 interface TokenBundle {
   access: string;
   refresh: string;
@@ -80,8 +89,19 @@ export function setAccessToken(access: string) {
 }
 
 export function clearTokens() {
+  ensureLoaded();
+  const hadTokens = memory !== null;
   memory = null;
   writeToStorage(null);
+  // Tell the app the session is over (only when there was one), so an open
+  // page doesn't keep showing data until the next reload.
+  if (hadTokens && typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new Event(TOKENS_CLEARED_EVENT));
+    } catch {
+      /* very old browsers: the next reload still signs out */
+    }
+  }
 }
 
 export function hasTokens(): boolean {

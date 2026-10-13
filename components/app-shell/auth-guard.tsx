@@ -11,8 +11,10 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { Logo } from "@/components/brand/logo";
+import { TOKEN_STORAGE_KEY, TOKENS_CLEARED_EVENT } from "@/lib/api/tokens";
 import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
 
@@ -32,6 +34,28 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     // Intentionally only fires once after rehydration.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
+
+  // Signed out by the server while the page is open (e.g. the account was
+  // removed from a publisher / buyer / the workspace): the next request gets
+  // 401, the tokens are thrown away, and this flips the app to signed-out at
+  // once - the redirect below then goes to the login page. Also follows a
+  // sign-out in another tab of the same browser.
+  useEffect(() => {
+    const signOutHere = () => {
+      if (!useAuthStore.getState().isAuthenticated) return; // a normal logout already did it
+      useAuthStore.setState({ user: null, isAuthenticated: false });
+      toast.error("You have been signed out. Your access may have been removed.", { id: "signed-out" });
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === TOKEN_STORAGE_KEY && e.newValue === null) signOutHere();
+    };
+    window.addEventListener(TOKENS_CLEARED_EVENT, signOutHere);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(TOKENS_CLEARED_EVENT, signOutHere);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (!hydrated) return;
