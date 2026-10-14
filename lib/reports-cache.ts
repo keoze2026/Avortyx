@@ -11,7 +11,11 @@
  *   - memory (and this tab's sessionStorage when small) per signed-in user;
  *   - identical requests are shared, so a prefetch and the page never ask twice;
  *   - only ever the data OF THAT VIEW - never another day's figures;
- *   - when the reports PIN locks again, saved copies of earlier days are dropped.
+ *   - when the reports PIN locks again, saved copies of earlier days are dropped;
+ *   - a view that ends before today never changes, so once loaded it is kept
+ *     for the whole session (no 6-hour expiry) and opens with no download;
+ *   - the last 7 days are loaded in advance, one at a time, so opening any of
+ *     them is instant too.
  */
 
 import {
@@ -37,7 +41,10 @@ export interface ReportData {
 }
 
 const STORAGE_PREFIX = "vortyx.reports-view.v1:";
-const MAX_ENTRIES = 6;
+/** Views kept in memory: today, yesterday, the 7 days loaded in advance, and a few more. */
+const MAX_ENTRIES = 14;
+/** Past days loaded in advance (yesterday back to this many days ago). */
+const PREFETCH_PAST_DAYS = 7;
 /** Saved data older than this is not shown while a fresh copy loads. */
 const MAX_AGE_MS = 6 * 60 * 60 * 1000;
 /** A prefetch is skipped if the saved copy is younger than this. */
@@ -69,18 +76,39 @@ function looksLikeReport(v: unknown): v is ReportData {
   return typeof r.takenAt === "number" && Array.isArray(r.calls) && !!r.summaries && typeof r.summaries === "object";
 }
 
+/** Does this view end before today in its own time zone? Such a view never changes. */
+export function isPastView(view: ReportView): boolean {
+  return view.dateTo < zonedDayKey(Date.now(), view.timeZone);
+}
+
+/** A view key's own "ends before today" check (key = user|from|to|zone). */
+function keyIsPast(key: string): boolean {
+  const [, , to, tz] = key.split("|");
+  if (!to || !tz) return false;
+  try {
+    return to < zonedDayKey(Date.now(), tz);
+  } catch {
+    return false;
+  }
+}
+
+/** Saved data still good to show: a past view always, today's for MAX_AGE_MS. */
+function stillGood(key: string, data: ReportData): boolean {
+  return keyIsPast(key) || Date.now() - data.takenAt <= MAX_AGE_MS;
+}
+
 /** The saved data of exactly this view, or null. */
 export function getCachedReport(key: string | null): ReportData | null {
   if (!key) return null;
   const hit = memory.get(key);
-  if (hit) return Date.now() - hit.takenAt <= MAX_AGE_MS ? hit : null;
+  if (hit) return stillGood(key, hit) ? hit : null;
   const ss = storage();
   if (!ss) return null;
   try {
     const raw = ss.getItem(STORAGE_PREFIX + key);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (!looksLikeReport(parsed) || Date.now() - parsed.takenAt > MAX_AGE_MS) return null;
+    if (!looksLikeReport(parsed) || !stillGood(key, parsed)) return null;
     memory.set(key, parsed);
     return parsed;
   } catch {
@@ -156,6 +184,30 @@ export function prefetchReport(view: ReportView): void {
   const cached = getCachedReport(key);
   if (cached && Date.now() - cached.takenAt < PREFETCH_FRESH_MS) return;
   loadReportShared(view).catch(() => undefined);
+}
+
+/**
+ * Load the last PREFETCH_PAST_DAYS days in the background, one day at a time
+ * (never a burst of requests), skipping any already saved. Past days never
+ * change, so each is downloaded at most once per session.
+ */
+let pastPrefetchRunning = false;
+export function prefetchRecentDays(timeZone: string): void {
+  if (pastPrefetchRunning || !historyOpen()) return;
+  pastPrefetchRunning = true;
+  void (async () => {
+    try {
+      for (let back = 1; back <= PREFETCH_PAST_DAYS; back++) {
+        if (!historyOpen()) return;
+        const day = zonedDayKey(Date.now() - back * 24 * 60 * 60 * 1000, timeZone);
+        const view = { dateFrom: day, dateTo: day, timeZone };
+        if (getCachedReport(reportKey(view))) continue;
+        await loadReportShared(view).catch(() => undefined);
+      }
+    } finally {
+      pastPrefetchRunning = false;
+    }
+  })();
 }
 
 /** Today's and yesterday's views in this time zone - the two people switch between. */

@@ -27,7 +27,15 @@ import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-statu
 import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
-import { getCachedReport, loadReportShared, prefetchReport, reportKey, todayAndYesterday } from "@/lib/reports-cache";
+import {
+  getCachedReport,
+  isPastView,
+  loadReportShared,
+  prefetchRecentDays,
+  prefetchReport,
+  reportKey,
+  todayAndYesterday,
+} from "@/lib/reports-cache";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useReportsAccess } from "@/lib/store/security-store";
@@ -183,9 +191,22 @@ export default function ReportsPage() {
       return;
     }
     const seq = ++loadSeq.current;
+    const current = view!;
+    // A range that ended before today never changes: if it is already saved
+    // (opened before, or loaded in advance), show it straight away with no
+    // download at all. Refresh still re-downloads it.
+    const saved = getCachedReport(reportKey(current));
+    if (saved && isPastView(current) && !manualRefresh.current) {
+      setRangeCalls(saved.calls);
+      setSummaries(saved.summaries);
+      setLoadedKey(viewKey);
+      loadInFlight.current = false;
+      setRangeLoading(false);
+      prefetchRecentDays(current.timeZone);
+      return;
+    }
     loadInFlight.current = true;
     setRangeLoading(true);
-    const current = view!;
     // Shared with a prefetch of the same view: one download, not two.
     loadReportShared(current)
       .then((data) => {
@@ -200,6 +221,9 @@ export default function ReportsPage() {
         for (const other of todayAndYesterday(current.timeZone)) {
           if (other.dateFrom !== current.dateFrom || other.dateTo !== current.dateTo) prefetchReport(other);
         }
+        // Then the rest of the past week, one day at a time, so opening any
+        // of those days is instant as well.
+        prefetchRecentDays(current.timeZone);
       })
       .catch((e) => {
         if (seq !== loadSeq.current) return;
