@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
-import { formatCompact, formatLocalDate, formatNumber, toE164 } from "@/lib/format";
+import { formatCompact, formatLocalDate, formatNumber, formatTimer, toE164 } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -161,6 +161,8 @@ export const TRACK_NUMBERS_COLUMNS = [
   { id: "daily", label: "Daily", labelKey: "trafficUI.numbers.track.headers.daily" },
   { id: "monthly", label: "Monthly", labelKey: "trafficUI.numbers.track.headers.monthly" },
   { id: "global", label: "Global", labelKey: "trafficUI.numbers.track.headers.global" },
+  { id: "tcl", label: "TCL", labelKey: "trafficUI.numbers.track.headers.tcl" },
+  { id: "acl", label: "ACL", labelKey: "trafficUI.numbers.track.headers.acl" },
   { id: "status", label: "Status", labelKey: "trafficUI.numbers.track.headers.status" },
   { id: "actions", label: "Actions", labelKey: "trafficUI.numbers.track.headers.actions", required: true as const },
 ];
@@ -228,6 +230,8 @@ export function TrackNumbersTable({
               {visibleColumns.has("daily") && <TableHead>{t("trafficUI.numbers.track.headers.daily")}</TableHead>}
               {visibleColumns.has("monthly") && <TableHead>{t("trafficUI.numbers.track.headers.monthly")}</TableHead>}
               {visibleColumns.has("global") && <TableHead>{t("trafficUI.numbers.track.headers.global")}</TableHead>}
+              {visibleColumns.has("tcl") && <TableHead>{t("trafficUI.numbers.track.headers.tcl")}</TableHead>}
+              {visibleColumns.has("acl") && <TableHead>{t("trafficUI.numbers.track.headers.acl")}</TableHead>}
               {visibleColumns.has("status") && <TableHead>{t("trafficUI.numbers.track.headers.status")}</TableHead>}
               <TableHead className="pr-4">{t("trafficUI.numbers.track.headers.actions")}</TableHead>
             </TableRow>
@@ -356,6 +360,16 @@ export function TrackNumbersTable({
                     {visibleColumns.has("global") && (
                       <TableCell className={CELL}>
                         {deriveGlobal(n) === undefined ? DASH : formatCompact(deriveGlobal(n)!)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("tcl") && (
+                      <TableCell className={CELL}>
+                        {n.tclSeconds === undefined ? DASH : formatTimer(n.tclSeconds)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("acl") && (
+                      <TableCell className={CELL}>
+                        {n.aclSeconds === undefined ? DASH : formatTimer(n.aclSeconds)}
                       </TableCell>
                     )}
                     {visibleColumns.has("status") && (

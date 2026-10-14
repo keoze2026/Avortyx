@@ -33,6 +33,10 @@ export interface TrackingNumber {
    *  rather than a figure derived from something else. */
   callsHourly?: number;
   callsGlobal?: number;
+  /** Total/average connected call length in seconds, per CH-102's one
+   *  definition (connected = completed or in-progress). From the backend. */
+  tclSeconds?: number;
+  aclSeconds?: number;
   conversionRate: number; // 0..1
 
   /** How many concurrent channels / DIDs the carrier has allocated to this

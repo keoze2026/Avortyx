@@ -48,6 +48,8 @@ interface NumberWire {
   live?: number;
   callsHourly?: number;
   callsGlobal?: number;
+  tclSeconds?: number;
+  aclSeconds?: number;
   conversionRate?: number;
   /** Concurrent channel allocation. Try several naming conventions. */
   allocatedCapacity?: string | number;
@@ -141,6 +143,8 @@ function wireToNumber(w: NumberWire): TrackingNumber {
     liveCalls: w.live ?? 0,
     callsHourly: w.callsHourly,
     callsGlobal: w.callsGlobal,
+    tclSeconds: w.tclSeconds,
+    aclSeconds: w.aclSeconds,
     conversionRate: w.conversionRate ?? 0,
     allocatedCapacity:
       allocatedRaw !== undefined && allocatedRaw !== null ? toNum(allocatedRaw) : undefined,
