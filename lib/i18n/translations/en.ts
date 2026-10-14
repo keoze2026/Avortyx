@@ -1686,6 +1686,8 @@ export const en = {
           daily: "Daily",
           monthly: "Monthly",
           global: "Global",
+          tcl: "TCL",
+          acl: "ACL",
           status: "Status",
           actions: "Actions",
         },
