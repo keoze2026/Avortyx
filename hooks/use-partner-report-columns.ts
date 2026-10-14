@@ -3,15 +3,25 @@
 /**
  * Which Reports columns a BUYER or PUBLISHER login must not see.
  *
- * The admin unticks columns under the partner's Reporting visibility; the
- * backend sends the allowed list on /api/accounts/me as
- * `visible_report_columns`. This hook reads that list (once per session) and
- * turns it into the Reports columns to hide. Admin / staff logins: nothing is
- * hidden, ever.
+ * The admin unticks columns under the partner's Reporting visibility. This
+ * hook finds the partner's allowed list and turns it into the Reports columns
+ * to hide. Admin / staff logins: nothing is hidden, ever.
+ *
+ * Where the list comes from (first one that answers wins):
+ *   1. /api/accounts/me `visible_report_columns`. The backend builds it, but
+ *      the /me response schema doesn't declare it, so today it never arrives.
+ *      Kept first so it takes over the day the backend adds it.
+ *   2. The partner's own settings: the scoped /api/publishers (or /api/buyers)
+ *      list gives the partner login its own record, and
+ *      /api/accounts/{kind}/{id}/settings gives its `visible_report_columns`,
+ *      the same list the admin edits.
+ *
+ * An empty list means "nothing visible" (all 12 unticked), not "no limit".
+ * The list is re-read each time Reports / Dashboard opens (at most every
+ * 30 seconds), so a change the admin makes shows without logging out.
  *
  * Each Reports column follows one backend key. Where the backend has a more
- * specific key (e.g. `tcl`) that one decides; otherwise the general one does
- * (TCL and ACL follow `duration` until the backend has `tcl` / `acl`).
+ * specific key (e.g. `tcl`) that one decides; otherwise the general one does.
  */
 
 import * as React from "react";
@@ -48,21 +58,73 @@ const LOG_KEYS: Record<string, string[]> = {
   recording: ["recording"],
 };
 
-let allowedPromise: Promise<string[] | null> | null = null;
-let allowedFor: string | null = null;
+/** The 12 Reporting visibility keys the backend has. Known even if the catalogue can't be read. */
+const BACKEND_KEYS = [
+  "incoming",
+  "connected",
+  "qualified",
+  "converted",
+  "duplicate",
+  "duration",
+  "not_connected",
+  "tcl",
+  "acl",
+  "cost",
+  "payout",
+  "revenue",
+];
 
-/** The allowed backend keys for the signed-in partner, or null = no limit known. */
-function loadAllowed(userId: string): Promise<string[] | null> {
-  if (allowedPromise && allowedFor === userId) return allowedPromise;
-  allowedFor = userId;
-  allowedPromise = http
-    .get<{ visibleReportColumns?: unknown }>("/api/accounts/me")
-    .then((me) => (Array.isArray(me?.visibleReportColumns) ? me.visibleReportColumns.map(String) : null))
-    .catch(() => {
-      allowedPromise = null;
-      return null;
+const REFRESH_MS = 30_000;
+
+type Cached = { userId: string; at: number; list: string[] | null };
+let cached: Cached | null = null;
+let inflight: { userId: string; promise: Promise<string[] | null> } | null = null;
+
+const asList = (v: unknown): string[] | null => (Array.isArray(v) ? v.map(String) : null);
+
+/** The partner login's own buyer / publisher id, from the list the backend scopes to it. */
+async function ownPartnerId(kind: "buyer" | "publisher"): Promise<string | null> {
+  const res = await http.get<unknown>(`/api/${kind}s?page=1&page_size=5`);
+  const rows = Array.isArray(res)
+    ? res
+    : ((res as { items?: unknown[]; results?: unknown[] } | null)?.items ??
+       (res as { results?: unknown[] } | null)?.results ??
+       []);
+  const first = rows[0] as { id?: unknown } | undefined;
+  return first?.id ? String(first.id) : null;
+}
+
+/** The allowed backend keys for the signed-in partner, or null = couldn't find out. */
+async function readAllowed(kind: "buyer" | "publisher"): Promise<string[] | null> {
+  try {
+    const me = await http.get<{ visibleReportColumns?: unknown }>("/api/accounts/me");
+    const fromMe = asList(me?.visibleReportColumns);
+    if (fromMe) return fromMe;
+  } catch {
+    /* fall through to the settings read */
+  }
+  try {
+    const id = await ownPartnerId(kind);
+    if (!id) return null;
+    const s = await http.get<{ visibleReportColumns?: unknown }>(`/api/accounts/${kind}/${id}/settings`);
+    return asList(s?.visibleReportColumns);
+  } catch {
+    return null;
+  }
+}
+
+function loadAllowed(userId: string, kind: "buyer" | "publisher"): Promise<string[] | null> {
+  if (inflight && inflight.userId === userId) return inflight.promise;
+  const promise = readAllowed(kind)
+    .then((list) => {
+      if (list) cached = { userId, at: Date.now(), list };
+      return list;
+    })
+    .finally(() => {
+      if (inflight?.promise === promise) inflight = null;
     });
-  return allowedPromise;
+  inflight = { userId, promise };
+  return promise;
 }
 
 function hiddenFrom(map: Record<string, string[]>, known: Set<string>, allowed: Set<string>): Set<string> {
@@ -79,27 +141,39 @@ const NONE = { summary: new Set<string>(), log: new Set<string>() };
 export function usePartnerHiddenColumns(): { summary: ReadonlySet<string>; log: ReadonlySet<string> } {
   const role = useAuthStore((s) => s.user?.role);
   const userId = useAuthStore((s) => s.user?.id) ?? "";
-  const isPartner = role === "buyer" || role === "publisher";
+  const kind = role === "buyer" || role === "publisher" ? role : null;
   const catalogue = usePartnerSettingsStore((s) => s.catalogue);
   const fetchCatalogue = usePartnerSettingsStore((s) => s.fetchCatalogue);
-  const [allowed, setAllowed] = React.useState<string[] | null>(null);
+
+  const fresh = cached && cached.userId === userId ? cached.list : null;
+  // undefined = still looking; null = couldn't find out; array = the allowed keys.
+  const [allowed, setAllowed] = React.useState<string[] | null | undefined>(fresh ?? undefined);
 
   React.useEffect(() => {
-    if (!isPartner || !userId) return;
+    if (!kind || !userId) return;
     let alive = true;
     void fetchCatalogue();
-    void loadAllowed(userId).then((list) => {
-      if (alive) setAllowed(list);
-    });
+    const have = cached && cached.userId === userId ? cached : null;
+    if (have) setAllowed(have.list);
+    if (!have || Date.now() - have.at > REFRESH_MS) {
+      void loadAllowed(userId, kind).then((list) => {
+        if (!alive) return;
+        // A failed refresh keeps the last good list rather than showing everything.
+        setAllowed(list ?? (have ? have.list : null));
+      });
+    }
     return () => {
       alive = false;
     };
-  }, [isPartner, userId, fetchCatalogue]);
+  }, [kind, userId, fetchCatalogue]);
 
   return React.useMemo(() => {
-    if (!isPartner || !allowed || !catalogue) return NONE;
-    const known = new Set(catalogue.reportColumns.map((c) => c.key));
-    const ok = new Set(allowed);
+    if (!kind) return NONE;
+    const known = new Set<string>([...BACKEND_KEYS, ...(catalogue?.reportColumns ?? []).map((c) => c.key)]);
+    // Still looking: keep everything hidden so nothing unticked flashes up first.
+    // Couldn't find out at all: fall back to showing them (the old behaviour).
+    if (allowed === null) return NONE;
+    const ok = new Set(allowed ?? []);
     return { summary: hiddenFrom(SUMMARY_KEYS, known, ok), log: hiddenFrom(LOG_KEYS, known, ok) };
-  }, [isPartner, allowed, catalogue]);
+  }, [kind, allowed, catalogue]);
 }
