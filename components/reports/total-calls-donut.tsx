@@ -123,33 +123,35 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          {/* Centre label: both lines as one block in the exact middle of the
-              ring. The letter-spacing adds space after the last letter, so the
-              same amount is added before the first (pl) to keep it centred. */}
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center">
+          {/* Centre label (boss request): "TOTAL CALLS" sits on the exact centre
+              of the ring, and the number sits just under it. Only the label
+              takes part in the centring; the number is placed below it, so it
+              cannot pull the label off the middle. The letter-spacing adds
+              space after the last letter, so the same is added before the
+              first (pl) to keep the word itself centred. */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center">
             {activeSlice ? (
-              <>
+              <div className="relative flex flex-col items-center">
                 <span
-                  // The label inside the ring (CONNECTED / NO ANSWER): bold (boss request).
                   className="max-w-[7rem] truncate pl-[0.05em] text-[10px] font-extrabold uppercase leading-none tracking-wider"
                   style={{ color: activeSlice.swatch }}
                 >
                   {activeSlice.label}
                 </span>
-                <span className="w-full text-center text-lg font-bold tabular-nums leading-none">
+                <span className="absolute left-1/2 top-full mt-1.5 -translate-x-1/2 whitespace-nowrap text-lg font-bold tabular-nums leading-none">
                   {formatNumber(activeSlice.count)}
                 </span>
-              </>
+              </div>
             ) : (
-              <>
-                {/* "TOTAL CALLS" on top, the number under it - same as the Dashboard. */}
+              <div className="relative flex flex-col items-center">
+                {/* "TOTAL CALLS" in the middle, the number under it - same as the Dashboard. */}
                 <span className="pl-[0.05em] text-[10px] font-extrabold uppercase leading-none tracking-wider text-muted-foreground">
                   {t("dashboard.donut.totalCalls")}
                 </span>
-                <span className="w-full text-center text-lg font-bold tabular-nums leading-none">
+                <span className="absolute left-1/2 top-full mt-1.5 -translate-x-1/2 whitespace-nowrap text-lg font-bold tabular-nums leading-none">
                   {formatNumber(total)}
                 </span>
-              </>
+              </div>
             )}
           </div>
         </div>
