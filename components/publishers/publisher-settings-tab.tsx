@@ -20,7 +20,9 @@
 
 import * as React from "react";
 import { publishersService } from "@/lib/api/services/publishers.service";
+import { usePartnerSettingsStore } from "@/lib/store/partner-settings-store";
 import { AlertTriangle, ChevronDown, ChevronUp, Gauge, Info } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -61,7 +63,23 @@ export function PublisherSettingsTab({ publisher }: Props) {
   const addMember = usePublisherAccessStore((s) => s.addMember);
   const removeMember = usePublisherAccessStore((s) => s.removeMember);
 
-  const timezone = access?.timezone ?? "UTC";
+  // Time zone: the server's copy (partner settings) wins, so every browser and
+  // device shows the same one. The browser copy is only the fallback - it is
+  // why the time zone used to read UTC anywhere but the browser it was set in.
+  const serverTimezone = usePartnerSettingsStore((s) => s.byPartner[`publisher:${publisher.id}`]?.timezone);
+  const timezoneOnServer = usePartnerSettingsStore((s) => !!s.timezoneOnServer[`publisher:${publisher.id}`]);
+  const fetchPartnerSettings = usePartnerSettingsStore((s) => s.fetchSettings);
+  const savePartnerTimezone = usePartnerSettingsStore((s) => s.setTimezone);
+  React.useEffect(() => {
+    void fetchPartnerSettings("publisher", publisher.id);
+  }, [publisher.id, fetchPartnerSettings]);
+  const timezone = serverTimezone ?? access?.timezone ?? "UTC";
+  const onTimezoneChange = (tz: string) => {
+    setTimezone(publisher.id, tz); // browser copy (fallback)
+    void savePartnerTimezone("publisher", publisher.id, tz).catch(() =>
+      toast.error("Couldn't save the time zone on the server. Please try again."),
+    );
+  };
   const members = access?.members ?? [];
   const capEnabled = access?.cap.enabled ?? false;
 
@@ -123,7 +141,7 @@ export function PublisherSettingsTab({ publisher }: Props) {
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--warning)]" />
         <div className="space-y-1">
           <div className="font-semibold text-[color:var(--warning)]">
-            Time zone and cap setting save to this browser only
+            {timezoneOnServer ? "Cap setting saves to this browser only" : "Time zone and cap setting save to this browser only"}
           </div>
           <p className="text-muted-foreground">
             Members, Permissions and Reporting visibility are saved on the
@@ -136,7 +154,7 @@ export function PublisherSettingsTab({ publisher }: Props) {
       <HeaderRow
         title={publisher.name}
         timezone={timezone}
-        onTimezoneChange={(v) => setTimezone(publisher.id, v)}
+        onTimezoneChange={onTimezoneChange}
       />
 
       <PartnerMembersSection

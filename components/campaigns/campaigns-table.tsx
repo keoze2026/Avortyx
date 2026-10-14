@@ -361,10 +361,22 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
     });
   };
 
+  // Campaign full (live calls at its CC limit, e.g. 10 / 10): the box turns
+  // solid blue so a full campaign stands out at a glance.
+  const full = cap > 0 && current >= cap;
+
   return (
-    <span className="inline-flex h-7 min-w-[4.5rem] items-center justify-center gap-1 rounded-md border border-border bg-secondary/30 px-2 tabular-nums">
+    <span
+      className={cn(
+        "inline-flex h-7 min-w-[4.5rem] items-center justify-center gap-1 rounded-md border px-2 tabular-nums transition-colors",
+        full
+          ? "border-accent bg-accent font-semibold text-white"
+          : "border-border bg-secondary/30",
+      )}
+      title={full ? "Campaign full: every CC slot is in use" : undefined}
+    >
       <span>{current}</span>
-      <span className="text-muted-foreground">/</span>
+      <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
       {editing ? (
         <input
           ref={inputRef}
@@ -399,7 +411,10 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
           }}
           title="Click to change the CC limit (0 = unlimited)"
           aria-label="Change CC limit"
-          className="cursor-text rounded px-1 tabular-nums transition-colors hover:bg-accent/10 hover:ring-1 hover:ring-accent/40"
+          className={cn(
+            "cursor-text rounded px-1 tabular-nums transition-colors",
+            full ? "hover:bg-white/15 hover:ring-1 hover:ring-white/50" : "hover:bg-accent/10 hover:ring-1 hover:ring-accent/40",
+          )}
         >
           {cap > 0 ? cap : "∞"}
         </button>

@@ -6,7 +6,12 @@
  *         permission and report column the backend supports
  *   GET   /api/accounts/{buyer|publisher}/{id}/settings
  *   PATCH /api/accounts/{buyer|publisher}/{id}/settings
- *         { permissions?: {...}, visible_report_columns?: [...] }
+ *         { permissions?: {...}, visible_report_columns?: [...], timezone?: "America/New_York" }
+ *
+ * `timezone` is the partner's report time zone. It used to be kept in the
+ * browser only, so any other browser or device showed UTC. It is now sent to
+ * the server too; until the server stores it, the screen keeps the value
+ * that was picked (and the browser copy remains the fallback).
  *
  * This is the field the partner's OWN login reads (`visible_report_columns`
  * on /me). Before, the publisher page saved its checkboxes in the browser
@@ -44,6 +49,8 @@ export interface PartnerSettings {
   permissions: Record<string, boolean>;
   /** Backend column keys this partner's login may see. */
   visibleColumns: string[];
+  /** IANA time zone saved on the server; undefined when the server sent none. */
+  timezone?: string;
 }
 
 /** What the backend supported when this was written; used only if the catalogue can't be read. */
@@ -77,6 +84,7 @@ type CatalogueWire = {
 type SettingsWire = {
   permissions?: Record<string, boolean> | null;
   visibleReportColumns?: string[] | null;
+  timezone?: string | null;
 };
 
 function itemsFromWire(list: Array<Partial<CatalogueItem>> | undefined, fallback: CatalogueItem[]): CatalogueItem[] {
@@ -97,6 +105,7 @@ function settingsFromWire(w: SettingsWire | null | undefined): PartnerSettings {
   return {
     permissions,
     visibleColumns: Array.isArray(w?.visibleReportColumns) ? w!.visibleReportColumns!.map(String) : [],
+    timezone: typeof w?.timezone === "string" && w.timezone.trim() ? w.timezone.trim() : undefined,
   };
 }
 
@@ -114,6 +123,10 @@ interface Store {
   toggleColumn: (kind: PartnerKind, id: string, columnKey: string) => Promise<void>;
   /** Switch one permission for this partner's login. Saves at once. */
   togglePermission: (kind: PartnerKind, id: string, permissionKey: string) => Promise<void>;
+  /** Save this partner's report time zone on the server. */
+  setTimezone: (kind: PartnerKind, id: string, timezone: string) => Promise<void>;
+  /** true once the server has echoed a saved time zone back for this partner. */
+  timezoneOnServer: Record<string, boolean>;
 }
 
 let cataloguePromise: Promise<PartnerCatalogue> | null = null;
@@ -126,9 +139,15 @@ export const usePartnerSettingsStore = create<Store>()((set, get) => {
     set((s) => ({ byPartner: { ...s.byPartner, [k]: next } }));
     try {
       const w = await http.patch<SettingsWire>(`/api/accounts/${kind}/${id}/settings`, { body });
+      const fromServer = settingsFromWire(w);
       set((s) => ({
-        byPartner: { ...s.byPartner, [k]: settingsFromWire(w) },
+        // A server that does not store the time zone yet answers without it:
+        // keep the one on screen rather than blanking it.
+        byPartner: { ...s.byPartner, [k]: { ...fromServer, timezone: fromServer.timezone ?? next.timezone } },
         status: { ...s.status, [k]: "ok" },
+        timezoneOnServer: fromServer.timezone
+          ? { ...s.timezoneOnServer, [k]: true }
+          : s.timezoneOnServer,
       }));
     } catch (e) {
       set((s) => ({ byPartner: prev ? { ...s.byPartner, [k]: prev } : s.byPartner }));
@@ -140,6 +159,7 @@ export const usePartnerSettingsStore = create<Store>()((set, get) => {
     catalogue: null,
     byPartner: {},
     status: {},
+    timezoneOnServer: {},
 
     fetchCatalogue: async () => {
       const have = get().catalogue;
@@ -166,9 +186,13 @@ export const usePartnerSettingsStore = create<Store>()((set, get) => {
       set((s) => ({ status: { ...s.status, [k]: s.byPartner[k] ? s.status[k] ?? "ok" : "loading" } }));
       try {
         const w = await http.get<SettingsWire>(`/api/accounts/${kind}/${id}/settings`);
+        const fromServer = settingsFromWire(w);
         set((s) => ({
-          byPartner: { ...s.byPartner, [k]: settingsFromWire(w) },
+          byPartner: { ...s.byPartner, [k]: fromServer },
           status: { ...s.status, [k]: "ok" },
+          timezoneOnServer: fromServer.timezone
+            ? { ...s.timezoneOnServer, [k]: true }
+            : s.timezoneOnServer,
         }));
       } catch {
         set((s) => ({ status: { ...s.status, [k]: "error" } }));
@@ -196,6 +220,11 @@ export const usePartnerSettingsStore = create<Store>()((set, get) => {
       // Keys go out as written: the http layer would snake-case camelCase keys,
       // and these are already snake_case.
       await save(kind, id, { ...cur, permissions }, { permissions });
+    },
+
+    setTimezone: async (kind, id, timezone) => {
+      const cur = get().byPartner[keyOf(kind, id)] ?? { permissions: {}, visibleColumns: [] };
+      await save(kind, id, { ...cur, timezone }, { timezone });
     },
   };
 });

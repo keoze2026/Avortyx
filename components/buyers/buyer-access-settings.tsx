@@ -37,6 +37,7 @@ import {
   emptyBuyerAccess,
   useBuyerAccessStore,
 } from "@/lib/store/buyer-access-store";
+import { usePartnerSettingsStore } from "@/lib/store/partner-settings-store";
 import { TIMEZONES } from "@/lib/store/publisher-access-store";
 import type { Buyer } from "@/lib/types";
 
@@ -55,11 +56,24 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
   const fetchAccess = useBuyerAccessStore((s) => s.fetchAccess);
   const setTimezone = useBuyerAccessStore((s) => s.setTimezone);
 
+  // The time zone is also kept in the partner settings (the same place as
+  // Permissions and Reporting visibility), and that copy wins when the server
+  // has one - the /access copy kept coming back as UTC.
+  const serverTimezone = usePartnerSettingsStore((s) => s.byPartner[`buyer:${buyer.id}`]?.timezone);
+  const fetchPartnerSettings = usePartnerSettingsStore((s) => s.fetchSettings);
+  const savePartnerTimezone = usePartnerSettingsStore((s) => s.setTimezone);
+
   React.useEffect(() => {
     void fetchAccess(buyer.id);
-  }, [buyer.id, fetchAccess]);
+    void fetchPartnerSettings("buyer", buyer.id);
+  }, [buyer.id, fetchAccess, fetchPartnerSettings]);
+
+  const timezone = serverTimezone ?? access.timezone;
 
   const onTimezone = async (tz: string) => {
+    // Saved in both places; the partner settings copy is best-effort until the
+    // backend stores it there.
+    void savePartnerTimezone("buyer", buyer.id, tz).catch(() => undefined);
     try {
       await setTimezone(buyer.id, tz);
     } catch (e) {
@@ -87,7 +101,7 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{t("buyerAccess.manage")}</p>
         </div>
-        <Select value={access.timezone} onValueChange={(v) => void onTimezone(v)}>
+        <Select value={timezone} onValueChange={(v) => void onTimezone(v)}>
           <SelectTrigger className="w-full sm:w-72" aria-label={t("buyerAccess.timezone")}>
             <SelectValue />
           </SelectTrigger>
