@@ -76,9 +76,14 @@ export function PublisherSettingsTab({ publisher }: Props) {
   const timezone = serverTimezone ?? access?.timezone ?? "UTC";
   const onTimezoneChange = (tz: string) => {
     setTimezone(publisher.id, tz); // browser copy (fallback)
-    void savePartnerTimezone("publisher", publisher.id, tz).catch(() =>
-      toast.error("Couldn't save the time zone on the server. Please try again."),
-    );
+    void savePartnerTimezone("publisher", publisher.id, tz).catch((e: unknown) => {
+      // 400 / 404 / 422: this server does not store a partner time zone yet.
+      // Nothing is lost - the browser copy above keeps the choice - so no error
+      // is shown. Only a real failure (server error, no connection) is reported.
+      const status = (e as { status?: number })?.status;
+      if (typeof status === "number" && status < 500) return;
+      toast.error("Couldn't save the time zone on the server. Please try again.");
+    });
   };
   const members = access?.members ?? [];
   const capEnabled = access?.cap.enabled ?? false;
