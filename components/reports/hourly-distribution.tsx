@@ -15,9 +15,11 @@ import {
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { matchesCallStatusFilter } from "@/lib/call-status";
 import type { Call } from "@/lib/types";
 import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +49,18 @@ const COLOR_NOANS = "var(--destructive)";
 // accent. Sharing the accent with the Connected bars put two identical
 // blue squares in the legend and made the line read as part of the stack.
 const COLOR_REVENUE = "var(--success)"; // green — the total-calls line
+
+/** Which parts of the chart this login may see. A buyer / publisher login
+ *  loses whatever the admin unticked under its Reporting visibility, and a
+ *  publisher never sees revenue. Admin / staff: everything. */
+interface ChartParts {
+  connected: boolean;
+  noAnswer: boolean;
+  total: boolean;
+  revenue: boolean;
+}
+
+const ALL_PARTS: ChartParts = { connected: true, noAnswer: true, total: true, revenue: true };
 
 interface HourlyDistributionProps {
   calls: Call[];
@@ -498,6 +512,17 @@ export function HourlyDistribution({
 }: HourlyDistributionProps) {
   const { t } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
+  const role = useAuthStore((s) => s.user?.role);
+  const partnerHidden = usePartnerHiddenColumns().summary;
+  const show: ChartParts = React.useMemo(
+    () => ({
+      connected: !partnerHidden.has("connected"),
+      noAnswer: !partnerHidden.has("noConnect"),
+      total: !partnerHidden.has("incoming"),
+      revenue: role !== "publisher" && !partnerHidden.has("revenue"),
+    }),
+    [role, partnerHidden],
+  );
   const [grain, setGrain] = React.useState<Grain>("H");
   // Track the actual CHART CONTAINER width via ResizeObserver — the
   // viewport can be 1200px while the chart card only gets ~600px because
@@ -678,6 +703,7 @@ export function HourlyDistribution({
                     the tooltip). */}
                 <YAxis
                   yAxisId="rev"
+                  hide={!show.revenue}
                   orientation="right"
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
@@ -688,66 +714,80 @@ export function HourlyDistribution({
                   tickFormatter={compactMoney}
                   tickMargin={4}
                 />
-                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
+                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} show={show} />} />
                 {/* Stack order — bottom to top:
                      1. noAnswer    (red sliver at bottom)
                      2. converted   (accent, dominant, top of stack) */}
-                <Bar
-                  yAxisId="count"
-                  dataKey="noAnswer"
-                  stackId="calls"
-                  fill={COLOR_NOANS}
-                  radius={[0, 0, 0, 0]}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="converted"
-                  stackId="calls"
-                  fill={COLOR_CONVERTED}
-                  radius={[3, 3, 0, 0]}
-                />
+                {show.noAnswer && (
+                  <Bar
+                    yAxisId="count"
+                    dataKey="noAnswer"
+                    stackId="calls"
+                    fill={COLOR_NOANS}
+                    radius={show.connected ? [0, 0, 0, 0] : [3, 3, 0, 0]}
+                  />
+                )}
+                {show.connected && (
+                  <Bar
+                    yAxisId="count"
+                    dataKey="converted"
+                    stackId="calls"
+                    fill={COLOR_CONVERTED}
+                    radius={[3, 3, 0, 0]}
+                  />
+                )}
                 {/* Calls line: follows the call totals on the columns'
                     scale, riding just above each column so the count sits
                     between the column and the line (see lineLevel). */}
-                <Line
-                  yAxisId="count"
-                  type="monotone"
-                  dataKey="lineLevel"
-                  stroke={COLOR_REVENUE}
-                  strokeWidth={2}
-                  dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
-                  activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
-                  isAnimationActive
-                  animationDuration={500}
-                >
-                  {/* No value labels on the line: the call counts printed
-                      on top of the columns are the line's values. */}
-                </Line>
+                {show.total && (
+                  <Line
+                    yAxisId="count"
+                    type="monotone"
+                    dataKey="lineLevel"
+                    stroke={COLOR_REVENUE}
+                    strokeWidth={2}
+                    dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
+                    activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
+                    isAnimationActive
+                    animationDuration={500}
+                  >
+                    {/* No value labels on the line: the call counts printed
+                        on top of the columns are the line's values. */}
+                  </Line>
+                )}
                 {/* Call counts between each column and the line — see
                     ColumnCountLabel. A zero-height bar on the same stack,
                     placed after the line so the figures are drawn over it;
                     hidden from the tooltip and legend. */}
-                <Bar
-                  yAxisId="count"
-                  dataKey="labelAnchor"
-                  stackId="calls"
-                  fill="transparent"
-                  legendType="none"
-                  tooltipType="none"
-                >
-                  <LabelList
-                    dataKey="total"
-                    content={<ColumnCountLabel data={data} countTop={axes.countTop} />}
-                  />
-                </Bar>
+                {show.total && (
+                  <Bar
+                    yAxisId="count"
+                    dataKey="labelAnchor"
+                    stackId="calls"
+                    fill="transparent"
+                    legendType="none"
+                    tooltipType="none"
+                  >
+                    <LabelList
+                      dataKey="total"
+                      content={<ColumnCountLabel data={data} countTop={axes.countTop} />}
+                    />
+                  </Bar>
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
 
           <div className="flex items-center justify-center gap-5 pt-2">
-            <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
-            <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
-            <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
+            {show.connected && (
+              <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
+            )}
+            {show.noAnswer && (
+              <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
+            )}
+            {show.total && (
+              <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
+            )}
           </div>
         </div>
       </CardContent>
@@ -767,6 +807,7 @@ interface HourlyTooltipProps {
   active?: boolean;
   payload?: TooltipPayload[];
   grain: Grain;
+  show?: ChartParts;
 }
 
 const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -795,19 +836,27 @@ function HourlyTooltipWrapper(props: HourlyTooltipProps) {
   return <HourlyTooltipInner {...props} t={t} />;
 }
 
-function HourlyTooltipInner({ active, payload, grain, t }: HourlyTooltipProps & { t: (k: string) => string }) {
+function HourlyTooltipInner({
+  active,
+  payload,
+  grain,
+  show = ALL_PARTS,
+  t,
+}: HourlyTooltipProps & { t: (k: string) => string }) {
   if (!active || !payload || payload.length === 0) return null;
   const b = payload[0]?.payload;
   if (!b) return null;
 
   const total = b.converted + b.notConverted + b.noAnswer;
+  // Only the rows this login may see (see ChartParts).
   const rows: Array<{ color: string; label: string; value: string }> = [
-    { color: "var(--muted-foreground)", label: t("toolsUI.reports.hourly.tooltip.totalCalls"), value: formatNumber(total) },
-    { color: COLOR_CONVERTED, label: t("toolsUI.reports.hourly.tooltip.converted"), value: formatNumber(b.converted) },
-    { color: COLOR_NOTCONV, label: t("toolsUI.reports.hourly.tooltip.notConverted"), value: formatNumber(b.notConverted) },
-    { color: COLOR_NOANS, label: t("toolsUI.reports.hourly.tooltip.noAnswer"), value: formatNumber(b.noAnswer) },
-    { color: COLOR_REVENUE, label: t("toolsUI.reports.hourly.tooltip.revenue"), value: formatCurrency(b.revenue, true) },
-  ];
+    show.total && { color: "var(--muted-foreground)", label: t("toolsUI.reports.hourly.tooltip.totalCalls"), value: formatNumber(total) },
+    show.connected && { color: COLOR_CONVERTED, label: t("toolsUI.reports.hourly.tooltip.converted"), value: formatNumber(b.converted) },
+    show.connected && { color: COLOR_NOTCONV, label: t("toolsUI.reports.hourly.tooltip.notConverted"), value: formatNumber(b.notConverted) },
+    show.noAnswer && { color: COLOR_NOANS, label: t("toolsUI.reports.hourly.tooltip.noAnswer"), value: formatNumber(b.noAnswer) },
+    show.revenue && { color: COLOR_REVENUE, label: t("toolsUI.reports.hourly.tooltip.revenue"), value: formatCurrency(b.revenue, true) },
+  ].filter((r): r is { color: string; label: string; value: string } => !!r);
+  if (rows.length === 0) return null;
 
   return (
     <div className="rounded-md border border-border bg-popover/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md">

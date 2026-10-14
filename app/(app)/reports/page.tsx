@@ -21,6 +21,7 @@ import { TotalCallsDonut } from "@/components/reports/total-calls-donut";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import type { CallLogQuery, EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.service";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
@@ -313,6 +314,13 @@ export default function ReportsPage() {
     });
   }, [filters, viewCalls]);
 
+  // Columns the admin unticked under this buyer / publisher's Reporting
+  // visibility. The Call Performance card follows them like the tables do.
+  const partnerHidden = usePartnerHiddenColumns().summary;
+  const perfRevenue = role === "publisher" || partnerHidden.has("revenue") ? null : undefined;
+  const perfPayout = role === "buyer" || partnerHidden.has("payout") ? null : undefined;
+  const showPerf = perfRevenue === undefined || perfPayout === undefined;
+
   const summary = useMemo(() => {
     const revenue = filtered.reduce((s, c) => s + c.revenue, 0);
     const payout = filtered.reduce((s, c) => s + c.payout, 0);
@@ -469,10 +477,10 @@ export default function ReportsPage() {
             )}
             {(visibility.perf || visibility.donut) && (
               <div className="flex flex-col gap-4 lg:h-full">
-                {visibility.perf && (
+                {visibility.perf && showPerf && (
                   <CallPerfCard
-                    revenue={role === "publisher" ? null : summary.revenue}
-                    payout={role === "buyer" ? null : summary.payout}
+                    revenue={perfRevenue === null ? null : summary.revenue}
+                    payout={perfPayout === null ? null : summary.payout}
                   />
                 )}
                 {visibility.donut && (

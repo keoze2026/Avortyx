@@ -1,7 +1,11 @@
 "use client";
 
 /**
- * Marketplace — live RTB auction floor.
+ * Marketplace — two tabs:
+ *   Live Auctions  the RTB auction floor (unchanged, `LiveAuctionsFloor` below)
+ *   Services       partner websites directory (components/marketplace)
+ *
+ * Live RTB auction floor:
  *
  * Phase 8 redesign: the rich simulation has been replaced with a clean
  * "active auctions" table backed by /api/rtb/auctions, with a side-sheet
@@ -17,6 +21,7 @@ import {
   Clock,
   Gavel,
   Loader2,
+  Store,
   RefreshCw,
   TrendingUp,
 } from "lucide-react";
@@ -49,7 +54,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ServicesDirectory } from "@/components/marketplace/services-directory";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   marketplaceService,
@@ -68,7 +75,52 @@ const STATUS_VARIANT: Record<AuctionStatus, "success" | "outline" | "destructive
   cancelled: "destructive",
 };
 
+type MarketplaceTab = "auctions" | "services";
+
 export default function MarketplacePage() {
+  const [tab, setTab] = useState<MarketplaceTab>("auctions");
+
+  // Open on the tab in the link (/marketplace?tab=services) and keep the
+  // link in step, so a refresh or a shared link lands on the same tab.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("tab");
+    if (fromUrl === "services") setTab("services");
+  }, []);
+
+  function changeTab(value: string) {
+    const next: MarketplaceTab = value === "services" ? "services" : "auctions";
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === "services") url.searchParams.set("tab", "services");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(null, "", url.toString());
+  }
+
+  return (
+    <Tabs value={tab} onValueChange={changeTab} className="gap-5">
+      <TabsList>
+        <TabsTrigger value="auctions" className="px-3">
+          <Gavel className="h-3.5 w-3.5" />
+          Live Auctions
+        </TabsTrigger>
+        <TabsTrigger value="services" className="px-3">
+          <Store className="h-3.5 w-3.5" />
+          Services
+        </TabsTrigger>
+      </TabsList>
+
+      {/* forceMount keeps the floor's live socket and state while on Services. */}
+      <TabsContent value="auctions" forceMount className="data-[state=inactive]:hidden">
+        <LiveAuctionsFloor />
+      </TabsContent>
+      <TabsContent value="services">
+        <ServicesDirectory />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function LiveAuctionsFloor() {
   const buyers = useBuyersStore((s) => s.buyers);
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);

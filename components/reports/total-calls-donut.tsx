@@ -8,6 +8,7 @@ import { matchesCallStatusFilter } from "@/lib/call-status";
 import { formatNumber } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 
 interface TotalCallsDonutProps {
   calls: Call[];
@@ -42,15 +43,24 @@ function classify(c: Call): SliceKey {
 
 export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
   const { t } = useTranslation();
+  // A buyer / publisher login does not see the slices the admin unticked
+  // under its Reporting visibility (Connected / Not Connected), nor the
+  // total when Incoming is unticked. Admin / staff: nothing is hidden.
+  const partnerHidden = usePartnerHiddenColumns().summary;
   const counts = { converted: 0, noAnswer: 0 };
   for (const c of calls) counts[classify(c)] += 1;
 
   // Indigo for the positive outcome; destructive red for the rest.
-  const slices: Slice[] = [
+  const allSlices: Slice[] = [
     { key: "converted", label: t("toolsUI.reports.totalDonut.converted"), count: counts.converted, color: "var(--accent)", swatch: "var(--accent)" },
     { key: "noAnswer",  label: t("toolsUI.reports.totalDonut.noAnswer"),  count: counts.noAnswer,  color: "var(--destructive)", swatch: "var(--destructive)" },
   ];
-  const total = slices.reduce((s, x) => s + x.count, 0);
+  const slices = allSlices.filter((s) =>
+    s.key === "converted" ? !partnerHidden.has("connected") : !partnerHidden.has("noConnect"),
+  );
+  // Every call, not just the visible slices: "Total calls" is Incoming.
+  const total = counts.converted + counts.noAnswer;
+  const showTotal = !partnerHidden.has("incoming");
 
   // Track which slice is currently focused. `null` is the default — the
   // center shows the running TOTAL. Clicking a sector switches the center to
@@ -142,7 +152,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                   {formatNumber(activeSlice.count)}
                 </span>
               </div>
-            ) : (
+            ) : showTotal ? (
               <div className="relative flex flex-col items-center">
                 {/* "TOTAL CALLS" in the middle, the number under it - same as the Dashboard. */}
                 <span className="pl-[0.05em] text-[10px] font-extrabold uppercase leading-none tracking-wider text-muted-foreground">
@@ -152,7 +162,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                   {formatNumber(total)}
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
