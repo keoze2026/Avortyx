@@ -104,7 +104,10 @@ export function PartnerReportingVisibility({
                     checked={visible.has(col.key)}
                     disabled={!settings}
                     onCheckedChange={() => void onToggle(col.key)}
-                    className="mt-0.5"
+                    // Clearly visible box: a thicker, lighter border when empty and
+                    // a filled accent box with a white tick when ticked. The default
+                    // border nearly disappeared on the dark card.
+                    className="mt-0.5 size-[18px] border-2 border-muted-foreground/70 dark:bg-transparent data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-white dark:data-[state=checked]:bg-accent"
                   />
                   <div className="min-w-0">
                     <div className="text-sm font-medium leading-tight">
