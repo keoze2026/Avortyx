@@ -78,6 +78,7 @@ import type { Call, CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { cn } from "@/lib/utils";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
@@ -542,13 +543,17 @@ export function CallLogTable({
   // Plus the columns the admin unticked under this partner's Reporting
   // visibility (buyer / publisher logins only; never the admin's own view).
   const partnerHidden = usePartnerHiddenColumns().log;
+  // And what the admin switched off under this partner's Permissions:
+  // Audio Recording, Download Reports, Block Numbers, Manage Traffic.
+  const partnerCan = usePartnerPermissions().can;
   const columns = React.useMemo(() => {
     const out = { ...columnsState };
     if (role === "buyer") out.payout = false;
     if (role === "publisher") out.revenue = false;
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
+    if (!partnerCan("audio_recording")) out.recording = false;
     return out;
-  }, [columnsState, role, partnerHidden]);
+  }, [columnsState, role, partnerHidden, partnerCan]);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
   // Most recent call first until a column header is clicked.
@@ -791,17 +796,19 @@ export function CallLogTable({
               </div>
             </PopoverContent>
           </Popover>
-          <ExportMenu onExport={onExport}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              disabled={exporting}
-              aria-label={t("toolsUI.callLogs.toolbar.export")}
-            >
-              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            </Button>
-          </ExportMenu>
+          {partnerCan("download_reports") && (
+            <ExportMenu onExport={onExport}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={exporting}
+                aria-label={t("toolsUI.callLogs.toolbar.export")}
+              >
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              </Button>
+            </ExportMenu>
+          )}
         </div>
       </div>
 
@@ -950,7 +957,12 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       <TableCell className="pr-6">
-                        <CallRowActions call={c} onCallPatched={onCallPatched} />
+                        <CallRowActions
+                          call={c}
+                          onCallPatched={onCallPatched}
+                          canBlock={partnerCan("block_numbers")}
+                          canHangup={partnerCan("manage_traffic")}
+                        />
                       </TableCell>
                     </TableRow>
                   );
@@ -1061,9 +1073,15 @@ function HangUpCell({ call }: { call: Call }) {
 function CallRowActions({
   call,
   onCallPatched,
+  canBlock = true,
+  canHangup = true,
 }: {
   call: Call;
   onCallPatched?: (id: string, patch: Partial<Call>) => void;
+  /** False for a partner login whose Block Numbers permission is off. */
+  canBlock?: boolean;
+  /** False for a partner login whose Manage Traffic permission is off. */
+  canHangup?: boolean;
 }) {
   const { t } = useTranslation();
   const caller = formatCallerId(call.callerNumber);
@@ -1137,7 +1155,7 @@ function CallRowActions({
       {/* Hang up — only offered while the call is live; the backend
           answers 400 for anything that has already ended. Two clicks:
           the first arms it, the second (within 4 s) sends. */}
-      {isLive && (
+      {isLive && canHangup && (
         <Button
           variant={hangupArmed ? "destructive" : "ghost"}
           size="sm"
@@ -1159,15 +1177,17 @@ function CallRowActions({
       >
         <Copy className="h-3.5 w-3.5" />
       </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-        aria-label={t("toolsUI.reports.callLog.actions.blockCaller")}
-        onClick={onBlock}
-      >
-        <Ban className="h-3.5 w-3.5" />
-      </Button>
+      {canBlock && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          aria-label={t("toolsUI.reports.callLog.actions.blockCaller")}
+          onClick={onBlock}
+        >
+          <Ban className="h-3.5 w-3.5" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"

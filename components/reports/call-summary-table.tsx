@@ -40,6 +40,7 @@ import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { cn } from "@/lib/utils";
 
 type GroupKey =
@@ -955,6 +956,8 @@ export function CallSummaryTable({
   // Plus the columns the admin unticked under this partner's Reporting
   // visibility (buyer / publisher logins only; never the admin's own view).
   const partnerHidden = usePartnerHiddenColumns().summary;
+  // Download Reports switched off for this partner login: no export button.
+  const canDownload = usePartnerPermissions().can("download_reports");
   const hiddenForRole: ReadonlySet<ColumnKey> = React.useMemo(() => {
     const base: ColumnKey[] =
       role === "buyer"
@@ -1217,11 +1220,13 @@ export function CallSummaryTable({
               </div>
             </PopoverContent>
           </Popover>
-          <ExportMenu onExport={onExport}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.callLogs.toolbar.export")}>
-              <Download className="h-4 w-4" />
-            </Button>
-          </ExportMenu>
+          {canDownload && (
+            <ExportMenu onExport={onExport}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.callLogs.toolbar.export")}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </ExportMenu>
+          )}
         </div>
       </div>
 

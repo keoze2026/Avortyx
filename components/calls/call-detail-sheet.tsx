@@ -23,6 +23,7 @@ import {
 
 import { CallStatusBadge } from "./call-status-badge";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -98,6 +99,8 @@ function enrich(call: Call): CallEnrichment {
 
 export function CallDetailSheet({ call, onOpenChange }: Props) {
   const { t } = useTranslation();
+  // Audio Recording switched off for this partner login: no player at all.
+  const canListen = usePartnerPermissions().can("audio_recording");
   const open = !!call;
   const enrichment = call ? enrich(call) : null;
 
@@ -282,7 +285,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
 
               {/* Recording — render the player when the backend exposes a URL,
                   otherwise show the legacy placeholder. */}
-              {(detail?.recordingUrl || call.recordingUrl) ? (
+              {!canListen ? null : (detail?.recordingUrl || call.recordingUrl) ? (
                 <section className="mt-6 rounded-lg border border-border bg-card p-4">
                   <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                     <PlayCircle className="h-3.5 w-3.5 text-accent" />

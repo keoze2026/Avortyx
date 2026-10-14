@@ -21,12 +21,18 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 
 export default function CampaignsPage() {
   const { t } = useTranslation();
+  // A publisher login: Manage Traffic switched off = look, don't change.
+  // Creating a campaign also needs Number Creation (the server's "create").
+  const partnerCan = usePartnerPermissions().can;
+  const canManage = partnerCan("manage_traffic");
+  const canCreate = canManage && partnerCan("number_creation");
   const campaigns = useCampaignsStore((s) => s.campaigns);
   // Until the first load finishes, show a loading table - not "No campaigns
   // yet" (which flashed on every refresh before the real list arrived).
@@ -185,9 +191,11 @@ export default function CampaignsPage() {
         title={t("trafficUI.campaigns.pageTitle")}
         description={t("trafficUI.campaigns.pageDescription")}
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.newCampaign")}
-          </Button>
+          canCreate ? (
+            <Button size="sm" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.newCampaign")}
+            </Button>
+          ) : undefined
         }
       />
 
@@ -200,9 +208,11 @@ export default function CampaignsPage() {
           title={t("trafficUI.campaigns.empty.title")}
           description={t("trafficUI.campaigns.empty.description")}
           actions={
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.createCampaign")}
-            </Button>
+            canCreate ? (
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.createCampaign")}
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -221,7 +231,7 @@ export default function CampaignsPage() {
             onRefresh={() => toast.success(t("trafficUI.campaigns.refreshed"))}
           />
 
-          {selectedCampaigns.length > 0 && (
+          {canManage && selectedCampaigns.length > 0 && (
             <div className="flex items-center justify-between gap-3">
               <BulkActionsBar
                 count={selectedCampaigns.length}
@@ -249,6 +259,8 @@ export default function CampaignsPage() {
                 onToggle={onToggle}
                 onArchive={onArchive}
                 onClone={onClone}
+                canManage={canManage}
+                canCreate={canCreate}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
               />

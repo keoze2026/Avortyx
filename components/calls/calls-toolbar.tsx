@@ -84,7 +84,8 @@ interface Props {
   campaigns: Array<{ id: string; name: string }>;
   visibleColumns: Set<string>;
   onToggleColumn: (id: string) => void;
-  onExport: (format: ExportFormat) => void;
+  /** Leave out to hide Export (a partner login without Download Reports). */
+  onExport?: (format: ExportFormat) => void;
   count: number;
   total: number;
 }
@@ -225,12 +226,14 @@ export function CallsToolbar({
           {t("toolsUI.callLogs.toolbar.countOfTotal").replace("{count}", formatNumber(count)).replace("{total}", formatNumber(total))}
         </span>
 
-        <ExportMenu onExport={onExport}>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5">
-            <Download className="h-3.5 w-3.5" />
-            {t("toolsUI.callLogs.toolbar.export")}
-          </Button>
-        </ExportMenu>
+        {onExport && (
+          <ExportMenu onExport={onExport}>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5">
+              <Download className="h-3.5 w-3.5" />
+              {t("toolsUI.callLogs.toolbar.export")}
+            </Button>
+          </ExportMenu>
+        )}
       </div>
     </div>
   );

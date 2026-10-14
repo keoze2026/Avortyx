@@ -5,6 +5,7 @@ import { PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { CallDetailSheet } from "@/components/calls/call-detail-sheet";
 import { ALL_COLUMNS, CallsToolbar } from "@/components/calls/calls-toolbar";
 import { CallsTable } from "@/components/calls/calls-table";
@@ -42,8 +43,8 @@ const DEFAULT_VISIBLE = new Set(ALL_COLUMNS.map((c) => c.id));
 /** Columns written to the CSV / XLSX file - the same names, order and formats
  *  as the Reports call-log export (see lib/call-log-export.ts). Numeric fields
  *  (payout, revenue) stay numbers so XLSX keeps their type. */
-function callExportColumns(destinationNames: ReadonlyMap<string, string>): ExportColumn<Call>[] {
-  return upperLabels<Call>([
+function callExportColumns(destinationNames: ReadonlyMap<string, string>, withRecording = true): ExportColumn<Call>[] {
+  const cols: ExportColumn<Call>[] = [
     { label: "Call ID", value: (c) => c.id },
     { label: "Started", value: (c) => new Date(c.startedAt).toISOString() },
     { label: "Caller ID", value: (c) => exportNumber(c.callerNumber) },
@@ -59,11 +60,14 @@ function callExportColumns(destinationNames: ReadonlyMap<string, string>): Expor
     { label: "Payout", value: (c) => c.payout },
     { label: "Revenue", value: (c) => c.revenue },
     { label: "Recording", value: (c) => c.recordingUrl ?? "" },
-  ]);
+  ];
+  // No recording links in the file for a partner login without Audio Recording.
+  return upperLabels<Call>(withRecording ? cols : cols.filter((c) => c.label !== "Recording"));
 }
 
 export default function CallsPage() {
   const { t } = useTranslation();
+  const partnerCan = usePartnerPermissions().can;
   const [query, setQuery] = useState("");
   const [range, setRange] = useState<DateRange>("7d");
   const [statuses, setStatuses] = useState<Set<CallStatus>>(new Set());
@@ -181,7 +185,7 @@ export default function CallsPage() {
   const onExport = (format: ExportFormat) => {
     downloadRows(
       format,
-      callExportColumns(destinationNames),
+      callExportColumns(destinationNames, partnerCan("audio_recording")),
       filtered,
       dateStamped(`calls-${range}`),
       "Calls",
@@ -222,7 +226,7 @@ export default function CallsPage() {
           campaigns={campaigns}
           visibleColumns={visibleColumns}
           onToggleColumn={toggleColumn}
-          onExport={onExport}
+          onExport={partnerCan("download_reports") ? onExport : undefined}
           count={filtered.length}
           total={rangeCalls.length}
         />

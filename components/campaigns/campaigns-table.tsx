@@ -58,6 +58,10 @@ interface CampaignsTableProps {
   campaigns: Campaign[];
   columns?: Record<CampaignColumnKey, boolean>;
   onToggle: (id: string) => void;
+  /** False for a partner login without Manage Traffic: status, archive locked. */
+  canManage?: boolean;
+  /** False for a partner login that may not create campaigns: no Duplicate. */
+  canCreate?: boolean;
   onArchive: (id: string) => void;
   /** Called when the + (clone) icon is clicked on a row. */
   onClone?: (id: string) => void;
@@ -109,6 +113,8 @@ export function CampaignsTable({
   onClone,
   selectedIds,
   onSelectionChange,
+  canManage = true,
+  canCreate = true,
 }: CampaignsTableProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -247,6 +253,7 @@ export function CampaignsTable({
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={isActive}
+                        disabled={!canManage}
                         onCheckedChange={() => onToggle(c.id)}
                         aria-label={isActive ? t("trafficUI.campaigns.table.pauseCampaign") : t("trafficUI.campaigns.table.activateCampaign")}
                       />
@@ -259,18 +266,24 @@ export function CampaignsTable({
                         label={t("trafficUI.campaigns.table.edit")}
                         onClick={() => router.push(`${ROUTES.campaigns}/${c.id}`)}
                       />
-                      <ActionIcon
-                        icon={CirclePlus}
-                        label={t("trafficUI.campaigns.table.duplicate")}
-                        onClick={() => onClone?.(c.id)}
-                      />
-                      <ActionIcon icon={Undo2} label={t("trafficUI.campaigns.table.revert")} />
-                      <ActionIcon
-                        icon={Trash2}
-                        label={t("trafficUI.campaigns.table.archive")}
-                        tone="destructive"
-                        onClick={() => onArchive(c.id)}
-                      />
+                      {canCreate && (
+                        <ActionIcon
+                          icon={CirclePlus}
+                          label={t("trafficUI.campaigns.table.duplicate")}
+                          onClick={() => onClone?.(c.id)}
+                        />
+                      )}
+                      {canManage && (
+                        <>
+                          <ActionIcon icon={Undo2} label={t("trafficUI.campaigns.table.revert")} />
+                          <ActionIcon
+                            icon={Trash2}
+                            label={t("trafficUI.campaigns.table.archive")}
+                            tone="destructive"
+                            onClick={() => onArchive(c.id)}
+                          />
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
