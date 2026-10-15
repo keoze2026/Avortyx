@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -108,7 +109,21 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                         {n.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{n.label ?? "—"}</TableCell>
+                    <TableCell className="min-w-[160px] text-sm">
+                      <NumberNameCell
+                        value={n.label ?? ""}
+                        placeholder={t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder")}
+                        ariaLabel={t("trafficUI.campaigns.settings.trackingNumbers.name.aria").replace("{number}", e164)}
+                        onSave={async (label) => {
+                          try {
+                            await updateNumber(n.id, { label });
+                            toast.success(t("trafficUI.campaigns.settings.trackingNumbers.name.saved"));
+                          } catch {
+                            toast.error(t("trafficUI.campaigns.settings.trackingNumbers.name.error"));
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {n.publisherName ?? "—"}
                     </TableCell>
@@ -171,6 +186,56 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
         onOpenChange={setAttachOpen}
       />
     </section>
+  );
+}
+
+/**
+ * The tracking number's name, typed straight into the table. Saves when you
+ * press Enter or click away; Escape puts the old name back. Looks like plain
+ * text until hovered or focused, so the table reads the same as before.
+ */
+function NumberNameCell({
+  value,
+  placeholder,
+  ariaLabel,
+  onSave,
+}: {
+  value: string;
+  placeholder: string;
+  ariaLabel: string;
+  onSave: (label: string) => Promise<void> | void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
+  // a name saved elsewhere (the edit dialog, another tab) shows here too
+  if (!editing && draft !== value) setDraft(value);
+
+  const commit = () => {
+    setEditing(false);
+    const next = draft.trim();
+    if (next !== value.trim()) void onSave(next);
+    else setDraft(value);
+  };
+
+  return (
+    <Input
+      value={draft}
+      maxLength={255}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      onFocus={() => setEditing(true)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          setDraft(value);
+          setEditing(false);
+          requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
+        }
+      }}
+      className="h-8 border-transparent bg-transparent px-2 text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
+    />
   );
 }
 

@@ -9,7 +9,7 @@ export const ja: TranslationShape = {
     campaigns: "キャンペーン",
     phoneNumbers: "電話番号",
     routing: "ルーティング",
-    ivr: "IVR",
+    ivr: "IVR 音声応答",
     callQueue: "コールキュー",
     buyers: "バイヤー",
     destinations: "宛先",

@@ -18,9 +18,10 @@ import { activity } from "./activity";
 import { bulk } from "./bulk";
 import { buyerAccess } from "./buyer-access";
 import { routing } from "./routing";
+import { ivr } from "./ivr";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {

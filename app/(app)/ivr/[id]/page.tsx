@@ -49,22 +49,25 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { useTranslation } from "@/hooks/use-translation";
 import { ivrService, type IvrFlow, type IvrNode, type IvrTransition } from "@/lib/api/services/ivr.service";
 import { ROUTES } from "@/lib/constants";
 
 type NodeType = "say" | "menu" | "collect" | "transfer" | "record" | "hangup";
 
-const NODE_META: Record<
-  NodeType,
-  { label: string; icon: typeof Volume2; description: string; tone: string }
-> = {
-  say: { label: "Say", icon: Volume2, description: "Play a text-to-speech message", tone: "text-accent" },
-  menu: { label: "Menu", icon: Hash, description: "DTMF menu — branch on key press", tone: "text-[color:var(--warning)]" },
-  collect: { label: "Collect", icon: Mic, description: "Gather a digit sequence (PIN, account #)", tone: "text-[color:var(--warning)]" },
-  transfer: { label: "Transfer", icon: PhoneForwarded, description: "Forward call to a buyer or number", tone: "text-[color:var(--success)]" },
-  record: { label: "Record", icon: Radio, description: "Record the caller's voice", tone: "text-muted-foreground" },
-  hangup: { label: "Hangup", icon: X, description: "End the call", tone: "text-destructive" },
+// Name and description of each kind are translated: ivrUI.node.<kind>.label / .description
+const NODE_META: Record<NodeType, { icon: typeof Volume2; tone: string }> = {
+  say: { icon: Volume2, tone: "text-accent" },
+  menu: { icon: Hash, tone: "text-[color:var(--warning)]" },
+  collect: { icon: Mic, tone: "text-[color:var(--warning)]" },
+  transfer: { icon: PhoneForwarded, tone: "text-[color:var(--success)]" },
+  record: { icon: Radio, tone: "text-muted-foreground" },
+  hangup: { icon: X, tone: "text-destructive" },
 };
+
+type T = (key: string) => string;
+const nodeLabel = (t: T, type: NodeType) => t(`ivrUI.node.${type}.label`);
+const nodeDescription = (t: T, type: NodeType) => t(`ivrUI.node.${type}.description`);
 
 interface NodeDraft {
   id: string;
@@ -87,6 +90,7 @@ function emptyConfig(type: NodeType): Record<string, unknown> {
 }
 
 export default function IvrFlowEditorPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [flow, setFlow] = useState<IvrFlow | null>(null);
@@ -117,7 +121,7 @@ export default function IvrFlowEditorPage() {
         }));
         setNodes(drafts);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Couldn't load flow");
+        toast.error(e instanceof Error ? e.message : t("ivrUI.editor.toast.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -147,12 +151,12 @@ export default function IvrFlowEditorPage() {
           },
         ]);
         setAddOpen(false);
-        toast.success(`${NODE_META[type].label} node added`);
+        toast.success(t("ivrUI.editor.toast.nodeAdded").replace("{type}", nodeLabel(t, type)));
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Add failed");
+        toast.error(e instanceof Error ? e.message : t("ivrUI.editor.toast.addFailed"));
       }
     },
-    [flow],
+    [flow, t],
   );
 
   const patchNode = (id: string, patch: Partial<NodeDraft>) =>
@@ -231,26 +235,26 @@ export default function IvrFlowEditorPage() {
           }
         }
       }
-      toast.success("Flow saved");
+      toast.success(t("ivrUI.editor.toast.saved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : t("ivrUI.editor.toast.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const nodeOptions = useMemo(
-    () => nodes.map((n) => ({ id: n.id, label: `${NODE_META[n.nodeType].label} · ${n.label || n.id}` })),
-    [nodes],
+    () => nodes.map((n) => ({ id: n.id, label: `${nodeLabel(t, n.nodeType)} · ${n.label || n.id}` })),
+    [nodes, t],
   );
 
   if (loading) {
     return (
       <>
-        <PageHeader title="Loading flow…" />
+        <PageHeader title={t("ivrUI.editor.loadingTitle")} />
         <Card>
           <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading IVR flow…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("ivrUI.editor.loadingBody")}
           </CardContent>
         </Card>
       </>
@@ -262,10 +266,10 @@ export default function IvrFlowEditorPage() {
       <EmptyState
         icon={PhoneForwarded}
         tone="amber"
-        title="Flow not found"
-        description="It may have been deleted."
+        title={t("ivrUI.editor.notFound.title")}
+        description={t("ivrUI.editor.notFound.description")}
         actions={
-          <Button onClick={() => router.push(ROUTES.ivr)}>Back to flows</Button>
+          <Button onClick={() => router.push(ROUTES.ivr)}>{t("ivrUI.editor.backToFlows")}</Button>
         }
       />
     );
@@ -275,20 +279,20 @@ export default function IvrFlowEditorPage() {
     <>
       <PageHeader
         title={flow.name}
-        description={flow.description ?? "Configure the nodes and transitions for this flow."}
+        description={flow.description ?? t("ivrUI.editor.defaultDescription")}
         actions={
           <>
             <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
-              <Plus className="h-3.5 w-3.5" /> Add node
+              <Plus className="h-3.5 w-3.5" /> {t("ivrUI.editor.addNode")}
             </Button>
             <Button size="sm" onClick={save} disabled={saving}>
               {saving ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("ivrUI.editor.saving")}
                 </>
               ) : (
                 <>
-                  <Save className="h-3.5 w-3.5" /> Save
+                  <Save className="h-3.5 w-3.5" /> {t("ivrUI.editor.save")}
                 </>
               )}
             </Button>
@@ -300,11 +304,11 @@ export default function IvrFlowEditorPage() {
         <EmptyState
           icon={Volume2}
           tone="cyan"
-          title="This flow has no nodes yet"
-          description="Add a starting node — usually a Say or Menu — to begin building the flow."
+          title={t("ivrUI.editor.noNodes.title")}
+          description={t("ivrUI.editor.noNodes.description")}
           actions={
             <Button onClick={() => setAddOpen(true)}>
-              <Plus className="h-4 w-4" /> Add first node
+              <Plus className="h-4 w-4" /> {t("ivrUI.editor.addFirstNode")}
             </Button>
           }
         />
@@ -324,14 +328,14 @@ export default function IvrFlowEditorPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                            {meta.label}
+                            {nodeLabel(t, n.nodeType)}
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">#{idx + 1}</span>
                         </div>
                         <Input
                           value={n.label}
                           onChange={(e) => patchNode(n.id, { label: e.target.value })}
-                          placeholder="Node label"
+                          placeholder={t("ivrUI.editor.nodeLabelPlaceholder")}
                           className="mt-1.5 h-8 max-w-md text-sm"
                         />
                       </div>
@@ -341,7 +345,7 @@ export default function IvrFlowEditorPage() {
                       variant="ghost"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
                       onClick={() => removeNode(n.id)}
-                      aria-label="Remove node"
+                      aria-label={t("ivrUI.editor.removeNode")}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -354,7 +358,7 @@ export default function IvrFlowEditorPage() {
                     <div className="space-y-2 border-t border-border/40 pt-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                          Next steps
+                          {t("ivrUI.editor.nextSteps")}
                         </span>
                         <Button
                           size="sm"
@@ -362,34 +366,34 @@ export default function IvrFlowEditorPage() {
                           onClick={() => addTransition(n.id)}
                           disabled={nodeOptions.length <= 1}
                         >
-                          <Plus className="h-3 w-3" /> Transition
+                          <Plus className="h-3 w-3" /> {t("ivrUI.editor.transition")}
                         </Button>
                       </div>
                       {n.transitions.length === 0 ? (
                         <p className="text-[11px] italic text-muted-foreground">
                           {n.nodeType === "hangup"
-                            ? "Terminal node — no transitions."
-                            : "No transitions yet. Add one to chain to the next node."}
+                            ? t("ivrUI.editor.terminal")
+                            : t("ivrUI.editor.noTransitions")}
                         </p>
                       ) : (
                         <ul className="space-y-1.5">
-                          {n.transitions.map((t, ti) => (
+                          {n.transitions.map((tr, ti) => (
                             <li key={ti} className="flex items-center gap-2">
                               <Input
-                                value={t.condition ?? ""}
+                                value={tr.condition ?? ""}
                                 onChange={(e) =>
                                   patchTransition(n.id, ti, { condition: e.target.value })
                                 }
-                                placeholder={n.nodeType === "menu" ? "DTMF key (e.g. 1)" : "Condition"}
+                                placeholder={n.nodeType === "menu" ? t("ivrUI.editor.dtmfPlaceholder") : t("ivrUI.editor.conditionPlaceholder")}
                                 className="h-8 w-32 font-mono text-xs"
                               />
                               <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                               <Select
-                                value={t.toNodeId || undefined}
+                                value={tr.toNodeId || undefined}
                                 onValueChange={(v) => patchTransition(n.id, ti, { toNodeId: v })}
                               >
                                 <SelectTrigger className="h-8 flex-1 text-xs">
-                                  <SelectValue placeholder="Select next node" />
+                                  <SelectValue placeholder={t("ivrUI.editor.selectNext")} />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {nodeOptions
@@ -406,7 +410,7 @@ export default function IvrFlowEditorPage() {
                                 variant="ghost"
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                 onClick={() => removeTransition(n.id, ti)}
-                                aria-label="Remove transition"
+                                aria-label={t("ivrUI.editor.removeTransition")}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
@@ -443,16 +447,17 @@ function NodeConfigEditor({
   draft: NodeDraft;
   onPatch: (patch: Record<string, unknown>) => void;
 }) {
+  const { t } = useTranslation();
   const { nodeType, config } = draft;
   if (nodeType === "say") {
     return (
       <div className="space-y-1.5">
-        <Label className="text-xs">Message</Label>
+        <Label className="text-xs">{t("ivrUI.config.message")}</Label>
         <Textarea
           rows={2}
           value={(config.message as string) ?? ""}
           onChange={(e) => onPatch({ message: e.target.value })}
-          placeholder="Thanks for calling. Please listen carefully…"
+          placeholder={t("ivrUI.config.messagePlaceholder")}
         />
       </div>
     );
@@ -465,10 +470,10 @@ function NodeConfigEditor({
           rows={2}
           value={(config.prompt as string) ?? ""}
           onChange={(e) => onPatch({ prompt: e.target.value })}
-          placeholder="Press 1 for sales, 2 for support…"
+          placeholder={t("ivrUI.config.menuPromptPlaceholder")}
         />
         <p className="text-[11px] text-muted-foreground">
-          Define each menu choice as a transition below, using the DTMF key as the condition.
+          {t("ivrUI.config.menuHint")}
         </p>
       </div>
     );
@@ -481,11 +486,11 @@ function NodeConfigEditor({
           <Input
             value={(config.prompt as string) ?? ""}
             onChange={(e) => onPatch({ prompt: e.target.value })}
-            placeholder="Please enter your account number"
+            placeholder={t("ivrUI.config.collectPromptPlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Digits</Label>
+          <Label className="text-xs">{t("ivrUI.config.digits")}</Label>
           <Input
             type="number"
             min={1}
@@ -495,7 +500,7 @@ function NodeConfigEditor({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Timeout (s)</Label>
+          <Label className="text-xs">{t("ivrUI.config.timeout")}</Label>
           <Input
             type="number"
             min={1}
@@ -511,7 +516,7 @@ function NodeConfigEditor({
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs">Destination type</Label>
+          <Label className="text-xs">{t("ivrUI.config.destinationType")}</Label>
           <Select
             value={(config.destinationType as string) ?? "buyer"}
             onValueChange={(v) => onPatch({ destinationType: v })}
@@ -520,14 +525,14 @@ function NodeConfigEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="buyer">Buyer</SelectItem>
-              <SelectItem value="number">Phone number</SelectItem>
+              <SelectItem value="buyer">{t("ivrUI.config.buyer")}</SelectItem>
+              <SelectItem value="number">{t("ivrUI.config.phoneNumber")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">
-            {(config.destinationType as string) === "number" ? "Number" : "Buyer ID"}
+            {(config.destinationType as string) === "number" ? t("ivrUI.config.number") : t("ivrUI.config.buyerId")}
           </Label>
           <Input
             value={
@@ -554,7 +559,7 @@ function NodeConfigEditor({
   if (nodeType === "record") {
     return (
       <div className="space-y-1.5">
-        <Label className="text-xs">Max duration (seconds)</Label>
+        <Label className="text-xs">{t("ivrUI.config.maxDuration")}</Label>
         <Input
           type="number"
           min={1}
@@ -568,7 +573,7 @@ function NodeConfigEditor({
   // hangup
   return (
     <p className="text-[11px] italic text-muted-foreground">
-      The call ends when it reaches this node. No additional configuration needed.
+      {t("ivrUI.config.hangupNote")}
     </p>
   );
 }
@@ -588,19 +593,20 @@ function AddNodeDialog({
   setPendingType: (t: NodeType) => void;
   onAdd: (type: NodeType, label: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [label, setLabel] = useState("");
 
   useEffect(() => {
-    if (open) setLabel(NODE_META[pendingType].label);
-  }, [open, pendingType]);
+    if (open) setLabel(nodeLabel(t, pendingType));
+  }, [open, pendingType, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add node</DialogTitle>
+          <DialogTitle>{t("ivrUI.addNode.title")}</DialogTitle>
           <DialogDescription>
-            Pick a node kind — you can edit its configuration after adding.
+            {t("ivrUI.addNode.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -624,9 +630,9 @@ function AddNodeDialog({
                   <Icon className="h-4 w-4" />
                 </span>
                 <div>
-                  <div className="text-sm font-semibold">{meta.label}</div>
+                  <div className="text-sm font-semibold">{nodeLabel(t, type)}</div>
                   <div className="text-[11px] leading-tight text-muted-foreground">
-                    {meta.description}
+                    {nodeDescription(t, type)}
                   </div>
                 </div>
               </button>
@@ -636,22 +642,22 @@ function AddNodeDialog({
 
         <div className="space-y-1.5 py-2">
           <Label htmlFor="node-label" className="text-xs">
-            Label
+            {t("ivrUI.addNode.label")}
           </Label>
           <Input
             id="node-label"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="Greeting / Main menu / Transfer to sales"
+            placeholder={t("ivrUI.addNode.labelPlaceholder")}
           />
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("ivrUI.addNode.cancel")}
           </Button>
-          <Button onClick={() => onAdd(pendingType, label.trim() || NODE_META[pendingType].label)}>
-            Add
+          <Button onClick={() => onAdd(pendingType, label.trim() || nodeLabel(t, pendingType))}>
+            {t("ivrUI.addNode.add")}
           </Button>
         </DialogFooter>
       </DialogContent>

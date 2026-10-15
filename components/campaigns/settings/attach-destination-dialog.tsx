@@ -173,7 +173,7 @@ export function AttachDestinationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="flex max-h-[90vh] w-[95vw] flex-col gap-4 sm:max-w-4xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
@@ -196,9 +196,9 @@ export function AttachDestinationDialog({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by number, name or buyer"
-            className="h-8 flex-1"
+            className="h-10 flex-1 text-sm"
           />
-          <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-medium">
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-medium">
             <Checkbox
               checked={allShownSelected}
               disabled={filtered.length === 0}
@@ -209,7 +209,7 @@ export function AttachDestinationDialog({
           </label>
         </div>
 
-        <div className="max-h-[320px] overflow-y-auto rounded-md border">
+        <div className="min-h-[300px] flex-1 overflow-y-auto rounded-md border sm:min-h-[460px]">
           {filtered.length === 0 ? (
             <p className="p-4 text-center text-xs text-muted-foreground">
               {available.length === 0
@@ -222,13 +222,13 @@ export function AttachDestinationDialog({
             filtered.map((d) => (
               <label
                 key={d.id}
-                className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/40"
+                className="flex cursor-pointer items-center gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-muted/40"
               >
                 <Checkbox
                   checked={selected.has(d.id)}
                   onCheckedChange={() => toggle(d.id)}
                 />
-                <span className="flex-1 text-xs">
+                <span className="flex-1 text-sm">
                   <span className="font-medium">{toE164(d.tfn)}</span>
                   <span className="text-muted-foreground">
                     {" — "}

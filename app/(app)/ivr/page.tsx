@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { useTranslation } from "@/hooks/use-translation";
 import { ivrService, type IvrFlow, type IvrFlowStatus } from "@/lib/api/services/ivr.service";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 
@@ -46,6 +47,7 @@ const STATUS_VARIANT: Record<IvrFlowStatus, "success" | "outline" | "warning"> =
 };
 
 export default function IvrPage() {
+  const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const [flows, setFlows] = useState<IvrFlow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function IvrPage() {
         const items = await ivrService.listFlows();
         if (!cancelled) setFlows(items);
       } catch (e) {
-        if (!cancelled) toast.error(e instanceof Error ? e.message : "Couldn't load flows");
+        if (!cancelled) toast.error(e instanceof Error ? e.message : t("ivrUI.toast.loadFlowsFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -78,21 +80,21 @@ export default function IvrPage() {
     setFlows((f) => f.filter((x) => x.id !== flow.id));
     try {
       await ivrService.deleteFlow(flow.id);
-      toast.success(`${flow.name} deleted`);
+      toast.success(t("ivrUI.toast.deleted").replace("{name}", flow.name));
     } catch (e) {
       setFlows(prev);
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : t("ivrUI.toast.deleteFailed"));
     }
   };
 
   return (
     <>
       <PageHeader
-        title="IVR Flows"
-        description="Automated voice menus and transfers for inbound calls."
+        title={t("ivrUI.title")}
+        description={t("ivrUI.description")}
         actions={
           <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-3.5 w-3.5" /> New flow
+            <Plus className="h-3.5 w-3.5" /> {t("ivrUI.newFlow")}
           </Button>
         }
       />
@@ -100,18 +102,18 @@ export default function IvrPage() {
       {loading ? (
         <Card>
           <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading flows…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("ivrUI.loadingFlows")}
           </CardContent>
         </Card>
       ) : flows.length === 0 ? (
         <EmptyState
           icon={PhoneForwarded}
           tone="cyan"
-          title="No IVR flows yet"
-          description="Create your first flow to route inbound calls through a voice menu before they hit a buyer."
+          title={t("ivrUI.empty.title")}
+          description={t("ivrUI.empty.description")}
           actions={
             <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" /> New flow
+              <Plus className="h-4 w-4" /> {t("ivrUI.newFlow")}
             </Button>
           }
         />
@@ -129,18 +131,18 @@ export default function IvrPage() {
                       </p>
                     )}
                   </div>
-                  <Badge variant={STATUS_VARIANT[f.status]}>{f.status}</Badge>
+                  <Badge variant={STATUS_VARIANT[f.status]}>{t(`ivrUI.status.${f.status}`)}</Badge>
                 </div>
 
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-                  <dt className="text-muted-foreground">Campaign</dt>
+                  <dt className="text-muted-foreground">{t("ivrUI.card.campaign")}</dt>
                   <dd className="text-right font-mono">
                     {f.campaignName ?? f.campaignId ?? "—"}
                   </dd>
-                  <dt className="text-muted-foreground">Language</dt>
+                  <dt className="text-muted-foreground">{t("ivrUI.card.language")}</dt>
                   <dd className="text-right font-mono">{f.language ?? "en"}</dd>
-                  <dt className="text-muted-foreground">Voice</dt>
-                  <dd className="text-right font-mono">{f.voice ?? "default"}</dd>
+                  <dt className="text-muted-foreground">{t("ivrUI.card.voice")}</dt>
+                  <dd className="text-right font-mono">{f.voice ?? t("ivrUI.card.voiceDefault")}</dd>
                 </dl>
 
                 <div className="flex items-center justify-between border-t border-border/40 pt-2">
@@ -148,13 +150,13 @@ export default function IvrPage() {
                     href={`/ivr/${f.id}`}
                     className="inline-flex items-center gap-1 text-xs font-medium text-accent transition-colors hover:underline"
                   >
-                    Configure <ExternalLink className="h-3 w-3" />
+                    {t("ivrUI.configure")} <ExternalLink className="h-3 w-3" />
                   </Link>
                   <Button
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    aria-label={`Delete ${f.name}`}
+                    aria-label={t("ivrUI.deleteAria").replace("{name}", f.name)}
                     onClick={() => remove(f)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -187,6 +189,7 @@ function CreateFlowDialog({
   campaigns: ReturnType<typeof useCampaignsStore.getState>["campaigns"];
   onCreated: (f: IvrFlow) => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [campaignId, setCampaignId] = useState<string>("none");
@@ -215,10 +218,10 @@ function CreateFlowDialog({
         campaignId: campaignId !== "none" ? campaignId : undefined,
         welcomeMessage: welcomeMessage.trim() || undefined,
       });
-      toast.success(`${flow.name} created`);
+      toast.success(t("ivrUI.toast.created").replace("{name}", flow.name));
       onCreated(flow);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Create failed");
+      toast.error(e instanceof Error ? e.message : t("ivrUI.toast.createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -228,15 +231,15 @@ function CreateFlowDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New IVR flow</DialogTitle>
+          <DialogTitle>{t("ivrUI.create.title")}</DialogTitle>
           <DialogDescription>
-            A flow holds the voice menu and transitions a caller goes through before reaching a buyer.
+            {t("ivrUI.create.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
-            <Label htmlFor="ivr-name">Name</Label>
+            <Label htmlFor="ivr-name">{t("ivrUI.create.name")}</Label>
             <Input
               id="ivr-name"
               value={name}
@@ -246,7 +249,7 @@ function CreateFlowDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ivr-desc">Description</Label>
+            <Label htmlFor="ivr-desc">{t("ivrUI.create.descriptionLabel")}</Label>
             <Textarea
               id="ivr-desc"
               value={description}
@@ -256,13 +259,13 @@ function CreateFlowDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Campaign (optional)</Label>
+            <Label>{t("ivrUI.create.campaign")}</Label>
             <Select value={campaignId} onValueChange={setCampaignId}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">— Unassigned —</SelectItem>
+                <SelectItem value="none">{t("ivrUI.create.unassigned")}</SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -273,28 +276,28 @@ function CreateFlowDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ivr-welcome">Welcome message</Label>
+            <Label htmlFor="ivr-welcome">{t("ivrUI.create.welcome")}</Label>
             <Textarea
               id="ivr-welcome"
               value={welcomeMessage}
               onChange={(e) => setWelcomeMessage(e.target.value)}
               rows={2}
-              placeholder="Thanks for calling. Press 1 for sales…"
+              placeholder={t("ivrUI.create.welcomePlaceholder")}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onClose(false)}>
-            Cancel
+            {t("ivrUI.create.cancel")}
           </Button>
           <Button onClick={onSubmit} disabled={submitting || !name.trim()}>
             {submitting ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Creating…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("ivrUI.create.creating")}
               </>
             ) : (
-              "Create flow"
+              t("ivrUI.create.submit")
             )}
           </Button>
         </DialogFooter>

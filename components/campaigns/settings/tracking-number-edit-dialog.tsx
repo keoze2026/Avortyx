@@ -104,6 +104,24 @@ export function TrackingNumberEditDialog({
     [numberId, updateNumber],
   );
 
+  // The name is saved when the field loses focus (or on Enter), not on every
+  // keystroke like the toggles, so typing a name is one save, not twenty.
+  const savedName = number?.label ?? "";
+  const [nameDraft, setNameDraft] = React.useState(savedName);
+  React.useEffect(() => setNameDraft(savedName), [numberId, savedName]);
+  const saveName = async () => {
+    if (!numberId) return;
+    const next = nameDraft.trim();
+    if (next === savedName.trim()) return;
+    try {
+      await updateNumber(numberId, { label: next });
+      toast.success(t("trafficUI.campaigns.settings.trackingNumbers.name.saved"));
+    } catch {
+      setNameDraft(savedName);
+      toast.error(t("trafficUI.campaigns.settings.trackingNumbers.name.error"));
+    }
+  };
+
   if (!number) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -147,13 +165,31 @@ export function TrackingNumberEditDialog({
                 {t("trafficUI.campaigns.settings.trackingNumbers.edit.typeNameLabel")}
               </div>
               <DialogTitle className="mt-1 text-2xl font-semibold tracking-tight">
-                {number.label ?? t("trafficUI.campaigns.settings.trackingNumbers.edit.untitled")}
+                {number.label?.trim() || t("trafficUI.campaigns.settings.trackingNumbers.edit.untitled")}
               </DialogTitle>
             </div>
             <Badge variant="outline" className="gap-1.5 px-2.5 py-1 font-mono text-sm text-accent">
               <Flag className="h-3.5 w-3.5" />
               {toE164(number.number)}
             </Badge>
+          </div>
+
+          <div className="space-y-1.5 text-left">
+            <Label htmlFor="tracking-number-name" className="text-xs">
+              {t("trafficUI.campaigns.settings.trackingNumbers.name.label")}
+            </Label>
+            <Input
+              id="tracking-number-name"
+              value={nameDraft}
+              maxLength={255}
+              placeholder={t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder")}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={() => void saveName()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+              className="max-w-md"
+            />
           </div>
         </DialogHeader>
 

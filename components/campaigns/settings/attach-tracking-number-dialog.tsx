@@ -96,6 +96,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
       return (
         n.number.toLowerCase().includes(q) ||
         (n.label ?? "").toLowerCase().includes(q) ||
+        (n.carrierCode ?? "").toLowerCase().includes(q) ||
         (n.city ?? "").toLowerCase().includes(q)
       );
     });
@@ -277,7 +278,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by number, name or city"
+                  placeholder="Search by number, code, name or city"
                   className="pl-8 text-xs"
                 />
               </div>
@@ -326,6 +327,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                         />
                       </TableHead>
                       <TableHead className="text-left text-[11px] uppercase tracking-wider">Number</TableHead>
+                      <TableHead className="text-left text-[11px] uppercase tracking-wider">Code</TableHead>
                       <TableHead className="text-left text-[11px] uppercase tracking-wider">Name</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">Type</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">Region</TableHead>
@@ -335,7 +337,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={6} className="py-10 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={7} className="py-10 text-center text-xs text-muted-foreground">
                           No numbers match your search.
                         </TableCell>
                       </TableRow>
@@ -357,7 +359,11 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                           <TableCell className="text-left text-xs font-medium tabular-nums whitespace-nowrap">
                             {toE164(n.number)}
                           </TableCell>
-                          <TableCell className="text-left text-xs font-medium">{n.label ?? "—"}</TableCell>
+                          {/* The TFN code: the carrier's short code, same as Phone Numbers → Code */}
+                          <TableCell className="text-left font-mono text-xs font-semibold">
+                            {n.carrierCode?.trim() || "—"}
+                          </TableCell>
+                          <TableCell className="text-left text-xs font-medium">{n.label?.trim() || "—"}</TableCell>
                           <TableCell className="text-xs font-medium">
                             {n.type === "tollfree" ? "Toll-free" : "Local"}
                           </TableCell>
