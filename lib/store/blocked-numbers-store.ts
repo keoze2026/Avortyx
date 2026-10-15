@@ -86,6 +86,8 @@ function wireToEntry(w: SpamEntry): BlockedNumberEntry {
     number: normalizeNumber(w.number),
     scope,
     campaignId,
+    // When it was blocked, so the list can show the date and put the newest first.
+    blockedAt: w.createdAt,
   };
 }
 

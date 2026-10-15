@@ -13,6 +13,11 @@ export const base: ExtraTranslations = {
     "chart.grain.H": "H",
     "chart.grain.D": "D",
     "chart.grain.M": "M",
+    // Blocked Numbers: date column and newest-first sort; Call Log red caller.
+    "toolsUI.suppression.columns.blockedOn": "Blocked on",
+    "toolsUI.suppression.blockedNumbers.sort.newest": "Newest first",
+    "toolsUI.suppression.blockedNumbers.sort.oldest": "Oldest first",
+    "toolsUI.reports.callLog.callerIdBlocked": "Caller ID Blocked",
   },
   ru: {
     "common.daysShort": "{n} д",
@@ -54,6 +59,11 @@ export const base: ExtraTranslations = {
     "trafficUI.routing.nodes.buyer.noBuyers": "Покупателей пока нет — сначала создайте покупателя: назначению нужен покупатель, чтобы принимать звонки.",
     "workspaceUI.members.role.agent": "Агент",
     "workspaceUI.roles.descriptions.agent": "Обрабатывает текущие звонки и обновляет их статусы.",
+    // Blocked Numbers: date column and newest-first sort; Call Log red caller.
+    "toolsUI.suppression.columns.blockedOn": "Дата блокировки",
+    "toolsUI.suppression.blockedNumbers.sort.newest": "Сначала новые",
+    "toolsUI.suppression.blockedNumbers.sort.oldest": "Сначала старые",
+    "toolsUI.reports.callLog.callerIdBlocked": "Номер абонента заблокирован",
   },
   ja: {
     "common.daysShort": "{n}日",
@@ -95,6 +105,11 @@ export const base: ExtraTranslations = {
     "trafficUI.routing.nodes.buyer.noBuyers": "バイヤーがまだいません。先にバイヤーを作成してください。転送先が通話を受けるにはバイヤーが必要です。",
     "workspaceUI.members.role.agent": "エージェント",
     "workspaceUI.roles.descriptions.agent": "通話中の対応と結果の更新を行います。",
+    // Blocked Numbers: date column and newest-first sort; Call Log red caller.
+    "toolsUI.suppression.columns.blockedOn": "ブロック日時",
+    "toolsUI.suppression.blockedNumbers.sort.newest": "新しい順",
+    "toolsUI.suppression.blockedNumbers.sort.oldest": "古い順",
+    "toolsUI.reports.callLog.callerIdBlocked": "発信者番号はブロック済み",
   },
   zh: {
     "common.daysShort": "{n}天",
@@ -136,5 +151,10 @@ export const base: ExtraTranslations = {
     "trafficUI.routing.nodes.buyer.noBuyers": "还没有买家——请先创建买家；目标号码需要买家才能接听通话。",
     "workspaceUI.members.role.agent": "坐席",
     "workspaceUI.roles.descriptions.agent": "处理进行中的通话并更新通话结果。",
+    // Blocked Numbers: date column and newest-first sort; Call Log red caller.
+    "toolsUI.suppression.columns.blockedOn": "屏蔽时间",
+    "toolsUI.suppression.blockedNumbers.sort.newest": "最新的在前",
+    "toolsUI.suppression.blockedNumbers.sort.oldest": "最早的在前",
+    "toolsUI.reports.callLog.callerIdBlocked": "来电号码已屏蔽",
   },
 };

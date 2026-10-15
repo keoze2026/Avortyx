@@ -918,10 +918,9 @@ export function CallLogTable({
                         <TableCell className={NUMBER_CELL}>
                           {isBlocked(c.callerNumber, c.campaignId) ? (
                             <span
-                              className="inline-flex items-center gap-1 text-destructive"
-                              title={t("toolsUI.reports.callLog.blockedCaller")}
+                              className="text-destructive"
+                              title={t("toolsUI.reports.callLog.callerIdBlocked")}
                             >
-                              <Ban className="h-3 w-3" aria-hidden />
                               {formatCallerId(c.callerNumber)}
                             </span>
                           ) : (

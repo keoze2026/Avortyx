@@ -41,10 +41,32 @@ import {
 import type { BlockedNumberEntry } from "@/lib/mock/suppression";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useUIStore } from "@/lib/store/ui-store";
 
 const ALL_CAMPAIGNS_ID = "__all__";
 
-type SortKey = "number-asc" | "number-desc" | "campaign-asc";
+type SortKey = "newest" | "oldest" | "number-asc" | "number-desc" | "campaign-asc";
+
+const INTL_LOCALE: Record<string, string> = { en: "en-US", zh: "zh-CN", ja: "ja-JP", ru: "ru-RU" };
+
+/** When a number was blocked, in the portal's timezone and language:
+ *  "Oct 15, 2026, 08:42 PM". "—" when the server didn't say. */
+function blockedOnLabel(ts: number | undefined, locale: string, timeZone: string): string {
+  if (!ts) return "—";
+  const opts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  const tag = INTL_LOCALE[locale] ?? locale;
+  try {
+    return new Intl.DateTimeFormat(tag, { ...opts, timeZone }).format(new Date(ts));
+  } catch {
+    return new Intl.DateTimeFormat(tag, opts).format(new Date(ts));
+  }
+}
 
 /** "18302094480" → "+18302094480"; if scope is prefix we append "*". */
 function displayNumber(entry: BlockedNumberEntry): string {
@@ -53,9 +75,12 @@ function displayNumber(entry: BlockedNumberEntry): string {
 }
 
 export default function BlockedNumbersPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const timeZone = useUIStore((s) => s.reportTimezone);
 
   const SORT_OPTIONS: SortOption[] = [
+    { id: "newest", label: t("toolsUI.suppression.blockedNumbers.sort.newest") },
+    { id: "oldest", label: t("toolsUI.suppression.blockedNumbers.sort.oldest") },
     { id: "number-asc", label: t("toolsUI.suppression.blockedNumbers.sort.numberAsc") },
     { id: "number-desc", label: t("toolsUI.suppression.blockedNumbers.sort.numberDesc") },
     { id: "campaign-asc", label: t("toolsUI.suppression.blockedNumbers.sort.campaignAsc") },
@@ -64,6 +89,7 @@ export default function BlockedNumbersPage() {
   const COLUMN_OPTIONS: ColumnOption[] = [
     { id: "number", label: t("toolsUI.suppression.columns.blockedNumber") },
     { id: "campaign", label: t("toolsUI.suppression.columns.campaign") },
+    { id: "blockedOn", label: t("toolsUI.suppression.columns.blockedOn") },
     { id: "actions", label: t("toolsUI.suppression.columns.actions"), required: true },
   ];
   const DEFAULT_COLUMNS = new Set(COLUMN_OPTIONS.map((c) => c.id));
@@ -91,7 +117,8 @@ export default function BlockedNumbersPage() {
   const [query, setQuery] = React.useState("");
   const [pageSize, setPageSize] = React.useState<PageSize>(PAGE_SIZE_OPTIONS[1]);
   const [page, setPage] = React.useState(0);
-  const [sortKey, setSortKey] = React.useState<SortKey>("number-asc");
+  // The number blocked most recently is always on top.
+  const [sortKey, setSortKey] = React.useState<SortKey>("newest");
   const [campaignFilter, setCampaignFilter] = React.useState<Set<string>>(new Set());
 
   // Reset to page 0 whenever the result set or page size changes.
@@ -132,6 +159,10 @@ export default function BlockedNumbersPage() {
     const sorted = [...items];
     sorted.sort((a, b) => {
       switch (sortKey) {
+        case "newest":
+          return (b.blockedAt ?? 0) - (a.blockedAt ?? 0);
+        case "oldest":
+          return (a.blockedAt ?? 0) - (b.blockedAt ?? 0);
         case "number-asc":
           return a.number.localeCompare(b.number);
         case "number-desc":
@@ -249,6 +280,9 @@ export default function BlockedNumbersPage() {
                 {visibleColumns.has("campaign") && (
                   <TableHead className="text-left">{t("toolsUI.suppression.columns.campaign")}</TableHead>
                 )}
+                {visibleColumns.has("blockedOn") && (
+                  <TableHead className="text-left">{t("toolsUI.suppression.columns.blockedOn")}</TableHead>
+                )}
                 <TableHead className="pr-4">{t("toolsUI.suppression.columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -280,6 +314,11 @@ export default function BlockedNumbersPage() {
                     {visibleColumns.has("campaign") && (
                       <TableCell className="text-left text-muted-foreground">
                         {campaignLabel(e)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("blockedOn") && (
+                      <TableCell className="text-left tabular-nums text-muted-foreground">
+                        {blockedOnLabel(e.blockedAt, locale, timeZone)}
                       </TableCell>
                     )}
                     <TableCell className="pr-4">

@@ -70,6 +70,8 @@ export interface BlockedNumberEntry {
   scope: BlockedNumberScope;
   /** Undefined = applies to All Campaigns. Otherwise scoped to one campaign. */
   campaignId?: string;
+  /** When the number was blocked (ms) - the backend's `created_at`. */
+  blockedAt?: number;
 }
 
 export const MOCK_VOIP_SHIELD: VoipShieldEntry[] = [
