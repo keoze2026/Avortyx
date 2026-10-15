@@ -89,7 +89,7 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-6 uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.number")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.type")}</TableHead>
-                <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
+                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
@@ -109,7 +109,7 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                         {n.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="min-w-[160px] text-sm">
+                    <TableCell className="min-w-[160px] text-center text-sm">
                       <NumberNameCell
                         value={n.label ?? ""}
                         placeholder={t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder")}
@@ -234,7 +234,7 @@ function NumberNameCell({
           requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
         }
       }}
-      className="h-8 border-transparent bg-transparent px-2 text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
+      className="mx-auto h-8 max-w-[240px] border-transparent bg-transparent px-2 text-center text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
     />
   );
 }
