@@ -29,6 +29,7 @@
 import * as React from "react";
 import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import { enUS, ja, ru, zhCN } from "react-day-picker/locale";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -47,6 +48,9 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { calendarDayKey, dayKeyToLocalDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+/** Month and weekday names in the calendar follow the portal language. */
+const CALENDAR_LOCALES = { en: enUS, zh: zhCN, ja, ru } as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -192,7 +196,7 @@ export function DateRangePicker({
   today,
   latestDay,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const effectivePlaceholder = placeholder ?? t("sharedUI.dateRange.placeholder");
   const [open, setOpen] = React.useState(false);
   // Keyed on the calendar day, not the Date object: a parent that builds
@@ -325,6 +329,7 @@ export function DateRangePicker({
         <Calendar
           key={preset === "custom" ? "custom" : `${preset}-${calendarDayKey(anchor)}`}
           mode="range"
+          locale={CALENDAR_LOCALES[locale] ?? enUS}
           selected={buffer}
           onSelect={onCalendarSelect}
           onDayClick={onCalendarDayClick}

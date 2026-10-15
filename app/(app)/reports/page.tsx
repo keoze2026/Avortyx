@@ -65,6 +65,10 @@ const NO_SUMMARIES: Record<SummaryEntity, EntitySummary[]> = { campaign: [], buy
 export default function ReportsPage() {
   const role = useAuthStore((st) => st.user?.role);
   const { t } = useTranslation();
+  // For messages shown from inside the loading effect, without re-loading the
+  // report when the language changes.
+  const tRef = useRef(t);
+  tRef.current = t;
   // Every reporting surface on this page renders in this timezone (the Call
   // Log's timestamps, the hourly chart's buckets) — "today" has to mean
   // today in that zone too, or an operator ahead of it opens on tomorrow.
@@ -239,7 +243,7 @@ export default function ReportsPage() {
         // 423: the server wants the PIN. The lock screen takes over, so no
         // error toast - the security store has already been told.
         if (!(e instanceof ApiError && e.status === 423)) {
-          toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+          toast.error(friendlyErrorMessage(e, tRef.current("toolsUI.reports.page.loadError")));
         }
       })
       .finally(() => {
@@ -436,7 +440,7 @@ export default function ReportsPage() {
       <ReportsPinGate
         needsPin={needsPin}
         onCancel={cancelHistorical}
-        cancelLabel={REPORTS_POLICY.includeToday ? undefined : "Back to dashboard"}
+        cancelLabel={REPORTS_POLICY.includeToday ? undefined : t("toolsUI.reports.page.backToDashboard")}
       >
         {/* A new range is loading: nothing from the previous range is shown,
             and this says so instead of the panels reading as "no calls". */}
@@ -468,8 +472,8 @@ export default function ReportsPage() {
                     }
                     aria-label={
                       mobileChart === "hourly"
-                        ? "Show total calls donut"
-                        : "Show hourly distribution"
+                        ? t("toolsUI.reports.page.showDonut")
+                        : t("toolsUI.reports.page.showHourly")
                     }
                     className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
                   >

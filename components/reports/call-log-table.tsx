@@ -284,6 +284,42 @@ function failReasonLabel(reason: string | null | undefined): string {
   return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
 }
 
+/**
+ * The translation key for a fail reason the backend is known to send, so the
+ * Call Log shows it in the chosen language. null = a reason we don't know
+ * (shown as the backend wrote it). English keeps the exact words above.
+ */
+function failReasonKey(reason: string | null | undefined): { key: string; score?: string } | null {
+  const raw = (reason ?? "").trim();
+  if (!raw || raw === "—") return null;
+  const k = "toolsUI.reports.callLog.failReason.";
+  if (/duplicate/i.test(raw)) return { key: `${k}duplicate` };
+  if (/cc\s*full/i.test(raw)) return { key: `${k}destinationFull` };
+  if (/cap\s*reached|overflow/i.test(raw)) return { key: `${k}overflowMissed` };
+  if (/no\s*matching\s*rule/i.test(raw)) return { key: `${k}noMatchingRule` };
+  if (/insufficient[\s_]*balance/i.test(raw)) return { key: `${k}insufficientBalance` };
+  if (/rtb\s*no\s*winner/i.test(raw)) return { key: `${k}noBidWinner` };
+  if (/campaign\s*not\s*found/i.test(raw)) return { key: `${k}campaignNotFound` };
+  if (/^no[\s_]*(destination|decision)$/i.test(raw)) return { key: `${k}noDestination` };
+  if (/manual[\s_]*hang[\s_-]*up/i.test(raw)) return { key: `${k}manualHangup` };
+  if (/asterisk[\s_]*gone/i.test(raw)) return { key: `${k}callDropped` };
+  if (/blacklist/i.test(raw)) return { key: `${k}blacklisted` };
+  if (/anonymous/i.test(raw)) return { key: `${k}anonymous` };
+  const fraud = raw.match(/fraud[\s_]*score[\s_]*(\d+)/i);
+  if (fraud) return { key: `${k}fraudScore`, score: fraud[1] };
+  return null;
+}
+
+/** The fail reason as shown on screen: English exactly as before, other
+ *  languages translated when the reason is a known one. */
+function failReasonOnScreen(c: Call, locale: string, t: (key: string) => string): string {
+  const english = failReasonText(c);
+  if (!english || locale === "en") return english;
+  const known = failReasonKey(c.failReason);
+  if (!known) return english;
+  return t(known.key).replace("{score}", known.score ?? "");
+}
+
 /** The server's export file uses the backend's own wording; give it the same labels as the screen. */
 function withFailReasonLabels(table: string[][]): string[][] {
   if (table.length < 2) return table;
@@ -520,7 +556,7 @@ export function CallLogTable({
   onCallPatched,
   exportQuery = null,
 }: CallLogTableProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const publishers = usePublishersStore((s) => s.publishers);
   // Blocked Numbers list — callers on it are flagged in red in the Caller ID
@@ -707,7 +743,7 @@ export function CallLogTable({
       }
       toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't export calls"));
+      toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.exportError")));
     } finally {
       setExporting(false);
     }
@@ -937,13 +973,13 @@ export function CallLogTable({
                           {/* Fixed width so Live / Completed / No Answer are
                               identical pills rather than sized to their text. */}
                           <Badge variant={statusVariant(c.status)} className="w-24 justify-center">
-                            {isBusy(c) ? "Busy" : t(STATUS_LABEL_KEYS[c.status])}
+                            {isBusy(c) ? t("toolsUI.reports.callLog.statusLabel.busy") : t(STATUS_LABEL_KEYS[c.status])}
                           </Badge>
                         </TableCell>
                       )}
                       {columns.failReason && (
                         <TableCell className={`${CELL} text-center`}>
-                          {failReasonText(c) || "—"}
+                          {failReasonOnScreen(c, locale, t) || "—"}
                         </TableCell>
                       )}
                       {columns.recording && (
@@ -1052,14 +1088,22 @@ function RecordingCell({
  * the adjacent Tag column (text-muted-foreground). The label is in the title
  * tooltip for accessibility.
  */
+/** Tooltip text per hang-up side, in the chosen language. */
+const HANG_UP_KEYS: Record<Exclude<HangUpSide, "open">, string> = {
+  caller: "toolsUI.reports.callLog.hangUp.caller",
+  callee: "toolsUI.reports.callLog.hangUp.callee",
+  carrier: "toolsUI.reports.callLog.hangUp.carrier",
+};
+
 function HangUpCell({ call }: { call: Call }) {
+  const { t } = useTranslation();
   const side = getHangUpSide(call);
   if (side === "open") {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
   return (
     <span
-      title={HANG_UP_LABEL[side]}
+      title={t(HANG_UP_KEYS[side])}
       className="inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground"
     >
       <PhoneOff className="h-3 w-3" />

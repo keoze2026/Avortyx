@@ -15,11 +15,9 @@ import {
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
-import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { matchesCallStatusFilter } from "@/lib/call-status";
 import type { Call } from "@/lib/types";
 import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/format";
-import { useAuthStore } from "@/lib/store/auth-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
@@ -49,18 +47,6 @@ const COLOR_NOANS = "var(--destructive)";
 // accent. Sharing the accent with the Connected bars put two identical
 // blue squares in the legend and made the line read as part of the stack.
 const COLOR_REVENUE = "var(--success)"; // green — the total-calls line
-
-/** Which parts of the chart this login may see. A buyer / publisher login
- *  loses whatever the admin unticked under its Reporting visibility, and a
- *  publisher never sees revenue. Admin / staff: everything. */
-interface ChartParts {
-  connected: boolean;
-  noAnswer: boolean;
-  total: boolean;
-  revenue: boolean;
-}
-
-const ALL_PARTS: ChartParts = { connected: true, noAnswer: true, total: true, revenue: true };
 
 interface HourlyDistributionProps {
   calls: Call[];
@@ -145,6 +131,49 @@ function utcMsToDayKey(ms: number): string {
 }
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/* ─── Axis and tooltip dates in the chosen language ───────────────────
+ * Buckets keep their English labels ("08:00 am", "3. Sep") as ids; only
+ * what is drawn is translated. English is unchanged. */
+const INTL_LOCALE: Record<string, string> = { en: "en-US", zh: "zh-CN", ja: "ja-JP", ru: "ru-RU" };
+
+/** "08:00 pm" -> 20; null if it isn't an hour label. */
+function hourOfLabel(label: string): number | null {
+  const m = label.match(/^(\d{2}):00 (am|pm)$/);
+  if (!m) return null;
+  return (parseInt(m[1], 10) % 12) + (m[2] === "pm" ? 12 : 0);
+}
+
+/** An hour in the chosen language: 24-hour clock outside English. */
+function localHour(h: number, locale: string): string {
+  if (locale === "en") return fmt12Hour(h);
+  return `${h.toString().padStart(2, "0")}:00`;
+}
+
+/** "3. Sep" -> "9月3日" / "3 сент." in the chosen language. */
+function localDayLabel(label: string, locale: string): string {
+  const m = label.match(/^(\d{1,2})\. ([A-Z][a-z]{2})$/);
+  const month = m ? MONTH_ABBR.indexOf(m[2]) : -1;
+  if (!m || month < 0) return label;
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale] ?? locale, { month: "short", day: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, month, parseInt(m[1], 10))),
+  );
+}
+
+/** What an axis tick shows for a bucket label. */
+function axisLabel(label: string, grain: Grain, locale: string, compact: boolean): string {
+  if (grain === "H") {
+    const h = hourOfLabel(label);
+    if (h === null) return label;
+    if (locale !== "en") return compact ? `${h}:00` : localHour(h, locale);
+    if (!compact) return label;
+    // "08:00 am" → "8am" / "12:00 pm" → "12pm" so the axis
+    // fits a narrow card without dropping the am/pm suffix.
+    const m = label.match(/^(\d{2}):00 (am|pm)$/);
+    return m ? `${parseInt(m[1], 10)}${m[2]}` : label;
+  }
+  return locale === "en" ? label : localDayLabel(label, locale);
+}
 
 /**
  * Rounding for axis tick steps. The ladder is deliberately fine: each rung
@@ -510,19 +539,8 @@ export function HourlyDistribution({
   rangeEndKey,
   series,
 }: HourlyDistributionProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
-  const role = useAuthStore((s) => s.user?.role);
-  const partnerHidden = usePartnerHiddenColumns().summary;
-  const show: ChartParts = React.useMemo(
-    () => ({
-      connected: !partnerHidden.has("connected"),
-      noAnswer: !partnerHidden.has("noConnect"),
-      total: !partnerHidden.has("incoming"),
-      revenue: role !== "publisher" && !partnerHidden.has("revenue"),
-    }),
-    [role, partnerHidden],
-  );
   const [grain, setGrain] = React.useState<Grain>("H");
   // Track the actual CHART CONTAINER width via ResizeObserver — the
   // viewport can be 1200px while the chart card only gets ~600px because
@@ -639,7 +657,7 @@ export function HourlyDistribution({
         {/* Cased in CSS rather than in the copy, so translations stay
             natural-cased and every locale gets the same treatment. */}
         <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-muted-foreground">
-          {`${t("dashboard.chart.callsBy")} : ${t(GRAIN_NOUN_KEYS[grain])}`}
+          {`${t("dashboard.chart.callsBy").replace(/[:：]\s*$/, "")} : ${t(GRAIN_NOUN_KEYS[grain])}`}
         </div>
         <div aria-hidden className="hidden @md/card-header:block" />
         </div>
@@ -679,14 +697,7 @@ export function HourlyDistribution({
                   interval={grain === "H" ? tickInterval : "preserveStartEnd"}
                   minTickGap={grain === "H" ? 0 : 12}
                   tickMargin={8}
-                  tickFormatter={(label: string) => {
-                    if (grain !== "H" || !useCompactLabel) return label;
-                    // "08:00 am" → "8am" / "12:00 pm" → "12pm" so the axis
-                    // fits a narrow card without dropping the am/pm suffix.
-                    const m = label.match(/^(\d{2}):00 (am|pm)$/);
-                    if (!m) return label;
-                    return `${parseInt(m[1], 10)}${m[2]}`;
-                  }}
+                  tickFormatter={(label: string) => axisLabel(label, grain, locale, useCompactLabel)}
                 />
                 <YAxis
                   yAxisId="count"
@@ -703,7 +714,6 @@ export function HourlyDistribution({
                     the tooltip). */}
                 <YAxis
                   yAxisId="rev"
-                  hide={!show.revenue}
                   orientation="right"
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
@@ -714,80 +724,66 @@ export function HourlyDistribution({
                   tickFormatter={compactMoney}
                   tickMargin={4}
                 />
-                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} show={show} />} />
+                <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
                 {/* Stack order — bottom to top:
                      1. noAnswer    (red sliver at bottom)
                      2. converted   (accent, dominant, top of stack) */}
-                {show.noAnswer && (
-                  <Bar
-                    yAxisId="count"
-                    dataKey="noAnswer"
-                    stackId="calls"
-                    fill={COLOR_NOANS}
-                    radius={show.connected ? [0, 0, 0, 0] : [3, 3, 0, 0]}
-                  />
-                )}
-                {show.connected && (
-                  <Bar
-                    yAxisId="count"
-                    dataKey="converted"
-                    stackId="calls"
-                    fill={COLOR_CONVERTED}
-                    radius={[3, 3, 0, 0]}
-                  />
-                )}
+                <Bar
+                  yAxisId="count"
+                  dataKey="noAnswer"
+                  stackId="calls"
+                  fill={COLOR_NOANS}
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  yAxisId="count"
+                  dataKey="converted"
+                  stackId="calls"
+                  fill={COLOR_CONVERTED}
+                  radius={[3, 3, 0, 0]}
+                />
                 {/* Calls line: follows the call totals on the columns'
                     scale, riding just above each column so the count sits
                     between the column and the line (see lineLevel). */}
-                {show.total && (
-                  <Line
-                    yAxisId="count"
-                    type="monotone"
-                    dataKey="lineLevel"
-                    stroke={COLOR_REVENUE}
-                    strokeWidth={2}
-                    dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
-                    activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
-                    isAnimationActive
-                    animationDuration={500}
-                  >
-                    {/* No value labels on the line: the call counts printed
-                        on top of the columns are the line's values. */}
-                  </Line>
-                )}
+                <Line
+                  yAxisId="count"
+                  type="monotone"
+                  dataKey="lineLevel"
+                  stroke={COLOR_REVENUE}
+                  strokeWidth={2}
+                  dot={grain === "M" ? false : { r: 2, stroke: COLOR_REVENUE, strokeWidth: 1.5, fill: "var(--card)" }}
+                  activeDot={{ r: 4, stroke: COLOR_REVENUE, strokeWidth: 2, fill: "var(--card)" }}
+                  isAnimationActive
+                  animationDuration={500}
+                >
+                  {/* No value labels on the line: the call counts printed
+                      on top of the columns are the line's values. */}
+                </Line>
                 {/* Call counts between each column and the line — see
                     ColumnCountLabel. A zero-height bar on the same stack,
                     placed after the line so the figures are drawn over it;
                     hidden from the tooltip and legend. */}
-                {show.total && (
-                  <Bar
-                    yAxisId="count"
-                    dataKey="labelAnchor"
-                    stackId="calls"
-                    fill="transparent"
-                    legendType="none"
-                    tooltipType="none"
-                  >
-                    <LabelList
-                      dataKey="total"
-                      content={<ColumnCountLabel data={data} countTop={axes.countTop} />}
-                    />
-                  </Bar>
-                )}
+                <Bar
+                  yAxisId="count"
+                  dataKey="labelAnchor"
+                  stackId="calls"
+                  fill="transparent"
+                  legendType="none"
+                  tooltipType="none"
+                >
+                  <LabelList
+                    dataKey="total"
+                    content={<ColumnCountLabel data={data} countTop={axes.countTop} />}
+                  />
+                </Bar>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
 
           <div className="flex items-center justify-center gap-5 pt-2">
-            {show.connected && (
-              <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
-            )}
-            {show.noAnswer && (
-              <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
-            )}
-            {show.total && (
-              <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
-            )}
+            <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
+            <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
+            <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
           </div>
         </div>
       </CardContent>
@@ -807,22 +803,29 @@ interface HourlyTooltipProps {
   active?: boolean;
   payload?: TooltipPayload[];
   grain: Grain;
-  show?: ChartParts;
 }
 
 const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function headerForBucket(b: Bucket, grain: Grain, weekOfLabel: string): string {
+function headerForBucket(b: Bucket, grain: Grain, weekOfLabel: string, locale = "en"): string {
   if (grain === "H") {
     // An H bucket is an hour-of-day across the whole selected range, not one
     // hour of one day — so the header is just the hour: "01:00 pm".
-    return b.label;
+    const h = hourOfLabel(b.label);
+    return h === null || locale === "en" ? b.label : localHour(h, locale);
   }
   // D / M buckets carry a UTC-midnight instant for an already
   // timezone-resolved day, so read them with the UTC getters — the local
   // ones would slide the label a day for viewers west of UTC.
   const d = new Date(b.ts);
+  if (locale !== "en") {
+    const intl = INTL_LOCALE[locale] ?? locale;
+    if (grain === "D") {
+      return new Intl.DateTimeFormat(intl, { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" }).format(d);
+    }
+    return `${weekOfLabel} ${new Intl.DateTimeFormat(intl, { month: "short", day: "numeric", timeZone: "UTC" }).format(d)}`;
+  }
   if (grain === "D") {
     // "Friday, May 29"
     return `${DOW[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
@@ -832,36 +835,34 @@ function headerForBucket(b: Bucket, grain: Grain, weekOfLabel: string): string {
 }
 
 function HourlyTooltipWrapper(props: HourlyTooltipProps) {
-  const { t } = useTranslation();
-  return <HourlyTooltipInner {...props} t={t} />;
+  const { t, locale } = useTranslation();
+  return <HourlyTooltipInner {...props} t={t} locale={locale} />;
 }
 
 function HourlyTooltipInner({
   active,
   payload,
   grain,
-  show = ALL_PARTS,
   t,
-}: HourlyTooltipProps & { t: (k: string) => string }) {
+  locale,
+}: HourlyTooltipProps & { t: (k: string) => string; locale: string }) {
   if (!active || !payload || payload.length === 0) return null;
   const b = payload[0]?.payload;
   if (!b) return null;
 
   const total = b.converted + b.notConverted + b.noAnswer;
-  // Only the rows this login may see (see ChartParts).
   const rows: Array<{ color: string; label: string; value: string }> = [
-    show.total && { color: "var(--muted-foreground)", label: t("toolsUI.reports.hourly.tooltip.totalCalls"), value: formatNumber(total) },
-    show.connected && { color: COLOR_CONVERTED, label: t("toolsUI.reports.hourly.tooltip.converted"), value: formatNumber(b.converted) },
-    show.connected && { color: COLOR_NOTCONV, label: t("toolsUI.reports.hourly.tooltip.notConverted"), value: formatNumber(b.notConverted) },
-    show.noAnswer && { color: COLOR_NOANS, label: t("toolsUI.reports.hourly.tooltip.noAnswer"), value: formatNumber(b.noAnswer) },
-    show.revenue && { color: COLOR_REVENUE, label: t("toolsUI.reports.hourly.tooltip.revenue"), value: formatCurrency(b.revenue, true) },
-  ].filter((r): r is { color: string; label: string; value: string } => !!r);
-  if (rows.length === 0) return null;
+    { color: "var(--muted-foreground)", label: t("toolsUI.reports.hourly.tooltip.totalCalls"), value: formatNumber(total) },
+    { color: COLOR_CONVERTED, label: t("toolsUI.reports.hourly.tooltip.converted"), value: formatNumber(b.converted) },
+    { color: COLOR_NOTCONV, label: t("toolsUI.reports.hourly.tooltip.notConverted"), value: formatNumber(b.notConverted) },
+    { color: COLOR_NOANS, label: t("toolsUI.reports.hourly.tooltip.noAnswer"), value: formatNumber(b.noAnswer) },
+    { color: COLOR_REVENUE, label: t("toolsUI.reports.hourly.tooltip.revenue"), value: formatCurrency(b.revenue, true) },
+  ];
 
   return (
     <div className="rounded-md border border-border bg-popover/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md">
       <div className="mb-1.5 font-semibold text-foreground">
-        {headerForBucket(b, grain, t("toolsUI.reports.hourly.tooltip.weekOf"))}
+        {headerForBucket(b, grain, t("toolsUI.reports.hourly.tooltip.weekOf"), locale)}
       </div>
       <ul className="space-y-1">
         {rows.map((r) => (

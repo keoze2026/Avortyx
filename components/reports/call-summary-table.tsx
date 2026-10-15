@@ -561,6 +561,75 @@ function labelOf(value: string) {
   return { key: value, label: value };
 }
 
+/* ─── Row names in the chosen language ────────────────────────────────
+ * Rows are grouped on their English value (so sorting, filtering and the
+ * click-to-filter keep working); only what is shown is translated. Names
+ * people typed themselves - campaigns, publishers, buyers, destinations,
+ * cities, carriers - are shown exactly as entered. */
+const INTL_LOCALE: Record<string, string> = { en: "en-US", zh: "zh-CN", ja: "ja-JP", ru: "ru-RU" };
+
+const VALUE_KEYS: Record<string, string> = {
+  [NOT_AVAILABLE]: "notAvailable",
+  Unknown: "unknown",
+  "Not forwarded": "notForwarded",
+  Mobile: "mobile",
+  Landline: "landline",
+  VoIP: "voip",
+  "Toll-free": "tollFree",
+  "Not scored": "notScored",
+  "North America": "northAmerica",
+  "South America": "southAmerica",
+  Europe: "europe",
+  Asia: "asia",
+  Africa: "africa",
+  Oceania: "oceania",
+};
+
+const FRAUD_BAND_KEYS: Record<string, string> = {
+  Critical: "critical",
+  High: "high",
+  Medium: "medium",
+  Low: "low",
+  Clean: "clean",
+};
+
+const DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const COUNTRY_CODE_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(COUNTRY_NAMES).map(([cc, name]) => [name, cc]),
+);
+
+/** Tabs whose rows are names people entered: never translated. */
+const ENTERED_NAME_TABS = new Set<GroupKey>(["campaign", "publisher", "buyer", "dialed", "numberPool", "identity-phone"]);
+
+function localizeRowLabel(label: string, tab: GroupKey, locale: string, t: (key: string) => string): string {
+  if (locale === "en" || !label || ENTERED_NAME_TABS.has(tab)) return label;
+  const valueKey = (k: string) => t(`toolsUI.reports.summary.value.${k}`);
+  // A destination's own name stays; only "Not forwarded" is ours.
+  if (tab === "destination") return label === "Not forwarded" ? valueKey("notForwarded") : label;
+  const intl = INTL_LOCALE[locale] ?? locale;
+  if (tab === "date-dow") {
+    const i = DOW_SHORT.indexOf(label);
+    // 2023-01-01 was a Sunday.
+    if (i >= 0) return new Intl.DateTimeFormat(intl, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2023, 0, 1 + i)));
+  }
+  if (tab === "session-country" || tab === "profile-country") {
+    // Session Data holds the English name, Caller Profile the code ("US").
+    const cc = COUNTRY_CODE_BY_NAME[label] ?? (/^[A-Z]{2}$/.test(label) ? label : undefined);
+    if (cc) {
+      try {
+        return new Intl.DisplayNames([intl], { type: "region" }).of(cc) ?? label;
+      } catch {
+        return label;
+      }
+    }
+  }
+  const band = label.match(/^(Critical|High|Medium|Low|Clean) \((\d+-\d+)\)$/);
+  if (band) return `${valueKey(FRAUD_BAND_KEYS[band[1]])} (${band[2]})`;
+  const fixed = VALUE_KEYS[label];
+  return fixed ? valueKey(fixed) : label;
+}
+
 function groupCalls(
   calls: Call[],
   group: GroupKey,
@@ -992,8 +1061,10 @@ export function CallSummaryTable({
   drill = null,
   onDrillChange,
 }: CallSummaryTableProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
+  /** A row's name as shown on screen and in the export (see localizeRowLabel). */
+  const showLabel = (label: string) => localizeRowLabel(label, tab, locale, t);
   const [visibleState, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   // Money a partner is not told. The backend already sends null for these
   // (CH-088 extended to every Reports surface); hiding the columns keeps the
@@ -1147,7 +1218,7 @@ export function CallSummaryTable({
     const tabKey = KEY_LABEL_KEYS.get(tab);
     const labelCol: ExportColumn<SummaryRow> = {
       label: tabKey ? t(tabKey) : t("toolsUI.reports.summary.columns.group"),
-      value: (r) => r.label,
+      value: (r) => showLabel(r.label),
     };
     const dataCols: ExportColumn<SummaryRow>[] = COLUMNS.filter((c) => visible[c.id]).map(
       (c) => ({
@@ -1234,7 +1305,7 @@ export function CallSummaryTable({
               type="button"
               onClick={() => onDrillChange(null)}
               title={t("toolsUI.reports.summary.drill.clearAny")}
-              className="mr-1 inline-flex max-w-[260px] items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+              className="mr-1 inline-flex max-w-[260px] items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span className="truncate">
                 {t("toolsUI.reports.summary.drill.only").replace("{name}", drill.label)}
@@ -1295,14 +1366,14 @@ export function CallSummaryTable({
           <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-center">
+                <TableHead className="pl-6 text-left">
                   <SortHeader
                     label={(() => { const k = TABS.find((td) => td.id === tab)?.labelKey; return k ? t(k) : t("toolsUI.reports.summary.columns.group"); })()}
                     sortKey="label"
                     active={sortKey}
                     dir={sortDir}
                     onClick={requestSort}
-                    align="center"
+                    align="left"
                   />
                 </TableHead>
                 {visible.live && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.live")} sortKey="live" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -1336,11 +1407,11 @@ export function CallSummaryTable({
                   // ("Not available" rows have nothing behind them to narrow to.)
                   const pickable = !!onDrillChange && !!r.key && r.key !== NOT_AVAILABLE;
                   const picked = pickable && drill?.tab === tab && drill.key === r.key;
-                  const pick = () => onDrillChange?.(picked ? null : { tab, key: r.key, label: r.label });
+                  const pick = () => onDrillChange?.(picked ? null : { tab, key: r.key, label: showLabel(r.label) });
                   return (
                     <TableRow
                       key={r.key}
-                      className={cn(pickable && "cursor-pointer", picked && "bg-accent/10 hover:bg-accent/15")}
+                      className={cn(pickable && "cursor-pointer", picked && "bg-muted/60 hover:bg-muted/60")}
                       onClick={pickable ? pick : undefined}
                       onKeyDown={
                         pickable
@@ -1360,14 +1431,9 @@ export function CallSummaryTable({
                           : undefined
                       }
                     >
-                      <TableCell
-                        className={cn(
-                          "text-center font-medium",
-                          pickable && "text-accent underline-offset-4 hover:underline",
-                        )}
-                      >
-                        {r.label}
-                      </TableCell>
+                      {/* Names start on one left edge so they line up under each other;
+                          normal text colour, no underline (the row is still clickable). */}
+                      <TableCell className="pl-6 text-left font-medium">{showLabel(r.label)}</TableCell>
                       {visible.live && (
                         <TableCell
                           className={cn(
@@ -1439,7 +1505,7 @@ export function CallSummaryTable({
                   current page, so paginating doesn't make the footer shift. */}
               {allRows.length > 0 && (
                 <TableRow className="border-t-2 border-border bg-muted/40 hover:bg-muted/40 font-semibold">
-                  <TableCell className="text-center">{t("toolsUI.reports.summary.totals")}</TableCell>
+                  <TableCell className="pl-6 text-left">{t("toolsUI.reports.summary.totals")}</TableCell>
                   {/* The Live total is the sum of the rows above, so the
                       column always adds up. For groupings whose rows carry
                       the account-wide figure (campaign, destination, buyer,

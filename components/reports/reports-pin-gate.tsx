@@ -80,7 +80,7 @@ export function ReportsPinGate({ children, needsPin, onCancel, cancelLabel }: Pr
   if (needsPin && (load === "idle" || load === "loading")) {
     return (
       <Card className="mx-auto max-w-md p-6 text-sm text-muted-foreground">
-        Checking report access…
+        {t("toolsUI.reports.pinGate.checking")}
       </Card>
     );
   }
@@ -128,11 +128,15 @@ export function ReportsPinGate({ children, needsPin, onCancel, cancelLabel }: Pr
       toast.error(t("toolsUI.reports.pinGate.toastIncorrect"));
       setMessage(
         result.attemptsLeft === null
-          ? "Incorrect PIN."
-          : `Incorrect PIN. ${result.attemptsLeft} ${result.attemptsLeft === 1 ? "attempt" : "attempts"} left.`,
+          ? t("toolsUI.reports.pinGate.incorrect")
+          : t(
+              result.attemptsLeft === 1
+                ? "toolsUI.reports.pinGate.incorrectLeftOne"
+                : "toolsUI.reports.pinGate.incorrectLeftMany",
+            ).replace("{n}", String(result.attemptsLeft)),
       );
     } else if (result.reason === "lockedOut") {
-      setMessage("Too many wrong attempts.");
+      setMessage(t("toolsUI.reports.pinGate.tooMany"));
     } else {
       setMessage(result.message);
     }
@@ -147,17 +151,17 @@ export function ReportsPinGate({ children, needsPin, onCancel, cancelLabel }: Pr
         <div className="min-w-0">
           <h2 className="text-base font-semibold">{t("toolsUI.reports.pinGate.title")}</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Yesterday and earlier reports need the 4-digit reports PIN.{" "}
+            {t("toolsUI.reports.pinGate.needsPin")}{" "}
             {canManage ? (
               <>
-                You can set or change it in{" "}
+                {t("toolsUI.reports.pinGate.setIn")}{" "}
                 <Link href={ROUTES.settings} className="text-accent underline-offset-2 hover:underline">
-                  Security settings
+                  {t("toolsUI.reports.pinGate.securityLink")}
                 </Link>
                 .
               </>
             ) : (
-              "If you don't have it, ask your account administrator."
+              t("toolsUI.reports.pinGate.askAdmin")
             )}
           </p>
         </div>
@@ -186,7 +190,7 @@ export function ReportsPinGate({ children, needsPin, onCancel, cancelLabel }: Pr
           />
           {lockedOut ? (
             <p className="text-[11px] text-destructive">
-              Too many wrong attempts. Try again in {clock(waitSeconds)}.
+              {t("toolsUI.reports.pinGate.tryAgainIn").replace("{time}", clock(waitSeconds))}
             </p>
           ) : (
             message && <p className="text-[11px] text-destructive">{message}</p>
@@ -194,7 +198,7 @@ export function ReportsPinGate({ children, needsPin, onCancel, cancelLabel }: Pr
         </div>
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={entered.length !== 4 || busy || lockedOut}>
-            {busy ? "Checking…" : t("toolsUI.reports.pinGate.unlock")}
+            {busy ? t("toolsUI.reports.pinGate.checkingShort") : t("toolsUI.reports.pinGate.unlock")}
           </Button>
           {onCancel && (
             <Button type="button" variant="ghost" onClick={onCancel}>
