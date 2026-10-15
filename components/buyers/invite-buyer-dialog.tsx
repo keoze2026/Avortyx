@@ -80,7 +80,10 @@ export function InviteBuyerDialog({
         status: "pending",
         bidAmount,
         payoutModel: "flat",
-        concurrencyCap: 10,
+        // 0 = unlimited on the backend. Hardcoding 10 here meant every new
+        // buyer was born pinched at 10 concurrent calls, and nobody knew the
+        // limit existed until their traffic hit it (TBLA, then PDSO).
+        concurrencyCap: 0,
         dailyCap,
         monthlyCap: dailyCap * 25,
         callsToday: 0,
