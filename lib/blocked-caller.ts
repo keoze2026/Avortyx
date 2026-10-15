@@ -18,7 +18,7 @@ import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 type Entry = { number: string; scope: "number" | "prefix"; campaignId?: string };
 
 /** Digits only, with the leading US/Canada "1" dropped from 11-digit numbers. */
-function national(value: string | null | undefined): string {
+export function national(value: string | null | undefined): string {
   const d = (value ?? "").replace(/\D/g, "");
   return d.length === 11 && d.startsWith("1") ? d.slice(1) : d;
 }

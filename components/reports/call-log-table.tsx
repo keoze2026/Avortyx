@@ -70,7 +70,9 @@ import {
 } from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
-import { useBlockedCallerMatcher } from "@/lib/blocked-caller";
+import { national, useBlockedCallerMatcher } from "@/lib/blocked-caller";
+import { failReasonLabel, localizeFailReason } from "@/lib/fail-reason";
+import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -237,55 +239,9 @@ function failReasonText(c: Call): string {
   return failReasonLabel(c.failReason);
 }
 
-/**
- * The words the portal uses for a fail reason (screen and export):
- *   "Duplicate call" / "Duplicate call blocked"  ->  "Duplicate Call"
- *   "Campaign cap reached" (any cap)              ->  "Overflow Missed"
- * Anything else: each word starts with a capital, "blocked" dropped.
- */
-function failReasonLabel(reason: string | null | undefined): string {
-  const raw = (reason ?? "").trim();
-  if (!raw || raw === "—") return "";
-  if (/duplicate/i.test(raw)) return "Duplicate Call";
-  if (/cap\s*reached|overflow/i.test(raw)) return "Overflow Missed";
-  const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
-  return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
-}
-
-/**
- * The translation key for a fail reason the backend is known to send, so the
- * Call Log shows it in the chosen language. null = a reason we don't know
- * (shown as the backend wrote it). English keeps the exact words above.
- */
-function failReasonKey(reason: string | null | undefined): { key: string; score?: string } | null {
-  const raw = (reason ?? "").trim();
-  if (!raw || raw === "—") return null;
-  const k = "toolsUI.reports.callLog.failReason.";
-  if (/duplicate/i.test(raw)) return { key: `${k}duplicate` };
-  if (/cc\s*full/i.test(raw)) return { key: `${k}destinationFull` };
-  if (/cap\s*reached|overflow/i.test(raw)) return { key: `${k}overflowMissed` };
-  if (/no\s*matching\s*rule/i.test(raw)) return { key: `${k}noMatchingRule` };
-  if (/insufficient[\s_]*balance/i.test(raw)) return { key: `${k}insufficientBalance` };
-  if (/rtb\s*no\s*winner/i.test(raw)) return { key: `${k}noBidWinner` };
-  if (/campaign\s*not\s*found/i.test(raw)) return { key: `${k}campaignNotFound` };
-  if (/^no[\s_]*(destination|decision)$/i.test(raw)) return { key: `${k}noDestination` };
-  if (/manual[\s_]*hang[\s_-]*up/i.test(raw)) return { key: `${k}manualHangup` };
-  if (/asterisk[\s_]*gone/i.test(raw)) return { key: `${k}callDropped` };
-  if (/blacklist/i.test(raw)) return { key: `${k}blacklisted` };
-  if (/anonymous/i.test(raw)) return { key: `${k}anonymous` };
-  const fraud = raw.match(/fraud[\s_]*score[\s_]*(\d+)/i);
-  if (fraud) return { key: `${k}fraudScore`, score: fraud[1] };
-  return null;
-}
-
-/** The fail reason as shown on screen: English exactly as before, other
- *  languages translated when the reason is a known one. */
+/** The fail reason as shown on screen, in the chosen language (lib/fail-reason.ts). */
 function failReasonOnScreen(c: Call, locale: string, t: (key: string) => string): string {
-  const english = failReasonText(c);
-  if (!english || locale === "en") return english;
-  const known = failReasonKey(c.failReason);
-  if (!known) return english;
-  return t(known.key).replace("{score}", known.score ?? "");
+  return localizeFailReason(c.failReason, locale, t);
 }
 
 /** The server's export file uses the backend's own wording; give it the same labels as the screen. */
@@ -1137,10 +1093,46 @@ function CallRowActions({
     }
   };
 
-  const onBlock = () => {
-    toast.success(t("toolsUI.reports.callLog.actions.toastBlocked").replace("{number}", caller), {
-      description: t("toolsUI.reports.callLog.actions.toastBlockedDesc"),
-    });
+  // Block / unblock for real: adds to or removes from the Blocked Numbers
+  // list (this button used to show a "Blocked" message and save nothing).
+  const isBlockedCaller = useBlockedCallerMatcher();
+  const blockedEntries = useBlockedNumbersStore((s) => s.numbers);
+  const addBlocked = useBlockedNumbersStore((s) => s.add);
+  const removeBlocked = useBlockedNumbersStore((s) => s.remove);
+  const blocked = isBlockedCaller(call.callerNumber, call.campaignId);
+  const [blocking, setBlocking] = React.useState(false);
+
+  const onBlock = async () => {
+    if (blocking) return;
+    setBlocking(true);
+    try {
+      if (blocked) {
+        // Every entry for this exact number that applies to this call - the
+        // same number blocked twice must not stay blocked after one unblock.
+        const own = blockedEntries.filter(
+          (e) =>
+            e.scope === "number" &&
+            national(e.number) === national(call.callerNumber) &&
+            (!e.campaignId || e.campaignId === call.campaignId),
+        );
+        if (own.length === 0) {
+          // Blocked by a prefix rule, which covers other numbers too.
+          toast.info(t("toolsUI.reports.callLog.actions.prefixBlocked"));
+          return;
+        }
+        for (const e of own) await removeBlocked(e.id);
+        toast.success(t("toolsUI.suppression.blockedNumbers.toastUnblocked").replace("{number}", caller));
+      } else {
+        await addBlocked({ number: caller, scope: "number" });
+        toast.success(t("toolsUI.reports.callLog.actions.toastBlocked").replace("{number}", caller), {
+          description: t("toolsUI.reports.callLog.actions.toastBlockedDesc"),
+        });
+      }
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.actions.blockError")));
+    } finally {
+      setBlocking(false);
+    }
   };
 
   const onBill = () => {
@@ -1192,8 +1184,13 @@ function CallRowActions({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          aria-label={t("toolsUI.reports.callLog.actions.blockCaller")}
+          className={cn(
+            "h-7 w-7",
+            blocked ? "text-destructive hover:text-foreground" : "text-muted-foreground hover:text-destructive",
+          )}
+          disabled={blocking}
+          aria-label={t(blocked ? "toolsUI.reports.callLog.actions.unblockCaller" : "toolsUI.reports.callLog.actions.blockCaller")}
+          title={t(blocked ? "toolsUI.reports.callLog.actions.unblockCaller" : "toolsUI.reports.callLog.actions.blockCaller")}
           onClick={onBlock}
         >
           <Ban className="h-3.5 w-3.5" />

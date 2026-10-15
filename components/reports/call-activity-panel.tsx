@@ -35,6 +35,7 @@ import {
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslation } from "@/hooks/use-translation";
+import { localizeFailReason } from "@/lib/fail-reason";
 import {
   callsService,
   hasRoutingTrace,
@@ -534,7 +535,7 @@ function DestinationList({
 /** Routing, money and recording — the sections of the payload that aren't
  *  timeline events. */
 function ParametersTab({ data }: { data: CallActivity }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const money = (v: number | string | null | undefined) =>
     v === null || v === undefined ? undefined : formatCurrency(Number(v), true);
 
@@ -548,7 +549,7 @@ function ParametersTab({ data }: { data: CallActivity }) {
         [t("toolsUI.reports.activity.destination"), data.routing?.destination ?? undefined],
         [t("toolsUI.reports.activity.buyer"), data.routing?.buyer ?? undefined],
         [t("toolsUI.reports.activity.publisher"), data.routing?.publisher ?? undefined],
-        [t("toolsUI.reports.activity.blockReason"), data.routing?.blockReason ?? undefined],
+        [t("toolsUI.reports.activity.blockReason"), (locale === "en" ? data.routing?.blockReason : localizeFailReason(data.routing?.blockReason, locale, t)) || undefined],
       ],
     },
     {
