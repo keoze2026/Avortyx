@@ -237,6 +237,26 @@ export const marketplaceDirectoryService = {
     }
   },
 
+  /**
+   * Is this login platform staff (is_staff / is_superuser) on the server?
+   *
+   * /api/accounts/me does not send those two flags yet (its response schema
+   * leaves them out), so the portal can't tell staff from anyone else and
+   * never showed the staff controls or the hidden services. Until /me sends
+   * them, ask the marketplace itself: a staff-only edit of a category that
+   * doesn't exist. Staff get 404 (nothing to edit, nothing changed); everyone
+   * else gets 403. Nothing is ever written.
+   */
+  async isStaff(): Promise<boolean> {
+    if (localMode) return false;
+    try {
+      await http.patch("/api/marketplace/categories/00000000-0000-0000-0000-000000000000", { body: {} });
+      return true; // cannot happen (the id doesn't exist), but would mean staff
+    } catch (e) {
+      return e instanceof ApiError && e.status === 404;
+    }
+  },
+
   async saveCategory(input: {
     id?: string;
     name: string;
