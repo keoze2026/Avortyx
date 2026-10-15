@@ -105,6 +105,11 @@ interface CallRecordWire {
   payout?: string;
   buyerPayout?: string;
   publisherPayout?: string;
+  /** The call's telco cost (charged, or estimated before charging) - once
+   *  the list endpoint carries it. Any of these spellings. */
+  cost?: string | number | null;
+  chargedCost?: string | number | null;
+  platformCost?: string | number | null;
   recordingUrl?: string;
   recordingUri?: string;
   /* §3.13 calls this `started_at`; the CDR list endpoint has historically
@@ -454,6 +459,9 @@ function callRecordToCall(w: CallRecordWire): Call {
     carrier: w.carrier || undefined,
     payout: firstNum(w.payout, w.buyerPayout),
     revenue: toNum(w.revenue),
+    // Undefined until the backend sends a per-call cost; the Call Summary then
+    // sums it on every tab instead of only where an aggregate exists.
+    cost: firstOf(w.cost, w.chargedCost, w.platformCost),
     geo: {
       country: w.callerCountry ?? "",
       state: w.callerState ?? undefined,

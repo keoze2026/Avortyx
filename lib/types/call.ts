@@ -40,6 +40,8 @@ export interface Call {
   lineType?: string;
   payout: number;
   revenue: number;
+  /** Telco cost of this call, when the call list carries it. */
+  cost?: number;
   /** Caller geo as the backend resolved it, from the lookup provider.
    *  `zip` and `timezone` arrive alongside country/state/city; any of them is
    *  an empty string or undefined when the provider returned nothing for that

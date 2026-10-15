@@ -8,7 +8,12 @@ import { toast } from "sonner";
 
 import { CallLogTable } from "@/components/reports/call-log-table";
 import { CallPerfCard } from "@/components/reports/call-perf-card";
-import { CallSummaryTable } from "@/components/reports/call-summary-table";
+import {
+  CallSummaryTable,
+  callInDrill,
+  drillEntity,
+  type SummaryDrill,
+} from "@/components/reports/call-summary-table";
 import { HourlyDistribution } from "@/components/reports/hourly-distribution";
 import { EMPTY_FILTERS, type ReportFilters } from "@/components/reports/reports-filter-popover";
 import { ReportsPinGate } from "@/components/reports/reports-pin-gate";
@@ -83,6 +88,9 @@ export default function ReportsPage() {
     setDateRange({ from, to: latestDay });
   }, [dateRange, latestKey, latestDay]);
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
+  // A row clicked in the Call Summary (any tab): the whole report - chart,
+  // donut, Call Performance, summary and Call Log - shows only its calls.
+  const [drill, setDrill] = useState<SummaryDrill | null>(null);
   const [visibility, setVisibility] = useState<ReportsVisibility>(DEFAULT_REPORTS_VISIBILITY);
   // Set by clicking a Connected / Qualified / Not Connected total in the Call
   // Summary card below. Narrows the Call Log to matching rows; cleared by
@@ -274,6 +282,10 @@ export default function ReportsPage() {
   // rows — and no status filter is set.
   const summariesForTable = useMemo(() => {
     if (filters.statuses.length > 0) return undefined;
+    // A clicked row on a tab with no aggregate behind it (dialed number,
+    // destination, date, …) can't narrow any aggregate: count from the calls.
+    const drillOn = drill ? drillEntity(drill) : undefined;
+    if (drill && !drillOn) return undefined;
     const active: Record<SummaryEntity, string[]> = {
       campaign: filters.campaignIds,
       buyer: filters.buyerIds,
@@ -291,8 +303,20 @@ export default function ReportsPage() {
       const own = new Set(active[entity]);
       out[entity] = own.size > 0 ? viewSummaries[entity].filter((r) => own.has(r.entityId)) : viewSummaries[entity];
     }
+    if (drill && drillOn) {
+      // Only the clicked entity's own aggregate can be narrowed to it.
+      const name = drill.label.trim().toLowerCase();
+      for (const entity of Object.keys(out) as SummaryEntity[]) {
+        if (entity !== drillOn) delete out[entity];
+      }
+      if (out[drillOn]) {
+        out[drillOn] = out[drillOn]!.filter(
+          (r) => r.entityId === drill.key || r.entityName.trim().toLowerCase() === name,
+        );
+      }
+    }
     return out;
-  }, [filters, viewSummaries]);
+  }, [filters, viewSummaries, drill]);
 
   const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);
@@ -310,9 +334,10 @@ export default function ReportsPage() {
         return false;
       }
       if (statusSet.size > 0 && !statusSet.has(c.status)) return false;
+      if (drill && !callInDrill(c, drill, timeZone)) return false;
       return true;
     });
-  }, [filters, viewCalls]);
+  }, [filters, viewCalls, drill, timeZone]);
 
   // Columns the admin unticked under this buyer / publisher's Reporting
   // visibility. The Call Performance card follows them like the tables do.
@@ -359,6 +384,8 @@ export default function ReportsPage() {
 
   const exportQuery = useMemo<Omit<CallLogQuery, "page" | "pageSize"> | null>(() => {
     if (!fromKey) return null;
+    // A clicked row: export exactly the calls on screen (built in the browser).
+    if (drill) return null;
     if (filters.campaignIds.length > 1 || filters.buyerIds.length > 1 || filters.publisherIds.length > 1) {
       return null;
     }
@@ -373,7 +400,7 @@ export default function ReportsPage() {
       status: statusFilter === "connected" ? "completed" : undefined,
       isQualified: statusFilter === "qualified" ? true : undefined,
     };
-  }, [fromKey, toKey, filters, statusFilter]);
+  }, [fromKey, toKey, filters, statusFilter, drill]);
 
   // Backing out of the PIN screen. Where today can be shown, drop back to
   // today; otherwise there is nothing to show here, so go to the Dashboard.
@@ -507,6 +534,8 @@ export default function ReportsPage() {
             onScopeChange={onSummaryScope}
             summaries={summariesForTable}
             showLive={liveVisible}
+            drill={drill}
+            onDrillChange={setDrill}
           />
         )}
 

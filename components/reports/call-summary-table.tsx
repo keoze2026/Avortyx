@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Download, Settings } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Download, Settings, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { ExportMenu } from "@/components/shared/export-menu";
@@ -43,7 +43,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { cn } from "@/lib/utils";
 
-type GroupKey =
+export type GroupKey =
   | "campaign"
   | "publisher"
   | "dialed"
@@ -568,6 +568,7 @@ function groupCalls(
   destinationNames?: ReadonlyMap<string, string>,
 ): SummaryRow[] {
   const m = new Map<string, SummaryRow>();
+  const costCounts = new Map<string, { n: number; sum: number }>();
   for (const c of calls) {
     const bucket = deriveGroup(c, group, timeZone, destinationNames);
     if (!bucket || !bucket.key) continue;
@@ -615,14 +616,48 @@ function groupCalls(
     row.tcl += c.durationSec;
     row.payout += c.payout;
     row.revenue += c.revenue;
+    // Per-call cost, once the call list carries it: summed for the row, and
+    // only shown when every call in the row has one (never a partial sum).
+    const known = costCounts.get(key) ?? { n: 0, sum: 0 };
+    if (typeof c.cost === "number") {
+      known.n += 1;
+      known.sum += c.cost;
+    }
+    costCounts.set(key, known);
   }
 
   for (const row of m.values()) {
+    const known = costCounts.get(row.key);
+    if (known && known.n === row.incoming && row.incoming > 0) row.cost = Math.round(known.sum * 100) / 100;
     row.conversionRate = row.incoming > 0 ? row.converted / row.incoming : 0;
     row.acl = row.connected > 0 ? Math.round(row.tcl / row.connected) : 0;
   }
 
   return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
+}
+
+/** A Call Summary row the user clicked: the whole report shows only its calls. */
+export type SummaryDrill = { tab: GroupKey; key: string; label: string };
+
+/**
+ * Does this call belong to the clicked row? Same grouping the table used to
+ * build the row, so the report shows exactly the calls the row counted. Rows
+ * the backend aggregate added are keyed by the entity's name when it sent no
+ * id, so campaign / publisher / buyer rows also match on the name.
+ */
+export function callInDrill(c: Call, d: SummaryDrill, timeZone: string): boolean {
+  if (deriveGroup(c, d.tab, timeZone)?.key === d.key) return true;
+  const name = d.label.trim().toLowerCase();
+  if (!name) return false;
+  if (d.tab === "campaign") return (c.campaignName ?? "").trim().toLowerCase() === name;
+  if (d.tab === "publisher") return (c.publisherName ?? "").trim().toLowerCase() === name;
+  if (d.tab === "buyer") return (c.buyerName ?? "").trim().toLowerCase() === name;
+  return false;
+}
+
+/** The backend aggregate behind a clicked row's tab, if it has one. */
+export function drillEntity(d: SummaryDrill): SummaryEntity | undefined {
+  return SUMMARY_ENTITY_FOR_TAB[d.tab];
 }
 
 /** Which backend aggregate (if any) feeds a grouping tab. Carrier rows are
@@ -924,6 +959,15 @@ interface CallSummaryTableProps {
    * Defaults to on.
    */
   showLive?: boolean;
+  /** The row clicked to narrow the whole report, or null for everything. */
+  drill?: SummaryDrill | null;
+  /**
+   * Click a row on any tab (a campaign, publisher, buyer, dialed number,
+   * destination, date, …) to show only its calls across the report (chart,
+   * donut, summary, call log, export); click it again, or the chip, to show
+   * all. Called with null to clear.
+   */
+  onDrillChange?: (drill: SummaryDrill | null) => void;
 }
 
 type SummarySortKey = "label" | ColumnKey;
@@ -945,6 +989,8 @@ export function CallSummaryTable({
   onScopeChange,
   summaries,
   showLive = true,
+  drill = null,
+  onDrillChange,
 }: CallSummaryTableProps) {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<GroupKey>("campaign");
@@ -1182,6 +1228,20 @@ export function CallSummaryTable({
           })}
         </div>
         <div className="flex items-center gap-1">
+          {/* A row was clicked: say which, and one click shows everything again. */}
+          {onDrillChange && drill && (
+            <button
+              type="button"
+              onClick={() => onDrillChange(null)}
+              title={t("toolsUI.reports.summary.drill.clearAny")}
+              className="mr-1 inline-flex max-w-[260px] items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+            >
+              <span className="truncate">
+                {t("toolsUI.reports.summary.drill.only").replace("{name}", drill.label)}
+              </span>
+              <X className="h-3 w-3 shrink-0" aria-label={t("toolsUI.reports.summary.drill.clearAny")} />
+            </button>
+          )}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.reports.callLog.columnSettings")}>
@@ -1272,9 +1332,42 @@ export function CallSummaryTable({
               ) : (
                 rows.map((r) => {
                   const profit = rowProfit(r);
+                  // Every real row is clickable: show only its calls, click again for all.
+                  // ("Not available" rows have nothing behind them to narrow to.)
+                  const pickable = !!onDrillChange && !!r.key && r.key !== NOT_AVAILABLE;
+                  const picked = pickable && drill?.tab === tab && drill.key === r.key;
+                  const pick = () => onDrillChange?.(picked ? null : { tab, key: r.key, label: r.label });
                   return (
-                    <TableRow key={r.key}>
-                      <TableCell className="text-center font-medium">{r.label}</TableCell>
+                    <TableRow
+                      key={r.key}
+                      className={cn(pickable && "cursor-pointer", picked && "bg-accent/10 hover:bg-accent/15")}
+                      onClick={pickable ? pick : undefined}
+                      onKeyDown={
+                        pickable
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                pick();
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={pickable ? 0 : undefined}
+                      aria-pressed={pickable ? picked : undefined}
+                      title={
+                        pickable
+                          ? t(picked ? "toolsUI.reports.summary.drill.rowHintAnyActive" : "toolsUI.reports.summary.drill.rowHintAny")
+                          : undefined
+                      }
+                    >
+                      <TableCell
+                        className={cn(
+                          "text-center font-medium",
+                          pickable && "text-accent underline-offset-4 hover:underline",
+                        )}
+                      >
+                        {r.label}
+                      </TableCell>
                       {visible.live && (
                         <TableCell
                           className={cn(
