@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { ROUTES } from "@/lib/constants";
 import { formatCallerId, formatCurrency, formatHMS, formatRelativeTime } from "@/lib/format";
 import type { Call } from "@/lib/types";
@@ -27,6 +28,8 @@ interface Props {
 
 export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Props) {
   const { t } = useTranslation();
+  // Callers on the Blocked Numbers list show in red, as in the Reports call log.
+  const isBlocked = useBlockedCallerMatcher();
   return (
     <div className="overflow-hidden rounded-xl border border-border">
       <div className="overflow-x-auto">
@@ -64,7 +67,15 @@ export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Prop
                     </TableCell>
                   )}
                   {visibleColumns.has("caller") && (
-                    <TableCell className="text-[9.5px] font-medium tabular-nums">{formatCallerId(c.callerNumber)}</TableCell>
+                    <TableCell className="text-[9.5px] font-medium tabular-nums">
+                      {isBlocked(c.callerNumber, c.campaignId) ? (
+                        <span className="text-destructive" title={t("toolsUI.reports.callLog.callerIdBlocked")}>
+                          {formatCallerId(c.callerNumber)}
+                        </span>
+                      ) : (
+                        formatCallerId(c.callerNumber)
+                      )}
+                    </TableCell>
                   )}
                   {visibleColumns.has("campaign") && (
                     <TableCell>

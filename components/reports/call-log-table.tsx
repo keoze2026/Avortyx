@@ -70,7 +70,7 @@ import {
 } from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
-import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
+import { useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -191,38 +191,6 @@ function statusVariant(s: CallStatus): React.ComponentProps<typeof Badge>["varia
  */
 function customerPayout(c: Call): number {
   return Math.max(0, c.revenue - c.payout);
-}
-
-/**
- * Matcher for the Blocked Numbers list. Exact entries match on digits;
- * prefix entries match any caller whose digits start with them. Campaign-
- * scoped entries only apply to calls on that campaign.
- */
-function makeBlockedMatcher(
-  entries: Array<{ number: string; scope: "number" | "prefix"; campaignId?: string }>,
-): (callerNumber: string, campaignId: string) => boolean {
-  if (entries.length === 0) return () => false;
-  const exact = new Map<string, Set<string | undefined>>();
-  const prefixes: Array<{ digits: string; campaignId?: string }> = [];
-  for (const e of entries) {
-    const digits = e.number.replace(/\D/g, "");
-    if (!digits) continue;
-    if (e.scope === "prefix") prefixes.push({ digits, campaignId: e.campaignId });
-    else {
-      const set = exact.get(digits) ?? new Set<string | undefined>();
-      set.add(e.campaignId);
-      exact.set(digits, set);
-    }
-  }
-  const applies = (scopeCampaign: string | undefined, campaignId: string) =>
-    scopeCampaign === undefined || scopeCampaign === campaignId;
-  return (callerNumber, campaignId) => {
-    const digits = callerNumber.replace(/\D/g, "");
-    if (!digits) return false;
-    const set = exact.get(digits);
-    if (set && [...set].some((c) => applies(c, campaignId))) return true;
-    return prefixes.some((p) => digits.startsWith(p.digits) && applies(p.campaignId, campaignId));
-  };
 }
 
 /** Stable hash so derived fields (TTC, fail reason) don't reshuffle on render. */
@@ -562,8 +530,8 @@ export function CallLogTable({
   // Blocked Numbers list — callers on it are flagged in red in the Caller ID
   // column so an operator can see at a glance that a call came from a
   // number they've blocked. Hydrated on app boot with the other stores.
-  const blockedNumbers = useBlockedNumbersStore((s) => s.numbers);
-  const isBlocked = React.useMemo(() => makeBlockedMatcher(blockedNumbers), [blockedNumbers]);
+  // Matched on the national number, so "7194683580" and "+17194683580" are the same caller.
+  const isBlocked = useBlockedCallerMatcher();
   const publisherNameById = React.useMemo(
     () => new Map(publishers.map((p) => [p.id, p.name])),
     [publishers],
