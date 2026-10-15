@@ -21,6 +21,8 @@ export interface Buyer {
   /** True when the list response already carried the usage counters, so
    *  the Buyers page doesn't ask each buyer's /stats one by one. */
   statsFromList?: boolean;
+  /** True when the list response carried live calls for this buyer. */
+  liveKnown?: boolean;
   dailyCap: number;
   monthlyCap: number;
 

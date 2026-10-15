@@ -30,6 +30,11 @@ interface CampaignsState {
   /** Save the campaign's daily call cap (0 = unlimited). The other caps are
    *  sent unchanged, because the cap endpoint treats a missing cap as 0. */
   setDailyCap: (id: string, dailyCap: number) => Promise<void>;
+  /** Save all of a campaign's caps at once (the campaign page's Call caps card). */
+  setCaps: (
+    id: string,
+    caps: { dailyCap: number; monthlyCap: number; maxConcurrency: number; globalCap: number },
+  ) => Promise<void>;
   /**
    * Create a copy of a campaign named "<name> (Clone)". Copies everything the
    * campaign itself stores (payout, caps, schedule, call audio, duplicate
@@ -126,6 +131,23 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
         monthlyCap: c.monthlyCap ?? 0,
         globalCap: c.globalCap ?? 0,
       });
+    } catch (e) {
+      set({ campaigns: prev });
+      throw e;
+    }
+  },
+
+  setCaps: async (id, caps) => {
+    const prev = get().campaigns;
+    set({
+      campaigns: prev.map((x) =>
+        x.id === id
+          ? { ...x, dailyCap: caps.dailyCap, monthlyCap: caps.monthlyCap, maxConcurrency: caps.maxConcurrency, globalCap: caps.globalCap }
+          : x,
+      ),
+    });
+    try {
+      await campaignsService.saveCaps(id, caps);
     } catch (e) {
       set({ campaigns: prev });
       throw e;

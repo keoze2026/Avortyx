@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Undo2 } from "lucide-react";
+import { Pencil, PhoneForwarded, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -33,6 +33,8 @@ interface BuyersTableProps {
   onToggle: (id: string) => void;
   onArchive: (id: string) => void;
   onEdit: (id: string) => void;
+  /** "Add TFN": open the destination dialog with this buyer already picked. */
+  onAddTfn?: (id: string) => void;
   /** Optional controlled selection. When omitted, the table owns it internally. */
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
@@ -44,6 +46,7 @@ export function BuyersTable({
   onToggle,
   onArchive,
   onEdit,
+  onAddTfn,
   selectedIds,
   onSelectionChange,
 }: BuyersTableProps) {
@@ -97,8 +100,6 @@ export function BuyersTable({
           <TableBody>
             {buyers.map((b) => {
               const isActive = b.status === "active";
-              // This hour's spend as the backend counts it (hourly_spend).
-              const hourly = b.hourlySpend;
               return (
                 <TableRow
                   key={b.id}
@@ -120,7 +121,7 @@ export function BuyersTable({
                       <BuyerCcBox
                         buyerId={b.id}
                         name={b.name}
-                        current={b.liveCalls}
+                        current={b.liveKnown ? b.liveCalls : null}
                         cap={b.concurrencyCap}
                         known={b.concurrencyKnown !== false}
                       />
@@ -128,22 +129,22 @@ export function BuyersTable({
                   )}
                   {columns.hourly && (
                     <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      {formatCurrency(hourly, true)}
+                      <WindowCell spend={b.hourlySpend} calls={b.hourlyCalls} />
                     </TableCell>
                   )}
                   {columns.daily && (
                     <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      {formatCurrency(b.spendToday, true)}
+                      <WindowCell spend={b.spendToday} calls={b.callsToday} />
                     </TableCell>
                   )}
                   {columns.monthly && (
                     <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      {formatCurrency(b.spendMonth, true)}
+                      <WindowCell spend={b.spendMonth} calls={b.callsMonth} />
                     </TableCell>
                   )}
                   {columns.global && (
                     <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      {formatCurrency(b.lifetimeSpend, true)}
+                      <WindowCell spend={b.lifetimeSpend} calls={b.globalCalls} />
                     </TableCell>
                   )}
                   {columns.status && (
@@ -164,7 +165,13 @@ export function BuyersTable({
                         label={t("networkUI.common.edit")}
                         onClick={() => onEdit(b.id)}
                       />
-                      <ActionIcon icon={Undo2} label={t("networkUI.common.revert")} />
+                      {onAddTfn && (
+                        <ActionIcon
+                          icon={PhoneForwarded}
+                          label={t("buyersRow.addTfn")}
+                          onClick={() => onAddTfn(b.id)}
+                        />
+                      )}
                       <ActionIcon
                         icon={Trash2}
                         label={t("networkUI.common.remove")}
@@ -185,6 +192,19 @@ export function BuyersTable({
 
 /* ─────────────────────────────────────────────────────────────────── */
 
+/** One spend window: the spend, with the number of calls under it. */
+function WindowCell({ spend, calls }: { spend: number; calls: number }) {
+  const { t } = useTranslation();
+  return (
+    <span className="inline-flex flex-col items-center leading-tight">
+      <span>{formatCurrency(spend, true)}</span>
+      <span className="text-[10px] text-muted-foreground/80">
+        {t(calls === 1 ? "buyersRow.callsOne" : "buyersRow.callsMany").replace("{n}", calls.toLocaleString("en-US"))}
+      </span>
+    </span>
+  );
+}
+
 /**
  * Live calls / CC limit for one buyer - the same box as the Live column on
  * Campaigns. Click the limit, type a number, Enter or click away to save,
@@ -201,7 +221,8 @@ function BuyerCcBox({
 }: {
   buyerId: string;
   name: string;
-  current: number;
+  /** Live calls now; null when the list doesn't send them (only the limit shows). */
+  current: number | null;
   cap: number;
   /** False until the list says what the limit is: shows "—", still editable. */
   known: boolean;
@@ -247,7 +268,7 @@ function BuyerCcBox({
   };
 
   // Buyer full (live calls at its CC limit, e.g. 10 / 10): solid blue, as on Campaigns.
-  const full = known && cap > 0 && current >= cap;
+  const full = known && current !== null && cap > 0 && current >= cap;
 
   return (
     <span
@@ -257,8 +278,12 @@ function BuyerCcBox({
       )}
       title={full ? t("buyersRow.ccFull") : undefined}
     >
-      <span>{current}</span>
-      <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
+      {current !== null && (
+        <>
+          <span>{current}</span>
+          <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
+        </>
+      )}
       {editing ? (
         <input
           ref={inputRef}

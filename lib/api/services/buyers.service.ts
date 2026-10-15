@@ -45,6 +45,11 @@ interface BuyerListWire {
   dailySpend?: number | string;
   monthlySpend?: number | string;
   globalSpend?: number | string;
+  /** List spellings of the four windows (see BuyerStatsWire). */
+  callsHourly?: number;
+  callsGlobal?: number;
+  spendHourly?: number | string;
+  spendGlobal?: number | string;
   /** The buyer's concurrent-call (CC) limit - `Buyer.max_concurrency`, the
    *  field routing checks. 0 = unlimited. Read when the list carries it. */
   maxConcurrency?: number;
@@ -87,6 +92,13 @@ interface BuyerWire extends BuyerListWire {
  * so every real payload fell through to the 0 default.
  */
 interface BuyerStatsWire {
+  /** Spellings used by the buyers LIST (`GET /api/buyers/`): calls_hourly,
+   *  calls_today, calls_month, calls_global, spend_hourly, spend_today,
+   *  spend_month, spend_global - all four windows for every row in one call. */
+  callsHourly?: number;
+  callsGlobal?: number;
+  spendHourly?: number | string;
+  spendGlobal?: number | string;
   liveCalls?: number;
   hourlyCalls?: number;
   dailyCalls?: number;
@@ -138,14 +150,14 @@ function firstOf(...values: Array<number | string | null | undefined>): number {
 function statsWireToStats(w: BuyerStatsWire): BuyerStats {
   return {
     liveCalls: w.liveCalls ?? 0,
-    hourlyCalls: w.hourlyCalls ?? 0,
+    hourlyCalls: firstOf(w.callsHourly, w.hourlyCalls),
     callsToday: firstOf(w.dailyCalls, w.callsToday),
     callsMonth: firstOf(w.monthlyCalls, w.callsMonth),
-    globalCalls: w.globalCalls ?? 0,
-    hourlySpend: toNum(w.hourlySpend),
+    globalCalls: firstOf(w.callsGlobal, w.globalCalls),
+    hourlySpend: firstOf(w.spendHourly, w.hourlySpend),
     spendToday: firstOf(w.dailySpend, w.spendToday),
     spendMonth: firstOf(w.monthlySpend, w.spendMonth),
-    lifetimeSpend: firstOf(w.globalSpend, w.lifetimeSpend, w.totalSpend),
+    lifetimeSpend: firstOf(w.spendGlobal, w.globalSpend, w.lifetimeSpend, w.totalSpend),
     acceptRate: toRate(w.acceptRate),
     conversionRate: toRate(w.conversionRate),
   };
@@ -194,7 +206,13 @@ function listWireToBuyer(w: BuyerListWire): Buyer {
     // them (0 otherwise) — these used to be hardcoded to 0 regardless of
     // what the response carried.
     ...statsWireToStats(w),
-    statsFromList: w.hourlySpend !== undefined && (w.dailySpend ?? w.spendToday) !== undefined,
+    // The list carries the spend windows (the buyers list endpoint now does),
+    // so the page needs no per-buyer /stats calls.
+    statsFromList:
+      (w.spendHourly ?? w.hourlySpend) !== undefined && (w.dailySpend ?? w.spendToday) !== undefined,
+    // Live calls are shown only when the list sends them; otherwise the row
+    // shows just the CC limit instead of a made-up 0.
+    liveKnown: w.liveCalls !== undefined,
     campaignIds: [],
     createdAt: Date.parse(w.createdAt) || Date.now(),
   };

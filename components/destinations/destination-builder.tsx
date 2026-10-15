@@ -35,6 +35,9 @@ interface DestinationBuilderProps {
   onOpenChange: (open: boolean) => void;
   /** When set, the dialog opens in edit mode for this destination. */
   editId?: string;
+  /** New destination for this buyer: the Buyer field opens already picked
+   *  (the "Add TFN" action on a Buyers row). */
+  defaultBuyerId?: string;
 }
 
 interface FormState {
@@ -72,6 +75,7 @@ export function DestinationBuilder({
   open,
   onOpenChange,
   editId,
+  defaultBuyerId,
 }: DestinationBuilderProps) {
   const { t } = useTranslation();
   const add = useDestinationsStore((s) => s.add);
@@ -102,10 +106,11 @@ export function DestinationBuilder({
         enabled: existing.enabled,
       });
     } else {
-      // Open with no buyer pre-selected — the operator must pick one.
-      setForm(EMPTY);
+      // Opened from a buyer's row: that buyer is already picked. Otherwise no
+      // buyer is pre-selected and the operator must pick one.
+      setForm({ ...EMPTY, buyerId: defaultBuyerId ?? "" });
     }
-  }, [open, existing]);
+  }, [open, existing, defaultBuyerId]);
 
   // Buyer is REQUIRED on create — the backend answers 400 without one ("a
   // destination with no buyer can never receive calls").

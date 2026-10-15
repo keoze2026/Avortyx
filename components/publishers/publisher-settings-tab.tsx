@@ -40,10 +40,9 @@ import {
 } from "@/components/network/partner-access-sections";
 import {
   PartnerMembersSection,
-  type PartnerMemberRow,
   type PartnerMembersLabels,
 } from "@/components/network/partner-members-section";
-import { usePartnerRegistration } from "@/hooks/use-partner-registration";
+import { usePartnerMembers } from "@/hooks/use-partner-members";
 import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useTranslation } from "@/hooks/use-translation";
 import {
@@ -60,8 +59,6 @@ export function PublisherSettingsTab({ publisher }: Props) {
   const access = usePublisherAccessStore((s) => s.byPublisher[publisher.id]);
   const setTimezone = usePublisherAccessStore((s) => s.setTimezone);
   const setCapEnabled = usePublisherAccessStore((s) => s.setCapEnabled);
-  const addMember = usePublisherAccessStore((s) => s.addMember);
-  const removeMember = usePublisherAccessStore((s) => s.removeMember);
 
   // Time zone: the server's copy (partner settings) wins, so every browser and
   // device shows the same one. The browser copy is only the fallback - it is
@@ -85,31 +82,15 @@ export function PublisherSettingsTab({ publisher }: Props) {
       toast.error("Couldn't save the time zone on the server. Please try again.");
     });
   };
-  const members = access?.members ?? [];
   const capEnabled = access?.cap.enabled ?? false;
 
-  // Who is listed: the publisher's own contact email (the address the backend
-  // invites when the publisher is created) plus anyone invited from this tab.
-  // Each one's status - "Invited", or "Registered" once they have accepted -
-  // is checked against the workspace's logins and refreshes by itself.
+  // Who is listed: every login that can sign in to this publisher, read from
+  // the server (GET /api/publishers/{id}/members) - including the contact
+  // login the backend invites when the publisher is created. Each one's
+  // status - "Invited", or "Registered" once they have accepted - comes from
+  // the same list and refreshes by itself.
   const { t } = useTranslation();
-  const contactEmail = (publisher.email ?? "").trim().toLowerCase();
-  const memberEmails = React.useMemo(
-    () => [...(contactEmail ? [contactEmail] : []), ...members.map((m) => m.email)],
-    [contactEmail, members],
-  );
-  const registration = usePartnerRegistration(memberEmails);
-  const memberRows = React.useMemo<PartnerMemberRow[]>(() => {
-    const out: PartnerMemberRow[] = [];
-    if (contactEmail) {
-      out.push({ id: "contact", email: contactEmail, ...registration.info(contactEmail), canRemove: false });
-    }
-    for (const m of members) {
-      if (m.email.trim().toLowerCase() === contactEmail) continue;
-      out.push({ id: m.id, email: m.email, ...registration.info(m.email), canRemove: true });
-    }
-    return out;
-  }, [contactEmail, members, registration]);
+  const { rows: memberRows, refresh: refreshMembers } = usePartnerMembers("publisher", publisher.id, publisher.email);
   const memberLabels = React.useMemo<PartnerMembersLabels>(
     () => ({
       title: t("networkUI.publishers.settings.membersTitle"),
@@ -166,23 +147,19 @@ export function PublisherSettingsTab({ publisher }: Props) {
         rows={memberRows}
         labels={memberLabels}
         onInvite={async (email) => {
-          // Send the invite first. The local store is display state backed by
-          // localStorage - adding to it before the request succeeded is what
-          // made the row read "Invited" when no email had been sent.
+          // Send the invite, then reload the list from the server.
           await publishersService.invite(publisher.id, email);
-          addMember(publisher.id, email);
           // A new invitation starts from scratch, even for an email seen before.
           markInvited([email]);
-          registration.refresh();
+          await refreshMembers();
         }}
         onRemove={async (memberId) => {
-          const member = members.find((m) => m.id === memberId);
+          const member = memberRows.find((m) => m.id === memberId);
           if (!member) return;
-          // End their access on the server first; only then drop the row.
+          // End their access on the server, then reload the list from it.
           const outcome = await removePartnerMember("publisher", publisher.id, member.email);
-          removeMember(publisher.id, memberId);
           forgetEmails([member.email]);
-          registration.refresh();
+          await refreshMembers();
           return outcome;
         }}
       />

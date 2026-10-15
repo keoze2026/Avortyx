@@ -14,6 +14,7 @@ import {
 } from "@/components/buyers/buyers-table-toolbar";
 import { EditBuyerDialog } from "@/components/buyers/edit-buyer-dialog";
 import { InviteBuyerDialog } from "@/components/buyers/invite-buyer-dialog";
+import { DestinationBuilder } from "@/components/destinations/destination-builder";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ListLoading } from "@/components/shared/list-loading";
@@ -54,6 +55,8 @@ export default function BuyersPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  // "Add TFN" on a row: the destination dialog, with that buyer already picked.
+  const [addTfnFor, setAddTfnFor] = useState<string | null>(null);
 
   // Toolbar state
   const [query, setQuery] = useState("");
@@ -228,6 +231,7 @@ export default function BuyersPage() {
             onToggle={onToggle}
             onArchive={onArchive}
             onEdit={setEditId}
+            onAddTfn={setAddTfnFor}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
           />
@@ -242,6 +246,13 @@ export default function BuyersPage() {
       )}
 
       <InviteBuyerDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      <DestinationBuilder
+        open={addTfnFor !== null}
+        onOpenChange={(open) => {
+          if (!open) setAddTfnFor(null);
+        }}
+        defaultBuyerId={addTfnFor ?? undefined}
+      />
       <EditBuyerDialog
         buyerId={editId}
         onOpenChange={(open) => !open && setEditId(null)}

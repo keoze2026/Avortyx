@@ -15,6 +15,7 @@ import { Globe, LockKeyhole, Settings as SettingsIcon, Zap } from "lucide-react"
 
 import { AccessTab } from "./access-tab";
 import { AdvancedSettingsList } from "./advanced-settings-cards";
+import { CallCapsSection } from "./call-caps-section";
 import { EnrichmentTab } from "./enrichment-tab";
 import { ForwardCallsSection } from "./forward-calls-section";
 import { PricingSection } from "./pricing-section";
@@ -75,6 +76,9 @@ export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
         <div className="space-y-6">
           {/* Pricing — revenue and payout per call; what the Dashboard adds up */}
           <PricingSection campaignId={campaign.id} />
+
+          {/* Call caps — daily, monthly and concurrency, the caps routing checks */}
+          <CallCapsSection campaignId={campaign.id} />
 
           {/* Auto schedule — daily play/pause based on portal timezone */}
           <AutoScheduleCard
