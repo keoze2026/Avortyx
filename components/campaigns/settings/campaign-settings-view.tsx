@@ -22,6 +22,7 @@ import { PricingSection } from "./pricing-section";
 import { RtbTab } from "./rtb-tab";
 import { TrackingNumbersSection } from "./tracking-numbers-section";
 import { AutoScheduleCard } from "@/components/shared/auto-schedule-card";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { useTranslation } from "@/hooks/use-translation";
 import type { Campaign } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,21 @@ const TAB_KEYS: Array<{ id: TabId; labelKey: string; icon: React.ComponentType<{
 
 export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
   const { t } = useTranslation();
+  const { isPartner } = usePartnerPermissions();
   const [tab, setTab] = React.useState<TabId>("general");
+
+  // A publisher (or buyer) login sees its own tracking numbers on this
+  // campaign and nothing else: no pricing, buyers, routing or settings.
+  if (isPartner) {
+    return (
+      <div className="space-y-4">
+        <p className="rounded-md border border-border bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
+          {t("partnerCampaign.note")}
+        </p>
+        <TrackingNumbersSection campaignId={campaign.id} readOnly />
+      </div>
+    );
+  }
   const TABS = TAB_KEYS.map((tk) => ({ ...tk, label: t(tk.labelKey) }));
 
   return (

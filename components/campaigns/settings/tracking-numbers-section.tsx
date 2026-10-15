@@ -25,7 +25,16 @@ import { useNumbersStore } from "@/lib/store/numbers-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
+export function TrackingNumbersSection({
+  campaignId,
+  readOnly = false,
+}: {
+  campaignId: string;
+  /** Publisher / buyer login: see the numbers, change nothing (no add, edit,
+   *  detach, rename or on/off). The list itself only holds their own numbers -
+   *  the server sends a publisher only the numbers allocated to them. */
+  readOnly?: boolean;
+}) {
   const { t } = useTranslation();
   // Stable selector + useMemo to avoid the new-ref-per-render Zustand loop.
   const allNumbers = useNumbersStore((s) => s.numbers);
@@ -65,9 +74,11 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
             {t("trafficUI.campaigns.settings.trackingNumbers.description")}
           </p>
         </div>
-        <Button size="sm" onClick={() => setAttachOpen(true)}>
-          <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.add")}
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={() => setAttachOpen(true)}>
+            <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.add")}
+          </Button>
+        )}
       </div>
 
       {numbers.length === 0 ? (
@@ -77,9 +88,11 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
           title={t("trafficUI.campaigns.settings.trackingNumbers.empty.title")}
           description={t("trafficUI.campaigns.settings.trackingNumbers.empty.description")}
           actions={
-            <Button size="sm" onClick={() => setAttachOpen(true)}>
-              <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.addTracking")}
-            </Button>
+            readOnly ? undefined : (
+              <Button size="sm" onClick={() => setAttachOpen(true)}>
+                <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.addTracking")}
+              </Button>
+            )
           }
         />
       ) : (
@@ -93,7 +106,9 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
-                <TableHead className="pr-6 text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.actions")}</TableHead>
+                {!readOnly && (
+                  <TableHead className="pr-6 text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.actions")}</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -110,6 +125,9 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                       </Badge>
                     </TableCell>
                     <TableCell className="min-w-[160px] text-center text-sm">
+                      {readOnly ? (
+                        <span className={cn(!n.label && "text-muted-foreground")}>{n.label || "—"}</span>
+                      ) : (
                       <NumberNameCell
                         value={n.label ?? ""}
                         placeholder={t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder")}
@@ -123,6 +141,7 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                           }
                         }}
                       />
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {n.publisherName ?? "—"}
@@ -131,6 +150,11 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                       {formatCurrency(n.payoutPerCall ?? 0, true)}
                     </TableCell>
                     <TableCell className="text-center">
+                      {readOnly ? (
+                        <Badge variant={n.status === "active" ? "success" : "outline"}>
+                          {t(n.status === "active" ? "partnerCampaign.numberOn" : "partnerCampaign.numberOff")}
+                        </Badge>
+                      ) : (
                       <Switch className="data-[state=checked]:bg-accent"
                         checked={n.status === "active"}
                         onCheckedChange={(v) => {
@@ -143,7 +167,9 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                         }}
                         aria-label={t("trafficUI.numbers.pools.toggle").replace("{name}", e164)}
                       />
+                      )}
                     </TableCell>
+                    {!readOnly && (
                     <TableCell className="pr-6">
                       <div className="inline-flex items-center justify-center gap-0.5">
                         <RowActionIcon
@@ -163,6 +189,7 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
                         />
                       </div>
                     </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
@@ -172,19 +199,23 @@ export function TrackingNumbersSection({ campaignId }: { campaignId: string }) {
       )}
 
       {/* Edit dialog — opens when a row's pencil icon is clicked. */}
+      {!readOnly && (
       <TrackingNumberEditDialog
         numberId={editingId}
         onOpenChange={(open) => !open && setEditingId(null)}
       />
+      )}
 
       {/* Two-mode picker — attach an already-bought number OR buy a fresh
           one from the carrier. Both paths route the result to this campaign
           so it shows up in the table above without a refresh. */}
-      <AttachTrackingNumberDialog
-        campaignId={campaignId}
-        open={attachOpen}
-        onOpenChange={setAttachOpen}
-      />
+      {!readOnly && (
+        <AttachTrackingNumberDialog
+          campaignId={campaignId}
+          open={attachOpen}
+          onOpenChange={setAttachOpen}
+        />
+      )}
     </section>
   );
 }

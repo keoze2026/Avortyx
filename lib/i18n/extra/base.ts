@@ -6,6 +6,10 @@ import type { ExtraTranslations } from "./types";
 
 export const base: ExtraTranslations = {
   en: {
+    // Publisher / buyer login: own tracking numbers on a campaign.
+    "partnerCampaign.note": "These are the tracking numbers allocated to you on this campaign.",
+    "partnerCampaign.numberOn": "On",
+    "partnerCampaign.numberOff": "Off",
     "common.daysShort": "{n}d",
     "common.other": "Other",
     "common.loadingRange": "Loading {range}…",
@@ -17,7 +21,7 @@ export const base: ExtraTranslations = {
     "toolsUI.suppression.columns.blockedOn": "Blocked on",
     "toolsUI.suppression.blockedNumbers.sort.newest": "Newest first",
     "toolsUI.suppression.blockedNumbers.sort.oldest": "Oldest first",
-    "toolsUI.reports.callLog.callerIdBlocked": "Caller ID Blocked",
+    "toolsUI.reports.callLog.callerIdBlocked": "Callerid Blocked",
     "toolsUI.reports.callLog.actions.unblockCaller": "Unblock caller",
     "toolsUI.reports.callLog.actions.prefixBlocked": "This caller is blocked by a prefix rule. Remove it on the Blocked Numbers page.",
     "toolsUI.reports.callLog.actions.blockError": "Couldn't update the Blocked Numbers list. Please try again.",
@@ -47,6 +51,10 @@ export const base: ExtraTranslations = {
     "nav.owner": "Owner",
   },
   ru: {
+    // Publisher / buyer login: own tracking numbers on a campaign.
+    "partnerCampaign.note": "Это номера отслеживания, выделенные вам в этой кампании.",
+    "partnerCampaign.numberOn": "Вкл.",
+    "partnerCampaign.numberOff": "Выкл.",
     "common.daysShort": "{n} д",
     "common.other": "Другое",
     "common.loadingRange": "Загрузка {range}…",
@@ -120,6 +128,10 @@ export const base: ExtraTranslations = {
     "nav.owner": "Владелец",
   },
   ja: {
+    // Publisher / buyer login: own tracking numbers on a campaign.
+    "partnerCampaign.note": "このキャンペーンであなたに割り当てられた追跡番号です。",
+    "partnerCampaign.numberOn": "オン",
+    "partnerCampaign.numberOff": "オフ",
     "common.daysShort": "{n}日",
     "common.other": "その他",
     "common.loadingRange": "{range} を読み込み中…",
@@ -193,6 +205,10 @@ export const base: ExtraTranslations = {
     "nav.owner": "オーナー",
   },
   zh: {
+    // Publisher / buyer login: own tracking numbers on a campaign.
+    "partnerCampaign.note": "这些是本活动中分配给您的追踪号码。",
+    "partnerCampaign.numberOn": "开启",
+    "partnerCampaign.numberOff": "关闭",
     "common.daysShort": "{n}天",
     "common.other": "其他",
     "common.loadingRange": "正在加载 {range}…",

@@ -17,6 +17,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { VERTICAL_ACCENT, type Campaign } from "@/lib/types";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
 
 const DOT: Record<string, string> = {
@@ -35,7 +37,9 @@ const GLOW: Record<string, string> = {
 };
 
 export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  // Publisher / buyer logins look, they don't pause or archive.
+  const { isPartner } = usePartnerPermissions();
   const router = useRouter();
   const setStatus = useCampaignsStore((s) => s.setStatus);
   const remove = useCampaignsStore((s) => s.remove);
@@ -81,8 +85,11 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
             <span className="text-muted-foreground/60">·</span>
             <span className="font-mono text-muted-foreground">{campaign.id}</span>
           </div>
-          <h1 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">
-            {campaign.name}
+          <h1
+            className="mt-1 text-base font-semibold tracking-tight sm:text-lg"
+            title={locale === "en" ? undefined : campaign.name}
+          >
+            {localizeName(campaign.name, locale)}
           </h1>
           {campaign.description && (
             <p className="mt-1 max-w-2xl text-xs text-muted-foreground">{campaign.description}</p>
@@ -91,6 +98,8 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
 
         <div className="flex items-center gap-2">
           <CampaignStatusBadge status={campaign.status} />
+          {!isPartner && (
+          <>
           <Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
             {isActive ? (
               <>
@@ -117,6 +126,8 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </>
+          )}
         </div>
       </div>
     </div>

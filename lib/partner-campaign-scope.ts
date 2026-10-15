@@ -12,10 +12,16 @@
  * How "assigned" is found, using data the server already limits to the partner:
  *   1. GET /api/publishers/ (or /api/buyers/) returns only the partner's own record
  *   2. GET /api/publishers/{id} (or /api/buyers/{id}) lists its assigned campaigns
+ *   3. Publishers only: GET /api/numbers/ returns only the publisher's own
+ *      tracking numbers, and each number says which campaign it is on. A
+ *      publisher that was given TFNs on a campaign (without being added to the
+ *      campaign's publisher list) sees that campaign too - this is how the
+ *      server itself decides what a publisher may see.
  * Admins and employees: no limit (returns null).
  */
 
 import { buyersService } from "@/lib/api/services/buyers.service";
+import { numbersService } from "@/lib/api/services/numbers.service";
 import { publishersService } from "@/lib/api/services/publishers.service";
 
 type PartnerRole = "buyer" | "publisher";
@@ -23,15 +29,39 @@ type PartnerRole = "buyer" | "publisher";
 const REFRESH_MS = 5 * 60_000;
 let cache: { key: string; at: number; promise: Promise<Set<string>> } | null = null;
 
+/** Campaigns that hold at least one of this publisher's own tracking numbers. */
+async function campaignsOfOwnNumbers(): Promise<Set<string>> {
+  const PAGE_SIZE = 200; // the server's maximum page size
+  const ids = new Set<string>();
+  for (let page = 1; page <= 50; page++) {
+    const res = await numbersService.list({ page, pageSize: PAGE_SIZE });
+    for (const n of res.items) if (n.campaignId) ids.add(String(n.campaignId));
+    const total = (res as { total?: number }).total;
+    if (res.items.length < PAGE_SIZE || (typeof total === "number" && page * PAGE_SIZE >= total)) break;
+  }
+  return ids;
+}
+
 async function loadAssigned(role: PartnerRole): Promise<Set<string>> {
   const svc = role === "publisher" ? publishersService : buyersService;
-  // A partner login only ever gets its own record back from the list.
-  const page = await svc.list({ page: 1, pageSize: 50 });
   const ids = new Set<string>();
-  for (const own of page.items) {
-    const full = await svc.get(own.id);
-    for (const c of full.campaignIds ?? []) if (c) ids.add(String(c));
-  }
+  // Both lookups run; one failing must not hide what the other found.
+  const [assigned, viaNumbers] = await Promise.allSettled([
+    (async () => {
+      // A partner login only ever gets its own record back from the list.
+      const page = await svc.list({ page: 1, pageSize: 50 });
+      const out: string[] = [];
+      for (const own of page.items) {
+        const full = await svc.get(own.id);
+        for (const c of full.campaignIds ?? []) if (c) out.push(String(c));
+      }
+      return out;
+    })(),
+    role === "publisher" ? campaignsOfOwnNumbers() : Promise.resolve(new Set<string>()),
+  ]);
+  if (assigned.status === "fulfilled") assigned.value.forEach((c) => ids.add(c));
+  if (viaNumbers.status === "fulfilled") viaNumbers.value.forEach((c) => ids.add(c));
+  if (assigned.status === "rejected" && viaNumbers.status === "rejected") throw assigned.reason;
   return ids;
 }
 

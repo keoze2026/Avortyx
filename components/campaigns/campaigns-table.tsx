@@ -31,6 +31,7 @@ import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { Campaign } from "@/lib/types";
+import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
 
 type ProgressState = "ready" | "paused" | "incomplete";
@@ -119,7 +120,7 @@ export function CampaignsTable({
   canManage = true,
   canCreate = true,
 }: CampaignsTableProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   // Live count of tracking numbers attached per campaign — drives the
   // "Incomplete" progress pill so a campaign with zero TFNs reads as needing
@@ -223,7 +224,9 @@ export function CampaignsTable({
                         badge column reads as a clean vertical band, regardless
                         of campaign-name length. */}
                     <div className="flex w-full items-center justify-between gap-2">
-                      <span className="truncate">{c.name}</span>
+                      <span className="truncate" title={locale === "en" ? undefined : c.name}>
+                        {localizeName(c.name, locale)}
+                      </span>
                       {isActive && <ActiveBadge />}
                     </div>
                   </TableCell>
