@@ -2,11 +2,15 @@
 
 /**
  * Marketplace → Services: a directory of partner websites (ad networks,
- * hosting, proxies...) for our users. Grouped by category with a count,
- * searchable, 8 cards per category until "Show all".
+ * hosting, proxies...) for our users - the same idea as a wallet's
+ * "Marketplace": "All services" / "My services", search, a section per
+ * category with its count ("Ad networks (55)"), logo cards with a short
+ * description and "More details", 9 cards per category until "Show all".
  *
- * Everyone can browse. Platform staff / superusers also get Add service,
- * Categories, and edit / delete on each card.
+ * Everyone can browse and star services into "My services". Platform staff /
+ * superusers also get Add service, Categories, and edit / delete on each card.
+ * Every text is in the chosen language; category names and descriptions use
+ * the translations staff entered (English when none).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,6 +27,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Star,
   Store,
   Trash2,
 } from "lucide-react";
@@ -44,23 +49,31 @@ import {
   ConfirmDelete,
   ServiceFormDialog,
 } from "@/components/marketplace/directory-dialogs";
+import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import {
   marketplaceDirectoryService,
+  pickTranslation,
   type Directory,
   type MarketplaceService,
+  type ServiceCategory,
 } from "@/lib/api/services/marketplace-directory.service";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 
-const PREVIEW_COUNT = 8;
+/** Three rows of three before "Show all", like the reference. */
+const PREVIEW_COUNT = 9;
+
+type View = "all" | "mine";
 
 export function ServicesDirectory() {
+  const { t, locale } = useTranslation();
   const canManage = useAuthStore((s) => s.user?.isSuperuser === true || s.user?.isStaff === true);
 
   const [data, setData] = useState<Directory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<View>("all");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -78,20 +91,32 @@ export function ServicesDirectory() {
     try {
       setData(await marketplaceDirectoryService.load());
     } catch (e) {
-      setError(friendlyErrorMessage(e, "Couldn't load services"));
+      setError(friendlyErrorMessage(e, t("marketplace.loadError")));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
-  }, [load]);
+    // Load once; `t` changing language must not reload the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const catName = useCallback(
+    (c: ServiceCategory | undefined) => (c ? pickTranslation(c.name, c.nameTranslations, locale) : ""),
+    [locale],
+  );
+  const descOf = useCallback(
+    (s: MarketplaceService) => pickTranslation(s.description, s.descriptionTranslations, locale),
+    [locale],
+  );
 
   // Users never see hidden services, even if the backend sent them.
   const visibleServices = useMemo(
-    () => (data?.services ?? []).filter((s) => canManage || s.isActive),
-    [data, canManage],
+    () =>
+      (data?.services ?? []).filter((s) => (canManage || s.isActive) && (view === "all" || s.isFavorite)),
+    [data, canManage, view],
   );
 
   const countFor = useCallback(
@@ -108,17 +133,17 @@ export function ServicesDirectory() {
         items: visibleServices.filter(
           (s) =>
             s.categoryId === c.id &&
-            (!q || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)),
+            (!q || s.name.toLowerCase().includes(q) || descOf(s).toLowerCase().includes(q) || s.description.toLowerCase().includes(q)),
         ),
       }))
-      // While searching, hide categories with no match. Otherwise staff still
-      // see empty categories so they can fill them.
-      .filter((sec) => sec.items.length > 0 || (!q && canManage));
-  }, [data, visibleServices, query, activeCategory, canManage]);
+      // While searching (or in My services), hide categories with no match.
+      // Otherwise staff still see empty categories so they can fill them.
+      .filter((sec) => sec.items.length > 0 || (!q && canManage && view === "all"));
+  }, [data, visibleServices, query, activeCategory, canManage, view, descOf]);
 
   function openAdd(categoryId?: string) {
     if (!data?.categories.length) {
-      toast.info("Add a category first.");
+      toast.info(t("marketplace.addCategoryFirst"));
       setCategoriesOpen(true);
       return;
     }
@@ -136,33 +161,53 @@ export function ServicesDirectory() {
   async function confirmDelete(svc: MarketplaceService) {
     try {
       await marketplaceDirectoryService.deleteService(svc.id);
-      toast.success("Service deleted");
+      toast.success(t("marketplace.deleted"));
       void load();
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't delete the service"));
+      toast.error(friendlyErrorMessage(e, t("marketplace.deleteError")));
     } finally {
       setToDelete(null);
     }
   }
 
-  const categoryName = (id: string) => data?.categories.find((c) => c.id === id)?.name ?? "";
-  const hasAnything = (data?.categories.length ?? 0) > 0 && (canManage || visibleServices.length > 0);
+  async function toggleFavorite(svc: MarketplaceService) {
+    const next = !svc.isFavorite;
+    // Flip at once; put it back if the server says no.
+    const flip = (value: boolean) =>
+      setData((d) =>
+        d ? { ...d, services: d.services.map((s) => (s.id === svc.id ? { ...s, isFavorite: value } : s)) } : d,
+      );
+    flip(next);
+    setDetails((d) => (d && d.id === svc.id ? { ...d, isFavorite: next } : d));
+    try {
+      await marketplaceDirectoryService.setFavorite(svc.id, next);
+      toast.success(t(next ? "marketplace.favoriteAdded" : "marketplace.favoriteRemoved"));
+    } catch (e) {
+      flip(!next);
+      setDetails((d) => (d && d.id === svc.id ? { ...d, isFavorite: !next } : d));
+      toast.error(friendlyErrorMessage(e, t("marketplace.favoriteError")));
+    }
+  }
+
+  const categoryById = (id: string) => data?.categories.find((c) => c.id === id);
+  const allVisible = (data?.services ?? []).filter((s) => canManage || s.isActive);
+  const hasAnything = (data?.categories.length ?? 0) > 0 && (canManage || allVisible.length > 0);
 
   return (
     <>
       <PageHeader
-        title="Marketplace"
-        description="Services for our users: ad networks, hosting, proxies and more."
+        title={t("marketplace.title")}
+        description={t("marketplace.subtitle")}
         actions={
           canManage ? (
             <>
               <Button size="sm" variant="outline" onClick={() => setCategoriesOpen(true)}>
                 <Layers className="h-3.5 w-3.5" />
-                Categories
+                {t("marketplace.categories")}
               </Button>
               <Button size="sm" onClick={() => openAdd()}>
                 <Plus className="h-3.5 w-3.5" />
-                Add service
+                {t("marketplace.addService")}
               </Button>
             </>
           ) : undefined
@@ -172,10 +217,7 @@ export function ServicesDirectory() {
       {canManage && data?.local && (
         <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-[oklch(0.78_0.16_75)]/40 bg-[oklch(0.78_0.16_75)]/10 px-3.5 py-2.5 text-[13px] text-foreground">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[oklch(0.78_0.16_75)]" />
-          <p>
-            The backend for Services isn&apos;t live yet. What you add here is saved in{" "}
-            <strong>this browser only</strong> and users can&apos;t see it until the backend ships.
-          </p>
+          <p>{t("marketplace.localNotice")}</p>
         </div>
       )}
 
@@ -187,124 +229,154 @@ export function ServicesDirectory() {
         <EmptyState
           icon={AlertTriangle}
           tone="amber"
-          title="Couldn't load services"
+          title={t("marketplace.loadError")}
           description={error}
           actions={
             <Button size="sm" variant="outline" onClick={() => void load()}>
-              Try again
+              {t("marketplace.tryAgain")}
             </Button>
           }
         />
       ) : !hasAnything ? (
         <EmptyState
           icon={Store}
-          title="No services yet"
-          description={
-            canManage
-              ? "Add a category, then add the partner websites you want users to see."
-              : "Partner services will appear here soon."
-          }
+          title={t("marketplace.emptyTitle")}
+          description={canManage ? t("marketplace.emptyStaff") : t("marketplace.emptyUser")}
           actions={
             canManage ? (
               <Button size="sm" onClick={() => openAdd()}>
                 <Plus className="h-3.5 w-3.5" />
-                Add service
+                {t("marketplace.addService")}
               </Button>
             ) : undefined
           }
         />
       ) : (
         <div className="space-y-8">
-          {/* ─── Search + category filter ─────────────────────────── */}
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative lg:w-80">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {/* ─── All services / My services (underline tabs, like the reference) ─── */}
+          <div className="flex flex-col gap-4 border-b border-border lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex gap-1">
+              {(["all", "mine"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  className={cn(
+                    "relative px-3 py-2.5 text-[13px] font-medium transition-colors",
+                    view === v ? "text-[color:var(--success)]" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {v === "all" ? t("marketplace.view.all") : t("marketplace.view.mine")}
+                  {v === "mine" && (
+                    <span className="ml-1 text-muted-foreground">
+                      ({allVisible.filter((s) => s.isFavorite).length})
+                    </span>
+                  )}
+                  {view === v && (
+                    <span aria-hidden className="absolute inset-x-2 -bottom-px h-0.5 bg-[color:var(--success)]" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="relative pb-3 lg:w-80">
+              <Search className="pointer-events-none absolute left-3 top-[calc(50%-0.375rem)] h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search services..."
+                placeholder={t("marketplace.search")}
                 className="pl-9"
               />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <FilterChip
-                active={activeCategory === "all"}
-                onClick={() => setActiveCategory("all")}
-                label="All"
-                count={visibleServices.length}
-              />
-              {data!.categories.map((c) => (
-                <FilterChip
-                  key={c.id}
-                  active={activeCategory === c.id}
-                  onClick={() => setActiveCategory(c.id)}
-                  label={c.name}
-                  count={countFor(c.id)}
-                />
-              ))}
-            </div>
           </div>
 
-          {sections.length === 0 && (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              No services match &ldquo;{query}&rdquo;.
-            </p>
-          )}
+          {/* ─── Category filter ─────────────────────────────────── */}
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip
+              active={activeCategory === "all"}
+              onClick={() => setActiveCategory("all")}
+              label={t("marketplace.all")}
+              count={visibleServices.length}
+            />
+            {data!.categories.map((c) => (
+              <FilterChip
+                key={c.id}
+                active={activeCategory === c.id}
+                onClick={() => setActiveCategory(c.id)}
+                label={catName(c)}
+                count={countFor(c.id)}
+              />
+            ))}
+          </div>
 
-          {/* ─── Sections ─────────────────────────────────────────── */}
+          {sections.length === 0 &&
+            (view === "mine" && !query.trim() ? (
+              <EmptyState icon={Star} title={t("marketplace.mineEmptyTitle")} description={t("marketplace.mineEmpty")} />
+            ) : (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                {t("marketplace.noMatch").replace("{q}", query)}
+              </p>
+            ))}
+
+          {/* ─── Sections: "Ad networks (55)" ─────────────────────── */}
           {sections.map(({ category, items }) => {
-            const isOpen = expanded[category.id] || !!query.trim();
+            const isOpen = expanded[category.id] || !!query.trim() || view === "mine";
             const shown = isOpen ? items : items.slice(0, PREVIEW_COUNT);
             return (
               <section key={category.id}>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h2 className="text-[15px] font-semibold text-foreground">
-                    {category.name}{" "}
+                  <h2 className="text-[17px] font-medium text-foreground">
+                    {catName(category)}{" "}
                     <span className="text-[color:var(--success)]">({items.length})</span>
                   </h2>
-                  {canManage && (
+                  {canManage && view === "all" && (
                     <Button size="sm" variant="ghost" onClick={() => openAdd(category.id)}>
                       <Plus className="h-3.5 w-3.5" />
-                      Add here
+                      {t("marketplace.addHere")}
                     </Button>
                   )}
                 </div>
 
                 {items.length === 0 ? (
                   <p className="rounded-xl border border-dashed px-4 py-8 text-center text-[13px] text-muted-foreground">
-                    No services in this category yet.
+                    {t("marketplace.categoryEmpty")}
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {shown.map((svc) => (
                       <ServiceCard
                         key={svc.id}
                         service={svc}
+                        description={descOf(svc)}
                         canManage={canManage}
                         onDetails={() => setDetails(svc)}
                         onEdit={() => openEdit(svc)}
                         onDelete={() => setToDelete(svc)}
+                        onFavorite={() => void toggleFavorite(svc)}
                       />
                     ))}
                   </div>
                 )}
 
-                {!query.trim() && items.length > PREVIEW_COUNT && (
+                {!isOpen && items.length > PREVIEW_COUNT && (
                   <div className="mt-4 flex justify-center">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setExpanded((e) => ({ ...e, [category.id]: !e[category.id] }))}
+                      onClick={() => setExpanded((e) => ({ ...e, [category.id]: true }))}
                     >
-                      {isOpen ? (
-                        <>
-                          Hide <ChevronUp className="h-3.5 w-3.5" />
-                        </>
-                      ) : (
-                        <>
-                          Show all ({items.length}) <ChevronDown className="h-3.5 w-3.5" />
-                        </>
-                      )}
+                      {t("marketplace.showAll").replace("{n}", String(items.length))}
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+                {expanded[category.id] && !query.trim() && view === "all" && items.length > PREVIEW_COUNT && (
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setExpanded((e) => ({ ...e, [category.id]: false }))}
+                    >
+                      {t("marketplace.hide")} <ChevronUp className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 )}
@@ -314,7 +386,7 @@ export function ServicesDirectory() {
         </div>
       )}
 
-      {/* ─── Details ──────────────────────────────────────────────── */}
+      {/* ─── More details ─────────────────────────────────────────── */}
       <Dialog open={!!details} onOpenChange={(o) => !o && setDetails(null)}>
         <DialogContent className="sm:max-w-md">
           {details && (
@@ -323,17 +395,25 @@ export function ServicesDirectory() {
                 <Logo service={details} large />
               </div>
               <DialogHeader>
-                <DialogTitle>{details.name}</DialogTitle>
-                <DialogDescription>{categoryName(details.categoryId)}</DialogDescription>
+                <DialogTitle className="flex items-center justify-between gap-3">
+                  <span>{details.name}</span>
+                  <FavoriteButton
+                    active={!!details.isFavorite}
+                    onClick={() => void toggleFavorite(details)}
+                    labelOn={t("marketplace.removeFavorite")}
+                    labelOff={t("marketplace.addFavorite")}
+                  />
+                </DialogTitle>
+                <DialogDescription>{catName(categoryById(details.categoryId))}</DialogDescription>
               </DialogHeader>
-              {details.description && (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                  {details.description}
+              {descOf(details) && (
+                <p className="max-h-64 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                  {descOf(details)}
                 </p>
               )}
               <Button asChild className="w-full">
                 <a href={details.websiteUrl} target="_blank" rel="noopener noreferrer">
-                  Visit website <ExternalLink className="h-3.5 w-3.5" />
+                  {t("marketplace.visitWebsite")} <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </Button>
             </>
@@ -360,8 +440,8 @@ export function ServicesDirectory() {
           />
           <ConfirmDelete
             open={!!toDelete}
-            title={`Delete "${toDelete?.name ?? ""}"?`}
-            description="It will be removed from the Marketplace for all users. This can't be undone."
+            title={t("marketplace.deleteTitle").replace("{name}", toDelete?.name ?? "")}
+            description={t("marketplace.deleteDesc")}
             onCancel={() => setToDelete(null)}
             onConfirm={() => toDelete && void confirmDelete(toDelete)}
           />
@@ -391,11 +471,42 @@ function FilterChip({
       className={cn(
         "rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
         active
-          ? "border-accent/60 bg-accent/10 text-foreground"
+          ? "border-[color:var(--success)]/60 bg-[color:var(--success)]/10 text-foreground"
           : "border-border text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
       )}
     >
       {label} <span className="text-muted-foreground">{count}</span>
+    </button>
+  );
+}
+
+function FavoriteButton({
+  active,
+  onClick,
+  labelOn,
+  labelOff,
+  className,
+}: {
+  active: boolean;
+  onClick: () => void;
+  labelOn: string;
+  labelOff: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={active ? labelOn : labelOff}
+      title={active ? labelOn : labelOff}
+      className={cn(
+        "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
+        active ? "text-amber-500" : "text-muted-foreground hover:text-amber-500",
+        className,
+      )}
+    >
+      <Star className={cn("h-4 w-4", active && "fill-current")} />
     </button>
   );
 }
@@ -424,30 +535,44 @@ function Logo({ service, large }: { service: MarketplaceService; large?: boolean
 
 function ServiceCard({
   service,
+  description,
   canManage,
   onDetails,
   onEdit,
   onDelete,
+  onFavorite,
 }: {
   service: MarketplaceService;
+  description: string;
   canManage: boolean;
   onDetails: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onFavorite: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-accent/40",
+        "group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-[color:var(--success)]/50",
         !service.isActive && "opacity-60",
       )}
     >
+      <div className="absolute left-2 top-2 z-10">
+        <FavoriteButton
+          active={!!service.isFavorite}
+          onClick={onFavorite}
+          labelOn={t("marketplace.removeFavorite")}
+          labelOff={t("marketplace.addFavorite")}
+          className="bg-white/80 backdrop-blur-sm"
+        />
+      </div>
       {canManage && (
         <div className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-          <Button size="icon" variant="secondary" className="h-7 w-7" aria-label="Edit" onClick={onEdit}>
+          <Button size="icon" variant="secondary" className="h-7 w-7" aria-label={t("marketplace.edit")} onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <Button size="icon" variant="secondary" className="h-7 w-7" aria-label="Delete" onClick={onDelete}>
+          <Button size="icon" variant="secondary" className="h-7 w-7" aria-label={t("marketplace.delete")} onClick={onDelete}>
             <Trash2 className="h-3.5 w-3.5 text-destructive" />
           </Button>
         </div>
@@ -457,8 +582,8 @@ function ServiceCard({
       <button
         type="button"
         onClick={onDetails}
-        className="m-3 mb-0 flex h-24 items-center justify-center rounded-lg bg-white p-3"
-        aria-label={`${service.name} details`}
+        className="m-3 mb-0 flex h-28 items-center justify-center rounded-lg bg-white px-6 py-4"
+        aria-label={t("marketplace.detailsAria").replace("{name}", service.name)}
       >
         <Logo service={service} />
       </button>
@@ -466,17 +591,19 @@ function ServiceCard({
       <div className="flex flex-1 flex-col items-center px-4 pb-4 pt-3 text-center">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
           {service.name}
-          {!service.isActive && <EyeOff className="h-3.5 w-3.5 text-muted-foreground" aria-label="Hidden" />}
+          {!service.isActive && (
+            <EyeOff className="h-3.5 w-3.5 text-muted-foreground" aria-label={t("marketplace.hidden")} />
+          )}
         </h3>
         <p className="mt-1 line-clamp-3 min-h-[3.25rem] text-[12px] leading-[1.1rem] text-muted-foreground">
-          {service.description}
+          {description}
         </p>
         <button
           type="button"
           onClick={onDetails}
-          className="mt-3 inline-flex items-center gap-0.5 text-[12px] font-medium text-[color:var(--success)] hover:underline"
+          className="mt-3 inline-flex items-center gap-0.5 border-b border-dashed border-[color:var(--success)]/60 text-[12px] font-medium text-[color:var(--success)] hover:border-solid"
         >
-          More details <ChevronRight className="h-3.5 w-3.5" />
+          {t("marketplace.moreDetails")} <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

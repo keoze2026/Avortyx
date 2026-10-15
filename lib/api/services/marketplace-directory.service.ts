@@ -2,29 +2,43 @@
  * Marketplace → Services directory — /api/marketplace/*.
  *
  * Partner websites (ad networks, hosting, proxies...) that platform staff list
- * for every user to browse. Everyone can read; only staff / superusers write.
+ * for every user to browse, like the "Marketplace" of a payments wallet:
+ * categories with a count, logo cards, "More details", "My services".
+ * Everyone can read; only staff / superusers write.
  *
- *   GET    /api/marketplace/services            → { categories, services }
- *   POST   /api/marketplace/categories          { name, sort_order }
- *   PATCH  /api/marketplace/categories/{id}     { name?, sort_order? }
+ *   GET    /api/marketplace/services                 → { categories, services }
+ *   POST   /api/marketplace/categories               JSON { name, sort_order, name_translations }
+ *   PATCH  /api/marketplace/categories/{id}          JSON (same fields, all optional)
  *   DELETE /api/marketplace/categories/{id}
- *   POST   /api/marketplace/services            multipart (see toForm)
- *   PATCH  /api/marketplace/services/{id}       multipart (see toForm)
+ *   POST   /api/marketplace/services                 multipart (see toForm)  - create
+ *   POST   /api/marketplace/services/{id}            multipart (see toForm)  - update
  *   DELETE /api/marketplace/services/{id}
+ *   POST   /api/marketplace/services/{id}/favorite   add to "My services"
+ *   DELETE /api/marketplace/services/{id}/favorite   remove from "My services"
  *
- * Until the backend ships these (404), the directory runs in "local" mode:
- * staff edits are kept in this browser only so the screen can be reviewed,
- * and the page shows a notice saying so. See BACKEND-MARKETPLACE-SERVICES.md.
+ * Updates go by POST, not PATCH: Django only reads multipart (the logo file)
+ * on POST, so a PATCH with a logo would arrive empty.
+ *
+ * Until the backend ships these (404 / 405), the directory runs in "local"
+ * mode: staff edits are kept in this browser only so the screen can be
+ * reviewed, and the page shows a notice saying so. As soon as
+ * GET /api/marketplace/services answers, everything switches to the server
+ * by itself. See BACKEND-MARKETPLACE-SERVICES.md.
  */
 
 import { http } from "@/lib/api/http";
 import { ApiError } from "@/lib/api/errors";
 import { API_BASE_URL } from "@/lib/api/env";
 
+/** Text in the other portal languages; English is the main field. */
+export type Translations = Partial<Record<"zh" | "ja" | "ru", string>>;
+
 export interface ServiceCategory {
   id: string;
   name: string;
   sortOrder: number;
+  /** The category name in Chinese / Japanese / Russian (optional). */
+  nameTranslations?: Translations;
 }
 
 export interface MarketplaceService {
@@ -32,11 +46,15 @@ export interface MarketplaceService {
   categoryId: string;
   name: string;
   description: string;
+  /** The description in Chinese / Japanese / Russian (optional). */
+  descriptionTranslations?: Translations;
   websiteUrl: string;
   logoUrl?: string;
   /** Hidden services are only returned to staff. */
   isActive: boolean;
   sortOrder: number;
+  /** In this user's "My services". */
+  isFavorite?: boolean;
 }
 
 export interface Directory {
@@ -50,6 +68,7 @@ export interface ServiceInput {
   categoryId: string;
   name: string;
   description: string;
+  descriptionTranslations?: Translations;
   websiteUrl: string;
   isActive: boolean;
   sortOrder: number;
@@ -59,9 +78,17 @@ export interface ServiceInput {
   removeLogo?: boolean;
 }
 
+/** The text for the chosen language, falling back to the English field. */
+export function pickTranslation(main: string, translations: Translations | undefined, locale: string): string {
+  if (locale === "en" || !translations) return main;
+  const t = translations[locale as keyof Translations];
+  return t && t.trim() ? t : main;
+}
+
 /* ─── local fallback ──────────────────────────────────────────────────── */
 
 const LOCAL_KEY = "avortyx.marketplace.directory.v1";
+const LOCAL_FAVORITES_KEY = "avortyx.marketplace.favorites.v1";
 
 function readLocal(): Omit<Directory, "local"> {
   try {
@@ -81,6 +108,24 @@ function writeLocal(data: Omit<Directory, "local">) {
     window.localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
   } catch {
     /* quota or private mode: edits last until reload */
+  }
+}
+
+function readLocalFavorites(): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_FAVORITES_KEY);
+    const list = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(list) ? list.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeLocalFavorites(ids: Set<string>) {
+  try {
+    window.localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify([...ids]));
+  } catch {
+    /* private mode: lasts until reload */
   }
 }
 
@@ -112,11 +157,23 @@ interface DirectoryWire {
   services?: MarketplaceService[];
 }
 
+/** Only the languages that were filled in. */
+function cleanTranslations(t: Translations | undefined): Translations {
+  const out: Translations = {};
+  for (const k of ["zh", "ja", "ru"] as const) {
+    const v = t?.[k]?.trim();
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
 function toForm(input: ServiceInput): FormData {
   const f = new FormData();
   f.append("category_id", input.categoryId);
   f.append("name", input.name);
   f.append("description", input.description);
+  // JSON text: { "zh": "...", "ja": "...", "ru": "..." } - only filled languages.
+  f.append("description_translations", JSON.stringify(cleanTranslations(input.descriptionTranslations)));
   f.append("website_url", input.websiteUrl);
   f.append("is_active", input.isActive ? "true" : "false");
   f.append("sort_order", String(input.sortOrder));
@@ -132,7 +189,14 @@ function absolute(url?: string | null): string | undefined {
 }
 
 function fromWire(s: MarketplaceService): MarketplaceService {
-  return { ...s, isActive: s.isActive !== false, logoUrl: absolute(s.logoUrl) };
+  return {
+    ...s,
+    description: s.description ?? "",
+    descriptionTranslations: s.descriptionTranslations ?? {},
+    isActive: s.isActive !== false,
+    isFavorite: s.isFavorite === true,
+    logoUrl: absolute(s.logoUrl),
+  };
 }
 
 function sortDirectory(d: Omit<Directory, "local">): Omit<Directory, "local"> {
@@ -153,7 +217,7 @@ export const marketplaceDirectoryService = {
       localMode = false;
       return {
         ...sortDirectory({
-          categories: res?.categories ?? [],
+          categories: (res?.categories ?? []).map((c) => ({ ...c, nameTranslations: c.nameTranslations ?? {} })),
           services: (res?.services ?? []).map(fromWire),
         }),
         local: false,
@@ -161,21 +225,37 @@ export const marketplaceDirectoryService = {
     } catch (e) {
       if (!isMissingEndpoint(e)) throw e;
       localMode = true;
-      return { ...sortDirectory(readLocal()), local: true };
+      const favorites = readLocalFavorites();
+      const local = readLocal();
+      return {
+        ...sortDirectory({
+          categories: local.categories,
+          services: local.services.map((s) => ({ ...s, isFavorite: favorites.has(s.id) })),
+        }),
+        local: true,
+      };
     }
   },
 
-  async saveCategory(input: { id?: string; name: string; sortOrder: number }): Promise<ServiceCategory> {
+  async saveCategory(input: {
+    id?: string;
+    name: string;
+    sortOrder: number;
+    nameTranslations?: Translations;
+  }): Promise<ServiceCategory> {
+    const nameTranslations = cleanTranslations(input.nameTranslations);
     if (localMode) {
       const d = readLocal();
-      const cat: ServiceCategory = { id: input.id ?? newId(), name: input.name, sortOrder: input.sortOrder };
+      const cat: ServiceCategory = { id: input.id ?? newId(), name: input.name, sortOrder: input.sortOrder, nameTranslations };
       d.categories = input.id
         ? d.categories.map((c) => (c.id === input.id ? cat : c))
         : [...d.categories, cat];
       writeLocal(d);
       return cat;
     }
-    const body = { name: input.name, sortOrder: input.sortOrder };
+    // The http layer sends keys in snake_case; the language codes inside the
+    // translations object have no capitals, so they arrive unchanged.
+    const body = { name: input.name, sortOrder: input.sortOrder, nameTranslations };
     return input.id
       ? http.patch<ServiceCategory>(`/api/marketplace/categories/${input.id}`, { body })
       : http.post<ServiceCategory>("/api/marketplace/categories", { body });
@@ -203,6 +283,7 @@ export const marketplaceDirectoryService = {
         categoryId: input.categoryId,
         name: input.name,
         description: input.description,
+        descriptionTranslations: cleanTranslations(input.descriptionTranslations),
         websiteUrl: input.websiteUrl,
         isActive: input.isActive,
         sortOrder: input.sortOrder,
@@ -213,9 +294,11 @@ export const marketplaceDirectoryService = {
       return svc;
     }
     const body = toForm(input);
-    const saved = id
-      ? await http.patch<MarketplaceService>(`/api/marketplace/services/${id}`, { body })
-      : await http.post<MarketplaceService>("/api/marketplace/services", { body });
+    // Create and update are both POST (multipart is only parsed on POST).
+    const saved = await http.post<MarketplaceService>(
+      id ? `/api/marketplace/services/${id}` : "/api/marketplace/services",
+      { body },
+    );
     return fromWire(saved);
   },
 
@@ -227,5 +310,18 @@ export const marketplaceDirectoryService = {
       return;
     }
     await http.delete(`/api/marketplace/services/${id}`);
+  },
+
+  /** Add to / remove from this user's "My services". */
+  async setFavorite(id: string, favorite: boolean): Promise<void> {
+    if (localMode) {
+      const ids = readLocalFavorites();
+      if (favorite) ids.add(id);
+      else ids.delete(id);
+      writeLocalFavorites(ids);
+      return;
+    }
+    if (favorite) await http.post(`/api/marketplace/services/${id}/favorite`);
+    else await http.delete(`/api/marketplace/services/${id}/favorite`);
   },
 };

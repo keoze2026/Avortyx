@@ -57,6 +57,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ServicesDirectory } from "@/components/marketplace/services-directory";
+import { useTranslation } from "@/hooks/use-translation";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   marketplaceService,
@@ -78,6 +79,7 @@ const STATUS_VARIANT: Record<AuctionStatus, "success" | "outline" | "destructive
 type MarketplaceTab = "auctions" | "services";
 
 export default function MarketplacePage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<MarketplaceTab>("auctions");
 
   // Open on the tab in the link (/marketplace?tab=services) and keep the
@@ -101,11 +103,11 @@ export default function MarketplacePage() {
       <TabsList>
         <TabsTrigger value="auctions" className="px-3">
           <Gavel className="h-3.5 w-3.5" />
-          Live Auctions
+          {t("marketplace.tabs.auctions")}
         </TabsTrigger>
         <TabsTrigger value="services" className="px-3">
           <Store className="h-3.5 w-3.5" />
-          Services
+          {t("marketplace.tabs.services")}
         </TabsTrigger>
       </TabsList>
 

@@ -2,13 +2,14 @@
 
 /**
  * Staff-only dialogs for the Marketplace → Services directory:
- *   ServiceFormDialog   add / edit one partner website
- *   CategoriesDialog    add, rename, reorder and delete categories
+ *   ServiceFormDialog   add / edit one partner website (logo, link, description
+ *                       and, optionally, the description in zh / ja / ru)
+ *   CategoriesDialog    add, rename, reorder, translate and delete categories
  *   ConfirmDelete       shared "are you sure" prompt
  */
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ImagePlus, Languages, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -41,15 +42,19 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import {
   marketplaceDirectoryService,
+  pickTranslation,
   type MarketplaceService,
   type ServiceCategory,
+  type Translations,
 } from "@/lib/api/services/marketplace-directory.service";
 
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const LOGO_MAX_BYTES = 1024 * 1024; // 1 MB
+const LANGS = ["zh", "ja", "ru"] as const;
 
 function isValidUrl(v: string) {
   try {
@@ -78,11 +83,14 @@ export function ServiceFormDialog({
   defaultCategoryId?: string;
   onSaved: () => void;
 }) {
+  const { t, locale } = useTranslation();
   const editing = !!service;
   const [categoryId, setCategoryId] = useState("");
   const [name, setName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [translations, setTranslations] = useState<Translations>({});
+  const [showTranslations, setShowTranslations] = useState(false);
   const [sortOrder, setSortOrder] = useState("0");
   const [isActive, setIsActive] = useState(true);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -98,6 +106,8 @@ export function ServiceFormDialog({
     setName(service?.name ?? "");
     setWebsiteUrl(service?.websiteUrl ?? "");
     setDescription(service?.description ?? "");
+    setTranslations({ ...(service?.descriptionTranslations ?? {}) });
+    setShowTranslations(Object.values(service?.descriptionTranslations ?? {}).some((v) => !!v));
     setSortOrder(String(service?.sortOrder ?? 0));
     setIsActive(service?.isActive ?? true);
     setLogoFile(null);
@@ -115,11 +125,11 @@ export function ServiceFormDialog({
   function pickLogo(file: File | undefined) {
     if (!file) return;
     if (!LOGO_TYPES.includes(file.type)) {
-      toast.error("Logo must be PNG, JPG, WEBP or SVG.");
+      toast.error(t("marketplace.form.logoType"));
       return;
     }
     if (file.size > LOGO_MAX_BYTES) {
-      toast.error("Logo must be 1 MB or smaller.");
+      toast.error(t("marketplace.form.logoSize"));
       return;
     }
     setLogoFile(file);
@@ -136,9 +146,9 @@ export function ServiceFormDialog({
 
   async function submit() {
     const url = websiteUrl.trim();
-    if (!categoryId) return toast.error("Pick a category.");
-    if (!name.trim()) return toast.error("Enter the service name.");
-    if (!isValidUrl(url)) return toast.error("Enter a full website link starting with https://");
+    if (!categoryId) return toast.error(t("marketplace.form.needCategory"));
+    if (!name.trim()) return toast.error(t("marketplace.form.needName"));
+    if (!isValidUrl(url)) return toast.error(t("marketplace.form.needUrl"));
 
     setSaving(true);
     try {
@@ -147,16 +157,17 @@ export function ServiceFormDialog({
         name: name.trim(),
         websiteUrl: url,
         description: description.trim(),
+        descriptionTranslations: translations,
         sortOrder: Number(sortOrder) || 0,
         isActive,
         logoFile,
         removeLogo: removeLogo && !logoFile,
       });
-      toast.success(editing ? "Service updated" : "Service added");
+      toast.success(editing ? t("marketplace.form.updated") : t("marketplace.form.added"));
       onSaved();
       onOpenChange(false);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't save the service"));
+      toast.error(friendlyErrorMessage(e, t("marketplace.form.saveError")));
     } finally {
       setSaving(false);
     }
@@ -164,12 +175,10 @@ export function ServiceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit service" : "Add service"}</DialogTitle>
-          <DialogDescription>
-            Listed in Marketplace → Services for every user.
-          </DialogDescription>
+          <DialogTitle>{editing ? t("marketplace.form.editTitle") : t("marketplace.form.addTitle")}</DialogTitle>
+          <DialogDescription>{t("marketplace.form.desc")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -186,16 +195,16 @@ export function ServiceFormDialog({
             <div className="flex flex-col gap-1.5">
               <div className="flex gap-2">
                 <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
-                  {logoPreview ? "Change logo" : "Upload logo"}
+                  {logoPreview ? t("marketplace.form.changeLogo") : t("marketplace.form.uploadLogo")}
                 </Button>
                 {logoPreview && (
                   <Button type="button" size="sm" variant="ghost" onClick={clearLogo}>
                     <X className="h-3.5 w-3.5" />
-                    Remove
+                    {t("marketplace.form.remove")}
                   </Button>
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground">PNG, JPG, WEBP or SVG, up to 1 MB.</p>
+              <p className="text-[11px] text-muted-foreground">{t("marketplace.form.logoHint")}</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -208,70 +217,105 @@ export function ServiceFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label>Category</Label>
+              <Label>{t("marketplace.form.category")}</Label>
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pick a category" />
+                  <SelectValue placeholder={t("marketplace.form.pickCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                      {pickTranslation(c.name, c.nameTranslations, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="svc-name">Name</Label>
+              <Label htmlFor="svc-name">{t("marketplace.form.name")}</Label>
               <Input
                 id="svc-name"
                 value={name}
                 maxLength={120}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Adsterra"
+                placeholder="Adsterra"
               />
             </div>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="svc-url">Website link</Label>
+            <Label htmlFor="svc-url">{t("marketplace.form.website")}</Label>
             <Input
               id="svc-url"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
-              placeholder="https://example.com"
+              placeholder="https://example.com/?ref=avortyx"
               inputMode="url"
             />
+            <p className="text-[11px] text-muted-foreground">{t("marketplace.form.websiteHint")}</p>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="svc-desc">Description</Label>
+            <Label htmlFor="svc-desc">{t("marketplace.form.description")}</Label>
             <Textarea
               id="svc-desc"
               value={description}
               maxLength={1000}
               rows={4}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What this service offers our users."
+              placeholder={t("marketplace.form.descriptionPlaceholder")}
             />
+          </div>
+
+          {/* Description in the other portal languages (optional). */}
+          <div className="rounded-lg border">
+            <button
+              type="button"
+              onClick={() => setShowTranslations((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Languages className="h-4 w-4 text-muted-foreground" />
+                {t("marketplace.form.translations")}
+              </span>
+              {showTranslations ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {showTranslations && (
+              <div className="grid gap-3 border-t px-3 py-3">
+                <p className="text-[11px] text-muted-foreground">{t("marketplace.form.translationsHint")}</p>
+                {LANGS.map((lang) => (
+                  <div key={lang} className="grid gap-1.5">
+                    <Label htmlFor={`svc-desc-${lang}`} className="text-xs">
+                      {t(`marketplace.lang.${lang}`)}
+                    </Label>
+                    <Textarea
+                      id={`svc-desc-${lang}`}
+                      value={translations[lang] ?? ""}
+                      maxLength={1000}
+                      rows={3}
+                      onChange={(e) => setTranslations((tr) => ({ ...tr, [lang]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label htmlFor="svc-order">Position</Label>
+              <Label htmlFor="svc-order">{t("marketplace.form.position")}</Label>
               <Input
                 id="svc-order"
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
               />
-              <p className="text-[11px] text-muted-foreground">Lower numbers show first.</p>
+              <p className="text-[11px] text-muted-foreground">{t("marketplace.form.positionHint")}</p>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Visible to users</p>
-                <p className="text-[11px] text-muted-foreground">Off hides it from users.</p>
+                <p className="text-sm font-medium">{t("marketplace.form.visible")}</p>
+                <p className="text-[11px] text-muted-foreground">{t("marketplace.form.visibleHint")}</p>
               </div>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
@@ -280,11 +324,11 @@ export function ServiceFormDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancel
+            {t("marketplace.cancel")}
           </Button>
           <Button onClick={() => void submit()} disabled={saving}>
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {editing ? "Save changes" : "Add service"}
+            {editing ? t("marketplace.form.save") : t("marketplace.form.add")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -298,6 +342,11 @@ interface Row {
   id: string;
   name: string;
   sortOrder: string;
+  nameTranslations: Translations;
+}
+
+function sameTranslations(a: Translations | undefined, b: Translations | undefined) {
+  return LANGS.every((l) => (a?.[l] ?? "").trim() === (b?.[l] ?? "").trim());
 }
 
 export function CategoriesDialog({
@@ -313,31 +362,42 @@ export function CategoriesDialog({
   countFor: (categoryId: string) => number;
   onChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>([]);
   const [newName, setNewName] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<ServiceCategory | null>(null);
+  const [translating, setTranslating] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setRows(categories.map((c) => ({ id: c.id, name: c.name, sortOrder: String(c.sortOrder) })));
+      setRows(
+        categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          sortOrder: String(c.sortOrder),
+          nameTranslations: { ...(c.nameTranslations ?? {}) },
+        })),
+      );
       setNewName("");
+      setTranslating(null);
     }
   }, [open, categories]);
 
   async function save(row: Row) {
-    if (!row.name.trim()) return toast.error("Category name can't be empty.");
+    if (!row.name.trim()) return toast.error(t("marketplace.cat.emptyName"));
     setBusyId(row.id);
     try {
       await marketplaceDirectoryService.saveCategory({
         id: row.id,
         name: row.name.trim(),
         sortOrder: Number(row.sortOrder) || 0,
+        nameTranslations: row.nameTranslations,
       });
-      toast.success("Category saved");
+      toast.success(t("marketplace.cat.saved"));
       onChanged();
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't save the category"));
+      toast.error(friendlyErrorMessage(e, t("marketplace.cat.saveError")));
     } finally {
       setBusyId(null);
     }
@@ -349,11 +409,11 @@ export function CategoriesDialog({
     try {
       const max = categories.reduce((m, c) => Math.max(m, c.sortOrder), 0);
       await marketplaceDirectoryService.saveCategory({ name: newName.trim(), sortOrder: max + 10 });
-      toast.success("Category added");
+      toast.success(t("marketplace.cat.added"));
       setNewName("");
       onChanged();
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't add the category"));
+      toast.error(friendlyErrorMessage(e, t("marketplace.cat.addError")));
     } finally {
       setBusyId(null);
     }
@@ -363,75 +423,92 @@ export function CategoriesDialog({
     setBusyId(cat.id);
     try {
       await marketplaceDirectoryService.deleteCategory(cat.id);
-      toast.success("Category deleted");
+      toast.success(t("marketplace.cat.deleted"));
       onChanged();
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't delete the category"));
+      toast.error(friendlyErrorMessage(e, t("marketplace.cat.deleteError")));
     } finally {
       setBusyId(null);
       setToDelete(null);
     }
   }
 
+  const deleteCount = toDelete ? countFor(toDelete.id) : 0;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Categories</DialogTitle>
-            <DialogDescription>
-              Sections on the Services tab, e.g. Ad Networks or Hosting &amp; Proxies.
-            </DialogDescription>
+            <DialogTitle>{t("marketplace.cat.title")}</DialogTitle>
+            <DialogDescription>{t("marketplace.cat.desc")}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-2">
-            {rows.length === 0 && (
-              <p className="py-2 text-sm text-muted-foreground">No categories yet. Add the first one below.</p>
-            )}
+            {rows.length === 0 && <p className="py-2 text-sm text-muted-foreground">{t("marketplace.cat.none")}</p>}
             {rows.map((row, i) => {
               const original = categories.find((c) => c.id === row.id);
               const dirty =
                 !!original &&
-                (original.name !== row.name || String(original.sortOrder) !== row.sortOrder);
+                (original.name !== row.name ||
+                  String(original.sortOrder) !== row.sortOrder ||
+                  !sameTranslations(original.nameTranslations, row.nameTranslations));
+              const update = (patch: Partial<Row>) =>
+                setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
               return (
-                <div key={row.id} className="grid grid-cols-[1fr_4.5rem_auto_auto] items-center gap-2">
-                  <Input
-                    value={row.name}
-                    maxLength={80}
-                    onChange={(e) =>
-                      setRows((r) => r.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))
-                    }
-                  />
-                  <Input
-                    type="number"
-                    aria-label="Position"
-                    value={row.sortOrder}
-                    onChange={(e) =>
-                      setRows((r) => r.map((x, j) => (j === i ? { ...x, sortOrder: e.target.value } : x)))
-                    }
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Save category"
-                    disabled={!dirty || busyId === row.id}
-                    onClick={() => void save(row)}
-                  >
-                    {busyId === row.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Delete category"
-                    disabled={busyId === row.id}
-                    onClick={() => original && setToDelete(original)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                <div key={row.id} className="grid gap-2">
+                  <div className="grid grid-cols-[1fr_4.5rem_auto_auto_auto] items-center gap-2">
+                    <Input value={row.name} maxLength={80} onChange={(e) => update({ name: e.target.value })} />
+                    <Input
+                      type="number"
+                      aria-label={t("marketplace.cat.position")}
+                      value={row.sortOrder}
+                      onChange={(e) => update({ sortOrder: e.target.value })}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={t("marketplace.cat.translate")}
+                      title={t("marketplace.cat.translate")}
+                      onClick={() => setTranslating((id) => (id === row.id ? null : row.id))}
+                    >
+                      <Languages className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={t("marketplace.cat.save")}
+                      disabled={!dirty || busyId === row.id}
+                      onClick={() => void save(row)}
+                    >
+                      {busyId === row.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={t("marketplace.cat.delete")}
+                      disabled={busyId === row.id}
+                      onClick={() => original && setToDelete(original)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                  {translating === row.id && (
+                    <div className="grid gap-2 rounded-lg border bg-secondary/20 p-2 sm:grid-cols-3">
+                      {LANGS.map((lang) => (
+                        <div key={lang} className="grid gap-1">
+                          <Label className="text-[11px] text-muted-foreground">{t(`marketplace.lang.${lang}`)}</Label>
+                          <Input
+                            value={row.nameTranslations[lang] ?? ""}
+                            maxLength={80}
+                            onChange={(e) =>
+                              update({ nameTranslations: { ...row.nameTranslations, [lang]: e.target.value } })
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -441,13 +518,13 @@ export function CategoriesDialog({
             <Input
               value={newName}
               maxLength={80}
-              placeholder="New category name"
+              placeholder={t("marketplace.cat.newName")}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void add()}
             />
             <Button onClick={() => void add()} disabled={!newName.trim() || busyId === "new"}>
               {busyId === "new" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              Add
+              {t("marketplace.cat.add")}
             </Button>
           </div>
         </DialogContent>
@@ -455,11 +532,11 @@ export function CategoriesDialog({
 
       <ConfirmDelete
         open={!!toDelete}
-        title={`Delete "${toDelete?.name ?? ""}"?`}
+        title={t("marketplace.deleteTitle").replace("{name}", toDelete?.name ?? "")}
         description={
-          toDelete && countFor(toDelete.id) > 0
-            ? `This also deletes its ${countFor(toDelete.id)} service(s). This can't be undone.`
-            : "This can't be undone."
+          deleteCount > 0
+            ? t("marketplace.cat.deleteWithServices").replace("{n}", String(deleteCount))
+            : t("marketplace.cat.deleteSimple")
         }
         onCancel={() => setToDelete(null)}
         onConfirm={() => toDelete && void remove(toDelete)}
@@ -483,6 +560,7 @@ export function ConfirmDelete({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onCancel()}>
       <AlertDialogContent>
@@ -491,12 +569,9 @@ export function ConfirmDelete({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className="bg-destructive text-white hover:bg-destructive/90"
-          >
-            Delete
+          <AlertDialogCancel onClick={onCancel}>{t("marketplace.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="bg-destructive text-white hover:bg-destructive/90">
+            {t("marketplace.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
