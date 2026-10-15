@@ -52,7 +52,8 @@ import {
   type Translations,
 } from "@/lib/api/services/marketplace-directory.service";
 
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+// The backend accepts PNG, JPG and WEBP only (SVG is refused: it can carry script).
+const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const LOGO_MAX_BYTES = 1024 * 1024; // 1 MB
 const LANGS = ["zh", "ja", "ru"] as const;
 

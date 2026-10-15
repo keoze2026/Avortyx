@@ -411,11 +411,14 @@ export function ServicesDirectory() {
                   {descOf(details)}
                 </p>
               )}
-              <Button asChild className="w-full">
-                <a href={details.websiteUrl} target="_blank" rel="noopener noreferrer">
-                  {t("marketplace.visitWebsite")} <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
+              {/* Seeded services start without a link until staff add one. */}
+              {details.websiteUrl ? (
+                <Button asChild className="w-full">
+                  <a href={details.websiteUrl} target="_blank" rel="noopener noreferrer">
+                    {t("marketplace.visitWebsite")} <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              ) : null}
             </>
           )}
         </DialogContent>
