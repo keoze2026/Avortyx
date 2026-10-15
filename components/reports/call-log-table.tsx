@@ -72,6 +72,7 @@ import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { national, useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { failReasonLabel, localizeFailReason } from "@/lib/fail-reason";
+import { localizeName } from "@/lib/name-translation";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -831,11 +832,13 @@ export function CallLogTable({
                         {timeLabel(c.startedAt, timeZone)}
                       </TableCell>
                       {columns.campaign && (
-                        <TableCell className={CELL}>{c.campaignName}</TableCell>
+                        <TableCell className={CELL} title={locale === "en" ? undefined : c.campaignName}>
+                          {localizeName(c.campaignName, locale)}
+                        </TableCell>
                       )}
                       {columns.publisher && (
-                        <TableCell className={CELL}>
-                          {resolvePublisherName(c, publisherNameById) || "—"}
+                        <TableCell className={CELL} title={locale === "en" ? undefined : resolvePublisherName(c, publisherNameById) || undefined}>
+                          {localizeName(resolvePublisherName(c, publisherNameById), locale) || "—"}
                         </TableCell>
                       )}
                       {columns.caller && (
@@ -858,8 +861,8 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.buyer && (
-                        <TableCell className={CELL}>
-                          {c.buyerName ?? "—"}
+                        <TableCell className={CELL} title={locale === "en" ? undefined : c.buyerName ?? undefined}>
+                          {localizeName(c.buyerName, locale) || "—"}
                         </TableCell>
                       )}
                       {columns.revenue && (

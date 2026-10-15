@@ -41,6 +41,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
 
 export type GroupKey =
@@ -599,14 +600,27 @@ const COUNTRY_CODE_BY_NAME: Record<string, string> = Object.fromEntries(
   Object.entries(COUNTRY_NAMES).map(([cc, name]) => [name, cc]),
 );
 
-/** Tabs whose rows are names people entered: never translated. */
-const ENTERED_NAME_TABS = new Set<GroupKey>(["campaign", "publisher", "buyer", "dialed", "numberPool", "identity-phone"]);
+/** Tabs whose rows are names people entered: written in the chosen
+ *  language's script (lib/name-translation.ts), never looked up. */
+const ENTERED_NAME_TABS = new Set<GroupKey>(["campaign", "publisher", "buyer"]);
+/** Tabs whose rows are phone numbers: shown as they are. */
+const NUMBER_TABS = new Set<GroupKey>(["dialed", "numberPool", "identity-phone"]);
 
-function localizeRowLabel(label: string, tab: GroupKey, locale: string, t: (key: string) => string): string {
-  if (locale === "en" || !label || ENTERED_NAME_TABS.has(tab)) return label;
+function localizeRowLabel(
+  label: string,
+  tab: GroupKey,
+  locale: string,
+  t: (key: string) => string,
+  names = true,
+): string {
+  if (locale === "en" || !label || NUMBER_TABS.has(tab)) return label;
+  if (ENTERED_NAME_TABS.has(tab)) return names ? localizeName(label, locale) : label;
   const valueKey = (k: string) => t(`toolsUI.reports.summary.value.${k}`);
-  // A destination's own name stays; only "Not forwarded" is ours.
-  if (tab === "destination") return label === "Not forwarded" ? valueKey("notForwarded") : label;
+  // A destination's own name is written in the chosen script; "Not forwarded" is ours.
+  if (tab === "destination") {
+    if (label === "Not forwarded") return valueKey("notForwarded");
+    return names ? localizeName(label, locale) : label;
+  }
   const intl = INTL_LOCALE[locale] ?? locale;
   if (tab === "date-dow") {
     const i = DOW_SHORT.indexOf(label);
@@ -1065,6 +1079,8 @@ export function CallSummaryTable({
   const [tab, setTab] = React.useState<GroupKey>("campaign");
   /** A row's name as shown on screen and in the export (see localizeRowLabel). */
   const showLabel = (label: string) => localizeRowLabel(label, tab, locale, t);
+  /** In exported files names stay as entered, so they match the other pages. */
+  const exportLabel = (label: string) => localizeRowLabel(label, tab, locale, t, false);
   const [visibleState, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
   // Money a partner is not told. The backend already sends null for these
   // (CH-088 extended to every Reports surface); hiding the columns keeps the
@@ -1218,7 +1234,7 @@ export function CallSummaryTable({
     const tabKey = KEY_LABEL_KEYS.get(tab);
     const labelCol: ExportColumn<SummaryRow> = {
       label: tabKey ? t(tabKey) : t("toolsUI.reports.summary.columns.group"),
-      value: (r) => showLabel(r.label),
+      value: (r) => exportLabel(r.label),
     };
     const dataCols: ExportColumn<SummaryRow>[] = COLUMNS.filter((c) => visible[c.id]).map(
       (c) => ({
@@ -1433,7 +1449,12 @@ export function CallSummaryTable({
                     >
                       {/* Names start on one left edge so they line up under each other;
                           normal text colour, no underline (the row is still clickable). */}
-                      <TableCell className="pl-6 text-left font-medium">{showLabel(r.label)}</TableCell>
+                      <TableCell
+                        className="pl-6 text-left font-medium"
+                        title={showLabel(r.label) !== r.label ? r.label : undefined}
+                      >
+                        {showLabel(r.label)}
+                      </TableCell>
                       {visible.live && (
                         <TableCell
                           className={cn(

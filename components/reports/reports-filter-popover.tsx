@@ -17,6 +17,7 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import type { CallStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
+import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
 
 const TOOLBAR_BTN_HOVER =
@@ -51,7 +52,7 @@ interface ReportsFilterPopoverProps {
 }
 
 export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopoverProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const STATUS_OPTIONS = useMemo(
@@ -68,14 +69,15 @@ export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopover
   const facets = useMemo(() => {
     const toList = (rows: Array<{ id: string; name: string }>) =>
       rows
-        .map((r) => ({ id: r.id, label: r.name }))
+        // Names in the chosen language's script, like the Call Log shows them.
+        .map((r) => ({ id: r.id, label: localizeName(r.name, locale) }))
         .sort((a, b) => a.label.localeCompare(b.label));
     return {
       campaigns: toList(campaigns),
       buyers: toList(buyers),
       publishers: toList(publishers),
     };
-  }, [campaigns, buyers, publishers]);
+  }, [campaigns, buyers, publishers, locale]);
 
   const total =
     filters.campaignIds.length +
