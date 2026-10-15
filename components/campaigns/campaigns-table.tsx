@@ -78,6 +78,8 @@ interface CampaignsTableProps {
 interface CampaignMetrics {
   liveCurrent: number;
   liveCap: number;
+  /** Daily call cap (0 = unlimited), shown and edited next to today's calls. */
+  dailyCap: number;
   hourly: number;
   daily: number;
   monthly: number;
@@ -94,6 +96,7 @@ function makeMetrics(c: Campaign): CampaignMetrics {
   return {
     liveCurrent: c.liveCalls,
     liveCap: c.maxConcurrency ?? 0,
+    dailyCap: c.dailyCap ?? 0,
     hourly: c.callsHour,
     daily: c.callsToday,
     monthly: c.callsMonth,
@@ -241,7 +244,9 @@ export function CampaignsTable({
                     <TableCell className="tabular-nums">{m.hourly}</TableCell>
                   )}
                   {columns.daily && (
-                    <TableCell className="tabular-nums">{m.daily}</TableCell>
+                    <TableCell className="tabular-nums">
+                      <DailyCapBox campaignId={c.id} current={m.daily} cap={m.dailyCap} editable={canManage} />
+                    </TableCell>
                   )}
                   {columns.monthly && (
                     <TableCell className="tabular-nums">{m.monthly.toLocaleString("en-US", { useGrouping: false })}</TableCell>
@@ -431,6 +436,118 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
         >
           {cap > 0 ? cap : "∞"}
         </button>
+      )}
+    </span>
+  );
+}
+
+/**
+ * Today's calls / daily cap, editable in place exactly like the Live box:
+ * click the cap, type a number, Enter or click away to save, Escape to
+ * cancel. 0 = unlimited (∞). Saved as the campaign's daily cap - the one
+ * routing checks - so the campaign stops taking calls for the day once it
+ * reaches it.
+ */
+function DailyCapBox({
+  campaignId,
+  current,
+  cap,
+  editable = true,
+}: {
+  campaignId: string;
+  current: number;
+  cap: number;
+  editable?: boolean;
+}) {
+  const { t } = useTranslation();
+  const setDailyCap = useCampaignsStore((s) => s.setDailyCap);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(String(cap));
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  // Reflect saved / refreshed values while not editing.
+  React.useEffect(() => {
+    if (!editing) setDraft(String(cap));
+  }, [cap, editing]);
+
+  const commit = () => {
+    if (draft.trim() === "") {
+      setEditing(false);
+      setDraft(String(cap));
+      return;
+    }
+    const next = Math.max(0, Math.floor(Number(draft) || 0));
+    setEditing(false);
+    setDraft(String(next));
+    if (next === cap) return;
+    setDailyCap(campaignId, next).catch(() => {
+      toast.error(t("campaignDailyCap.saveError"));
+    });
+  };
+
+  // Daily cap reached (e.g. 500 / 500): solid blue, like a full Live box.
+  const full = cap > 0 && current >= cap;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex h-7 min-w-[4.5rem] items-center justify-center gap-1 rounded-md border px-2 tabular-nums transition-colors",
+        full ? "border-accent bg-accent font-semibold text-white" : "border-border bg-secondary/30",
+      )}
+      title={full ? t("campaignDailyCap.full") : undefined}
+    >
+      <span>{current}</span>
+      <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              setDraft(String(cap));
+              setEditing(false);
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={t("campaignDailyCap.input")}
+          className="w-14 rounded border border-accent/50 bg-background px-1 py-0.5 text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      ) : editable ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDraft(String(cap));
+            setEditing(true);
+          }}
+          title={t("campaignDailyCap.edit")}
+          aria-label={t("campaignDailyCap.edit")}
+          className={cn(
+            "cursor-text rounded px-1 tabular-nums transition-colors",
+            full ? "hover:bg-white/15 hover:ring-1 hover:ring-white/50" : "hover:bg-accent/10 hover:ring-1 hover:ring-accent/40",
+          )}
+        >
+          {cap > 0 ? cap : "∞"}
+        </button>
+      ) : (
+        <span className="px-1">{cap > 0 ? cap : "∞"}</span>
       )}
     </span>
   );

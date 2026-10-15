@@ -18,6 +18,14 @@ export const base: ExtraTranslations = {
     "toolsUI.suppression.blockedNumbers.sort.newest": "Newest first",
     "toolsUI.suppression.blockedNumbers.sort.oldest": "Oldest first",
     "toolsUI.reports.callLog.callerIdBlocked": "Caller ID Blocked",
+    "toolsUI.reports.callLog.actions.unblockCaller": "Unblock caller",
+    "toolsUI.reports.callLog.actions.prefixBlocked": "This caller is blocked by a prefix rule. Remove it on the Blocked Numbers page.",
+    "toolsUI.reports.callLog.actions.blockError": "Couldn't update the Blocked Numbers list. Please try again.",
+    // Campaigns list: daily cap edited in the row.
+    "campaignDailyCap.edit": "Click to change the daily cap (0 = unlimited)",
+    "campaignDailyCap.input": "Daily cap (0 = unlimited)",
+    "campaignDailyCap.full": "Daily cap reached: no more calls today",
+    "campaignDailyCap.saveError": "Couldn't save the daily cap. Please try again.",
   },
   ru: {
     "common.daysShort": "{n} д",
@@ -64,6 +72,14 @@ export const base: ExtraTranslations = {
     "toolsUI.suppression.blockedNumbers.sort.newest": "Сначала новые",
     "toolsUI.suppression.blockedNumbers.sort.oldest": "Сначала старые",
     "toolsUI.reports.callLog.callerIdBlocked": "Номер абонента заблокирован",
+    "toolsUI.reports.callLog.actions.unblockCaller": "Разблокировать абонента",
+    "toolsUI.reports.callLog.actions.prefixBlocked": "Абонент заблокирован по префиксу. Удалите правило на странице «Заблокированные номера».",
+    "toolsUI.reports.callLog.actions.blockError": "Не удалось обновить список заблокированных номеров. Попробуйте ещё раз.",
+    // Campaigns list: daily cap edited in the row.
+    "campaignDailyCap.edit": "Нажмите, чтобы изменить дневной лимит (0 = без лимита)",
+    "campaignDailyCap.input": "Дневной лимит (0 = без лимита)",
+    "campaignDailyCap.full": "Дневной лимит достигнут: сегодня звонков больше не будет",
+    "campaignDailyCap.saveError": "Не удалось сохранить дневной лимит. Попробуйте ещё раз.",
   },
   ja: {
     "common.daysShort": "{n}日",
@@ -110,6 +126,14 @@ export const base: ExtraTranslations = {
     "toolsUI.suppression.blockedNumbers.sort.newest": "新しい順",
     "toolsUI.suppression.blockedNumbers.sort.oldest": "古い順",
     "toolsUI.reports.callLog.callerIdBlocked": "発信者番号はブロック済み",
+    "toolsUI.reports.callLog.actions.unblockCaller": "発信者のブロックを解除",
+    "toolsUI.reports.callLog.actions.prefixBlocked": "この発信者はプレフィックスのルールでブロックされています。ブロック番号のページで削除してください。",
+    "toolsUI.reports.callLog.actions.blockError": "ブロック番号の一覧を更新できませんでした。もう一度お試しください。",
+    // Campaigns list: daily cap edited in the row.
+    "campaignDailyCap.edit": "クリックして1日の上限を変更（0 = 無制限）",
+    "campaignDailyCap.input": "1日の上限（0 = 無制限）",
+    "campaignDailyCap.full": "1日の上限に達しました：本日はこれ以上受け付けません",
+    "campaignDailyCap.saveError": "1日の上限を保存できませんでした。もう一度お試しください。",
   },
   zh: {
     "common.daysShort": "{n}天",
@@ -156,5 +180,13 @@ export const base: ExtraTranslations = {
     "toolsUI.suppression.blockedNumbers.sort.newest": "最新的在前",
     "toolsUI.suppression.blockedNumbers.sort.oldest": "最早的在前",
     "toolsUI.reports.callLog.callerIdBlocked": "来电号码已屏蔽",
+    "toolsUI.reports.callLog.actions.unblockCaller": "取消屏蔽来电号码",
+    "toolsUI.reports.callLog.actions.prefixBlocked": "此来电号码被号段规则屏蔽，请在“屏蔽号码”页面删除该规则。",
+    "toolsUI.reports.callLog.actions.blockError": "无法更新屏蔽号码列表，请重试。",
+    // Campaigns list: daily cap edited in the row.
+    "campaignDailyCap.edit": "点击修改每日上限（0 = 不限）",
+    "campaignDailyCap.input": "每日上限（0 = 不限）",
+    "campaignDailyCap.full": "已达每日上限：今天不再接收来电",
+    "campaignDailyCap.saveError": "无法保存每日上限，请重试。",
   },
 };
