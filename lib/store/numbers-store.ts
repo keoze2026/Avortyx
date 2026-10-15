@@ -40,6 +40,36 @@ interface NumbersState {
   removePool: (id: string) => Promise<void>;
 }
 
+/**
+ * Every tracking number in the workspace, page by page.
+ *
+ * The server hands out at most 200 numbers per page (newest first). Asking
+ * for 500 in one go still returned only 200, so once a workspace had more
+ * than 200 numbers the older ones silently dropped off - and a campaign whose
+ * numbers were among them showed "No tracking numbers" although its numbers
+ * were still attached and taking calls.
+ */
+async function fetchAllNumbers(): Promise<TrackingNumber[]> {
+  const PAGE_SIZE = 200;
+  const MAX_PAGES = 50; // 10,000 numbers - a guard, not a limit anyone reaches.
+  const all: TrackingNumber[] = [];
+  const seen = new Set<string>();
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const res = await numbersService.list({ page, pageSize: PAGE_SIZE });
+    for (const n of res.items) {
+      if (!seen.has(n.id)) {
+        seen.add(n.id);
+        all.push(n);
+      }
+    }
+    const pages = (res as { pages?: number }).pages;
+    const total = (res as { total?: number }).total;
+    if (res.items.length === 0) break;
+    if (typeof pages === "number" ? page >= pages : typeof total === "number" ? all.length >= total : res.items.length < PAGE_SIZE) break;
+  }
+  return all;
+}
+
 export const useNumbersStore = create<NumbersState>()((set, get) => ({
   numbers: [],
   pools: [],
@@ -49,20 +79,24 @@ export const useNumbersStore = create<NumbersState>()((set, get) => ({
 
   fetch: async () => {
     set({ loading: true, error: null });
-    try {
-      const [numbers, pools] = await Promise.all([
-        numbersService.list({ page: 1, pageSize: 500 }),
-        poolsService.list({ page: 1, pageSize: 200 }),
-      ]);
-      set({
-        numbers: numbers.items,
-        pools: pools.items,
-        loading: false,
-        hydrated: true,
-      });
-    } catch (e) {
-      set({ loading: false, error: messageFromError(e) });
-    }
+    // Numbers and pools load independently: a failing pools call must not
+    // blank every campaign's Tracking Numbers list.
+    const [numbers, pools] = await Promise.allSettled([
+      fetchAllNumbers(),
+      poolsService.list({ page: 1, pageSize: 200 }),
+    ]);
+    set((s) => ({
+      numbers: numbers.status === "fulfilled" ? numbers.value : s.numbers,
+      pools: pools.status === "fulfilled" ? pools.value.items : s.pools,
+      loading: false,
+      hydrated: numbers.status === "fulfilled" || s.hydrated,
+      error:
+        numbers.status === "rejected"
+          ? messageFromError(numbers.reason)
+          : pools.status === "rejected"
+            ? messageFromError(pools.reason)
+            : null,
+    }));
   },
 
   /* ─── Numbers ────────────────────────────────────────────────────── */
