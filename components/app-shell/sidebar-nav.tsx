@@ -221,8 +221,12 @@ function SidebarItem({
             {item.badge === "Live" && (
               <span className="mr-1 inline-flex h-1.5 w-1.5 rounded-full bg-current align-middle animate-pulse" />
             )}
-            {/* "Live" is a word (translated); other badges such as "AI" are kept as they are. */}
-            {item.badge === "Live" ? t("sharedUI.liveBadge.live") : item.badge}
+            {/* Badges are words too: "Live" and "AI" in the chosen language. */}
+            {item.badge === "Live"
+              ? t("sharedUI.liveBadge.live")
+              : item.badge === "AI"
+                ? t("sharedUI.aiBadge")
+                : item.badge}
           </span>
         )}
       </Link>

@@ -19,7 +19,7 @@ export const zh: TranslationShape = {
     blockedNumbers: "已屏蔽号码",
     callLogs: "通话日志",
     marketplace: "市场",
-    aiInsights: "AI 洞察",
+    aiInsights: "人工智能洞察",
     coinMarket: "币市行情",
     dailyNews: "每日新闻",
     referrals: "推荐计划",
@@ -107,8 +107,8 @@ export const zh: TranslationShape = {
       description: "跨垂直行业的高意向库存实时拍卖。",
     },
     aiInsights: {
-      title: "AI 洞察",
-      description: "异常、推荐与 Autopilot 建议。",
+      title: "人工智能洞察",
+      description: "异常、推荐与自动驾驶建议。",
     },
     integrations: {
       title: "集成",
@@ -4692,11 +4692,11 @@ export const zh: TranslationShape = {
           description: "未能抵达目的地的通话。",
         },
         acl: {
-          label: "ACL",
+          label: "平均通话时长",
           description: "已送达通话的平均通话时长。",
         },
         tcl: {
-          label: "TCL",
+          label: "总通话时长",
           description: "已送达通话的总通话时长汇总。",
         },
         cost: {

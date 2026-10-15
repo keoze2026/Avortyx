@@ -19,7 +19,7 @@ export const ru: TranslationShape = {
     blockedNumbers: "Чёрный список",
     callLogs: "Журнал звонков",
     marketplace: "Маркетплейс",
-    aiInsights: "ИИ Аналитика",
+    aiInsights: "ИИ-аналитика",
     coinMarket: "Криптовалюты",
     dailyNews: "Новости",
     referrals: "Рефералы",
@@ -107,7 +107,7 @@ export const ru: TranslationShape = {
       description: "Живые аукционы инвентаря по вертикалям.",
     },
     aiInsights: {
-      title: "ИИ Аналитика",
+      title: "ИИ-аналитика",
       description: "Аномалии, рекомендации и предложения Автопилота.",
     },
     integrations: {
@@ -4703,11 +4703,11 @@ export const ru: TranslationShape = {
           description: "Звонки, не дошедшие до назначения.",
         },
         acl: {
-          label: "ACL",
+          label: "Средняя длительность",
           description: "Средняя длительность по доставленным звонкам.",
         },
         tcl: {
-          label: "TCL",
+          label: "Общая длительность",
           description: "Суммарная длительность по доставленным звонкам.",
         },
         cost: {

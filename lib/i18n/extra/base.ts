@@ -43,6 +43,8 @@ export const base: ExtraTranslations = {
     "callCaps.retry": "Retry",
     "callCaps.invalid": "Enter whole numbers, 0 or more.",
     "callCaps.invalidOne": "Whole number, 0 or more",
+    "sharedUI.aiBadge": "AI",
+    "nav.owner": "Owner",
   },
   ru: {
     "common.daysShort": "{n} д",
@@ -114,6 +116,8 @@ export const base: ExtraTranslations = {
     "callCaps.retry": "Повторить",
     "callCaps.invalid": "Введите целые числа от 0.",
     "callCaps.invalidOne": "Целое число от 0",
+    "sharedUI.aiBadge": "ИИ",
+    "nav.owner": "Владелец",
   },
   ja: {
     "common.daysShort": "{n}日",
@@ -185,6 +189,8 @@ export const base: ExtraTranslations = {
     "callCaps.retry": "再試行",
     "callCaps.invalid": "0 以上の整数を入力してください。",
     "callCaps.invalidOne": "0 以上の整数",
+    "sharedUI.aiBadge": "知能",
+    "nav.owner": "オーナー",
   },
   zh: {
     "common.daysShort": "{n}天",
@@ -256,5 +262,7 @@ export const base: ExtraTranslations = {
     "callCaps.retry": "重试",
     "callCaps.invalid": "请输入 0 或更大的整数。",
     "callCaps.invalidOne": "0 或更大的整数",
+    "sharedUI.aiBadge": "智能",
+    "nav.owner": "所有者",
   },
 };

@@ -19,7 +19,7 @@ export const ja: TranslationShape = {
     blockedNumbers: "ブロック番号",
     callLogs: "通話ログ",
     marketplace: "マーケットプレイス",
-    aiInsights: "AI インサイト",
+    aiInsights: "人工知能インサイト",
     coinMarket: "コインマーケット",
     dailyNews: "デイリーニュース",
     referrals: "リファラル",
@@ -107,8 +107,8 @@ export const ja: TranslationShape = {
       description: "業種別の高インテント在庫のライブオークション。",
     },
     aiInsights: {
-      title: "AI インサイト",
-      description: "異常検知、推奨事項、Autopilot の提案。",
+      title: "人工知能インサイト",
+      description: "異常検知、推奨事項、自動運転の提案。",
     },
     integrations: {
       title: "連携",
@@ -4702,11 +4702,11 @@ export const ja: TranslationShape = {
           description: "宛先に到達しなかった通話。",
         },
         acl: {
-          label: "ACL",
+          label: "平均通話時間",
           description: "配信済み通話の平均通話時間。",
         },
         tcl: {
-          label: "TCL",
+          label: "合計通話時間",
           description: "配信済み通話の合計通話時間。",
         },
         cost: {
