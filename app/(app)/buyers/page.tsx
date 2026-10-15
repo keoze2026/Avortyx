@@ -42,7 +42,11 @@ export default function BuyersPage() {
   // straight off the list. Pull each buyer's counters from its /stats
   // endpoint once the list is in — keyed on the id set so a re-fetch of the
   // same buyers (the store replacing the array) doesn't fan out again.
-  const buyerIdKey = buyers.map((b) => b.id).join(",");
+  // Once the list response carries the four spend windows, no per-row calls.
+  const buyerIdKey = buyers
+    .filter((b) => !b.statsFromList)
+    .map((b) => b.id)
+    .join(",");
   useEffect(() => {
     if (!buyerIdKey) return;
     for (const id of buyerIdKey.split(",")) void fetchStats(id);

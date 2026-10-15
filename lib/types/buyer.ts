@@ -15,6 +15,12 @@ export interface Buyer {
   payoutModel: BuyerPayoutModel;
 
   concurrencyCap: number;
+  /** False while the list response didn't say what `concurrencyCap` is
+   *  (older backend): the row shows "—" instead of a made-up ∞. */
+  concurrencyKnown?: boolean;
+  /** True when the list response already carried the usage counters, so
+   *  the Buyers page doesn't ask each buyer's /stats one by one. */
+  statsFromList?: boolean;
   dailyCap: number;
   monthlyCap: number;
 

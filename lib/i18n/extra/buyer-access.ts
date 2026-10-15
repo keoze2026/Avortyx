@@ -19,6 +19,14 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.reportingDesc": "Pick which reporting columns this buyer can see — uncheck to hide. {visible} of {total} visible.",
     "buyerAccess.localOnly": "Time zone and permissions are saved in this browser only until the server supports them. Members and reporting visibility are already saved on the server.",
     "buyerAccess.saveFailed": "Couldn't save buyer access",
+    // Buyers list: live calls / CC limit, edited in the row.
+    "buyersRow.live": "Live",
+    "buyersRow.ccFull": "Buyer full: every CC slot is in use",
+    "buyersRow.ccEdit": "Click to change the CC limit (0 = unlimited)",
+    "buyersRow.ccInput": "CC limit (0 = unlimited)",
+    "buyersRow.ccSaved": "{name}: CC limit set to {cap}",
+    "buyersRow.ccUnlimited": "unlimited",
+    "buyersRow.ccError": "Couldn't save the CC limit. Please try again.",
   },
   ru: {
     "partnerMoney.earnings": "Заработок",
@@ -37,6 +45,14 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.reportingDesc": "Выберите, какие столбцы отчётов видит этот покупатель — снимите галочку, чтобы скрыть. Видно {visible} из {total}.",
     "buyerAccess.localOnly": "Часовой пояс и разрешения сохраняются только в этом браузере, пока сервер их не поддерживает. Участники и видимость отчётов уже сохраняются на сервере.",
     "buyerAccess.saveFailed": "Не удалось сохранить доступ покупателя",
+    // Buyers list: live calls / CC limit, edited in the row.
+    "buyersRow.live": "В эфире",
+    "buyersRow.ccFull": "Покупатель заполнен: все линии заняты",
+    "buyersRow.ccEdit": "Нажмите, чтобы изменить лимит одновременных звонков (0 = без лимита)",
+    "buyersRow.ccInput": "Лимит одновременных звонков (0 = без лимита)",
+    "buyersRow.ccSaved": "{name}: лимит одновременных звонков — {cap}",
+    "buyersRow.ccUnlimited": "без лимита",
+    "buyersRow.ccError": "Не удалось сохранить лимит. Попробуйте ещё раз.",
   },
   ja: {
     "partnerMoney.earnings": "収益",
@@ -55,6 +71,14 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.reportingDesc": "このバイヤーが閲覧できるレポート列を選択してください — チェックを外すと非表示。{visible} / {total} 表示中。",
     "buyerAccess.localOnly": "タイムゾーンと権限は、サーバーが対応するまでこのブラウザにのみ保存されます。メンバーとレポートの表示範囲はすでにサーバーに保存されています。",
     "buyerAccess.saveFailed": "バイヤーのアクセスを保存できませんでした",
+    // Buyers list: live calls / CC limit, edited in the row.
+    "buyersRow.live": "通話中",
+    "buyersRow.ccFull": "バイヤー満杯：同時通話枠がすべて使用中です",
+    "buyersRow.ccEdit": "クリックして同時通話の上限を変更（0 = 無制限）",
+    "buyersRow.ccInput": "同時通話の上限（0 = 無制限）",
+    "buyersRow.ccSaved": "{name}：同時通話の上限を {cap} に設定しました",
+    "buyersRow.ccUnlimited": "無制限",
+    "buyersRow.ccError": "同時通話の上限を保存できませんでした。もう一度お試しください。",
   },
   zh: {
     "partnerMoney.earnings": "收入",
@@ -73,5 +97,13 @@ export const buyerAccess: ExtraTranslations = {
     "buyerAccess.reportingDesc": "选择此买家可见的报表列 — 取消勾选即隐藏。{visible} / {total} 可见。",
     "buyerAccess.localOnly": "在服务器支持之前，时区和权限仅保存在此浏览器中。成员和报表可见性已保存在服务器上。",
     "buyerAccess.saveFailed": "无法保存买家访问权限",
+    // Buyers list: live calls / CC limit, edited in the row.
+    "buyersRow.live": "实时",
+    "buyersRow.ccFull": "买家已满：所有同时通话名额都在使用中",
+    "buyersRow.ccEdit": "点击修改同时通话上限（0 = 不限）",
+    "buyersRow.ccInput": "同时通话上限（0 = 不限）",
+    "buyersRow.ccSaved": "{name}：同时通话上限已设为 {cap}",
+    "buyersRow.ccUnlimited": "不限",
+    "buyersRow.ccError": "无法保存同时通话上限，请重试。",
   },
 };

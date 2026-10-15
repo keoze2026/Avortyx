@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   ALL_BUYER_COLUMNS,
@@ -22,6 +23,7 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
+import { useBuyersStore } from "@/lib/store/buyers-store";
 import type { Buyer } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +85,7 @@ export function BuyersTable({
                 />
               </TableHead>
               <TableHead className="text-left">{t("networkUI.common.name")}</TableHead>
+              {columns.live && <TableHead className="!text-center">{t("buyersRow.live")}</TableHead>}
               {columns.hourly && <TableHead className="!text-center">{t("networkUI.common.hourly")}</TableHead>}
               {columns.daily && <TableHead className="!text-center">{t("networkUI.common.daily")}</TableHead>}
               {columns.monthly && <TableHead className="!text-center">{t("networkUI.common.monthly")}</TableHead>}
@@ -94,8 +97,8 @@ export function BuyersTable({
           <TableBody>
             {buyers.map((b) => {
               const isActive = b.status === "active";
-              // Hourly spend estimated from today's spend divided by elapsed hours.
-              const hourly = b.spendToday / Math.max(1, new Date().getHours() || 1);
+              // This hour's spend as the backend counts it (hourly_spend).
+              const hourly = b.hourlySpend;
               return (
                 <TableRow
                   key={b.id}
@@ -112,6 +115,17 @@ export function BuyersTable({
                   <TableCell className="text-left font-medium text-foreground">
                     {b.name}
                   </TableCell>
+                  {columns.live && (
+                    <TableCell className="!text-center text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                      <BuyerCcBox
+                        buyerId={b.id}
+                        name={b.name}
+                        current={b.liveCalls}
+                        cap={b.concurrencyCap}
+                        known={b.concurrencyKnown !== false}
+                      />
+                    </TableCell>
+                  )}
                   {columns.hourly && (
                     <TableCell className="!text-center tabular-nums text-muted-foreground">
                       {formatCurrency(hourly, true)}
@@ -170,6 +184,126 @@ export function BuyersTable({
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
+
+/**
+ * Live calls / CC limit for one buyer - the same box as the Live column on
+ * Campaigns. Click the limit, type a number, Enter or click away to save,
+ * Escape to cancel; 0 = unlimited (∞). Saved on the buyer itself
+ * (`max_concurrency`), the limit routing checks before sending it a call,
+ * so this replaces Buyer -> Settings -> Concurrency -> Save.
+ */
+function BuyerCcBox({
+  buyerId,
+  name,
+  current,
+  cap,
+  known,
+}: {
+  buyerId: string;
+  name: string;
+  current: number;
+  cap: number;
+  /** False until the list says what the limit is: shows "—", still editable. */
+  known: boolean;
+}) {
+  const { t } = useTranslation();
+  const setConcurrency = useBuyersStore((s) => s.setConcurrency);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(String(cap));
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  // Reflect saved / refreshed values while not editing.
+  React.useEffect(() => {
+    if (!editing) setDraft(String(cap));
+  }, [cap, editing]);
+
+  const commit = () => {
+    // Nothing typed: leave the limit as it is.
+    if (draft.trim() === "") {
+      setEditing(false);
+      setDraft(String(cap));
+      return;
+    }
+    const next = Math.max(0, Math.floor(Number(draft) || 0));
+    setEditing(false);
+    setDraft(String(next));
+    if (known && next === cap) return;
+    setConcurrency(buyerId, next)
+      .then(() =>
+        toast.success(
+          t("buyersRow.ccSaved")
+            .replace("{name}", name)
+            .replace("{cap}", next > 0 ? String(next) : t("buyersRow.ccUnlimited")),
+        ),
+      )
+      .catch(() => toast.error(t("buyersRow.ccError")));
+  };
+
+  // Buyer full (live calls at its CC limit, e.g. 10 / 10): solid blue, as on Campaigns.
+  const full = known && cap > 0 && current >= cap;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex h-7 min-w-[4.5rem] items-center justify-center gap-1 rounded-md border px-2 tabular-nums transition-colors",
+        full ? "border-accent bg-accent font-semibold text-white" : "border-border bg-secondary/30",
+      )}
+      title={full ? t("buyersRow.ccFull") : undefined}
+    >
+      <span>{current}</span>
+      <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              setDraft(String(cap));
+              setEditing(false);
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={t("buyersRow.ccInput")}
+          className="w-14 rounded border border-accent/50 bg-background px-1 py-0.5 text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDraft(known ? String(cap) : "");
+            setEditing(true);
+          }}
+          title={t("buyersRow.ccEdit")}
+          aria-label={t("buyersRow.ccEdit")}
+          className={cn(
+            "cursor-text rounded px-1 tabular-nums transition-colors",
+            full ? "hover:bg-white/15 hover:ring-1 hover:ring-white/50" : "hover:bg-accent/10 hover:ring-1 hover:ring-accent/40",
+          )}
+        >
+          {!known ? "—" : cap > 0 ? cap : "∞"}
+        </button>
+      )}
+    </span>
+  );
+}
 
 function ActionIcon({
   icon: Icon,

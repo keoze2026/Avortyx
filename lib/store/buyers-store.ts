@@ -67,6 +67,9 @@ interface BuyersState {
   ) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setStatus: (id: string, status: BuyerStatus) => Promise<void>;
+  /** Save the buyer's CC limit (0 = unlimited) where routing reads it.
+   *  Only that field changes locally - the row keeps its counters. */
+  setConcurrency: (id: string, maxConcurrency: number) => Promise<void>;
 }
 
 export const useBuyersStore = create<BuyersState>()((set, get) => ({
@@ -178,6 +181,24 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
     }));
     try {
       await buyersService.updateCap(id, cap);
+    } catch (e) {
+      set({ buyers: prev, error: messageFromError(e) });
+      throw e;
+    }
+  },
+
+  setConcurrency: async (id, maxConcurrency) => {
+    const prev = get().buyers;
+    set((s) => ({
+      buyers: s.buyers.map((b) =>
+        b.id === id ? { ...b, concurrencyCap: maxConcurrency, concurrencyKnown: true } : b,
+      ),
+    }));
+    try {
+      const saved = await buyersService.setConcurrency(id, maxConcurrency);
+      set((s) => ({
+        buyers: s.buyers.map((b) => (b.id === id ? { ...b, concurrencyCap: saved, concurrencyKnown: true } : b)),
+      }));
     } catch (e) {
       set({ buyers: prev, error: messageFromError(e) });
       throw e;

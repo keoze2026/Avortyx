@@ -45,6 +45,9 @@ interface BuyerListWire {
   dailySpend?: number | string;
   monthlySpend?: number | string;
   globalSpend?: number | string;
+  /** The buyer's concurrent-call (CC) limit - `Buyer.max_concurrency`, the
+   *  field routing checks. 0 = unlimited. Read when the list carries it. */
+  maxConcurrency?: number;
   /** Legacy spellings — still read as fallbacks. */
   callsToday?: number;
   callsMonth?: number;
@@ -60,7 +63,6 @@ interface BuyerWire extends BuyerListWire {
   description?: string;
   sipEndpoint?: string;
   minCallDuration?: number;
-  maxConcurrency?: number;
   dupWindowDays?: number;
   qualityScore?: number;
   /** FK reference (uuid). Read-only — display via `organizationName` above. */
@@ -184,13 +186,15 @@ function listWireToBuyer(w: BuyerListWire): Buyer {
     status: normalizeStatus(w.status),
     bidAmount: toNum(w.payoutAmount),
     payoutModel: normalizePayoutModel(w.payoutModel),
-    concurrencyCap: 0,
+    concurrencyCap: typeof w.maxConcurrency === "number" ? w.maxConcurrency : 0,
+    concurrencyKnown: typeof w.maxConcurrency === "number",
     dailyCap: 0,
     monthlyCap: 0,
     // Usage counters: read off the list payload when the backend includes
     // them (0 otherwise) — these used to be hardcoded to 0 regardless of
     // what the response carried.
     ...statsWireToStats(w),
+    statsFromList: w.hourlySpend !== undefined && (w.dailySpend ?? w.spendToday) !== undefined,
     campaignIds: [],
     createdAt: Date.parse(w.createdAt) || Date.now(),
   };
@@ -204,7 +208,10 @@ function detailWireToBuyer(w: BuyerWire): Buyer {
     // (uuid). The legacy id-only fallback stays in place for old responses
     // that haven't been updated yet.
     organization: w.organizationName ?? w.organizationId ?? "",
-    concurrencyCap: w.cap?.concurrency ?? w.maxConcurrency ?? 0,
+    // `max_concurrency` on the buyer is what routing checks; the cap
+    // record's copy is only a fallback for old responses.
+    concurrencyCap: w.maxConcurrency ?? w.cap?.concurrency ?? 0,
+    concurrencyKnown: w.maxConcurrency !== undefined || w.cap?.concurrency !== undefined,
     dailyCap: w.cap?.daily ?? 0,
     monthlyCap: w.cap?.monthly ?? 0,
     campaignIds: (w.campaigns ?? []).map((c) => c.campaignId),
@@ -262,6 +269,17 @@ export const buyersService = {
     if (patch.email !== undefined) body.contactEmail = patch.email;
     const wire = await http.patch<BuyerWire>(`/api/buyers/${id}`, { body });
     return detailWireToBuyer(wire);
+  },
+
+  /**
+   * Set the buyer's CC limit (0 = unlimited) on `Buyer.max_concurrency` -
+   * the field the routing engine checks before sending a call to this buyer
+   * (`PATCH /api/buyers/{id}`). The Caps endpoint writes `BuyerCap`, which
+   * routing does not read, so a limit saved only there never took effect.
+   */
+  async setConcurrency(id: string, maxConcurrency: number): Promise<number> {
+    const wire = await http.patch<BuyerWire>(`/api/buyers/${id}`, { body: { maxConcurrency } });
+    return typeof wire?.maxConcurrency === "number" ? wire.maxConcurrency : maxConcurrency;
   },
 
   async remove(id: string): Promise<void> {

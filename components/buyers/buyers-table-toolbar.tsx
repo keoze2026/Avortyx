@@ -39,9 +39,10 @@ export type BuyerTableStatusFilter =
   | "capped"
   | "pending";
 
-export type BuyerColumnKey = "hourly" | "daily" | "monthly" | "global" | "status";
+export type BuyerColumnKey = "live" | "hourly" | "daily" | "monthly" | "global" | "status";
 
 export const BUYER_COLUMNS: Array<{ id: BuyerColumnKey; labelKey: string }> = [
+  { id: "live", labelKey: "buyersRow.live" },
   { id: "hourly", labelKey: "networkUI.common.hourly" },
   { id: "daily", labelKey: "networkUI.common.daily" },
   { id: "monthly", labelKey: "networkUI.common.monthly" },

@@ -53,6 +53,7 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
   const { t } = useTranslation();
   const update = useBuyersStore((s) => s.update);
   const updateCap = useBuyersStore((s) => s.updateCap);
+  const setConcurrency = useBuyersStore((s) => s.setConcurrency);
   const [form, setForm] = useState<FormState>(() => fromBuyer(buyer));
   const [submitting, setSubmitting] = useState(false);
 
@@ -94,6 +95,11 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
           monthly: form.monthlyCap,
           concurrency: form.concurrencyCap,
         });
+      }
+      // Concurrency also on the buyer itself - that is the limit routing
+      // checks, and the one the Buyers list shows and edits in the row.
+      if (form.concurrencyCap !== baseline.concurrencyCap) {
+        await setConcurrency(buyer.id, form.concurrencyCap);
       }
       toast.success(t("networkUI.buyers.settings.saved"));
     } catch (e) {
