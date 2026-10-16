@@ -166,6 +166,7 @@ export function usePartnerHiddenColumns(): { summary: ReadonlySet<string>; log: 
       alive = false;
     };
   }, [kind, userId, fetchCatalogue]);
+  
 
   return React.useMemo(() => {
     if (!kind) return NONE;
