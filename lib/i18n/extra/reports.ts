@@ -7,7 +7,7 @@ import type { ExtraTranslations } from "./types";
 
 export const reports: ExtraTranslations = {
   en: {
-    "toolsUI.reports.callLog.columns.blocked": "Blocked",
+    "toolsUI.reports.callLog.failReason.callerIdBlocked": "Callerid Blocked",
     "toolsUI.reports.summary.drill.rowHint": "Show only this campaign",
     "toolsUI.reports.summary.drill.rowHintActive": "Show all campaigns again",
     "toolsUI.reports.summary.drill.clear": "Show all campaigns",
@@ -83,7 +83,7 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.callLog.failReason.buyerBlocked": "This Buyer Has Blocked The Caller",
   },
   ru: {
-    "toolsUI.reports.callLog.columns.blocked": "Блокировка",
+    "toolsUI.reports.callLog.failReason.callerIdBlocked": "Номер абонента заблокирован",
     "toolsUI.reports.summary.drill.rowHint": "Показать только эту кампанию",
     "toolsUI.reports.summary.drill.rowHintActive": "Снова показать все кампании",
     "toolsUI.reports.summary.drill.clear": "Показать все кампании",
@@ -159,7 +159,7 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.callLog.failReason.buyerBlocked": "Покупатель заблокировал этого абонента",
   },
   ja: {
-    "toolsUI.reports.callLog.columns.blocked": "ブロック",
+    "toolsUI.reports.callLog.failReason.callerIdBlocked": "発信者番号はブロック済み",
     "toolsUI.reports.summary.drill.rowHint": "このキャンペーンだけを表示",
     "toolsUI.reports.summary.drill.rowHintActive": "すべてのキャンペーンを再表示",
     "toolsUI.reports.summary.drill.clear": "すべてのキャンペーンを表示",
@@ -235,7 +235,7 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.callLog.failReason.buyerBlocked": "このバイヤーは発信者をブロックしています",
   },
   zh: {
-    "toolsUI.reports.callLog.columns.blocked": "已屏蔽",
+    "toolsUI.reports.callLog.failReason.callerIdBlocked": "来电号码已屏蔽",
     "toolsUI.reports.summary.drill.rowHint": "只显示此营销活动",
     "toolsUI.reports.summary.drill.rowHintActive": "重新显示所有营销活动",
     "toolsUI.reports.summary.drill.clear": "显示所有营销活动",

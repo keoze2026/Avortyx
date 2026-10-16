@@ -14,12 +14,19 @@
  * The words the portal uses for a fail reason (screen and export):
  *   "Duplicate call" / "Duplicate call blocked"  ->  "Duplicate Call"
  *   "Campaign cap reached" (any cap)              ->  "Overflow Missed"
+ *   "Callerid Blocked" (a caller the team blocked) ->  "Callerid Blocked"
  * Anything else: each word starts with a capital, "blocked" dropped.
  */
+/** "Callerid Blocked" / "Caller ID Blocked", as the backend writes it for a blocked caller. */
+const CALLER_ID_BLOCKED = /^caller\s*-?\s*id\s*blocked$/i;
+
 export function failReasonLabel(reason: string | null | undefined): string {
   const raw = (reason ?? "").trim();
   if (!raw || raw === "—") return "";
   if (/duplicate/i.test(raw)) return "Duplicate Call";
+  // A call from a number on Blocked Numbers (backend CH-136). Kept whole -
+  // the "blocked" trim below would leave just "Callerid".
+  if (CALLER_ID_BLOCKED.test(raw)) return "Callerid Blocked";
   if (/cap\s*reached|overflow/i.test(raw)) return "Overflow Missed";
   const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
   return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
@@ -36,6 +43,7 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   const k = "toolsUI.reports.callLog.failReason.";
   // Most specific first: every "Destination missed (...)" before the plain one.
   if (/duplicate/i.test(raw)) return { key: `${k}duplicate` };
+  if (CALLER_ID_BLOCKED.test(raw)) return { key: `${k}callerIdBlocked` };
   if (/cc\s*full/i.test(raw)) return { key: `${k}destinationFull` };
   if (/destination\s*missed\s*\(\s*buyer\s*paused/i.test(raw)) return { key: `${k}destBuyerPaused` };
   if (/destination\s*missed\s*\(\s*tfn\s*off/i.test(raw)) return { key: `${k}destTfnOff` };

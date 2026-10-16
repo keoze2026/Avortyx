@@ -571,15 +571,6 @@ export function CallLogTable({
     [filtered, page, pageSize],
   );
 
-  // "Blocked" column: only shown when a caller on this page is on the
-  // Blocked Numbers list (the same check that paints the number red).
-  // Screen only - it is not part of the CSV / Excel export.
-  const showBlockedCol = React.useMemo(
-    () => visible.some((c) => isBlocked(c.callerNumber, c.campaignId)),
-    [visible, isBlocked],
-  );
-  const tableColSpan = colSpan + (showBlockedCol ? 1 : 0);
-
   /* ─── Recording playback ───────────────────────────────────────────
    * One <audio> element for the whole table: starting a second recording
    * stops the first, and there's never a stack of orphaned players. The
@@ -793,7 +784,6 @@ export function CallLogTable({
                 {columns.campaign && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.publisher && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.caller && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {showBlockedCol && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.blocked")}</TableHead>}
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -810,7 +800,7 @@ export function CallLogTable({
             <TableBody>
               {loading || searchingAll ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={tableColSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={colSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       {searchingAll && !loading ? t("toolsUI.reports.callLog.searchingAll") : t("toolsUI.reports.callLog.loading")}
@@ -819,7 +809,7 @@ export function CallLogTable({
                 </TableRow>
               ) : visible.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={tableColSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={colSpan} className="pl-6 py-8 text-center text-sm text-muted-foreground">
                     {t("toolsUI.reports.callLog.empty")}
                   </TableCell>
                 </TableRow>
@@ -862,15 +852,6 @@ export function CallLogTable({
                             </span>
                           ) : (
                             formatCallerId(c.callerNumber)
-                          )}
-                        </TableCell>
-                      )}
-                      {showBlockedCol && (
-                        <TableCell className={`${CELL} text-center`}>
-                          {isBlocked(c.callerNumber, c.campaignId) ? (
-                            <span className="font-medium text-destructive">{t("toolsUI.reports.callLog.callerIdBlocked")}</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       )}
