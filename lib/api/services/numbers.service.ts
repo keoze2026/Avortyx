@@ -48,6 +48,7 @@ interface NumberWire {
   live?: number;
   callsHourly?: number;
   callsGlobal?: number;
+  risk?: 'low' | 'high';
   tclSeconds?: number;
   aclSeconds?: number;
   conversionRate?: number;
@@ -143,6 +144,7 @@ function wireToNumber(w: NumberWire): TrackingNumber {
     liveCalls: w.live ?? 0,
     callsHourly: w.callsHourly,
     callsGlobal: w.callsGlobal,
+    risk: w.risk,
     tclSeconds: w.tclSeconds,
     aclSeconds: w.aclSeconds,
     conversionRate: w.conversionRate ?? 0,

@@ -1679,6 +1679,7 @@ export const en = {
           renew: "Renew",
           lifetime: "Lifetime",
           carrier: "Code",
+          risk: "Risk",
           assigned: "Assigned",
           vendor: "Publisher",
           live: "Live",

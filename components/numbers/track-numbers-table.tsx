@@ -154,6 +154,7 @@ export const TRACK_NUMBERS_COLUMNS = [
   { id: "renew", label: "Renew", labelKey: "trafficUI.numbers.track.headers.renew" },
   { id: "lifetime", label: "Lifetime", labelKey: "trafficUI.numbers.track.headers.lifetime" },
   { id: "carrier", label: "Code", labelKey: "trafficUI.numbers.track.headers.carrier" },
+  { id: "risk", label: "Risk", labelKey: "trafficUI.numbers.track.headers.risk" },
   { id: "assigned", label: "Assigned", labelKey: "trafficUI.numbers.track.headers.assigned" },
   { id: "vendor", label: "Publisher", labelKey: "trafficUI.numbers.track.headers.vendor" },
   { id: "live", label: "Live", labelKey: "trafficUI.numbers.track.headers.live" },
@@ -223,6 +224,7 @@ export function TrackNumbersTable({
               {visibleColumns.has("renew") && <TableHead>{t("trafficUI.numbers.track.headers.renew")}</TableHead>}
               {visibleColumns.has("lifetime") && <TableHead>{t("trafficUI.numbers.track.headers.lifetime")}</TableHead>}
               {visibleColumns.has("carrier") && <TableHead>{t("trafficUI.numbers.track.headers.carrier")}</TableHead>}
+              {visibleColumns.has("risk") && <TableHead>{t("trafficUI.numbers.track.headers.risk")}</TableHead>}
               {visibleColumns.has("assigned") && <TableHead>{t("trafficUI.numbers.track.headers.assigned")}</TableHead>}
               {visibleColumns.has("vendor") && <TableHead>{t("trafficUI.numbers.track.headers.vendor")}</TableHead>}
               {visibleColumns.has("live") && <TableHead>{t("trafficUI.numbers.track.headers.live")}</TableHead>}
@@ -320,6 +322,13 @@ export function TrackNumbersTable({
                     {visibleColumns.has("carrier") && (
                       <TableCell className={CELL}>
                         {deriveCarrierCode(n)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("risk") && (
+                      <TableCell className={CELL}>
+                        <span className={n.risk === "high" ? "text-red-400" : "text-emerald-400"}>
+                          {n.risk === "high" ? "High Risk" : "Low Risk"}
+                        </span>
                       </TableCell>
                     )}
                     {visibleColumns.has("assigned") && (

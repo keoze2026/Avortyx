@@ -35,6 +35,8 @@ export interface TrackingNumber {
   callsGlobal?: number;
   /** Total/average connected call length in seconds, per CH-102's one
    *  definition (connected = completed or in-progress). From the backend. */
+  /** "high" when any retirement rule can take the number, else "low". */
+  risk?: "low" | "high";
   tclSeconds?: number;
   aclSeconds?: number;
   conversionRate: number; // 0..1
