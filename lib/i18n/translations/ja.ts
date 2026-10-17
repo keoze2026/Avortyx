@@ -213,6 +213,17 @@ export const ja: TranslationShape = {
       back: "← サインインに戻る",
       enabled: "このアカウントでは二要素認証が有効です",
     },
+    intro: {
+      lead: "ペイパーコール",
+      middle: "のルーティングとライブマーケットを、",
+      accent: "ひとつのワークスペースで。",
+      sub: "通話のルーティング、キャンペーンの管理、マーケットの把握を、ひとつのサインインで。",
+    },
+    footer: {
+      tagline: "ペイパーコール・ルーティングを再定義",
+      terms: "利用規約",
+      privacy: "プライバシー",
+    },
   },
 
   userMenu: {

@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* windows under 760px tall (a laptop browser often is): the sign-in screen tightens to fit without scrolling */
+@custom-variant short (@media (max-height: 760px));
 
 /* =========================================================
    Avortyx — Calm indigo on slate.
@@ -2238,4 +2240,107 @@
   50% {
     opacity: 1;
   }
+}
+
+/* =========================================================
+   Sign-in screen (app/(login)/login/page.tsx)
+   The ring-of-light login. Sits on `.site-surface` and tunes it:
+   a 14px base, whole-pixel small text, brighter secondary text and
+   Inter's crisper figures. Everything here is scoped to
+   `.login-screen`, so the other auth pages keep their own look.
+   ========================================================= */
+html:has(.login-screen) {
+  font-size: 14px;
+  background: var(--site-canvas);
+}
+html:has(.login-screen) body {
+  background: var(--site-canvas);
+}
+.login-screen {
+  /* small text in whole pixels: at a 14px base, text-xs and text-sm would be 10.5px and 12.25px */
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  /* brighter than baltic-sea-400 (~2.5:1 on the canvas): a cool grey at ~7:1 */
+  --muted-foreground: #9aa3b8;
+  --destructive: #e40014;
+  --success: #2dd29b;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  /* Inter's crisper figures: an open 4, 6 and 9 and a flat-topped 3 */
+  font-feature-settings: "cv02", "cv03", "cv04", "cv09";
+}
+
+/* browser autofill keeps the dark glass fields instead of painting them white or yellow */
+.login-screen input:-webkit-autofill,
+.login-screen input:-webkit-autofill:hover,
+.login-screen input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  -webkit-box-shadow: inset 0 0 0 1000px #15161f;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* the live BTC price takes a soft green or red tint for a moment as it moves up or down */
+@keyframes tick-soft-up {
+  0% { color: #9be3c6; }
+  100% { color: #d8d8e2; }
+}
+@keyframes tick-soft-down {
+  0% { color: #f0b4b4; }
+  100% { color: #d8d8e2; }
+}
+/* the same two again under other names, so each tick can restart the tint (see btc-ticker.tsx) */
+@keyframes tick-soft-up-b {
+  0% { color: #9be3c6; }
+  100% { color: #d8d8e2; }
+}
+@keyframes tick-soft-down-b {
+  0% { color: #f0b4b4; }
+  100% { color: #d8d8e2; }
+}
+/* the live end of the BTC line: a ring that grows and fades */
+@keyframes btc-pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[btc-pulse"] { animation: none; }
+}
+
+/* the intro and the card rise into place, one after the other */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in {
+  animation: rise-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* a light travelling slowly round the card's edge: a turning conic gradient, masked to the 1px rim */
+@property --edge-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes edge-turn {
+  to { --edge-turn: 360deg; }
+}
+.edge-light {
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from var(--edge-turn), transparent 0deg 250deg, rgba(147, 197, 253, 0.55) 300deg,
+    rgba(219, 234, 254, 0.85) 322deg, transparent 350deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: edge-turn 10s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in, .edge-light { animation: none; }
+  .edge-light { opacity: 0; }
 }
