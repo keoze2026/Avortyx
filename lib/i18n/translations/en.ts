@@ -276,6 +276,19 @@ export const en = {
       back: "← Back to sign-in",
       enabled: "Two-factor authentication is on for this account",
     },
+    intro: {
+      // Rendered as: <lead, kept on one line><middle><accent, in the brand gradient>.
+      // `middle` carries its own spacing so languages without spaces read right.
+      lead: "Pay-per-call",
+      middle: " routing and live markets, in ",
+      accent: "one workspace.",
+      sub: "Route calls, track campaigns and follow the markets, all from one sign-in.",
+    },
+    footer: {
+      tagline: "Pay-per-call routing reimagined",
+      terms: "Terms",
+      privacy: "Privacy",
+    },
   },
 
   /* ─── User dropdown ──────────────────────────────────────── */
