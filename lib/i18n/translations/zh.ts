@@ -213,17 +213,6 @@ export const zh: TranslationShape = {
       back: "← 返回登录",
       enabled: "此账户已启用双重验证",
     },
-    intro: {
-      lead: "按通话付费",
-      middle: "的路由与实时行情，尽在",
-      accent: "同一个工作区。",
-      sub: "通话路由、广告系列追踪与行情关注，一次登录即可完成。",
-    },
-    footer: {
-      tagline: "重新定义按通话付费路由",
-      terms: "条款",
-      privacy: "隐私",
-    },
   },
 
   userMenu: {
