@@ -1,7 +1,14 @@
 import type { Call } from "@/lib/types";
 
-/** The three headline outcome buckets surfaced on the Reports page. */
-export type CallStatusFilter = "connected" | "qualified" | "notConnected" | "live";
+/** The outcome buckets surfaced on the Reports page: every clickable total in
+ *  the Call Summary's footer row. */
+export type CallStatusFilter =
+  | "total"
+  | "connected"
+  | "qualified"
+  | "converted"
+  | "notConnected"
+  | "live";
 
 /**
  * Single source of truth for what "Connected", "Qualified" and "Not
@@ -15,6 +22,15 @@ export type CallStatusFilter = "connected" | "qualified" | "notConnected" | "liv
  * eventually drift apart.
  */
 export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): boolean {
+  if (filter === "total") {
+    // The Incoming total: every call that came in.
+    return true;
+  }
+  if (filter === "converted") {
+    // Same rule the Call Summary counts Converted with: the backend's own
+    // verdict when the record carries it, else a paid completed call.
+    return call.isConverted ?? (call.status === "completed" && call.payout > 0);
+  }
   if (filter === "live") {
     // Calls still going on right now: ringing or talking.
     return call.status === "ringing" || call.status === "in-progress";

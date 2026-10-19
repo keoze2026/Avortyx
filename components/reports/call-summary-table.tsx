@@ -1550,7 +1550,15 @@ export function CallSummaryTable({
                     />
                   )}
                   {visible.incoming && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.incoming)}</TableCell>
+                    <TotalsFilterCell
+                      count={totals.incoming}
+                      tone="neutral"
+                      active={activeStatusFilter === "total"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() => onStatusFilterChange(activeStatusFilter === "total" ? null : "total"))
+                      }
+                    />
                   )}
                   {/* Connected / Qualified / Not Connected totals double as
                       filters for the Call Log below — click one to narrow it,
@@ -1590,7 +1598,18 @@ export function CallSummaryTable({
                     <TableCell className="text-center tabular-nums">{formatNumber(totals.paid)}</TableCell>
                   )}
                   {visible.converted && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.converted)}</TableCell>
+                    <TotalsFilterCell
+                      count={totals.converted}
+                      tone="success"
+                      active={activeStatusFilter === "converted"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() =>
+                          onStatusFilterChange(
+                            activeStatusFilter === "converted" ? null : "converted",
+                          ))
+                      }
+                    />
                   )}
                   {visible.noConnect && (
                     <TotalsFilterCell

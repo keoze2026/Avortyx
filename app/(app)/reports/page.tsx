@@ -52,6 +52,8 @@ import { cn } from "@/lib/utils";
 /** Reuses the Call Summary's own column labels so the reset strip names the
  *  active filter with the exact word the operator just clicked. */
 const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
+  total: "toolsUI.reports.summary.columns.incoming",
+  converted: "toolsUI.reports.summary.columns.converted",
   connected: "toolsUI.reports.summary.columns.connected",
   qualified: "toolsUI.reports.summary.columns.qualified",
   notConnected: "toolsUI.reports.summary.columns.noConnect",
@@ -379,6 +381,10 @@ export default function ReportsPage() {
     (scope: ((c: Call) => boolean) | null) => setSummaryScope(() => scope),
     [],
   );
+  // The hourly chart and the donut read from this same set, so clicking
+  // Connected / Qualified / Not Connected / Total / Converted changes the graph
+  // along with the Call Log. The Call Summary and Call Performance keep
+  // reading `filtered`, so a total never shrinks to match its own click.
   const logCalls = useMemo(() => {
     if (!statusFilter) return filtered;
     return filtered.filter(
@@ -394,7 +400,8 @@ export default function ReportsPage() {
       return null;
     }
     if (filters.statuses.length > 0) return null;
-    if (statusFilter === "notConnected" || statusFilter === "live") return null;
+    // Built in the browser: the backend query has no converted or missed filter.
+    if (statusFilter === "notConnected" || statusFilter === "live" || statusFilter === "converted") return null;
     return {
       dateFrom: fromKey,
       dateTo: toKey,
@@ -491,7 +498,7 @@ export default function ReportsPage() {
                       "lg:block lg:h-full",
                     )}
                   >
-                    <HourlyDistribution calls={filtered} className="lg:h-full" />
+                    <HourlyDistribution calls={logCalls} className="lg:h-full" />
                   </div>
                 )}
                 {visibility.donut && (
@@ -501,7 +508,7 @@ export default function ReportsPage() {
                       "lg:hidden",
                     )}
                   >
-                    <TotalCallsDonut calls={filtered} />
+                    <TotalCallsDonut calls={logCalls} />
                   </div>
                 )}
               </div>
@@ -516,7 +523,7 @@ export default function ReportsPage() {
                 )}
                 {visibility.donut && (
                   <div className="hidden min-h-0 flex-1 lg:block">
-                    <TotalCallsDonut calls={filtered} />
+                    <TotalCallsDonut calls={logCalls} />
                   </div>
                 )}
               </div>
