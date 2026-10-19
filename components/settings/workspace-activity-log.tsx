@@ -139,7 +139,8 @@ function detailText(e: WorkspaceActivityEvent, type: string, t: (key: string) =>
 }
 
 function detailTextRaw(e: WorkspaceActivityEvent, type: string, t: (key: string) => string): string {
-  const where = [e.client, e.ipAddress].filter(Boolean).join(" · ");
+  // The address has its own column now; the browser stays here.
+  const where = e.client ?? "";
   const typeName = type || t("activity.detail.record");
   switch (e.kind) {
     case "record.created":
@@ -221,10 +222,11 @@ export function fieldLabel(field: string): string {
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : field;
 }
 
+/** The exact moment, to the second: an audit entry has to say when, not "41m ago". */
 function absoluteTime(ts: number) {
   return formatLocalDateTime(ts, {
     dateStyle: "medium",
-    timeStyle: "short",
+    timeStyle: "medium",
   });
 }
 
@@ -357,19 +359,20 @@ export function WorkspaceActivityLog() {
 
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[960px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-4 text-left">{t("workspaceUI.activity.columnActor")}</TableHead>
                 <TableHead className="text-left">{t("workspaceUI.activity.columnAction")}</TableHead>
                 <TableHead className="text-left">{t("workspaceUI.activity.columnDetail")}</TableHead>
-                <TableHead className="pr-4">{t("workspaceUI.activity.columnWhen")}</TableHead>
+                <TableHead className="text-left">{t("activity.col.ip")}</TableHead>
+                <TableHead className="pr-4 text-left">{t("workspaceUI.activity.columnWhen")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-10 text-center text-xs text-muted-foreground">
+                  <TableCell colSpan={5} className="py-10 text-center text-xs text-muted-foreground">
                     {t("workspaceUI.activity.empty")}
                   </TableCell>
                 </TableRow>
@@ -471,13 +474,17 @@ function ActivityRow({
             detailText(event, type, t)
           )}
         </TableCell>
-        <TableCell className="pr-4 text-[13px] font-normal tabular-nums text-muted-foreground" title={absoluteTime(event.timestamp)}>
-          {formatRelativeTime(event.timestamp)}
+        <TableCell className="text-left font-mono text-[12px] font-normal tabular-nums text-muted-foreground">
+          {event.ipAddress ?? "—"}
+        </TableCell>
+        <TableCell className="pr-4 text-left text-[13px] font-normal tabular-nums text-muted-foreground">
+          <div className="whitespace-nowrap text-foreground">{absoluteTime(event.timestamp)}</div>
+          <div className="text-[11px]">{formatRelativeTime(event.timestamp)}</div>
         </TableCell>
       </TableRow>
       {open && changes.length > 0 && (
         <TableRow className="bg-secondary/20 hover:bg-secondary/20">
-          <TableCell colSpan={4} className="px-4 pb-3 pt-0">
+          <TableCell colSpan={5} className="px-4 pb-3 pt-0">
             <ChangesTable changes={changes} />
           </TableCell>
         </TableRow>
