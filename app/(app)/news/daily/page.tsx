@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { MOCK_DAILY_NEWS, type NewsCategory, type NewsItem } from "@/lib/mock/news";
+import { readDailySnapshot, writeDailySnapshot } from "@/lib/news-snapshots";
 
 const DAILY_CATEGORIES: NewsCategory[] = ["Tech", "Business", "World", "Politics", "Science", "Sports"];
 
@@ -15,10 +16,6 @@ const DAILY_CATEGORIES: NewsCategory[] = ["Tech", "Business", "World", "Politics
  *  user manually reloading. Same cadence as the server-side RSS cache so
  *  every auto-poll is cheap. */
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
-
-/** Last good batch, kept per browser so a return visit paints instantly
- *  while the fresh batch loads. Bounded: 60 trimmed items ≈ 30 KB. */
-const SNAPSHOT_KEY = "avortyx.news.daily";
 
 interface NewsResponse {
   items: NewsItem[];
@@ -28,29 +25,8 @@ interface NewsResponse {
   failedSources?: string[];
 }
 
-interface Snapshot {
-  items: NewsItem[];
-  fetchedAt: number;
-}
-
-function readSnapshot(): Snapshot | null {
-  try {
-    const raw = window.localStorage.getItem(SNAPSHOT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Snapshot;
-    return Array.isArray(parsed.items) && parsed.items.length > 0 ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeSnapshot(snap: Snapshot) {
-  try {
-    window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
-  } catch {
-    // Storage full or blocked — the page still works, it just cold-starts next time.
-  }
-}
+/** Runs before the first paint in the browser (no warning on the server). */
+const useBeforePaint = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
 export default function DailyNewsPage() {
   const { t } = useTranslation();
@@ -61,10 +37,10 @@ export default function DailyNewsPage() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Paint the last batch immediately; the network round-trip then only
-  // ever *updates* the page.
-  React.useEffect(() => {
-    const snap = readSnapshot();
+  // Paint the last batch before the first frame; the network round-trip then
+  // only ever *updates* the page.
+  useBeforePaint(() => {
+    const snap = readDailySnapshot();
     if (snap) {
       setItems(snap.items);
       setFetchedAt(snap.fetchedAt);
@@ -82,7 +58,7 @@ export default function DailyNewsPage() {
       if (data.items.length > 0) {
         setItems(data.items);
         setFetchedAt(data.fetchedAt);
-        writeSnapshot({ items: data.items, fetchedAt: data.fetchedAt });
+        writeDailySnapshot({ items: data.items, fetchedAt: data.fetchedAt });
       } else {
         // Every source failed and the server had nothing cached — keep
         // whatever is on screen, or the fixture so the page isn't empty.

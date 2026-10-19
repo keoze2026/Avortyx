@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTranslation } from "@/hooks/use-translation";
 import { prefetchDashboardSnapshot } from "@/lib/dashboard-snapshot";
+import { prefetchNewsPages } from "@/lib/news-snapshots";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { startLiveCountSync } from "@/lib/live-count";
 import { prefetchReport, todayAndYesterday } from "@/lib/reports-cache";
@@ -58,7 +59,13 @@ export function Topbar() {
     // Today's Reports view too, a moment later so it doesn't compete with the
     // Dashboard's first load - Reports then opens instantly.
     const timer = setTimeout(() => prefetchReport(todayAndYesterday(reportTimezone)[0]), 1500);
-    return () => clearTimeout(timer);
+    // Daily News and Coin Market too, once the screen has settled, so their
+    // first click of the session finds data waiting in the browser.
+    const newsTimer = setTimeout(() => prefetchNewsPages(), 3000);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(newsTimer);
+    };
   }, [reportTimezone]);
 
   // Wallet balance: the dashboard KPI payload polled above carries it

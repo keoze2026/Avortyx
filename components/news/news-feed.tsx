@@ -128,7 +128,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 }
 
 /** 16:9 picture, or a soft tint in the story's own colours when there is none. */
-function Picture({ item, className }: { item: NewsItem; className?: string }) {
+function Picture({ item, className, priority = false }: { item: NewsItem; className?: string; priority?: boolean }) {
   return (
     <div
       className={cn("relative overflow-hidden bg-muted", className)}
@@ -144,7 +144,9 @@ function Picture({ item, className }: { item: NewsItem; className?: string }) {
           src={item.imageUrl}
           alt=""
           className="h-full w-full object-cover transition-transform duration-500 group-hover/story:scale-[1.03]"
-          loading="lazy"
+          // The top story is what the eye lands on: fetch it first. The rest wait.
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
         />
       ) : (
@@ -189,7 +191,7 @@ function TopStory({ item }: { item: NewsItem }) {
       className="group/story block overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-accent/45"
     >
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Picture item={item} className="aspect-video lg:aspect-auto lg:min-h-[320px]" />
+        <Picture item={item} priority className="aspect-video lg:aspect-auto lg:min-h-[320px]" />
         <div className="flex flex-col justify-center p-6 sm:p-8">
           <Eyebrow item={item} top />
           <h2 className="mt-3 text-2xl font-semibold leading-tight tracking-tight transition-colors group-hover/story:text-accent sm:text-[28px]">

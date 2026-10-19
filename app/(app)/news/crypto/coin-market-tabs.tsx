@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import type { NewsCategory, NewsItem } from "@/lib/mock/news";
 import type { TokenEntry } from "@/lib/mock/tokens";
+import { readCryptoSnapshot, writeCryptoSnapshot } from "@/lib/news-snapshots";
 import { cn } from "@/lib/utils";
 
 type TabId = "tokens" | "news";
@@ -59,37 +60,8 @@ const ESTIMATED_MAX_TOKENS = 15_000;
 /** How many news items to keep in memory. */
 const NEWS_LIMIT = 24;
 
-/** Last good tape + headlines, per browser, so a return visit paints at once. */
-const SNAPSHOT_KEY = "avortyx.news.crypto";
-
-interface Snapshot {
-  tokens: TokenEntry[];
-  news: NewsItem[];
-  at: number;
-}
-
-function readSnapshot(): Snapshot | null {
-  try {
-    const raw = window.localStorage.getItem(SNAPSHOT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Snapshot;
-    return Array.isArray(parsed.tokens) && Array.isArray(parsed.news) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeSnapshot(snap: Snapshot) {
-  try {
-    // Only the first block of the tape is worth keeping (what is on screen).
-    window.localStorage.setItem(
-      SNAPSHOT_KEY,
-      JSON.stringify({ ...snap, tokens: snap.tokens.slice(0, BLOCK_SIZE) }),
-    );
-  } catch {
-    // Storage blocked: cold start next time, nothing else changes.
-  }
-}
+/** Runs before the first paint in the browser (no warning on the server). */
+const useBeforePaint = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
 interface Props {
   /** Optional server-rendered data; when omitted the component fetches on mount. */
@@ -109,10 +81,10 @@ export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Pro
   const [tokensPending, setTokensPending] = React.useState(!initialTokens?.length);
   const [newsPending, setNewsPending] = React.useState(!initialNews?.length);
 
-  // Paint the last snapshot immediately; the fetches below then update it.
-  React.useEffect(() => {
+  // Paint the last snapshot before the first frame; the fetches below then update it.
+  useBeforePaint(() => {
     if (initialTokens?.length || initialNews?.length) return;
-    const snap = readSnapshot();
+    const snap = readCryptoSnapshot();
     if (!snap) return;
     if (snap.tokens.length > 0) {
       setTokens(snap.tokens);
@@ -128,7 +100,7 @@ export function CoinMarketTabs({ tokens: initialTokens, news: initialNews }: Pro
   // Persist whatever is on screen so the next visit starts from it.
   React.useEffect(() => {
     if (tokens.length === 0 && news.length === 0) return;
-    writeSnapshot({ tokens, news, at: Date.now() });
+    writeCryptoSnapshot({ tokens, news, at: Date.now() });
   }, [tokens, news]);
   // True until we hit a CoinGecko page that returns an empty array.
   const [hasMore, setHasMore] = React.useState(true);
