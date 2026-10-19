@@ -58,6 +58,15 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
   const slices = allSlices.filter((s) =>
     s.key === "converted" ? !partnerHidden.has("connected") : !partnerHidden.has("noConnect"),
   );
+  // The ring only draws slices that have calls. A slice with none still took
+  // its 2 degree gap and its separator line, so a ring that was all one
+  // colour had a notch cut out of it. With nothing drawn at all (no calls) a
+  // faint full ring stands in so the chart is never empty.
+  const ringSlices = slices.filter((s) => s.count > 0);
+  const single = ringSlices.length <= 1;
+  const ringData = ringSlices.length > 0
+    ? ringSlices
+    : [{ key: "none", label: "", count: 1, color: "var(--muted)", swatch: "var(--muted)" }];
   // Every call, not just the visible slices: "Total calls" is Incoming.
   const total = counts.converted + counts.noAnswer;
   const showTotal = !partnerHidden.has("incoming");
@@ -92,16 +101,16 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={slices}
+                data={ringData}
                 dataKey="count"
                 nameKey="label"
                 cx="50%"
                 cy="50%"
                 innerRadius="76%"
                 outerRadius="92%"
-                paddingAngle={2}
-                stroke="var(--card)"
-                strokeWidth={3}
+                paddingAngle={single ? 0 : 2}
+                stroke={single ? "none" : "var(--card)"}
+                strokeWidth={single ? 0 : 3}
                 isAnimationActive
                 animationDuration={500}
                 activeShape={undefined}
@@ -109,14 +118,14 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                 onClick={(payload, idx, e) => {
                   // Stop the click from bubbling to the Card-level reset.
                   (e as unknown as { stopPropagation?: () => void })?.stopPropagation?.();
-                  const next = slices[idx];
+                  const next = ringSlices[idx];
                   if (!next) return;
                   // Toggle: clicking the already-active slice deselects it
                   // and the center reverts to TOTAL.
                   setActiveKey((prev) => (prev === next.key ? null : next.key));
                 }}
               >
-                {slices.map((s) => (
+                {ringData.map((s) => (
                   <Cell
                     key={s.key}
                     fill={s.color}

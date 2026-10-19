@@ -96,9 +96,11 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
                 cy="50%"
                 innerRadius="76%"
                 outerRadius="92%"
-                paddingAngle={2}
-                stroke="var(--card)"
-                strokeWidth={3}
+                // One colour only (all calls connected, or none): no gap and no
+                // separator line, so the ring is closed all the way round.
+                paddingAngle={slices.length > 1 ? 2 : 0}
+                stroke={slices.length > 1 ? "var(--card)" : "none"}
+                strokeWidth={slices.length > 1 ? 3 : 0}
                 isAnimationActive
                 animationDuration={500}
                 activeShape={undefined}

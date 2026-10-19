@@ -79,12 +79,14 @@ export function Topbar() {
   const totalCalls = kpis?.callsToday ?? 0;
 
   return (
-    // Solid on phones, glassy from sm up. The 85%-opaque + blur treatment
-    // lets whatever scrolls under the bar bleed through behind the stats
-    // text (which, unlike the icon pill and avatar, has no backing of its
-    // own) — on a phone that's dense table rows and chart gridlines, and the
-    // blurred row borders read as stripes through "Live: 0 / Total: 169".
-    <header className="sticky top-0 z-30 border-b border-border/50 bg-background sm:bg-background/85 sm:backdrop-blur-xl">
+    // Solid on phones and tablets, glassy from lg up. The 85%-opaque + blur
+    // treatment lets whatever is behind the bar show through the stats text
+    // (which, unlike the icon pill and avatar, has no backing of its own):
+    // table rows and chart gridlines while scrolling, and on a phone the
+    // login screen's fine ring lines for a moment after signing in. Both read
+    // as strike-through lines across "$8,790 / Live: 0 / Total: 1710". Phones
+    // held sideways are wider than the old sm cut-off, so it is lg now.
+    <header className="sticky top-0 z-30 border-b border-border/50 bg-background lg:bg-background/85 lg:backdrop-blur-xl">
       <div className="relative flex h-16 items-center gap-4 px-4 sm:px-6">
         {/* LEFT — sidebar trigger only */}
         <div className="flex items-center">

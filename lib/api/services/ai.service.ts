@@ -34,17 +34,42 @@ export interface Recommendation {
   entityId: string | null;
 }
 
+/** One thing Autopilot did, as the server recorded it. */
+export interface AutopilotHistoryItem {
+  action: string;
+  entity: string;
+  reason: string;
+  at: string;
+  source: string;
+}
+
 /**
- * Persisted autopilot rule configuration. Mirrors the backend's flat
- * AutopilotConfigSchema. Each pair = a toggle + its trigger threshold.
+ * Persisted autopilot configuration. Mirrors the backend's flat
+ * AutopilotConfigSchema: a switch, and where it has one, its threshold.
  */
 export interface AutopilotConfig {
   pauseOnHighNoAnswer: boolean;
   noAnswerThreshold: number;
+  pauseOnShortCalls: boolean;
+  shortCallSeconds: number;
+  minCallsToJudge: number;
+  resumeRecoveredBuyers: boolean;
+  resumeAfterMinutes: number;
   alertOnVolumeDrop: boolean;
   volumeDropThreshold: number;
   alertOnRevenueDrop: boolean;
   revenueDropThreshold: number;
+  alertOnLowBalance: boolean;
+  lowBalanceAmount: number;
+  alertOnNoCalls: boolean;
+  noCallsHours: number;
+  alertOnHighSpam: boolean;
+  spamRateThreshold: number;
+  alertOnCampaignWithoutBuyers: boolean;
+  autoRun: boolean;
+  runEveryMinutes: number;
+  lastRunAt: string | null;
+  history: AutopilotHistoryItem[];
 }
 
 export interface Anomaly {
