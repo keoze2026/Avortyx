@@ -37,6 +37,16 @@ export const en = {
       created: "Organization created",
       saved: "Saved",
       moved: "Balance updated",
+      delete: "Delete",
+      deleted: "Organization deleted",
+      deleteTitle: "Delete organization",
+      deleteBody:
+        "This permanently deletes the organization and everything under it. It cannot be undone.",
+      deleteType: "Type the organization name to confirm:",
+      numbers: "Phone numbers",
+      campaigns: "Campaigns",
+      calls: "Calls",
+      lastCall: "Last call",
       suspendTitle: "Suspend this organization?",
       suspendBody:
         "Every login in this workspace stops working immediately. You can activate it again at any time.",

@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Crown, MoreHorizontal, Plus, Search, ShieldX } from "lucide-react";
+import { Crown, MoreHorizontal, Plus, Search, ShieldX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
@@ -39,6 +39,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -55,18 +56,36 @@ import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
 import { useAuthStore } from "@/lib/store/auth-store";
 
+// The http client turns every response key into camelCase, so the row is typed
+// the way it arrives. It was typed snake_case before, which read every field
+// as undefined: every organization showed Suspended, and the rate, markup and
+// today's figures were blank.
 interface OrgRow {
   id: string;
   name: string;
   slug: string;
-  is_active: boolean;
+  isActive: boolean;
   users: number;
   balance: string | null;
-  per_minute_rate: string | null;
-  markup_percent: string | null;
-  billing_status: string | null;
-  calls_today: number;
-  revenue_today: string;
+  perMinuteRate: string | null;
+  markupPercent: string | null;
+  billingStatus: string | null;
+  callsToday: number;
+  revenueToday: string;
+}
+
+/** What deleting an organization would remove, and whether it is allowed. */
+interface DeletePreview {
+  id: string;
+  name: string;
+  slug: string;
+  blocked: string | null;
+  users: number;
+  phoneNumbers: number;
+  campaigns: number;
+  calls: number;
+  lastCall: string | null;
+  balance: string | null;
 }
 
 const FEE_FIELDS = [
@@ -80,6 +99,9 @@ const FEE_FIELDS = [
   "credit_limit",
 ] as const;
 type FeeField = (typeof FEE_FIELDS)[number];
+
+/** per_minute_rate -> perMinuteRate, to read a response the client camelCased. */
+const camel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 
 function errText(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -104,6 +126,9 @@ export default function OwnerPage() {
   const [moneyFor, setMoneyFor] = useState<{ org: OrgRow; direction: "credit" | "debit" } | null>(null);
   const [moneyForm, setMoneyForm] = useState({ amount: "", note: "" });
   const [suspendFor, setSuspendFor] = useState<OrgRow | null>(null);
+  const [deleteFor, setDeleteFor] = useState<OrgRow | null>(null);
+  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(null);
+  const [deleteTyped, setDeleteTyped] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (q: string) => {
@@ -164,8 +189,9 @@ export default function OwnerPage() {
       const d = await http.get<{ billing: Record<string, string> }>(
         `/api/owner/organizations/${org.id}`,
       );
+      // The billing keys arrive camelCased; read them that way or the form opens blank.
       setFeeForm(
-        Object.fromEntries(FEE_FIELDS.map((f) => [f, d.billing[f] ?? ""])) as Record<FeeField, string>,
+        Object.fromEntries(FEE_FIELDS.map((f) => [f, d.billing[camel(f)] ?? ""])) as Record<FeeField, string>,
       );
     } catch (e) {
       toast.error(errText(e));
@@ -212,7 +238,7 @@ export default function OwnerPage() {
     setBusy(true);
     try {
       await http.post(
-        `/api/owner/organizations/${suspendFor.id}/${suspendFor.is_active ? "suspend" : "activate"}`,
+        `/api/owner/organizations/${suspendFor.id}/${suspendFor.isActive ? "suspend" : "activate"}`,
         { body: {} },
       );
       toast.success(t("owner.orgs.saved"));
@@ -224,6 +250,42 @@ export default function OwnerPage() {
       setBusy(false);
     }
   }
+
+  async function openDelete(org: OrgRow) {
+    setDeleteFor(org);
+    setDeletePreview(null);
+    setDeleteTyped("");
+    try {
+      setDeletePreview(await http.get<DeletePreview>(`/api/owner/organizations/${org.id}/delete-preview`));
+    } catch (e) {
+      toast.error(errText(e));
+      setDeleteFor(null);
+    }
+  }
+
+  async function submitDelete() {
+    if (!deleteFor) return;
+    setBusy(true);
+    try {
+      await http.delete(
+        `/api/owner/organizations/${deleteFor.id}?confirm=${encodeURIComponent(deleteTyped.trim())}`,
+      );
+      toast.success(t("owner.orgs.deleted"));
+      setDeleteFor(null);
+      setDeletePreview(null);
+      load(search);
+    } catch (e) {
+      toast.error(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canDelete =
+    deleteFor != null &&
+    deletePreview != null &&
+    !deletePreview.blocked &&
+    deleteTyped.trim() === deleteFor.name;
 
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-6">
@@ -263,24 +325,24 @@ export default function OwnerPage() {
             </TableHeader>
             <TableBody>
               {rows.map((o) => (
-                <TableRow key={o.id} className={o.is_active ? "" : "opacity-60"}>
+                <TableRow key={o.id} className={o.isActive ? "" : "opacity-60"}>
                   <TableCell>
                     <div className="font-medium">{o.name}</div>
                     <div className="text-xs text-muted-foreground">{o.slug}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={o.is_active ? "secondary" : "destructive"}>
-                      {o.is_active ? t("owner.orgs.active") : t("owner.orgs.suspended")}
+                    <Badge variant={o.isActive ? "secondary" : "destructive"}>
+                      {o.isActive ? t("owner.orgs.active") : t("owner.orgs.suspended")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{money(o.balance)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{money(o.per_minute_rate)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{money(o.perMinuteRate)}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {o.markup_percent == null ? "—" : `${o.markup_percent}%`}
+                    {o.markupPercent == null ? "—" : `${o.markupPercent}%`}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{o.users}</TableCell>
-                  <TableCell className="text-right tabular-nums">{o.calls_today}</TableCell>
-                  <TableCell className="text-right tabular-nums">${o.revenue_today}</TableCell>
+                  <TableCell className="text-right tabular-nums">{o.callsToday}</TableCell>
+                  <TableCell className="text-right tabular-nums">${o.revenueToday}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -299,10 +361,15 @@ export default function OwnerPage() {
                           {t("owner.orgs.debit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className={o.is_active ? "text-destructive" : ""}
+                          className={o.isActive ? "text-destructive" : ""}
                           onClick={() => setSuspendFor(o)}
                         >
-                          {o.is_active ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
+                          {o.isActive ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => openDelete(o)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t("owner.orgs.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -433,22 +500,78 @@ export default function OwnerPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {suspendFor?.is_active
+              {suspendFor?.isActive
                 ? t("owner.orgs.suspendTitle")
                 : `${t("owner.orgs.activate")} — ${suspendFor?.name}`}
             </AlertDialogTitle>
-            {suspendFor?.is_active && (
+            {suspendFor?.isActive && (
               <AlertDialogDescription>{t("owner.orgs.suspendBody")}</AlertDialogDescription>
             )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={busy} onClick={submitSuspend}>
-              {suspendFor?.is_active ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
+              {suspendFor?.isActive ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete: permanent, so it shows what goes and asks for the name back */}
+      <Dialog open={deleteFor != null} onOpenChange={(v) => !busy && !v && setDeleteFor(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> {t("owner.orgs.deleteTitle")} — {deleteFor?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {!deletePreview ? (
+            <p className="text-sm text-muted-foreground">…</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("owner.orgs.deleteBody")}</p>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border p-3 text-sm">
+                <dt className="text-muted-foreground">{t("owner.orgs.users")}</dt>
+                <dd className="text-right tabular-nums">{deletePreview.users}</dd>
+                <dt className="text-muted-foreground">{t("owner.orgs.numbers")}</dt>
+                <dd className="text-right tabular-nums">{deletePreview.phoneNumbers}</dd>
+                <dt className="text-muted-foreground">{t("owner.orgs.campaigns")}</dt>
+                <dd className="text-right tabular-nums">{deletePreview.campaigns}</dd>
+                <dt className="text-muted-foreground">{t("owner.orgs.calls")}</dt>
+                <dd className="text-right tabular-nums">{deletePreview.calls}</dd>
+                <dt className="text-muted-foreground">{t("owner.orgs.lastCall")}</dt>
+                <dd className="text-right tabular-nums">
+                  {deletePreview.lastCall ? new Date(deletePreview.lastCall).toLocaleDateString() : "—"}
+                </dd>
+                <dt className="text-muted-foreground">{t("owner.orgs.balance")}</dt>
+                <dd className="text-right tabular-nums">{money(deletePreview.balance)}</dd>
+              </dl>
+              {deletePreview.blocked ? (
+                <p className="text-sm font-medium text-destructive">{deletePreview.blocked}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label>
+                    {t("owner.orgs.deleteType")} <span className="font-semibold">{deleteFor?.name}</span>
+                  </Label>
+                  <Input
+                    value={deleteTyped}
+                    onChange={(e) => setDeleteTyped(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" disabled={busy} onClick={() => setDeleteFor(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={busy || !canDelete} onClick={submitDelete}>
+              {t("owner.orgs.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
