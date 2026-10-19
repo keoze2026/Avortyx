@@ -69,9 +69,6 @@ type View = "all" | "mine";
 export function ServicesDirectory() {
   const { t, locale } = useTranslation();
   const staffFlag = useAuthStore((s) => s.user?.isSuperuser === true || s.user?.isStaff === true);
-  // The login's staff flags don't reach the portal yet (see isStaff in the
-  // service), so the server is asked directly when they are missing.
-  const [serverStaff, setServerStaff] = useState(false);
 
   const [data, setData] = useState<Directory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,8 +85,8 @@ export function ServicesDirectory() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [toDelete, setToDelete] = useState<MarketplaceService | null>(null);
 
-  // Staff controls: from the login's flags, or confirmed by the server.
-  const canManage = staffFlag || serverStaff;
+  // Staff controls: from the is_staff / is_superuser flags /me and the login send.
+  const canManage = staffFlag;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,17 +94,12 @@ export function ServicesDirectory() {
     try {
       const loaded = await marketplaceDirectoryService.load();
       setData(loaded);
-      // Hidden services only ever come back to staff, so seeing one settles it.
-      if (!staffFlag) {
-        if (loaded.services.some((s) => !s.isActive)) setServerStaff(true);
-        else if (!loaded.local) setServerStaff(await marketplaceDirectoryService.isStaff());
-      }
     } catch (e) {
       setError(friendlyErrorMessage(e, t("marketplace.loadError")));
     } finally {
       setLoading(false);
     }
-  }, [t, staffFlag]);
+  }, [t]);
 
   useEffect(() => {
     void load();
