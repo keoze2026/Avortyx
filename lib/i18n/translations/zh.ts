@@ -2743,6 +2743,11 @@ export const zh: TranslationShape = {
         confirmUnblockTitle: "解除屏蔽 {number}?",
         confirmUnblockDescription: "这将从屏蔽列表中移除该条目。该号码将可立即再次拨入。",
         confirmUnblockAction: "解除屏蔽",
+        bulkUnblockCta: "解除屏蔽所选 ({count})",
+        confirmBulkUnblockTitle: "解除屏蔽 {count} 个号码?",
+        confirmBulkUnblockDescription: "这些号码将从屏蔽列表中移除，并可立即再次拨入。",
+        toastBulkUnblocked: "已解除屏蔽 {count} 个号码",
+        toastBulkUnblockFailed: "有 {count} 个号码未能解除屏蔽，请重试。",
       },
       columns: {
         name: "名称",

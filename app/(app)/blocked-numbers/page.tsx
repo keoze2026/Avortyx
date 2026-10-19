@@ -113,6 +113,7 @@ export default function BlockedNumbersPage() {
   const addNumber = useBlockedNumbersStore((s) => s.add);
   const updateNumber = useBlockedNumbersStore((s) => s.update);
   const removeNumber = useBlockedNumbersStore((s) => s.remove);
+  const removeManyNumbers = useBlockedNumbersStore((s) => s.removeMany);
 
   const [query, setQuery] = React.useState("");
   const [pageSize, setPageSize] = React.useState<PageSize>(PAGE_SIZE_OPTIONS[1]);
@@ -130,6 +131,15 @@ export default function BlockedNumbersPage() {
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<BlockedNumberEntry | null>(null);
   const [removing, setRemoving] = React.useState<BlockedNumberEntry | null>(null);
+  const [bulkRemoveOpen, setBulkRemoveOpen] = React.useState(false);
+  const [bulkRemoving, setBulkRemoving] = React.useState(false);
+
+  // Resolve the selection against the live list so a row that is already gone
+  // is never counted or sent to the backend again.
+  const selectedEntries = React.useMemo(
+    () => numbers.filter((n) => selected.has(n.id)),
+    [numbers, selected],
+  );
 
   // Campaign filter options — "All Campaigns" pseudo-option + every real campaign.
   const filterOptions = React.useMemo<FilterOption[]>(
@@ -229,6 +239,24 @@ export default function BlockedNumbersPage() {
     setRemoving(null);
   };
 
+  const confirmBulkRemove = async () => {
+    const ids = selectedEntries.map((e) => e.id);
+    if (ids.length === 0) return;
+    setBulkRemoving(true);
+    const failed = await removeManyNumbers(ids);
+    setBulkRemoving(false);
+    setBulkRemoveOpen(false);
+    // Keep the failed rows checked so they can be retried in one click.
+    setSelected(new Set(failed));
+    const done = ids.length - failed.length;
+    if (done > 0) {
+      toast.success(t("toolsUI.suppression.blockedNumbers.toastBulkUnblocked").replace("{count}", String(done)));
+    }
+    if (failed.length > 0) {
+      toast.error(t("toolsUI.suppression.blockedNumbers.toastBulkUnblockFailed").replace("{count}", String(failed.length)));
+    }
+  };
+
   return (
     <>
       <PageHeader title={t("toolsUI.suppression.blockedNumbers.title")} />
@@ -261,6 +289,22 @@ export default function BlockedNumbersPage() {
           },
         }}
       />
+
+      {selectedEntries.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => setBulkRemoveOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {t("toolsUI.suppression.blockedNumbers.bulkUnblockCta").replace("{count}", String(selectedEntries.length))}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+            {t("common.bulk.clear")}
+          </Button>
+        </div>
+      )}
 
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
@@ -388,6 +432,38 @@ export default function BlockedNumbersPage() {
             <AlertDialogCancel>{t("toolsUI.suppression.removeConfirm.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => removing && confirmRemove(removing)}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {t("toolsUI.suppression.blockedNumbers.confirmUnblockAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkRemoveOpen}
+        onOpenChange={(o) => !bulkRemoving && setBulkRemoveOpen(o)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("toolsUI.suppression.blockedNumbers.confirmBulkUnblockTitle").replace("{count}", String(selectedEntries.length))}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("toolsUI.suppression.blockedNumbers.confirmBulkUnblockDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRemoving}>
+              {t("toolsUI.suppression.removeConfirm.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkRemoving}
+              onClick={(ev) => {
+                // Stay open until the deletes finish so the button can't be clicked twice.
+                ev.preventDefault();
+                void confirmBulkRemove();
+              }}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {t("toolsUI.suppression.blockedNumbers.confirmUnblockAction")}

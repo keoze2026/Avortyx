@@ -2742,6 +2742,11 @@ export const ja: TranslationShape = {
         confirmUnblockTitle: "{number} のブロックを解除しますか?",
         confirmUnblockDescription: "ブロックリストから削除されます。番号はすぐに再度発信できるようになります。",
         confirmUnblockAction: "ブロック解除",
+        bulkUnblockCta: "選択項目のブロック解除 ({count})",
+        confirmBulkUnblockTitle: "{count} 件の番号のブロックを解除しますか?",
+        confirmBulkUnblockDescription: "ブロックリストから削除され、すぐに再度発信できるようになります。",
+        toastBulkUnblocked: "{count} 件の番号のブロックを解除しました",
+        toastBulkUnblockFailed: "{count} 件の番号のブロックを解除できませんでした。もう一度お試しください。",
       },
       columns: {
         name: "名前",

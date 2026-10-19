@@ -47,7 +47,13 @@ interface BlockedNumbersState {
     patch: { campaignId?: string | undefined },
   ) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Unblock several numbers at once. Rows leave the list immediately; any
+   *  the backend refuses are put back. Resolves with the ids that failed. */
+  removeMany: (ids: string[]) => Promise<string[]>;
 }
+
+/** How many DELETEs run at once during a bulk unblock. */
+const BULK_DELETE_CONCURRENCY = 10;
 
 /** Strip every non-digit so the store always holds canonical digits-only values. */
 function normalizeNumber(input: string): string {
@@ -161,6 +167,37 @@ export const useBlockedNumbersStore = create<BlockedNumbersState>()((set, get) =
       set({ numbers: prev, error: messageFromError(e) });
       throw e;
     }
+  },
+
+  removeMany: async (ids) => {
+    const idSet = new Set(ids);
+    const removed = get().numbers.filter((n) => idSet.has(n.id));
+    set((s) => ({ numbers: s.numbers.filter((n) => !idSet.has(n.id)) }));
+
+    const failed: string[] = [];
+    let lastError: unknown;
+    for (let i = 0; i < removed.length; i += BULK_DELETE_CONCURRENCY) {
+      const chunk = removed.slice(i, i + BULK_DELETE_CONCURRENCY);
+      const results = await Promise.allSettled(
+        chunk.map((n) => spamService.deleteBlacklist(n.id)),
+      );
+      results.forEach((r, j) => {
+        if (r.status === "rejected") {
+          failed.push(chunk[j].id);
+          lastError = r.reason;
+        }
+      });
+    }
+
+    if (failed.length > 0) {
+      // Put back only the rows the backend kept, leaving the others gone.
+      const failedSet = new Set(failed);
+      set((s) => ({
+        numbers: [...s.numbers, ...removed.filter((n) => failedSet.has(n.id))],
+        error: messageFromError(lastError),
+      }));
+    }
+    return failed;
   },
 }));
 

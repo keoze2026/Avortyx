@@ -2743,6 +2743,11 @@ export const ru: TranslationShape = {
         confirmUnblockTitle: "Разблокировать {number}?",
         confirmUnblockDescription: "Запись будет удалена из списка заблокированных. Номер сразу сможет звонить снова.",
         confirmUnblockAction: "Разблокировать",
+        bulkUnblockCta: "Разблокировать выбранные ({count})",
+        confirmBulkUnblockTitle: "Разблокировать номера: {count}?",
+        confirmBulkUnblockDescription: "Номера будут удалены из списка заблокированных и сразу смогут звонить снова.",
+        toastBulkUnblocked: "Разблокировано номеров: {count}",
+        toastBulkUnblockFailed: "Не удалось разблокировать номера: {count}. Попробуйте ещё раз.",
       },
       columns: {
         name: "Имя",

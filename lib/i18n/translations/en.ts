@@ -2856,6 +2856,11 @@ export const en = {
         confirmUnblockTitle: "Unblock {number}?",
         confirmUnblockDescription: "This will remove the entry from the blocked list. The number will be allowed to call again immediately.",
         confirmUnblockAction: "Unblock",
+        bulkUnblockCta: "Unblock selected ({count})",
+        confirmBulkUnblockTitle: "Unblock {count} number(s)?",
+        confirmBulkUnblockDescription: "They will be removed from the blocked list and can call again immediately.",
+        toastBulkUnblocked: "Unblocked {count} number(s)",
+        toastBulkUnblockFailed: "Couldn't unblock {count} number(s). Please try again.",
       },
       columns: {
         name: "Name",
