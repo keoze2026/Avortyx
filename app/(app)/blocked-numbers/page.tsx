@@ -42,6 +42,8 @@ import type { BlockedNumberEntry } from "@/lib/mock/suppression";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useUIStore } from "@/lib/store/ui-store";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 const ALL_CAMPAIGNS_ID = "__all__";
 
@@ -76,6 +78,7 @@ function displayNumber(entry: BlockedNumberEntry): string {
 
 export default function BlockedNumbersPage() {
   const { t, locale } = useTranslation();
+  const { can } = usePermissions();
   const timeZone = useUIStore((s) => s.reportTimezone);
 
   const SORT_OPTIONS: SortOption[] = [
@@ -266,8 +269,8 @@ export default function BlockedNumbersPage() {
         onQuery={setQuery}
         pageSize={pageSize}
         onPageSize={setPageSize}
-        ctaLabel={t("toolsUI.suppression.blockedNumbers.createCta")}
-        onCta={() => setCreateOpen(true)}
+        ctaLabel={can("blocked-numbers", "edit") ? t("toolsUI.suppression.blockedNumbers.createCta") : undefined}
+        onCta={can("blocked-numbers", "edit") ? () => setCreateOpen(true) : undefined}
         sort={{
           options: SORT_OPTIONS,
           value: sortKey,
@@ -292,14 +295,14 @@ export default function BlockedNumbersPage() {
 
       {selectedEntries.length > 0 && (
         <div className="flex items-center gap-2">
-          <Button
+          <Can area="blocked-numbers" action="delete"><Button
             size="sm"
             variant="destructive"
             onClick={() => setBulkRemoveOpen(true)}
           >
             <Trash2 className="h-3.5 w-3.5" />
             {t("toolsUI.suppression.blockedNumbers.bulkUnblockCta").replace("{count}", String(selectedEntries.length))}
-          </Button>
+          </Button></Can>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             {t("common.bulk.clear")}
           </Button>
@@ -367,7 +370,7 @@ export default function BlockedNumbersPage() {
                     )}
                     <TableCell className="pr-4">
                       <div className="inline-flex items-center gap-1">
-                        <Button
+                        <Can area="blocked-numbers" action="edit"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
@@ -375,8 +378,8 @@ export default function BlockedNumbersPage() {
                           onClick={() => setEditing(e)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
+                        </Button></Can>
+                        <Can area="blocked-numbers" action="delete"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -384,7 +387,7 @@ export default function BlockedNumbersPage() {
                           onClick={() => setRemoving(e)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button></Can>
                       </div>
                     </TableCell>
                   </TableRow>

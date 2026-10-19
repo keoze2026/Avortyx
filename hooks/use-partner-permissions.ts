@@ -22,6 +22,7 @@
 import * as React from "react";
 
 import { http } from "@/lib/api/http";
+import { usePermissions } from "@/lib/my-permissions";
 import { useAuthStore } from "@/lib/store/auth-store";
 
 export type PartnerPermissionKey =
@@ -101,6 +102,17 @@ function loadPerms(userId: string, kind: "buyer" | "publisher"): Promise<Perms |
   return promise;
 }
 
+/**
+ * An EMPLOYEE's equivalents on the Roles screen. Only the three toggles that
+ * have a tick of their own are mapped; the others stay open for staff (the
+ * pages that need them check their own ticks directly).
+ */
+const STAFF_TICK: Partial<Record<PartnerPermissionKey, [area: string, action: string]>> = {
+  audio_recording: ["reporting", "listen"],
+  download_reports: ["reporting", "download"],
+  block_numbers: ["blocked-numbers", "edit"],
+};
+
 export interface PartnerPermissions {
   /** True for buyer / publisher logins. */
   isPartner: boolean;
@@ -112,6 +124,7 @@ export function usePartnerPermissions(): PartnerPermissions {
   const role = useAuthStore((s) => s.user?.role);
   const userId = useAuthStore((s) => s.user?.id) ?? "";
   const kind = role === "buyer" || role === "publisher" ? role : null;
+  const staff = usePermissions();
 
   const fresh = cached && cached.userId === userId ? cached.perms : null;
   // undefined = still looking
@@ -135,8 +148,16 @@ export function usePartnerPermissions(): PartnerPermissions {
   }, [kind, userId]);
 
   return React.useMemo(() => {
-    if (!kind) return { isPartner: false, can: () => true };
+    if (!kind) {
+      return {
+        isPartner: false,
+        can: (key: PartnerPermissionKey) => {
+          const tick = STAFF_TICK[key];
+          return !tick || staff.can(tick[0], tick[1]);
+        },
+      };
+    }
     const p = perms ?? NOTHING;
     return { isPartner: true, can: (key: PartnerPermissionKey) => p[key] };
-  }, [kind, perms]);
+  }, [kind, perms, staff]);
 }

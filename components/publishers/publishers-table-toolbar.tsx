@@ -81,7 +81,8 @@ interface PublishersToolbarProps {
   columns: Record<PublisherColumnKey, boolean>;
   onColumns: (cols: Record<PublisherColumnKey, boolean>) => void;
   onRefresh: () => void;
-  onCreate: () => void;
+  /** Leave out to hide the Create button (the role has no Edit tick). */
+  onCreate?: () => void;
 }
 
 export function PublishersTableToolbar({
@@ -287,9 +288,11 @@ export function PublishersTableToolbar({
       </DropdownMenu>
 
       {/* Create */}
-      <Button size="sm" className="ml-1 h-8 px-4" onClick={onCreate}>
-        {t("networkUI.common.create")}
-      </Button>
+      {onCreate && (
+        <Button size="sm" className="ml-1 h-8 px-4" onClick={onCreate}>
+          {t("networkUI.common.create")}
+        </Button>
+      )}
     </div>
   );
 }

@@ -48,6 +48,7 @@ import { toE164 } from "@/lib/format";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { Buyer, Campaign, Destination, TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/lib/my-permissions";
 
 export const SHARE_LABEL: Record<Distribution, string> = {
   priority: "In order",
@@ -98,6 +99,9 @@ export function SimpleRoutingRow({
   onReload,
 }: Props) {
   const setStatus = useCampaignsStore((s) => s.setStatus);
+  // Where a campaign's calls ring needs both Call Flows Edit and Edit Forward Calls To.
+  const { can } = usePermissions();
+  const canEdit = can("call-flows", "edit") && can("campaigns", "edit-forward");
   const buyerById = useMemo(() => new Map(buyers.map((b) => [b.id, b])), [buyers]);
   const destByNumber = useMemo(
     () => new Map(destinations.map((d) => [toE164(d.tfn), d])),
@@ -332,7 +336,7 @@ export function SimpleRoutingRow({
           <Switch
             className="data-[state=checked]:bg-accent"
             checked={live}
-            disabled={switching}
+            disabled={switching || !canEdit}
             onCheckedChange={(on) => void toggleLive(on)}
             aria-label={`Turn ${campaign.name} ${live ? "off" : "on"}`}
           />
@@ -351,7 +355,7 @@ export function SimpleRoutingRow({
 
       {/* ── Editor ── */}
       {open && (
-        <div className="grid gap-6 border-t border-border bg-secondary/10 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <fieldset disabled={!canEdit} className="grid min-w-0 gap-6 border-t border-border bg-secondary/10 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="min-w-0 space-y-3">
             <div>
               <div className="text-xs font-semibold">Send calls to</div>
@@ -546,7 +550,7 @@ export function SimpleRoutingRow({
               </Link>
             )}
           </div>
-        </div>
+        </fieldset>
       )}
     </Card>
   );

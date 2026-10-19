@@ -13,6 +13,7 @@ import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
+import { Locked } from "@/components/shared/can";
 
 export default function DestinationDetailPage() {
   const { t } = useTranslation();
@@ -64,10 +65,12 @@ export default function DestinationDetailPage() {
       {/* Overview and Calls tabs were removed per product direction; the page
           is settings-only now, so we render the Settings panel directly
           without the tab chrome. */}
-      <DestinationSettingsTab
-        destination={destination}
-        onEdit={() => setBuilderOpen(true)}
-      />
+      <Locked area="destinations" action="edit">
+        <DestinationSettingsTab
+          destination={destination}
+          onEdit={() => setBuilderOpen(true)}
+        />
+      </Locked>
 
       <DestinationBuilder
         open={builderOpen}

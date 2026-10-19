@@ -17,6 +17,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
 import type { Publisher } from "@/lib/types";
+import { usePermissions } from "@/lib/my-permissions";
 
 export function PublisherCard({
   publisher,
@@ -28,6 +29,7 @@ export function PublisherCard({
   onArchive: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const isActive = publisher.status === "active";
 
   return (
@@ -60,7 +62,7 @@ export function PublisherCard({
           </div>
           <div className="flex items-center gap-1">
             <PartnerStatusBadge status={publisher.status} />
-            <DropdownMenu>
+            {can("traffic-sources", "edit") && (<DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -91,7 +93,7 @@ export function PublisherCard({
                   {t("networkUI.common.remove")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>)}
           </div>
         </div>
 

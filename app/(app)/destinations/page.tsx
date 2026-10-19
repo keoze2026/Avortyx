@@ -25,11 +25,14 @@ import { formatCompact } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 type StatusFilter = "all" | "active" | "disabled";
 
 export default function DestinationsPage() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const destinations = useDestinationsStore((s) => s.destinations);
   const remoteStats = useDestinationsStore((s) => s.stats);
   const hydrated = useDestinationsStore((s) => s.hydrated);
@@ -287,9 +290,9 @@ export default function DestinationsPage() {
         title={t("networkUI.destinations.page.title")}
         description={t("networkUI.destinations.page.description")}
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Can area="destinations" action="edit"><Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" /> {t("networkUI.destinations.page.newDestination")}
-          </Button>
+          </Button></Can>
         }
       />
 
@@ -354,12 +357,12 @@ export default function DestinationsPage() {
         </div>
       </div>
 
-      {selectedDestinations.length > 0 && (
+      {selectedDestinations.length > 0 && can("destinations", "edit") && (
         <BulkActionsBar
           count={selectedDestinations.length}
           onPlay={onBulkPlay}
           onPause={onBulkPause}
-          onDelete={onBulkDelete}
+          onDelete={can("destinations", "delete") ? onBulkDelete : undefined}
           onClear={() => setSelectedIds(new Set())}
           entity={t("common.bulk.entities.destinations")}
         />

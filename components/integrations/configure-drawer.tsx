@@ -51,6 +51,7 @@ import { formatRelativeTime } from "@/lib/format";
 import type { IntegrationApp } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
 
 interface Props {
   app: IntegrationApp | null;
@@ -472,7 +473,7 @@ export function ConfigureDrawer({ app, onOpenChange, onDisconnect }: Props) {
 
               {/* Sticky footer */}
               <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-card/80 px-6 py-3 backdrop-blur">
-                <Button
+                <Can area="integrations" action="delete"><Button
                   variant="outline"
                   className="text-destructive hover:text-destructive"
                   onClick={() => {
@@ -482,12 +483,12 @@ export function ConfigureDrawer({ app, onOpenChange, onDisconnect }: Props) {
                   }}
                 >
                   {t("toolsUI.integrations.configure.disconnect")}
-                </Button>
+                </Button></Can>
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
                     {t("toolsUI.integrations.configure.cancel")}
                   </Button>
-                  <Button size="sm" onClick={onSave} disabled={saving}>
+                  <Can area="integrations" action="edit"><Button size="sm" onClick={onSave} disabled={saving}>
                     {saving ? (
                       <>
                         <Loader2 className="h-3 w-3 animate-spin" /> {t("toolsUI.integrations.configure.saving")}
@@ -495,7 +496,7 @@ export function ConfigureDrawer({ app, onOpenChange, onDisconnect }: Props) {
                     ) : (
                       t("toolsUI.integrations.configure.saveChanges")
                     )}
-                  </Button>
+                  </Button></Can>
                 </div>
               </div>
             </Tabs>

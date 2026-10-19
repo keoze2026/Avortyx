@@ -25,6 +25,7 @@ import { INTEGRATION_CATEGORIES } from "@/lib/mock/integrations";
 import type { IntegrationApp, IntegrationCategory } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
 
 const CATEGORY_LABEL: Record<IntegrationCategory, string> = Object.fromEntries(
   INTEGRATION_CATEGORIES.map((c) => [c.key, c.label]),
@@ -102,7 +103,7 @@ export function IntegrationsBoard({
 
       {/* ── Transfer controls ────────────────────────────────────────── */}
       <div className="flex flex-row items-stretch justify-center gap-2 lg:flex-col lg:items-center lg:gap-3 lg:px-1 lg:py-12">
-        <Button
+        <Can area="integrations" action="edit"><Button
           variant={availSelected.size > 0 ? "default" : "outline"}
           size="icon"
           className="h-10 w-10 lg:h-12 lg:w-12"
@@ -111,8 +112,8 @@ export function IntegrationsBoard({
           disabled={availSelected.size === 0}
         >
           <ChevronsRight className="h-5 w-5" />
-        </Button>
-        <Button
+        </Button></Can>
+        <Can area="integrations" action="delete"><Button
           variant={connSelected.size > 0 ? "default" : "outline"}
           size="icon"
           className="h-10 w-10 lg:h-12 lg:w-12"
@@ -121,7 +122,7 @@ export function IntegrationsBoard({
           disabled={connSelected.size === 0}
         >
           <ChevronsLeft className="h-5 w-5" />
-        </Button>
+        </Button></Can>
       </div>
 
       {/* ── Connected (right) ────────────────────────────────────────── */}

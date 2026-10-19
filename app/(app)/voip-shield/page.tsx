@@ -43,11 +43,14 @@ import { formatNumber } from "@/lib/format";
 import type { VoipShieldEntry } from "@/lib/mock/suppression";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useVoipShieldStore } from "@/lib/store/voip-shield-store";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 type SortKey = "name-asc" | "name-desc" | "size-desc" | "size-asc";
 
 export default function VoipShieldPage() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
 
   const SORT_OPTIONS: SortOption[] = [
@@ -194,8 +197,8 @@ export default function VoipShieldPage() {
         onQuery={setQuery}
         pageSize={pageSize}
         onPageSize={setPageSize}
-        ctaLabel={t("toolsUI.suppression.voipShield.createCta")}
-        onCta={() => setCreateOpen(true)}
+        ctaLabel={can("voip-shield", "edit") ? t("toolsUI.suppression.voipShield.createCta") : undefined}
+        onCta={can("voip-shield", "edit") ? () => setCreateOpen(true) : undefined}
         sort={{
           options: SORT_OPTIONS,
           value: sortKey,
@@ -278,7 +281,7 @@ export default function VoipShieldPage() {
                     )}
                     <TableCell className="pr-4">
                       <div className="inline-flex items-center gap-1">
-                        <Button
+                        <Can area="voip-shield" action="edit"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
@@ -286,8 +289,8 @@ export default function VoipShieldPage() {
                           onClick={() => router.push(`${ROUTES.voipShield}/${e.id}`)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
+                        </Button></Can>
+                        <Can area="voip-shield" action="delete"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -295,7 +298,7 @@ export default function VoipShieldPage() {
                           onClick={() => setRemoving(e)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button></Can>
                       </div>
                     </TableCell>
                   </TableRow>

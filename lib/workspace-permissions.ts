@@ -20,6 +20,17 @@ export interface PermissionGroup {
   permissions: Permission[];
 }
 
+/** Areas whose screens do not exist in the portal yet. Their ticks are saved
+ *  but there is nothing for them to switch on or off, so the Roles screen says so. */
+export const INACTIVE_GROUPS: ReadonlySet<string> = new Set([
+  "groups",
+  "ping-post-log",
+  "leads",
+  "custom-parameters",
+  "dispute",
+  "global-offers",
+]);
+
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     id: "reporting",

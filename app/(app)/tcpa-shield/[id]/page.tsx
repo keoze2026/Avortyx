@@ -10,6 +10,7 @@ import { ProviderConfigurationCard } from "@/components/suppression/provider-con
 import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/constants";
 import { useTcpaShieldStore } from "@/lib/store/tcpa-shield-store";
+import { Locked } from "@/components/shared/can";
 
 export default function TcpaShieldDetailPage() {
   const { t } = useTranslation();
@@ -64,6 +65,7 @@ export default function TcpaShieldDetailPage() {
         description={t("toolsUI.suppression.tcpaShield.detailDescription")}
       />
 
+      <Locked area="voip-shield" action="edit">
       <ProtectedCampaignsCard
         selectedIds={provider.campaignIds}
         onAdd={(campaignId) => addCampaign(provider.id, campaignId)}
@@ -75,6 +77,7 @@ export default function TcpaShieldDetailPage() {
         config={provider.config}
         onChange={(patch) => updateConfig(provider.id, patch)}
       />
+      </Locked>
     </div>
   );
 }

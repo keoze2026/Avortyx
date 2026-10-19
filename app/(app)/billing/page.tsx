@@ -10,6 +10,7 @@ import { SubscriptionHero } from "@/components/billing/subscription-hero";
 import { UsageGrid } from "@/components/billing/usage-grid";
 import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
+import { Can, Locked } from "@/components/shared/can";
 
 export default function BillingPage() {
   const { t } = useTranslation();
@@ -27,18 +28,24 @@ export default function BillingPage() {
           <UsageGrid />
         </div>
         <div>
-          <PaymentMethodCard />
+          <Locked area="billing" action="edit">
+            <PaymentMethodCard />
+          </Locked>
         </div>
       </div>
 
       {/* Payment integrations — Capitalist (today) + room for more
           providers later. Sits on its own row above Rates so the operator
           sees their payout wallets next to their plan / rates context. */}
-      <PaymentIntegrationsCard />
+      <Locked area="billing" action="edit">
+        <PaymentIntegrationsCard />
+      </Locked>
 
       {/* Recharge balance — pick payment method, enter amount, get redirected
           to provider checkout (Stripe for cards, Capitalist for USDT). */}
-      <RechargeBalanceCard />
+      <Can area="billing" action="edit">
+        <RechargeBalanceCard />
+      </Can>
 
       <RatesCard />
       <ExpensesCard />

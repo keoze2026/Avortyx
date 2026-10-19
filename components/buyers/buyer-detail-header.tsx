@@ -19,9 +19,12 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import type { Buyer } from "@/lib/types";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   const setStatus = useBuyersStore((s) => s.setStatus);
   const remove = useBuyersStore((s) => s.remove);
@@ -92,10 +95,10 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
 
         <div className="flex items-center gap-2">
           <PartnerStatusBadge status={buyer.status} />
-          <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+          <Can area="buyers" action="edit"><Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
             <Send className="h-3.5 w-3.5" /> Invite
-          </Button>
-          <Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
+          </Button></Can>
+          <Can area="buyers" action="edit"><Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
             {isActive ? (
               <>
                 <Pause className="h-3.5 w-3.5" /> {t("networkUI.common.pause")}
@@ -105,8 +108,8 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
                 <Play className="h-3.5 w-3.5" /> {t("networkUI.common.activate")}
               </>
             )}
-          </Button>
-          <DropdownMenu>
+          </Button></Can>
+          {can("buyers", "delete") && (<DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label={t("networkUI.buyers.detail.actionsAria")}>
                 <MoreVertical className="h-4 w-4" />
@@ -117,7 +120,7 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
                 <Trash2 className="h-4 w-4" /> {t("networkUI.buyers.detail.removeBuyer")}
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu>)}
         </div>
       </div>
 

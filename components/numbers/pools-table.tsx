@@ -21,6 +21,7 @@ import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatNumber } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { NumberPool } from "@/lib/types";
+import { Can } from "@/components/shared/can";
 
 /* ===========================================================
    Derived column values
@@ -211,7 +212,7 @@ export function PoolsTable({
                   )}
                   <TableCell className="pr-4">
                     <div className="inline-flex items-center gap-1">
-                      <Button
+                      <Can area="number-pools" action="edit"><Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
@@ -219,8 +220,8 @@ export function PoolsTable({
                         onClick={() => router.push(`${ROUTES.numbers}/pools/${p.id}`)}
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
+                      </Button></Can>
+                      <Can area="number-pools" action="delete"><Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -231,7 +232,7 @@ export function PoolsTable({
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      </Button></Can>
                     </div>
                   </TableCell>
                 </TableRow>

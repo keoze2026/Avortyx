@@ -19,6 +19,7 @@ import { friendlyErrorMessage } from "@/lib/api/errors";
 import { workspaceService } from "@/lib/api/services/workspace.service";
 import { ROUTES } from "@/lib/constants";
 import {
+  INACTIVE_GROUPS,
   PERMISSION_GROUPS,
   type PermissionState,
   seedForRole,
@@ -255,6 +256,14 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
                       onCheckedChange={(v) => setGroup(group.id, Boolean(v))}
                     />
                     {groupLabel}
+                    {INACTIVE_GROUPS.has(group.id) && (
+                      <span
+                        title="This area is not in the portal yet, so its ticks change nothing today."
+                        className="rounded border border-border px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+                      >
+                        Not active yet
+                      </span>
+                    )}
                   </Label>
                   <CollapsibleTrigger asChild>
                     <Button

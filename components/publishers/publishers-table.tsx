@@ -24,6 +24,8 @@ import { ROUTES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 import type { Publisher } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 interface PublishersTableProps {
   publishers: Publisher[];
@@ -39,6 +41,7 @@ export function PublishersTable({
   onArchive,
 }: PublishersTableProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
@@ -125,6 +128,7 @@ export function PublishersTable({
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={isActive}
+                        disabled={!can("traffic-sources", "edit")}
                         onCheckedChange={() => onToggle(p.id)}
                         aria-label={isActive ? t("networkUI.publishers.table.pauseAria") : t("networkUI.publishers.table.activateAria")}
                       />
@@ -141,12 +145,12 @@ export function PublishersTable({
                         onClick={() => router.push(`${ROUTES.publishers}/${p.id}`)}
                       />
                       <ActionIcon icon={Undo2} label={t("networkUI.common.revert")} />
-                      <ActionIcon
+                      <Can area="traffic-sources" action="delete"><ActionIcon
                         icon={Trash2}
                         label={t("networkUI.common.remove")}
                         tone="destructive"
                         onClick={() => onArchive(p.id)}
-                      />
+                      /></Can>
                     </div>
                   </TableCell>
                 </TableRow>

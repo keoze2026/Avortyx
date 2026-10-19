@@ -39,6 +39,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import { ivrService, type IvrFlow, type IvrFlowStatus } from "@/lib/api/services/ivr.service";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { Can } from "@/components/shared/can";
 
 const STATUS_VARIANT: Record<IvrFlowStatus, "success" | "outline" | "warning"> = {
   active: "success",
@@ -93,9 +94,9 @@ export default function IvrPage() {
         title={t("ivrUI.title")}
         description={t("ivrUI.description")}
         actions={
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Can area="call-flows" action="edit"><Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-3.5 w-3.5" /> {t("ivrUI.newFlow")}
-          </Button>
+          </Button></Can>
         }
       />
 
@@ -112,9 +113,9 @@ export default function IvrPage() {
           title={t("ivrUI.empty.title")}
           description={t("ivrUI.empty.description")}
           actions={
-            <Button onClick={() => setCreateOpen(true)}>
+            <Can area="call-flows" action="edit"><Button onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" /> {t("ivrUI.newFlow")}
-            </Button>
+            </Button></Can>
           }
         />
       ) : (
@@ -152,7 +153,7 @@ export default function IvrPage() {
                   >
                     {t("ivrUI.configure")} <ExternalLink className="h-3 w-3" />
                   </Link>
-                  <Button
+                  <Can area="call-flows" action="delete"><Button
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -160,7 +161,7 @@ export default function IvrPage() {
                     onClick={() => remove(f)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  </Button></Can>
                 </div>
               </CardContent>
             </Card>

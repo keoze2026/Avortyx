@@ -10,7 +10,8 @@ interface BulkActionsBarProps {
   count: number;
   onPlay: () => void;
   onPause: () => void;
-  onDelete: () => void;
+  /** Leave out to hide the delete button (the role has no Delete tick). */
+  onDelete?: () => void;
   onClear?: () => void;
   /** Optional label that names what's being selected (e.g. "campaigns"). */
   entity?: string;
@@ -62,13 +63,15 @@ export function BulkActionsBar({
         disabled={disabled}
         tone="muted"
       />
-      <BulkBtn
-        icon={Trash2}
-        label={fill(tplDelete)}
-        onClick={onDelete}
-        disabled={disabled}
-        tone="destructive"
-      />
+      {onDelete && (
+        <BulkBtn
+          icon={Trash2}
+          label={fill(tplDelete)}
+          onClick={onDelete}
+          disabled={disabled}
+          tone="destructive"
+        />
+      )}
       {count > 0 && (
         <>
           <span

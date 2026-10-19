@@ -42,6 +42,7 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
+import { useUIStore } from "@/lib/store/ui-store";
 import { useWorkspaceMetaStore } from "@/lib/store/workspace-meta-store";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
@@ -222,12 +223,24 @@ export function fieldLabel(field: string): string {
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : field;
 }
 
-/** The exact moment, to the second: an audit entry has to say when, not "41m ago". */
-function absoluteTime(ts: number) {
-  return formatLocalDateTime(ts, {
-    dateStyle: "medium",
-    timeStyle: "medium",
-  });
+/** The exact moment, to the second, in the time zone picked in the portal
+ *  (not the viewer's computer): an audit entry has to say when, not "41m ago". */
+function absoluteTime(ts: number, timeZone: string) {
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  };
+  try {
+    return formatLocalDateTime(ts, { ...options, timeZone });
+  } catch {
+    // An unknown zone id must not blank the log.
+    return formatLocalDateTime(ts, options);
+  }
 }
 
 /** The verb for a row: translated for member / role / workspace events,
@@ -359,14 +372,14 @@ export function WorkspaceActivityLog() {
 
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[960px]">
+          <Table className="min-w-[760px] table-fixed text-xs">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-4 text-left">{t("workspaceUI.activity.columnActor")}</TableHead>
-                <TableHead className="text-left">{t("workspaceUI.activity.columnAction")}</TableHead>
-                <TableHead className="text-left">{t("workspaceUI.activity.columnDetail")}</TableHead>
-                <TableHead className="text-left">{t("activity.col.ip")}</TableHead>
-                <TableHead className="pr-4 text-left">{t("workspaceUI.activity.columnWhen")}</TableHead>
+                <TableHead className="h-8 w-[15%] px-3 text-left text-[10px]">{t("workspaceUI.activity.columnActor")}</TableHead>
+                <TableHead className="h-8 w-[25%] px-2 text-left text-[10px]">{t("workspaceUI.activity.columnAction")}</TableHead>
+                <TableHead className="h-8 w-[24%] px-2 text-left text-[10px]">{t("workspaceUI.activity.columnDetail")}</TableHead>
+                <TableHead className="h-8 w-[14%] px-2 text-left text-[10px]">{t("activity.col.ip")}</TableHead>
+                <TableHead className="h-8 w-[22%] px-3 text-left text-[10px]">{t("workspaceUI.activity.columnWhen")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -419,6 +432,7 @@ function ActivityRow({
   onToggle: () => void;
 }) {
   const { t } = useTranslation();
+  const timeZone = useUIStore((s) => s.reportTimezone);
   const Icon = KIND_ICONS[event.kind] ?? Pencil;
   const changes = event.changes ?? [];
   const type = typeLabel(event.targetType, t);
@@ -426,21 +440,21 @@ function ActivityRow({
   return (
     <>
       <TableRow className={cn(open && "border-b-0 bg-secondary/20")}>
-        <TableCell className="pl-4 text-left">
-          <div className="flex items-center gap-2.5">
+        <TableCell className="px-3 py-1.5 text-left">
+          <div className="flex items-center gap-2">
             <span
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-background shadow"
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-background shadow"
               style={{
                 background: `linear-gradient(135deg, ${event.actor.avatar[0]}, ${event.actor.avatar[1]})`,
               }}
             >
               {event.actor.initials}
             </span>
-            <span className="truncate text-[13px] font-normal">{event.actor.name}</span>
+            <span className="truncate text-xs font-normal">{event.actor.name}</span>
           </div>
         </TableCell>
-        <TableCell className="text-left">
-          <div className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px]">
+        <TableCell className="px-2 py-1.5 text-left">
+          <div className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs">
             <Icon className={cn("h-3.5 w-3.5 shrink-0", CATEGORY_TINT[event.category])} />
             <span className={cn("font-normal", VERB_TONE[event.kind] ?? "text-muted-foreground")}>{verb}</span>
             {type && (event.category === "record" || event.category === "role") && (
@@ -449,24 +463,24 @@ function ActivityRow({
             {event.target && <span className="font-normal text-foreground">{event.target}</span>}
           </div>
         </TableCell>
-        <TableCell className="text-left text-[13px] text-muted-foreground">
+        <TableCell className="px-2 py-1.5 text-left text-xs text-muted-foreground">
           {changes.length > 0 ? (
             <button
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[13px] font-normal text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
+              className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-0 text-xs font-normal text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
             >
               {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {changes.length === 1 ? t("activity.oneFieldChanged") : t("activity.fieldsChanged").replace("{n}", String(changes.length))}
             </button>
           ) : event.rolePair ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="rounded border border-border bg-card px-1.5 py-0.5 text-[13px]">
+              <span className="rounded border border-border bg-card px-1 py-0 text-xs">
                 {t(`workspaceUI.members.role.${event.rolePair.from}`)}
               </span>
               <span aria-hidden>→</span>
-              <span className="rounded border border-accent/45 bg-accent/12 px-1.5 py-0.5 text-[13px] text-foreground">
+              <span className="rounded border border-accent/45 bg-accent/12 px-1 py-0 text-xs text-foreground">
                 {t(`workspaceUI.members.role.${event.rolePair.to}`)}
               </span>
             </span>
@@ -474,12 +488,12 @@ function ActivityRow({
             detailText(event, type, t)
           )}
         </TableCell>
-        <TableCell className="text-left font-mono text-[12px] font-normal tabular-nums text-muted-foreground">
+        <TableCell className="px-2 py-1.5 text-left font-mono text-[11px] font-normal tabular-nums text-muted-foreground">
           {event.ipAddress ?? "—"}
         </TableCell>
-        <TableCell className="pr-4 text-left text-[13px] font-normal tabular-nums text-muted-foreground">
-          <div className="whitespace-nowrap text-foreground">{absoluteTime(event.timestamp)}</div>
-          <div className="text-[11px]">{formatRelativeTime(event.timestamp)}</div>
+        <TableCell className="px-3 py-1.5 text-left text-xs font-normal tabular-nums text-muted-foreground">
+          <div className="text-foreground">{absoluteTime(event.timestamp, timeZone)}</div>
+          <div className="text-[10px] leading-tight">{formatRelativeTime(event.timestamp)}</div>
         </TableCell>
       </TableRow>
       {open && changes.length > 0 && (

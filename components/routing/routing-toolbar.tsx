@@ -10,6 +10,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ADVANCED_ROUTING_HREF } from "@/lib/api/services/campaign-routing";
 import { formatRelativeTime } from "@/lib/format";
 import type { RoutingPlan, RoutingPlanStatus } from "@/lib/types";
+import { Can } from "@/components/shared/can";
 
 interface Props {
   plan: RoutingPlan;
@@ -62,17 +63,17 @@ export function RoutingToolbar({ plan, dirty, saving, onSave, onPublishToggle, o
         <Button variant="outline" size="sm" onClick={onTest}>
           <PlayCircle className="h-3.5 w-3.5" /> {t("trafficUI.routing.toolbar.testCall")}
         </Button>
-        <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive">
+        <Can area="call-flows" action="delete"><Button variant="outline" size="sm" onClick={onDelete} className="text-destructive">
           <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant={dirty ? "default" : "outline"} size="sm" onClick={onSave} disabled={saving || !dirty}>
+        </Button></Can>
+        <Can area="call-flows" action="edit"><Button variant={dirty ? "default" : "outline"} size="sm" onClick={onSave} disabled={saving || !dirty}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {t("trafficUI.routing.toolbar.save")}
-        </Button>
-        <Button size="sm" onClick={onPublishToggle} className="gap-1">
+        </Button></Can>
+        <Can area="call-flows" action="edit"><Button size="sm" onClick={onPublishToggle} className="gap-1">
           <BookOpen className="h-3.5 w-3.5" />
           {published ? t("trafficUI.routing.toolbar.unpublish") : t("trafficUI.routing.toolbar.publish")}
-        </Button>
+        </Button></Can>
       </div>
     </div>
   );

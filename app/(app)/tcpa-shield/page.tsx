@@ -46,6 +46,8 @@ import {
 } from "@/lib/mock/suppression";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useTcpaShieldStore } from "@/lib/store/tcpa-shield-store";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 type SortKey = "name-asc" | "name-desc" | "type-asc" | "active-first";
 
@@ -65,6 +67,7 @@ function makeCampaignLabel(nameById: Map<string, string>) {
 
 export default function TcpaShieldPage() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
 
   const SORT_OPTIONS: SortOption[] = [
@@ -192,8 +195,8 @@ export default function TcpaShieldPage() {
         onQuery={setQuery}
         pageSize={pageSize}
         onPageSize={setPageSize}
-        ctaLabel={t("toolsUI.suppression.tcpaShield.createCta")}
-        onCta={() => setCreateOpen(true)}
+        ctaLabel={can("voip-shield", "edit") ? t("toolsUI.suppression.tcpaShield.createCta") : undefined}
+        onCta={can("voip-shield", "edit") ? () => setCreateOpen(true) : undefined}
         sort={{
           options: SORT_OPTIONS,
           value: sortKey,
@@ -278,6 +281,7 @@ export default function TcpaShieldPage() {
                       <TableCell>
                         <Switch
                           checked={e.active}
+                          disabled={!can("voip-shield", "edit")}
                           onCheckedChange={(v) => {
                             setActive(e.id, Boolean(v));
                             toast.success(
@@ -293,7 +297,7 @@ export default function TcpaShieldPage() {
                     )}
                     <TableCell className="pr-4">
                       <div className="inline-flex items-center gap-1">
-                        <Button
+                        <Can area="voip-shield" action="edit"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
@@ -301,8 +305,8 @@ export default function TcpaShieldPage() {
                           onClick={() => router.push(`${ROUTES.tcpaShield}/${e.id}`)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
+                        </Button></Can>
+                        <Can area="voip-shield" action="delete"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -310,7 +314,7 @@ export default function TcpaShieldPage() {
                           onClick={() => setRemoving(e)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button></Can>
                       </div>
                     </TableCell>
                   </TableRow>

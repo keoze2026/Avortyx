@@ -25,6 +25,7 @@ import { formatCompact, formatLocalDate, formatNumber, formatTimer, toE164 } fro
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
 
 /* ===========================================================
    Derived column values
@@ -388,7 +389,7 @@ export function TrackNumbersTable({
                     )}
                     <TableCell className="pr-4">
                       <div className="inline-flex items-center gap-1">
-                        <Button
+                        <Can area="tracking-numbers" action="edit"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
@@ -396,8 +397,8 @@ export function TrackNumbersTable({
                           onClick={() => setEditing(n)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
+                        </Button></Can>
+                        <Can area="tracking-numbers" action="delete"><Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -408,7 +409,7 @@ export function TrackNumbersTable({
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button></Can>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -29,6 +29,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { NumberPool, TrackingNumber } from "@/lib/types";
+import { usePermissions } from "@/lib/my-permissions";
 
 /* ─── Sort definitions ───────────────────────────────────────────────── */
 
@@ -65,6 +66,7 @@ const DEFAULT_POOL_COLUMNS = new Set(POOL_COLUMNS.map((c) => c.id));
 
 export default function NumbersPage() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   const numbers = useNumbersStore((s) => s.numbers);
   const NUMBER_SORT_OPTIONS: SortOption[] = NUMBER_SORT_KEYS.map((o) => ({ id: o.id, label: t(o.labelKey) }));
@@ -223,8 +225,8 @@ export default function NumbersPage() {
             onQuery={setAllQuery}
             pageSize={allPageSize}
             onPageSize={setAllPageSize}
-            ctaLabel={t("trafficUI.numbers.cta.create")}
-            onCta={() => setProvisionOpen(true)}
+            ctaLabel={can("tracking-numbers", "edit") ? t("trafficUI.numbers.cta.create") : undefined}
+            onCta={can("tracking-numbers", "edit") ? () => setProvisionOpen(true) : undefined}
             sort={{
               options: NUMBER_SORT_OPTIONS,
               value: allSortKey,
@@ -266,8 +268,8 @@ export default function NumbersPage() {
             onQuery={setPoolsQuery}
             pageSize={poolsPageSize}
             onPageSize={setPoolsPageSize}
-            ctaLabel={t("trafficUI.numbers.cta.create")}
-            onCta={() => setCreatePoolOpen(true)}
+            ctaLabel={can("number-pools", "edit") ? t("trafficUI.numbers.cta.create") : undefined}
+            onCta={can("number-pools", "edit") ? () => setCreatePoolOpen(true) : undefined}
             sort={{
               options: POOL_SORT_OPTIONS,
               value: poolsSortKey,

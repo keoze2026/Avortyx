@@ -22,6 +22,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePermissions } from "@/lib/my-permissions";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
@@ -31,8 +32,11 @@ export default function CampaignsPage() {
   // A publisher login: Manage Traffic switched off = look, don't change.
   // Creating a campaign also needs Number Creation (the server's "create").
   const partnerCan = usePartnerPermissions().can;
-  const canManage = partnerCan("manage_traffic");
+  // An employee: the Roles-screen ticks decide (Edit Campaign data / Delete).
+  const staffCan = usePermissions().can;
+  const canManage = partnerCan("manage_traffic") && staffCan("campaigns", "edit-campaign");
   const canCreate = canManage && partnerCan("number_creation");
+  const canDelete = staffCan("campaigns", "delete");
   const campaigns = useCampaignsStore((s) => s.campaigns);
   // Until the first load finishes, show a loading table - not "No campaigns
   // yet" (which flashed on every refresh before the real list arrived).
@@ -237,7 +241,7 @@ export default function CampaignsPage() {
                 count={selectedCampaigns.length}
                 onPlay={onBulkPlay}
                 onPause={onBulkPause}
-                onDelete={onBulkDelete}
+                onDelete={canDelete ? onBulkDelete : undefined}
                 onClear={() => setSelectedIds(new Set())}
                 entity={t("common.bulk.entities.campaigns")}
               />
@@ -261,6 +265,7 @@ export default function CampaignsPage() {
                 onClone={onClone}
                 canManage={canManage}
                 canCreate={canCreate}
+                canDelete={canDelete}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
               />

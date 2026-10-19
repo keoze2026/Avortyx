@@ -25,6 +25,7 @@ import { formatNumber } from "@/lib/format";
 import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingPlanStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
 
 type StatusFilter = "all" | RoutingPlanStatus;
 
@@ -68,9 +69,9 @@ export function AdvancedRoutingSection() {
       description={t("settings.rail.advancedRouting.intro")}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Can area="call-flows" action="edit"><Button size="sm" onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4" /> {t("trafficUI.routing.newPlan")}
-        </Button>
+        </Button></Can>
         <Button asChild size="sm" variant="ghost" className="text-muted-foreground">
           <Link href={ROUTES.routing}>{t("settings.rail.advancedRouting.simpleLink")}</Link>
         </Button>
@@ -156,9 +157,9 @@ export function AdvancedRoutingSection() {
           }
           actions={
             plans.length === 0 ? (
-              <Button size="sm" onClick={() => setOpen(true)}>
+              <Can area="call-flows" action="edit"><Button size="sm" onClick={() => setOpen(true)}>
                 <Plus className="h-4 w-4" /> {t("trafficUI.routing.newPlan")}
-              </Button>
+              </Button></Can>
             ) : undefined
           }
         />

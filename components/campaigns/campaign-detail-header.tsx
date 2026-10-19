@@ -18,6 +18,7 @@ import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { VERTICAL_ACCENT, type Campaign } from "@/lib/types";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePermissions } from "@/lib/my-permissions";
 import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
   const { t, locale } = useTranslation();
   // Publisher / buyer logins look, they don't pause or archive.
   const { isPartner } = usePartnerPermissions();
+  const { can } = usePermissions();
   const router = useRouter();
   const setStatus = useCampaignsStore((s) => s.setStatus);
   const remove = useCampaignsStore((s) => s.remove);
@@ -100,6 +102,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
           <CampaignStatusBadge status={campaign.status} />
           {!isPartner && (
           <>
+          {can("campaigns", "edit-campaign") && (
           <Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
             {isActive ? (
               <>
@@ -111,6 +114,8 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
               </>
             )}
           </Button>
+          )}
+          {can("campaigns", "delete") && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label={t("trafficUI.campaigns.detail.actionsMenu")}>
@@ -126,6 +131,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
           </>
           )}
         </div>

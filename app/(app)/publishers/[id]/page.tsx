@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
 import { usePublishersStore } from "@/lib/store/publishers-store";
+import { Locked } from "@/components/shared/can";
 
 function DetailLoading() {
   return (
@@ -68,7 +69,9 @@ export default function PublisherDetailPage() {
   return (
     <div className="mx-auto w-full max-w-[928px] space-y-6">
       <PublisherDetailHeader publisher={publisher} />
-      <PublisherSettingsTab publisher={publisher} />
+      <Locked area="traffic-sources" action="edit">
+        <PublisherSettingsTab publisher={publisher} />
+      </Locked>
     </div>
   );
 }

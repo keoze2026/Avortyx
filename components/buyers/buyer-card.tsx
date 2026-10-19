@@ -17,6 +17,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
 import type { Buyer } from "@/lib/types";
+import { usePermissions } from "@/lib/my-permissions";
 
 interface BuyerCardProps {
   buyer: Buyer;
@@ -26,6 +27,7 @@ interface BuyerCardProps {
 
 export function BuyerCard({ buyer, onToggle, onArchive }: BuyerCardProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const isActive = buyer.status === "active";
   const dailyUsage = buyer.dailyCap > 0 ? Math.min(1, buyer.callsToday / buyer.dailyCap) : 0;
 
@@ -59,7 +61,7 @@ export function BuyerCard({ buyer, onToggle, onArchive }: BuyerCardProps) {
           </div>
           <div className="flex items-center gap-1">
             <PartnerStatusBadge status={buyer.status} />
-            <DropdownMenu>
+            {can("buyers", "edit") && (<DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -90,7 +92,7 @@ export function BuyerCard({ buyer, onToggle, onArchive }: BuyerCardProps) {
                   {t("networkUI.common.remove")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>)}
           </div>
         </div>
 

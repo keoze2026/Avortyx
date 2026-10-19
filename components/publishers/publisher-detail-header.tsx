@@ -19,9 +19,12 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import type { Publisher } from "@/lib/types";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   const setStatus = usePublishersStore((s) => s.setStatus);
   const remove = usePublishersStore((s) => s.remove);
@@ -92,7 +95,7 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
 
         <div className="flex items-center gap-2">
           <PartnerStatusBadge status={publisher.status} />
-          <Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
+          <Can area="traffic-sources" action="edit"><Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
             {isActive ? (
               <>
                 <Pause className="h-3.5 w-3.5" /> {t("networkUI.common.pause")}
@@ -102,7 +105,7 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
                 <Play className="h-3.5 w-3.5" /> {t("networkUI.common.activate")}
               </>
             )}
-          </Button>
+          </Button></Can>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label={t("networkUI.publishers.detail.actionsAria")}>
@@ -110,13 +113,13 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+              {can("traffic-sources", "edit") && (<><DropdownMenuItem onSelect={() => setEditOpen(true)}>
                 <Pencil className="h-4 w-4" /> {t("networkUI.common.edit")}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:text-destructive">
+              <DropdownMenuSeparator /></>)}
+              {can("traffic-sources", "delete") && (<DropdownMenuItem onSelect={onRemove} className="text-destructive focus:text-destructive">
                 <Trash2 className="h-4 w-4" /> {t("networkUI.publishers.detail.removePublisher")}
-              </DropdownMenuItem>
+              </DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -28,6 +28,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingPlan, RoutingPlanStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/lib/my-permissions";
 
 const STATUS_TONE: Record<
   RoutingPlanStatus,
@@ -56,6 +57,7 @@ const STATUS_TONE: Record<
 
 export function RoutingPlanCard({ plan }: { plan: RoutingPlan }) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const setStatus = useRoutingStore((s) => s.setStatus);
   const remove = useRoutingStore((s) => s.remove);
   const published = plan.status === "published";
@@ -147,7 +149,7 @@ export function RoutingPlanCard({ plan }: { plan: RoutingPlan }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
+                {can("call-flows", "edit") && (<><DropdownMenuItem
                   onSelect={() => {
                     const next = published ? "draft" : "published";
                     setStatus(plan.id, next);
@@ -160,8 +162,8 @@ export function RoutingPlanCard({ plan }: { plan: RoutingPlan }) {
                 >
                   {published ? t("trafficUI.routing.toolbar.unpublish") : t("trafficUI.routing.toolbar.publish")}
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
+                <DropdownMenuSeparator /></>)}
+                {can("call-flows", "delete") && (<DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onSelect={() => {
                     remove(plan.id);
@@ -169,7 +171,7 @@ export function RoutingPlanCard({ plan }: { plan: RoutingPlan }) {
                   }}
                 >
                   <Trash2 className="h-4 w-4" /> {t("trafficUI.routing.planCard.deletePlan")}
-                </DropdownMenuItem>
+                </DropdownMenuItem>)}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -20,9 +20,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatCompact, formatCurrency } from "@/lib/format";
 import { usePublishersStore } from "@/lib/store/publishers-store";
+import { usePermissions } from "@/lib/my-permissions";
 
 export default function PublishersPage() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const publishers = usePublishersStore((s) => s.publishers);
   const setPublisherStatus = usePublishersStore((s) => s.setStatus);
   const remove = usePublishersStore((s) => s.remove);
@@ -129,7 +131,7 @@ export default function PublishersPage() {
         columns={columns}
         onColumns={setColumns}
         onRefresh={() => toast.success(t("networkUI.publishers.toast.refreshed"))}
-        onCreate={() => setInviteOpen(true)}
+        onCreate={can("traffic-sources", "edit") ? () => setInviteOpen(true) : undefined}
       />
 
       {filtered.length === 0 ? (

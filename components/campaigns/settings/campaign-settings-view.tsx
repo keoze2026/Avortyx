@@ -23,6 +23,8 @@ import { RtbTab } from "./rtb-tab";
 import { TrackingNumbersSection } from "./tracking-numbers-section";
 import { AutoScheduleCard } from "@/components/shared/auto-schedule-card";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePermissions } from "@/lib/my-permissions";
+import { Locked } from "@/components/shared/can";
 import { useTranslation } from "@/hooks/use-translation";
 import type { Campaign } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -39,6 +41,7 @@ const TAB_KEYS: Array<{ id: TabId; labelKey: string; icon: React.ComponentType<{
 export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
   const { t } = useTranslation();
   const { isPartner } = usePartnerPermissions();
+  const { can } = usePermissions();
   const [tab, setTab] = React.useState<TabId>("general");
 
   // A publisher (or buyer) login sees its own tracking numbers on this
@@ -90,23 +93,25 @@ export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
       {tab === "general" && (
         <div className="space-y-6">
           {/* Pricing — revenue and payout per call; what the Dashboard adds up */}
-          <PricingSection campaignId={campaign.id} />
+          <Locked area="campaigns" action="edit-campaign"><PricingSection campaignId={campaign.id} /></Locked>
 
           {/* Call caps — daily, monthly and concurrency, the caps routing checks */}
-          <CallCapsSection campaignId={campaign.id} />
+          <Locked area="campaigns" action="edit-advanced"><CallCapsSection campaignId={campaign.id} /></Locked>
 
           {/* Auto schedule — daily play/pause based on portal timezone */}
-          <AutoScheduleCard
-            target="campaign"
-            id={campaign.id}
-            entityLabel="campaign"
-          />
+          <Locked area="campaigns" action="edit-advanced">
+            <AutoScheduleCard
+              target="campaign"
+              id={campaign.id}
+              entityLabel="campaign"
+            />
+          </Locked>
 
           {/* 1 — Tracking Numbers */}
-          <TrackingNumbersSection campaignId={campaign.id} />
+          <TrackingNumbersSection campaignId={campaign.id} readOnly={!can("campaigns", "edit-numbers")} />
 
           {/* 2 — Forward Calls To */}
-          <ForwardCallsSection campaignId={campaign.id} />
+          <Locked area="campaigns" action="edit-forward"><ForwardCallsSection campaignId={campaign.id} /></Locked>
 
           {/* 3 — Advanced Settings (12 collapsible cards) */}
           <section className="space-y-3">
@@ -116,14 +121,16 @@ export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
                 {t("trafficUI.campaigns.settings.advanced.description")}
               </p>
             </div>
-            <AdvancedSettingsList campaignId={campaign.id} />
+            <Locked area="campaigns" action="edit-advanced"><AdvancedSettingsList campaignId={campaign.id} /></Locked>
           </section>
         </div>
       )}
 
-      {tab === "rtb" && <RtbTab campaignId={campaign.id} />}
-      {tab === "enrichment" && <EnrichmentTab campaignId={campaign.id} />}
-      {tab === "access" && <AccessTab campaignId={campaign.id} />}
+      <Locked area="campaigns" action="edit-advanced">
+        {tab === "rtb" && <RtbTab campaignId={campaign.id} />}
+        {tab === "enrichment" && <EnrichmentTab campaignId={campaign.id} />}
+        {tab === "access" && <AccessTab campaignId={campaign.id} />}
+      </Locked>
     </div>
   );
 }

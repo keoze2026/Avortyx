@@ -67,6 +67,7 @@ import type {
   TrafficSourceEntry,
   TrackingNumber,
 } from "@/lib/types";
+import { Can } from "@/components/shared/can";
 
 const VENDOR_OPTIONS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
 const PHONE_FORMATS: { id: PhoneNumberFormat; label: string }[] = [
@@ -373,7 +374,7 @@ function AttachNumbersCard({
                     </TableCell>
                     <TableCell className="capitalize">{n.status}</TableCell>
                     <TableCell className="pr-4">
-                      <Button
+                      <Can area="number-pools" action="edit"><Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -381,7 +382,7 @@ function AttachNumbersCard({
                         onClick={() => detach(n.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      </Button></Can>
                     </TableCell>
                   </TableRow>
                 );
@@ -667,7 +668,7 @@ function TrafficSourcesCard({
                         <TableCell className="tabular-nums">{s.events}</TableCell>
                         <TableCell className="tabular-nums">{s.conversions}</TableCell>
                         <TableCell className="pr-4">
-                          <Button
+                          <Can area="number-pools" action="edit"><Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -675,7 +676,7 @@ function TrafficSourcesCard({
                             onClick={() => onRemove(s.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </Button></Can>
                         </TableCell>
                       </TableRow>
                     ))
@@ -875,9 +876,9 @@ function Toolbar({
           ))}
         </SelectContent>
       </Select>
-      <Button size="sm" className="h-9" onClick={onCta}>
+      <Can area="number-pools" action="edit"><Button size="sm" className="h-9" onClick={onCta}>
         <Plus className="h-3.5 w-3.5" /> {ctaLabel}
-      </Button>
+      </Button></Can>
     </div>
   );
 }

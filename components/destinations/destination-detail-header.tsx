@@ -30,6 +30,8 @@ import { toE164 } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import type { Destination } from "@/lib/types";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 interface DestinationDetailHeaderProps {
   destination: Destination;
@@ -41,6 +43,7 @@ export function DestinationDetailHeader({
   onEdit,
 }: DestinationDetailHeaderProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
   const remove = useDestinationsStore((s) => s.remove);
@@ -116,7 +119,7 @@ export function DestinationDetailHeader({
           ) : (
             <Badge variant="outline">{t("networkUI.destinations.detail.disabled")}</Badge>
           )}
-          <Button
+          <Can area="destinations" action="edit"><Button
             size="sm"
             variant={destination.enabled ? "outline" : "default"}
             onClick={onToggle}
@@ -130,10 +133,10 @@ export function DestinationDetailHeader({
                 <Play className="h-3.5 w-3.5" /> {t("networkUI.destinations.detail.enable")}
               </>
             )}
-          </Button>
-          <Button size="sm" variant="outline" onClick={onEdit}>
+          </Button></Can>
+          <Can area="destinations" action="edit"><Button size="sm" variant="outline" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" /> {t("networkUI.destinations.detail.edit")}
-          </Button>
+          </Button></Can>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label={t("networkUI.destinations.detail.actionsAria")}>
@@ -141,16 +144,16 @@ export function DestinationDetailHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={onEdit}>
+              {can("destinations", "edit") && (<><DropdownMenuItem onSelect={onEdit}>
                 <Pencil className="h-4 w-4" /> {t("networkUI.destinations.detail.editSettings")}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
+              <DropdownMenuSeparator /></>)}
+              {can("destinations", "delete") && (<DropdownMenuItem
                 onSelect={onRemove}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="h-4 w-4" /> {t("networkUI.destinations.detail.removeDestination")}
-              </DropdownMenuItem>
+              </DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

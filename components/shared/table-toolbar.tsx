@@ -58,8 +58,9 @@ interface Props {
   pageSize: PageSize;
   onPageSize: (n: PageSize) => void;
   /** Primary CTA on the far right (e.g. "Create", "Block Number"). */
-  ctaLabel: string;
-  onCta: () => void;
+  /** Leave both out to hide the button (the role has no tick for it). */
+  ctaLabel?: string;
+  onCta?: () => void;
   /** Optional handler — defaults to a "Refreshed" toast. */
   onRefresh?: () => void;
   /**
@@ -185,9 +186,11 @@ export function TableToolbar({
         </SelectContent>
       </Select>
 
-      <Button size="sm" className="h-9" onClick={onCta}>
-        {ctaLabel}
-      </Button>
+      {ctaLabel && onCta && (
+        <Button size="sm" className="h-9" onClick={onCta}>
+          {ctaLabel}
+        </Button>
+      )}
     </div>
   );
 }

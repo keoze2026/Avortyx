@@ -63,6 +63,8 @@ interface CampaignsTableProps {
   canManage?: boolean;
   /** False for a partner login that may not create campaigns: no Duplicate. */
   canCreate?: boolean;
+  /** False when the role has no Delete tick for campaigns: no Archive icon. */
+  canDelete?: boolean;
   onArchive: (id: string) => void;
   /** Called when the + (clone) icon is clicked on a row. */
   onClone?: (id: string) => void;
@@ -119,6 +121,7 @@ export function CampaignsTable({
   onSelectionChange,
   canManage = true,
   canCreate = true,
+  canDelete = true,
 }: CampaignsTableProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
@@ -281,7 +284,7 @@ export function CampaignsTable({
                           onClick={() => onClone?.(c.id)}
                         />
                       )}
-                      {canManage && (
+                      {canManage && canDelete && (
                         <>
                           <ActionIcon icon={Undo2} label={t("trafficUI.campaigns.table.revert")} />
                           <ActionIcon

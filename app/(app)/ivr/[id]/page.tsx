@@ -52,6 +52,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import { ivrService, type IvrFlow, type IvrNode, type IvrTransition } from "@/lib/api/services/ivr.service";
 import { ROUTES } from "@/lib/constants";
+import { Can, Locked } from "@/components/shared/can";
 
 type NodeType = "say" | "menu" | "collect" | "transfer" | "record" | "hangup";
 
@@ -281,7 +282,7 @@ export default function IvrFlowEditorPage() {
         title={flow.name}
         description={flow.description ?? t("ivrUI.editor.defaultDescription")}
         actions={
-          <>
+          <Can area="call-flows" action="edit">
             <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> {t("ivrUI.editor.addNode")}
             </Button>
@@ -296,7 +297,7 @@ export default function IvrFlowEditorPage() {
                 </>
               )}
             </Button>
-          </>
+          </Can>
         }
       />
 
@@ -307,13 +308,15 @@ export default function IvrFlowEditorPage() {
           title={t("ivrUI.editor.noNodes.title")}
           description={t("ivrUI.editor.noNodes.description")}
           actions={
-            <Button onClick={() => setAddOpen(true)}>
-              <Plus className="h-4 w-4" /> {t("ivrUI.editor.addFirstNode")}
-            </Button>
+            <Can area="call-flows" action="edit">
+              <Button onClick={() => setAddOpen(true)}>
+                <Plus className="h-4 w-4" /> {t("ivrUI.editor.addFirstNode")}
+              </Button>
+            </Can>
           }
         />
       ) : (
-        <ul className="space-y-3">
+        <Locked area="call-flows" action="edit"><ul className="space-y-3">
           {nodes.map((n, idx) => {
             const meta = NODE_META[n.nodeType];
             const Icon = meta.icon;
@@ -424,7 +427,7 @@ export default function IvrFlowEditorPage() {
               </li>
             );
           })}
-        </ul>
+        </ul></Locked>
       )}
 
       <AddNodeDialog

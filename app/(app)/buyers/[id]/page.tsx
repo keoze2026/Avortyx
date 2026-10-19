@@ -17,6 +17,7 @@ import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { cn } from "@/lib/utils";
+import { Locked } from "@/components/shared/can";
 
 type TabId = "overview" | "campaigns" | "destinations" | "caps" | "settings";
 
@@ -135,10 +136,12 @@ export default function BuyerDetailPage() {
         </div>
 
         {tab === "overview" && <BuyerOverviewTab buyer={buyer} />}
-        {tab === "campaigns" && <BuyerCampaignsTab campaignIds={buyer.campaignIds} />}
-        {tab === "destinations" && <BuyerDestinationsTab buyer={buyer} />}
-        {tab === "caps" && <BuyerCapsTab buyer={buyer} />}
-        {tab === "settings" && <BuyerSettingsTab buyer={buyer} />}
+        <Locked area="buyers" action="edit">
+          {tab === "campaigns" && <BuyerCampaignsTab campaignIds={buyer.campaignIds} />}
+          {tab === "destinations" && <BuyerDestinationsTab buyer={buyer} />}
+          {tab === "caps" && <BuyerCapsTab buyer={buyer} />}
+          {tab === "settings" && <BuyerSettingsTab buyer={buyer} />}
+        </Locked>
       </div>
     </div>
   );

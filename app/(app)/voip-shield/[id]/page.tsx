@@ -10,6 +10,7 @@ import { ProtectedCampaignsCard } from "@/components/suppression/protected-campa
 import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/constants";
 import { useVoipShieldStore } from "@/lib/store/voip-shield-store";
+import { Locked } from "@/components/shared/can";
 
 export default function VoipShieldDetailPage() {
   const { t } = useTranslation();
@@ -65,6 +66,7 @@ export default function VoipShieldDetailPage() {
         description={t("toolsUI.suppression.voipShield.detailDescription")}
       />
 
+      <Locked area="voip-shield" action="edit">
       <ProtectedCampaignsCard
         selectedIds={shield.campaignIds}
         onAdd={(campaignId) => addCampaign(shield.id, campaignId)}
@@ -76,6 +78,7 @@ export default function VoipShieldDetailPage() {
         onBlock={(carrier) => addCarrier(shield.id, carrier)}
         onUnblock={(carrier) => removeCarrier(shield.id, carrier)}
       />
+      </Locked>
     </div>
   );
 }

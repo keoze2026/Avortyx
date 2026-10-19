@@ -22,6 +22,8 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { formatNumber, toE164 } from "@/lib/format";
 import type { Buyer, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 type CapField = "concurrencyCap" | "dailyCap" | "monthlyCap";
 
@@ -97,6 +99,7 @@ export function DestinationsTable({
   onSelectionChange,
 }: DestinationsTableProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   const buyers = useBuyersStore((s) => s.buyers);
   const rows = useMemo(
@@ -361,6 +364,7 @@ export function DestinationsTable({
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={destination.enabled}
+                        disabled={!can("destinations", "edit")}
                         onCheckedChange={() => onToggle?.(destination.id)}
                         // Green when the destination is active (on); off is unchanged.
                         className="data-[state=checked]:bg-[color:var(--success)]"
@@ -378,28 +382,28 @@ export function DestinationsTable({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="inline-flex items-center gap-0.5">
-                        <RowActionIcon
+                        <Can area="destinations" action="edit"><RowActionIcon
                           icon={Pencil}
                           label={t(
                             "networkUI.destinations.table.editAria",
                           ).replace("{name}", destination.name)}
                           onClick={() => onEdit?.(destination.id)}
-                        />
-                        {onClone ? (
+                        /></Can>
+                        {onClone && can("destinations", "edit") ? (
                           <RowActionIcon
                             icon={CirclePlus}
                             label={`Clone ${destination.name}`}
                             onClick={() => onClone(destination.id)}
                           />
                         ) : null}
-                        <RowActionIcon
+                        <Can area="destinations" action="delete"><RowActionIcon
                           icon={Trash2}
                           label={t(
                             "networkUI.destinations.table.deleteAria",
                           ).replace("{name}", destination.name)}
                           tone="destructive"
                           onClick={() => onDelete?.(destination.id)}
-                        />
+                        /></Can>
                       </div>
                     </TableCell>
                   </TableRow>

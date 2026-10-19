@@ -31,6 +31,8 @@ import { useWebhooksStore } from "@/lib/store/webhooks-store";
 import type { Webhook, WebhookStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 const STATUS_VARIANT: Record<WebhookStatus, React.ComponentProps<typeof Badge>["variant"]> = {
   active: "success",
@@ -46,6 +48,7 @@ const STATUS_LABEL_KEYS: Record<WebhookStatus, string> = {
 
 export function WebhooksSection() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const hooks = useWebhooksStore((s) => s.webhooks);
   const createHook = useWebhooksStore((s) => s.create);
   const updateHook = useWebhooksStore((s) => s.update);
@@ -126,9 +129,9 @@ export function WebhooksSection() {
               .replace("{failing}", String(hooks.filter((h) => h.status === "failing").length))}
           </p>
         </div>
-        <Button size="sm" onClick={openCreate}>
+        <Can area="integrations" action="edit"><Button size="sm" onClick={openCreate}>
           <Plus className="h-3.5 w-3.5" /> {t("toolsUI.integrations.webhooks.addWebhook")}
-        </Button>
+        </Button></Can>
       </header>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -176,21 +179,21 @@ export function WebhooksSection() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onSendTest(h.id)}>
+                      {can("integrations", "edit") && (<DropdownMenuItem onSelect={() => onSendTest(h.id)}>
                         {t("toolsUI.integrations.webhooks.sendTest")}
-                      </DropdownMenuItem>
+                      </DropdownMenuItem>)}
                       <DropdownMenuItem onSelect={() => setDeliveriesFor(h)}>
                         <History className="h-4 w-4" /> View deliveries
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => openEdit(h)}>
+                      {can("integrations", "edit") && (<DropdownMenuItem onSelect={() => openEdit(h)}>
                         {t("toolsUI.integrations.webhooks.configure")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
+                      </DropdownMenuItem>)}
+                      {can("integrations", "delete") && (<DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onSelect={() => remove(h.id)}
                       >
                         <Trash2 className="h-4 w-4" /> {t("toolsUI.integrations.webhooks.remove")}
-                      </DropdownMenuItem>
+                      </DropdownMenuItem>)}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

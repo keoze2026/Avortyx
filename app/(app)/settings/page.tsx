@@ -18,6 +18,7 @@ import {
 import { AdvancedRoutingSection } from "@/components/routing/advanced-routing-section";
 import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
+import { Locked } from "@/components/shared/can";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -66,7 +67,11 @@ export default function SettingsPage() {
               {section === "api-keys" && <ApiKeysSection />}
               {section === "notifications" && <NotificationsSection />}
               {section === "sessions" && <SessionsSection />}
-              {section === "scheduled-reports" && <ScheduledReportsSection />}
+              {section === "scheduled-reports" && (
+                <Locked area="reporting" action="edit">
+                  <ScheduledReportsSection />
+                </Locked>
+              )}
               {section === "advanced-routing" && canSeeAdvanced && <AdvancedRoutingSection />}
             </motion.div>
           </AnimatePresence>

@@ -26,6 +26,8 @@ import { formatCurrency } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import type { Buyer } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Can } from "@/components/shared/can";
+import { usePermissions } from "@/lib/my-permissions";
 
 interface BuyersTableProps {
   buyers: Buyer[];
@@ -51,6 +53,7 @@ export function BuyersTable({
   onSelectionChange,
 }: BuyersTableProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const router = useRouter();
   // Uncontrolled fallback; controlled when `selectedIds` is supplied.
   const [internalSelected, setInternalSelected] = React.useState<Set<string>>(new Set());
@@ -153,6 +156,7 @@ export function BuyersTable({
                         // Green when the buyer is active (taking calls).
                         className="data-[state=checked]:bg-[color:var(--success)] dark:data-[state=checked]:bg-[color:var(--success)]"
                         checked={isActive}
+                        disabled={!can("buyers", "edit")}
                         onCheckedChange={() => onToggle(b.id)}
                         aria-label={isActive ? t("networkUI.buyers.table.pauseAria") : t("networkUI.buyers.table.activateAria")}
                       />
@@ -160,24 +164,24 @@ export function BuyersTable({
                   )}
                   <TableCell className="pr-4" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-0.5">
-                      <ActionIcon
+                      <Can area="buyers" action="edit"><ActionIcon
                         icon={Pencil}
                         label={t("networkUI.common.edit")}
                         onClick={() => onEdit(b.id)}
-                      />
-                      {onAddTfn && (
+                      /></Can>
+                      {onAddTfn && can("buyers", "edit") && (
                         <ActionIcon
                           icon={PhoneForwarded}
                           label={t("buyersRow.addTfn")}
                           onClick={() => onAddTfn(b.id)}
                         />
                       )}
-                      <ActionIcon
+                      <Can area="buyers" action="delete"><ActionIcon
                         icon={Trash2}
                         label={t("networkUI.common.remove")}
                         tone="destructive"
                         onClick={() => onArchive(b.id)}
-                      />
+                      /></Can>
                     </div>
                   </TableCell>
                 </TableRow>

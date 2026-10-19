@@ -24,9 +24,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatCompact, formatCurrency } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
+import { usePermissions } from "@/lib/my-permissions";
 
 export default function BuyersPage() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const buyers = useBuyersStore((s) => s.buyers);
   // Until the first load finishes, show a loading table and "—" in the
   // summary - not "No buyers match" and zeros, which flashed on every refresh.
@@ -200,15 +202,15 @@ export default function BuyersPage() {
         columns={columns}
         onColumns={setColumns}
         onRefresh={() => toast.success(t("networkUI.buyers.toast.refreshed"))}
-        onCreate={() => setInviteOpen(true)}
+        onCreate={can("buyers", "edit") ? () => setInviteOpen(true) : undefined}
       />
 
-      {selectedBuyers.length > 0 && (
+      {selectedBuyers.length > 0 && can("buyers", "edit") && (
         <BulkActionsBar
           count={selectedBuyers.length}
           onPlay={onBulkPlay}
           onPause={onBulkPause}
-          onDelete={onBulkDelete}
+          onDelete={can("buyers", "delete") ? onBulkDelete : undefined}
           onClear={() => setSelectedIds(new Set())}
           entity={t("common.bulk.entities.buyers")}
         />
