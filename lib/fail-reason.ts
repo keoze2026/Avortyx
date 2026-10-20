@@ -15,10 +15,14 @@
  *   "Duplicate call" / "Duplicate call blocked"  ->  "Duplicate Call"
  *   "Campaign cap reached" (any cap)              ->  "Overflow Missed"
  *   "Callerid Blocked" (a caller the team blocked) ->  "Callerid Blocked"
+ *   Any "Destination Missed" / "No Destination"      ->  "No Destination"
+ *     (Sir: never "Destination Missed"; older rows still carry that wording)
  * Anything else: each word starts with a capital, "blocked" dropped.
  */
 /** "Callerid Blocked" / "Caller ID Blocked", as the backend writes it for a blocked caller. */
 const CALLER_ID_BLOCKED = /^caller\s*-?\s*id\s*blocked$/i;
+const DESTINATION_MISSED = /destination\s*missed/i;
+const NO_DESTINATION = /^no[\s_]*destination$/i;
 
 export function failReasonLabel(reason: string | null | undefined): string {
   const raw = (reason ?? "").trim();
@@ -28,6 +32,9 @@ export function failReasonLabel(reason: string | null | undefined): string {
   // the "blocked" trim below would leave just "Callerid".
   if (CALLER_ID_BLOCKED.test(raw)) return "Callerid Blocked";
   if (/cap\s*reached|overflow/i.test(raw)) return "Overflow Missed";
+  // The destination side could not take the call. Old rows say "Destination
+  // Missed" (with or without a reason in brackets); new ones say it already.
+  if (DESTINATION_MISSED.test(raw) || NO_DESTINATION.test(raw)) return "No Destination";
   const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
   return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
 }
@@ -44,11 +51,9 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   // Most specific first: every "Destination missed (...)" before the plain one.
   if (/duplicate/i.test(raw)) return { key: `${k}duplicate` };
   if (CALLER_ID_BLOCKED.test(raw)) return { key: `${k}callerIdBlocked` };
+  // Every "Destination missed (...)" reads No Destination now.
+  if (DESTINATION_MISSED.test(raw) || NO_DESTINATION.test(raw)) return { key: `${k}noDestination` };
   if (/cc\s*full/i.test(raw)) return { key: `${k}destinationFull` };
-  if (/destination\s*missed\s*\(\s*buyer\s*paused/i.test(raw)) return { key: `${k}destBuyerPaused` };
-  if (/destination\s*missed\s*\(\s*tfn\s*off/i.test(raw)) return { key: `${k}destTfnOff` };
-  if (/destination\s*missed\s*\(\s*cap\s*full/i.test(raw)) return { key: `${k}destCapFull` };
-  if (/destination\s*missed/i.test(raw)) return { key: `${k}destinationMissed` };
   if (/destination\s*busy/i.test(raw)) return { key: `${k}destBusy` };
   if (/destination\s*no\s*answer/i.test(raw)) return { key: `${k}destNoAnswer` };
   if (/caller\s*hung\s*up/i.test(raw)) return { key: `${k}callerHungUp` };
