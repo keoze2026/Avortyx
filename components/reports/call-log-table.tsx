@@ -572,6 +572,21 @@ export function CallLogTable({
     [filtered, page, pageSize],
   );
 
+  // Fail Reason comments set in two parallel columns: the first word of every
+  // comment starts at the same place, and so does the second word ("Not" and
+  // "No" in one row, "Connected" and "Destination" in the next). The widths
+  // come from the longest word on the page, and the block sits centred.
+  const reasonLayout = React.useMemo(() => {
+    let first = 1;
+    let rest = 0;
+    for (const c of visible) {
+      const [a, ...b] = failReasonOnScreen(c, locale, t).split(" ");
+      first = Math.max(first, a.length);
+      rest = Math.max(rest, b.join(" ").length);
+    }
+    return { first, rest };
+  }, [visible, locale, t]);
+
   /* ─── Recording playback ───────────────────────────────────────────
    * One <audio> element for the whole table: starting a second recording
    * stops the first, and there's never a stack of orphaned players. The
@@ -916,16 +931,19 @@ export function CallLogTable({
                       )}
                       {columns.failReason && (
                         <TableCell className={`${CELL} text-center`}>
-                          {/* A fixed-width block, centred in the column, with
-                              the words starting at the same place in every
-                              row: centred and still lined up. */}
                           {(() => {
                             const reason = failReasonOnScreen(c, locale, t);
-                            // Words start at the same place in every row; the
-                            // dash (no reason) sits in the middle of the block.
+                            if (!reason) return "\u2014";
+                            const [firstWord, ...others] = reason.split(" ");
                             return (
-                              <div className={reason ? "mx-auto w-24 text-left" : "mx-auto w-24 text-center"}>
-                                {reason || "—"}
+                              <div
+                                className="mx-auto flex whitespace-nowrap text-left"
+                                style={{ width: `${reasonLayout.first + 1 + reasonLayout.rest + 1}ch` }}
+                              >
+                                <span className="shrink-0" style={{ width: `${reasonLayout.first + 1}ch` }}>
+                                  {firstWord}
+                                </span>
+                                <span>{others.join(" ")}</span>
                               </div>
                             );
                           })()}
