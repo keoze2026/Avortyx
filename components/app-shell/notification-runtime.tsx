@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { useAnomalyPopupRuntime } from "@/lib/anomaly-popup-runtime";
 import { useCapWatchRuntime } from "@/lib/cap-watch-runtime";
+import { useDeletedTfnsRuntime } from "@/lib/deleted-tfns-runtime";
 import { useAlertPreferencesStore } from "@/lib/store/alert-preferences-store";
 
 /**
@@ -36,5 +37,6 @@ export function NotificationRuntime() {
   useAutoScheduleRuntime();
   useCapWatchRuntime();
   useAnomalyPopupRuntime();
+  useDeletedTfnsRuntime();
   return <PushNotifications />;
 }

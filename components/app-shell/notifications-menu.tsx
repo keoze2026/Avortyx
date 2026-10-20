@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell, BellRing, CheckCheck, ChevronRight, Inbox } from "lucide-react";
+import { Bell, BellRing, CheckCheck, ChevronRight, Inbox, PhoneOff } from "lucide-react";
 
 import { NotificationRow } from "@/components/app-shell/notification-row";
 import { PopupAlertSettings } from "@/components/app-shell/popup-alert-settings";
@@ -23,6 +23,8 @@ import {
 } from "@/lib/mock/notifications";
 import { anomalyToNotification, capAlertToNotification } from "@/lib/notifications/mappers";
 import { useCapAlertsStore } from "@/lib/store/cap-alerts-store";
+import { useDeletedTfnsStore } from "@/lib/store/deleted-tfns-store";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type TabId = "all" | "critical" | "insights";
@@ -64,7 +66,10 @@ export function NotificationsMenu() {
     { id: "insights", label: t("notificationsUI.menu.tabs.insights") },
   ];
 
-  const unread = items.filter((n) => !n.read).length;
+  // "TFNs deleted" (backend CH-179): pinned above the tabs and counted on the
+  // bell until Seen is clicked. Not part of "Mark all read" on purpose.
+  const deletedCount = useDeletedTfnsStore((s) => s.count);
+  const unread = items.filter((n) => !n.read).length + deletedCount;
 
   /** All alert-severity items (`critical` + `warn`). Used both for the
    *  "Alerts" tab count and the sub-chip counts. */
@@ -160,6 +165,8 @@ export function NotificationsMenu() {
             </button>
           )}
         </div>
+
+        {deletedCount > 0 && <DeletedTfnsCard />}
 
         {/* Tabs */}
         <div className="px-4 pb-3">
@@ -274,5 +281,69 @@ export function NotificationsMenu() {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/** The pinned "TFNs deleted" card. Stays until Seen (Sir, 21 Oct). */
+function DeletedTfnsCard() {
+  const { t } = useTranslation();
+  const count = useDeletedTfnsStore((s) => s.count);
+  const numbers = useDeletedTfnsStore((s) => s.numbers);
+  const markSeen = useDeletedTfnsStore((s) => s.markSeen);
+  const [busy, setBusy] = React.useState(false);
+  const shown = numbers.slice(0, 8);
+  const more = count - shown.length;
+
+  return (
+    <div className="mx-4 mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+      <div className="flex items-start gap-2">
+        <PhoneOff className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-foreground">
+            {count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count))}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{t("deletedTfns.body")}</p>
+          <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+            {shown.map((n) => (
+              <li key={n.id} className="flex items-baseline justify-between gap-2 text-[11px]">
+                <span className="font-mono text-foreground">
+                  {n.number}
+                  {n.carrierCode ? <span className="ml-1 text-muted-foreground">{n.carrierCode}</span> : null}
+                </span>
+                <span className="truncate text-right text-muted-foreground" title={n.reason}>{n.reason}</span>
+              </li>
+            ))}
+          </ul>
+          {more > 0 && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {t("deletedTfns.more").replace("{count}", String(more))}
+            </p>
+          )}
+          <div className="mt-2 flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 px-2 text-xs"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await markSeen();
+                } catch {
+                  toast.error(t("deletedTfns.seenFailed"));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <CheckCheck className="h-3.5 w-3.5" /> {t("deletedTfns.seen")}
+            </Button>
+            <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
+              <Link href={ROUTES.numbers}>{t("deletedTfns.addTfns")}</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

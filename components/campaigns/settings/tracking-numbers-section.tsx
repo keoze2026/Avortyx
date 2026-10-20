@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AttachTrackingNumberDialog } from "@/components/campaigns/settings/attach-tracking-number-dialog";
 import { TrackingNumberEditDialog } from "@/components/campaigns/settings/tracking-number-edit-dialog";
+import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CampaignRiskBadge } from "@/components/campaigns/campaign-risk-badge";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { campaignRisk } from "@/lib/campaign-risk";
 import { compareByRiskThenAssigned } from "@/lib/risk-order";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -59,6 +61,69 @@ export function TrackingNumbersSection({
   // campaign so the user never re-picks a campaign they're already editing.
   const [attachOpen, setAttachOpen] = useState(false);
 
+  // Bulk select (Sir, 21 Oct: check boxes to work on many numbers at once,
+  // like Revo). Only ids still on this campaign count, so a number detached
+  // elsewhere drops out of the selection by itself.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const selectedIds = useMemo(
+    () => numbers.filter((n) => selected.has(n.id)).map((n) => n.id),
+    [numbers, selected],
+  );
+  const allChecked = numbers.length > 0 && selectedIds.length === numbers.length;
+  const someChecked = selectedIds.length > 0 && !allChecked;
+  const toggleAll = (on: boolean) => setSelected(on ? new Set(numbers.map((n) => n.id)) : new Set());
+  const toggleOne = (id: string, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  /**
+   * The same actions as the row switch and the row unlink button, applied to
+   * every selected number. One at a time: each save rolls back to its own
+   * snapshot on failure, and running them together could undo another one.
+   */
+  const runBulk = async (kind: "activate" | "pause" | "detach") => {
+    if (bulkBusy || selectedIds.length === 0) return;
+    setBulkBusy(true);
+    const targets = selectedIds;
+    const failed: string[] = [];
+    for (const id of targets) {
+      try {
+        if (kind === "detach") {
+          await updateNumber(id, { campaignId: undefined, campaignName: undefined });
+        } else {
+          await setNumberStatus(id, kind === "activate" ? "active" : "paused");
+        }
+      } catch {
+        failed.push(id);
+      }
+    }
+    setBulkBusy(false);
+    const ok = targets.length - failed.length;
+    if (failed.length === 0) {
+      const key =
+        kind === "detach"
+          ? "campaignNumbers.bulk.detached"
+          : kind === "activate"
+            ? "campaignNumbers.bulk.activated"
+            : "campaignNumbers.bulk.paused";
+      toast.success(t(key).replace("{count}", String(ok)));
+    } else {
+      toast.error(
+        t("campaignNumbers.bulk.partial")
+          .replace("{ok}", String(ok))
+          .replace("{total}", String(targets.length))
+          .replace("{failed}", String(failed.length)),
+      );
+    }
+    // Keep the ones that could not be changed selected, so they are easy to find.
+    setSelected(new Set(failed));
+  };
+
   const handleDetach = (id: string, label: string) => {
     // Detaching = clear the campaign link so the number drops out of this
     // section. We don't delete the number itself.
@@ -88,9 +153,21 @@ export function TrackingNumbersSection({
           </p>
         </div>
         {!readOnly && (
-          <Button size="sm" onClick={() => setAttachOpen(true)}>
-            <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.add")}
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <BulkActionsBar
+                count={bulkBusy ? 0 : selectedIds.length}
+                onPlay={() => void runBulk("activate")}
+                onPause={() => void runBulk("pause")}
+                onDetach={() => void runBulk("detach")}
+                onClear={() => setSelected(new Set())}
+                entity={t("campaignNumbers.bulk.entity")}
+              />
+            )}
+            <Button size="sm" onClick={() => setAttachOpen(true)}>
+              <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.add")}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -113,7 +190,16 @@ export function TrackingNumbersSection({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-6 uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.number")}</TableHead>
+                {!readOnly && (
+                  <TableHead className="w-10 pl-6">
+                    <Checkbox
+                      checked={allChecked ? true : someChecked ? "indeterminate" : false}
+                      onCheckedChange={(v) => toggleAll(v === true)}
+                      aria-label={t("campaignNumbers.bulk.selectAll")}
+                    />
+                  </TableHead>
+                )}
+                <TableHead className={cn(readOnly && "pl-6", "uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.number")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.type")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
@@ -129,8 +215,17 @@ export function TrackingNumbersSection({
               {numbers.map((n) => {
                 const e164 = toE164(n.number);
                 return (
-                  <TableRow key={n.id}>
-                    <TableCell className="pl-6 font-mono text-xs whitespace-nowrap">
+                  <TableRow key={n.id} data-state={selected.has(n.id) ? "selected" : undefined}>
+                    {!readOnly && (
+                      <TableCell className="w-10 pl-6">
+                        <Checkbox
+                          checked={selected.has(n.id)}
+                          onCheckedChange={(v) => toggleOne(n.id, v === true)}
+                          aria-label={t("campaignNumbers.bulk.selectRow").replace("{number}", e164)}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell className={cn(readOnly && "pl-6", "font-mono text-xs whitespace-nowrap")}>
                       {e164}
                     </TableCell>
                     <TableCell>

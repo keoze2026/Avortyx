@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Pause, Play, Trash2 } from "lucide-react";
+import { Pause, Play, Trash2, Unlink } from "lucide-react";
 
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,9 @@ interface BulkActionsBarProps {
   onPause: () => void;
   /** Leave out to hide the delete button (the role has no Delete tick). */
   onDelete?: () => void;
+  /** Leave out to hide the detach button. Campaign → Tracking Numbers passes it
+   *  to take the selected numbers off the campaign (the numbers are kept). */
+  onDetach?: () => void;
   onClear?: () => void;
   /** Optional label that names what's being selected (e.g. "campaigns"). */
   entity?: string;
@@ -29,6 +32,7 @@ export function BulkActionsBar({
   onPlay,
   onPause,
   onDelete,
+  onDetach,
   onClear,
   entity,
   className,
@@ -39,6 +43,7 @@ export function BulkActionsBar({
   const tplPlay = t("common.bulk.playAria");
   const tplPause = t("common.bulk.pauseAria");
   const tplDelete = t("common.bulk.deleteAria");
+  const tplDetach = t("common.bulk.detachAria");
   const fill = (s: string) =>
     s.replace("{count}", String(count)).replace("{entity}", entity ?? "");
 
@@ -63,6 +68,15 @@ export function BulkActionsBar({
         disabled={disabled}
         tone="muted"
       />
+      {onDetach && (
+        <BulkBtn
+          icon={Unlink}
+          label={fill(tplDetach)}
+          onClick={onDetach}
+          disabled={disabled}
+          tone="destructive"
+        />
+      )}
       {onDelete && (
         <BulkBtn
           icon={Trash2}
