@@ -9,6 +9,8 @@ import type { Paginated } from "@/lib/api/types";
 export interface SpamEntry {
   id: string;
   number: string;
+  /** Set when the block belongs to one publisher's numbers only. */
+  publisherId?: string;
   reason?: string;
   isActive: boolean;
   expiresAt?: number;
@@ -31,6 +33,7 @@ interface SpamEntryWire {
    *  any older response that hasn't been migrated yet. */
   phoneNumber?: string;
   number?: string;
+  publisherId?: string | null;
   reason?: string;
   isActive: boolean;
   expiresAt?: string | null;
@@ -58,6 +61,7 @@ function wireToEntry(w: SpamEntryWire): SpamEntry {
     id: w.id,
     // Prefer the canonical `phone_number` field; fall back to legacy `number`.
     number: w.phoneNumber ?? w.number ?? "",
+    publisherId: w.publisherId ?? undefined,
     reason: w.reason,
     isActive: !!w.isActive,
     expiresAt: toTs(w.expiresAt ?? null),
@@ -130,7 +134,9 @@ function extractList<T>(
 
 export const spamService = {
   /* ─── Blacklist ──────────────────────────────────────────────────── */
-  async listBlacklist(query: { page?: number; pageSize?: number } = {}): Promise<Paginated<SpamEntry>> {
+  /** `publisherId` lists the blocks of that publisher's numbers only; without it the
+   *  workspace list comes back (publisher-scoped blocks are left out of it). */
+  async listBlacklist(query: { page?: number; pageSize?: number; publisherId?: string } = {}): Promise<Paginated<SpamEntry>> {
     const raw = await http.get<unknown>("/api/spam/blacklist", { query });
     const page = extractList<SpamEntryWire>(raw, "/api/spam/blacklist");
     return { ...page, items: page.items.map(wireToEntry) };
@@ -138,13 +144,13 @@ export const spamService = {
   async getBlacklistEntry(id: string): Promise<SpamEntry> {
     return wireToEntry(await http.get<SpamEntryWire>(`/api/spam/blacklist/${id}`));
   },
-  async createBlacklist(input: { number: string; reason?: string }): Promise<SpamEntry> {
+  async createBlacklist(input: { number: string; reason?: string; publisherId?: string }): Promise<SpamEntry> {
     // Backend expects `phone_number` (not `number`). The http layer
     // camel-cases this to snake on the wire — pass `phoneNumber` and it
     // arrives as `phone_number`. Previously sending `number` 422'd.
     return wireToEntry(
       await http.post<SpamEntryWire>("/api/spam/blacklist", {
-        body: { phoneNumber: input.number, reason: input.reason },
+        body: { phoneNumber: input.number, reason: input.reason, publisherId: input.publisherId },
       }),
     );
   },

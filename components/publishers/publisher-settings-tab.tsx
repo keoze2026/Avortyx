@@ -42,6 +42,7 @@ import {
   PartnerMembersSection,
   type PartnerMembersLabels,
 } from "@/components/network/partner-members-section";
+import { PublisherBlockedNumbers } from "@/components/publishers/publisher-blocked-numbers";
 import { usePartnerMembers } from "@/hooks/use-partner-members";
 import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useTranslation } from "@/hooks/use-translation";
@@ -173,6 +174,9 @@ export function PublisherSettingsTab({ publisher }: Props) {
         description={t("networkUI.publishers.settings.permissionsDesc")}
         toggleAria={t("networkUI.publishers.settings.permToggle")}
       />
+
+      {/* Callers blocked on this publisher's numbers only. */}
+      <PublisherBlockedNumbers publisherId={publisher.id} />
 
       <PartnerReportingVisibility
         kind="publisher"

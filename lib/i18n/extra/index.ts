@@ -22,10 +22,11 @@ import { ivr } from "./ivr";
 import { reports } from "./reports";
 import { marketplace } from "./marketplace";
 import { risk } from "./risk";
+import { publisherBlocks } from "./publisher-blocks";
 import { ownerCosts } from "./owner-costs";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
