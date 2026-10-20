@@ -16,17 +16,82 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/hooks/use-translation";
+import { analyticsService } from "@/lib/api/services/analytics.service";
 import { spamService, type SpamEntry } from "@/lib/api/services/spam.service";
+import { numberMatches } from "@/lib/call-search";
 
 const digitsOf = (v: string) => v.replace(/\D/g, "");
 /** "6283585660" / "+16283585660" -> "+6283585660" / "+16283585660" for display. */
 const shown = (n: string) => `+${digitsOf(n)}`;
+/** Two spellings of one number ("1" + 10 digits, or just the 10) share a key. */
+const keyOf = (n: string) => digitsOf(n).slice(-10);
+
+interface Caller {
+  key: string;
+  number: string;
+  count: number;
+  last: number;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const SUGGESTIONS_SHOWN = 8;
 
 export function PublisherBlockedNumbers({ publisherId }: { publisherId: string }) {
   const { t } = useTranslation();
   const [entries, setEntries] = React.useState<SpamEntry[] | null>(null);
   const [value, setValue] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+
+  // Lookup: who has actually called this publisher's numbers lately. Loaded
+  // the first time the box is used, from the same call log Reports reads.
+  const [callers, setCallers] = React.useState<Caller[] | null>(null);
+  const [open, setOpen] = React.useState(false);
+  const loadingCallers = React.useRef(false);
+
+  const loadCallers = React.useCallback(async () => {
+    if (loadingCallers.current || callers) return;
+    loadingCallers.current = true;
+    try {
+      const now = new Date();
+      const page = await analyticsService.calls({
+        publisherId,
+        dateFrom: ymd(new Date(now.getTime() - 29 * 86_400_000)),
+        dateTo: ymd(now),
+        pageSize: 500,
+      });
+      const byKey = new Map<string, Caller>();
+      for (const c of page.items) {
+        const number = c.callerNumber;
+        const key = keyOf(number ?? "");
+        // Anonymous / private callers have no number to block.
+        if (digitsOf(number ?? "").length < 7) continue;
+        const row = byKey.get(key);
+        if (row) {
+          row.count += 1;
+          row.last = Math.max(row.last, c.startedAt ?? 0);
+        } else {
+          byKey.set(key, { key, number, count: 1, last: c.startedAt ?? 0 });
+        }
+      }
+      setCallers([...byKey.values()].sort((a, b) => b.count - a.count || b.last - a.last));
+    } catch {
+      // Typing a number still works; the lookup tries again on the next click.
+      setCallers(null);
+    } finally {
+      loadingCallers.current = false;
+    }
+  }, [publisherId, callers]);
+
+  const blockedKeys = React.useMemo(() => new Set((entries ?? []).map((e) => keyOf(e.number))), [entries]);
+  const suggestions = React.useMemo(() => {
+    if (!callers) return [];
+    const q = digitsOf(value);
+    return callers
+      .filter((c) => !blockedKeys.has(c.key))
+      .filter((c) => (q.length === 0 ? true : q.length < 4 ? digitsOf(c.number).includes(q) : numberMatches(c.number, q)))
+      .slice(0, SUGGESTIONS_SHOWN);
+  }, [callers, blockedKeys, value]);
 
   const load = React.useCallback(async () => {
     try {
@@ -102,9 +167,21 @@ export function PublisherBlockedNumbers({ publisherId }: { publisherId: string }
       >
         <Input
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+            void loadCallers();
+          }}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+          }}
           placeholder={t("publisherBlocks.placeholder")}
           inputMode="tel"
+          autoComplete="off"
           className="h-8 max-w-xs text-xs"
         />
         <Button type="submit" size="sm" disabled={busy || !digitsOf(value)}>
@@ -112,6 +189,44 @@ export function PublisherBlockedNumbers({ publisherId }: { publisherId: string }
           {t("publisherBlocks.block")}
         </Button>
       </form>
+
+      {open && (
+        <div className="border-t border-border bg-secondary/20">
+          <div className="px-4 pt-2.5 text-[11px] text-muted-foreground">{t("publisherBlocks.recentTitle")}</div>
+          {callers === null ? (
+            <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {t("publisherBlocks.recentLoading")}
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-muted-foreground">{t("publisherBlocks.recentEmpty")}</div>
+          ) : (
+            <ul className="max-h-56 overflow-y-auto py-1">
+              {suggestions.map((c) => (
+                <li key={c.key}>
+                  <button
+                    type="button"
+                    // mouse down (not click) so the box keeps focus until the pick lands
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setValue(shown(c.number));
+                      setOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-1.5 text-left transition-colors hover:bg-secondary"
+                  >
+                    <span className="font-mono text-sm">{shown(c.number)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {c.count === 1
+                        ? t("publisherBlocks.recentCall")
+                        : t("publisherBlocks.recentCalls").replace("{count}", String(c.count))}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {entries === null ? (
         <div className="flex items-center gap-2 border-t border-border px-4 py-4 text-xs text-muted-foreground">

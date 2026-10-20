@@ -803,7 +803,7 @@ export function CallLogTable({
                 {columns.duration && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
                 {columns.status && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.failReason && <TableHead className="text-left">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
+                {columns.failReason && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
                 <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
               </TableRow>
@@ -915,8 +915,11 @@ export function CallLogTable({
                         </TableCell>
                       )}
                       {columns.failReason && (
-                        <TableCell className={`${CELL} text-left`}>
-                          {failReasonOnScreen(c, locale, t) || "—"}
+                        <TableCell className={`${CELL} text-center`}>
+                          {/* A fixed-width block, centred in the column, with
+                              the words starting at the same place in every
+                              row: centred and still lined up. */}
+                          <div className="mx-auto w-28 text-left">{failReasonOnScreen(c, locale, t) || "—"}</div>
                         </TableCell>
                       )}
                       {columns.recording && (
