@@ -553,6 +553,24 @@ export default function ReportsPage() {
         {/* Lives at the page level, not inside CallSummaryTable, so it's
             reachable to clear the filter even if the operator hides the
             summary card via the toolbar's view-settings toggle. */}
+        {drill && (
+          <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">
+              {t("toolsUI.reports.summary.filteredBy")}{" "}
+              <span className="font-semibold text-accent">{drill.label}</span>
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-7 gap-1 px-2 text-xs"
+              onClick={() => setDrill(null)}
+            >
+              <X className="h-3 w-3" />
+              {t("toolsUI.reports.summary.resetFilter")}
+            </Button>
+          </div>
+        )}
+
         {statusFilter && (
           <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
             <span className="text-muted-foreground">
