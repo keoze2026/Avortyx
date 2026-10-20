@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Download, Settings, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Copy, Download, Filter, Settings, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { ExportMenu } from "@/components/shared/export-menu";
@@ -1045,9 +1045,9 @@ interface CallSummaryTableProps {
   /** The row clicked to narrow the whole report, or null for everything. */
   drill?: SummaryDrill | null;
   /**
-   * Click a row on any tab (a campaign, publisher, buyer, dialed number,
+   * Use the filter button on a row of any tab (a campaign, publisher, buyer, dialed number,
    * destination, date, …) to show only its calls across the report (chart,
-   * donut, summary, call log, export); click it again, or the chip, to show
+   * donut, summary, call log, export); click it again, or "Show all calls" above the table, to show
    * all. Called with null to clear.
    */
   onDrillChange?: (drill: SummaryDrill | null) => void;
@@ -1079,6 +1079,12 @@ export function CallSummaryTable({
   const [tab, setTab] = React.useState<GroupKey>("campaign");
   /** A row's name as shown on screen and in the export (see localizeRowLabel). */
   const showLabel = (label: string) => localizeRowLabel(label, tab, locale, t);
+  const copyLabel = (label: string) => {
+    const done = () => toast.success(t("toolsUI.reports.summary.drill.copied"));
+    const fail = () => toast.error(t("toolsUI.reports.summary.drill.copyFailed"));
+    if (!navigator.clipboard?.writeText) return fail();
+    navigator.clipboard.writeText(label).then(done, fail);
+  };
   /** In exported files names stay as entered, so they match the other pages. */
   const exportLabel = (label: string) => localizeRowLabel(label, tab, locale, t, false);
   const [visibleState, setVisible] = React.useState<Record<ColumnKey, boolean>>(ALL_VISIBLE);
@@ -1315,20 +1321,6 @@ export function CallSummaryTable({
           })}
         </div>
         <div className="flex items-center gap-1">
-          {/* A row was clicked: say which, and one click shows everything again. */}
-          {onDrillChange && drill && (
-            <button
-              type="button"
-              onClick={() => onDrillChange(null)}
-              title={t("toolsUI.reports.summary.drill.clearAny")}
-              className="mr-1 inline-flex max-w-[260px] items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <span className="truncate">
-                {t("toolsUI.reports.summary.drill.only").replace("{name}", drill.label)}
-              </span>
-              <X className="h-3 w-3 shrink-0" aria-label={t("toolsUI.reports.summary.drill.clearAny")} />
-            </button>
-          )}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.reports.callLog.columnSettings")}>
@@ -1376,6 +1368,26 @@ export function CallSummaryTable({
           )}
         </div>
       </div>
+
+      {/* A filter is on: say so across the full width, with one obvious way back to all rows. */}
+      {onDrillChange && drill && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-accent/5 px-6 py-2">
+          <span className="min-w-0 truncate text-sm text-foreground">
+            {t("toolsUI.reports.summary.drill.showing")}{" "}
+            <span className="select-text font-semibold">{drill.label}</span>
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onDrillChange(null)}
+            className="h-8 gap-1.5"
+          >
+            <X className="h-3.5 w-3.5" />
+            {t("toolsUI.reports.summary.drill.clearAny")}
+          </Button>
+        </div>
+      )}
 
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -1427,25 +1439,7 @@ export function CallSummaryTable({
                   return (
                     <TableRow
                       key={r.key}
-                      className={cn(pickable && "cursor-pointer", picked && "bg-muted/60 hover:bg-muted/60")}
-                      onClick={pickable ? pick : undefined}
-                      onKeyDown={
-                        pickable
-                          ? (e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                pick();
-                              }
-                            }
-                          : undefined
-                      }
-                      tabIndex={pickable ? 0 : undefined}
-                      aria-pressed={pickable ? picked : undefined}
-                      title={
-                        pickable
-                          ? t(picked ? "toolsUI.reports.summary.drill.rowHintAnyActive" : "toolsUI.reports.summary.drill.rowHintAny")
-                          : undefined
-                      }
+                      className={cn(picked && "bg-muted/60 hover:bg-muted/60")}
                     >
                       {/* Names start on one left edge so they line up under each other;
                           normal text colour, no underline (the row is still clickable). */}
@@ -1453,7 +1447,36 @@ export function CallSummaryTable({
                         className="pl-6 text-left font-medium"
                         title={showLabel(r.label) !== r.label ? r.label : undefined}
                       >
-                        {showLabel(r.label)}
+                        <span className="inline-flex max-w-full items-center gap-1.5">
+                          {/* Plain text: it can be selected and copied without anything else happening. */}
+                          <span className="select-text truncate">{showLabel(r.label)}</span>
+                          {r.key && r.key !== NOT_AVAILABLE && NUMBER_TABS.has(tab) && (
+                            <button
+                              type="button"
+                              onClick={() => copyLabel(r.label)}
+                              title={t("toolsUI.reports.summary.drill.copy")}
+                              aria-label={t("toolsUI.reports.summary.drill.copy")}
+                              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {pickable && (
+                            <button
+                              type="button"
+                              onClick={pick}
+                              aria-pressed={picked}
+                              title={t(picked ? "toolsUI.reports.summary.drill.rowHintAnyActive" : "toolsUI.reports.summary.drill.rowHintAny")}
+                              aria-label={t(picked ? "toolsUI.reports.summary.drill.rowHintAnyActive" : "toolsUI.reports.summary.drill.rowHintAny")}
+                              className={cn(
+                                "shrink-0 rounded p-1 transition-colors hover:bg-muted",
+                                picked ? "bg-accent/15 text-accent" : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              <Filter className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </span>
                       </TableCell>
                       {visible.live && (
                         <TableCell

@@ -15,6 +15,10 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.summary.drill.rowHintAnyActive": "Show all calls again",
     "toolsUI.reports.summary.drill.clearAny": "Show all calls",
     "toolsUI.reports.summary.drill.only": "Only: {name}",
+    "toolsUI.reports.summary.drill.showing": "Showing only:",
+    "toolsUI.reports.summary.drill.copy": "Copy",
+    "toolsUI.reports.summary.drill.copied": "Copied",
+    "toolsUI.reports.summary.drill.copyFailed": "Couldn't copy",
     // Fail reasons, Call Summary values, PIN screen and page texts.
     "toolsUI.reports.callLog.statusLabel.busy": "Busy",
     "toolsUI.reports.callLog.exportError": "Couldn't export calls",
@@ -91,6 +95,10 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.summary.drill.rowHintAnyActive": "Снова показать все звонки",
     "toolsUI.reports.summary.drill.clearAny": "Показать все звонки",
     "toolsUI.reports.summary.drill.only": "Только: {name}",
+    "toolsUI.reports.summary.drill.showing": "Показаны только:",
+    "toolsUI.reports.summary.drill.copy": "Копировать",
+    "toolsUI.reports.summary.drill.copied": "Скопировано",
+    "toolsUI.reports.summary.drill.copyFailed": "Не удалось скопировать",
     // Fail reasons, Call Summary values, PIN screen and page texts.
     "toolsUI.reports.callLog.statusLabel.busy": "Занято",
     "toolsUI.reports.callLog.exportError": "Не удалось выгрузить звонки",
@@ -167,6 +175,10 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.summary.drill.rowHintAnyActive": "すべてのコールを再表示",
     "toolsUI.reports.summary.drill.clearAny": "すべてのコールを表示",
     "toolsUI.reports.summary.drill.only": "絞り込み: {name}",
+    "toolsUI.reports.summary.drill.showing": "表示中:",
+    "toolsUI.reports.summary.drill.copy": "コピー",
+    "toolsUI.reports.summary.drill.copied": "コピーしました",
+    "toolsUI.reports.summary.drill.copyFailed": "コピーできませんでした",
     // Fail reasons, Call Summary values, PIN screen and page texts.
     "toolsUI.reports.callLog.statusLabel.busy": "話し中",
     "toolsUI.reports.callLog.exportError": "コールをエクスポートできませんでした",
@@ -243,6 +255,10 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.summary.drill.rowHintAnyActive": "重新显示所有通话",
     "toolsUI.reports.summary.drill.clearAny": "显示所有通话",
     "toolsUI.reports.summary.drill.only": "仅显示：{name}",
+    "toolsUI.reports.summary.drill.showing": "仅显示：",
+    "toolsUI.reports.summary.drill.copy": "复制",
+    "toolsUI.reports.summary.drill.copied": "已复制",
+    "toolsUI.reports.summary.drill.copyFailed": "复制失败",
     // Fail reasons, Call Summary values, PIN screen and page texts.
     "toolsUI.reports.callLog.statusLabel.busy": "占线",
     "toolsUI.reports.callLog.exportError": "无法导出通话",
