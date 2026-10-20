@@ -109,8 +109,8 @@ export function TrackingNumbersSection({
                 <TableHead className="pl-6 uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.number")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.type")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
-                <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
-                <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
+                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
+                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("campaignRisk.column")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
                 {!readOnly && (
@@ -150,11 +150,15 @@ export function TrackingNumbersSection({
                       />
                       )}
                     </TableCell>
+                    {/* Centred under the header, words starting at the same
+                        place in every row (same as the call log's Fail Reason). */}
                     <TableCell className="text-xs text-muted-foreground">
-                      {n.publisherName ?? "—"}
+                      <div className="mx-auto w-28 truncate text-left" title={n.publisherName ?? undefined}>
+                        {n.publisherName ?? "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="font-mono text-xs tabular-nums">
-                      {formatCurrency(n.payoutPerCall ?? 0, true)}
+                      <div className="mx-auto w-16 text-left">{formatCurrency(n.payoutPerCall ?? 0, true)}</div>
                     </TableCell>
                     <TableCell>
                       <CampaignRiskBadge risk={campaignRisk([n])} />
