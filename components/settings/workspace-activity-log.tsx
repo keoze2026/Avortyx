@@ -442,12 +442,7 @@ function ActivityRow({
       <TableRow className={cn(open && "border-b-0 bg-secondary/20")}>
         <TableCell className="px-3 py-1.5 text-left">
           <div className="flex items-center gap-2">
-            <span
-              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-background shadow"
-              style={{
-                background: `linear-gradient(135deg, ${event.actor.avatar[0]}, ${event.actor.avatar[1]})`,
-              }}
-            >
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[9px] font-bold text-accent ring-1 ring-accent/30">
               {event.actor.initials}
             </span>
             <span className="truncate text-xs font-normal">{event.actor.name}</span>

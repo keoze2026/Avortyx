@@ -32,6 +32,30 @@ import { workspaceService } from "@/lib/api/services/workspace.service";
 import type { Member, MemberRole, MemberStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 
+/** Sir's order: Admin, Manager, Billing, Viewer, Publisher, Buyer, each group
+ *  kept together. Billing is the billing login (a Viewer by role), shown right
+ *  after the Managers. Other roles, custom ones included, sit with the Viewers. */
+const ROLE_RANK: Record<string, number> = {
+  admin: 0,
+  reseller: 0,
+  manager: 1,
+  viewer: 3,
+  agent: 3,
+  publisher: 4,
+  buyer: 5,
+};
+const BILLING_RANK = 2;
+const OTHER_STAFF_RANK = 3;
+
+function isBillingLogin(m: Member): boolean {
+  return m.name.trim().toLowerCase() === "billing" || m.email.split("@")[0].toLowerCase() === "billing";
+}
+
+function memberRank(m: Member): number {
+  if (m.role === "viewer" && isBillingLogin(m)) return BILLING_RANK;
+  return ROLE_RANK[m.role] ?? OTHER_STAFF_RANK;
+}
+
 interface WorkspaceMembersTableProps {
   members: Member[];
   onMembersChange: (next: Member[]) => void;
@@ -48,6 +72,14 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
   React.useEffect(() => {
     setPage(0);
   }, [pageSize, members.length]);
+  const ordered = React.useMemo(
+    () =>
+      [...members].sort(
+        (a, b) =>
+          memberRank(a) - memberRank(b) || a.name.localeCompare(b.name),
+      ),
+    [members],
+  );
 
   const onInvite = async ({ email, role }: { name?: string; email: string; role: MemberRole }) => {
     try {
@@ -142,18 +174,14 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members
+                {ordered
                   .slice(page * pageSize, page * pageSize + pageSize)
                   .map((m) => (
                   <TableRow key={m.id}>
                     <TableCell className="pl-4 text-left">
                       <div className="flex items-center gap-3">
-                        <span
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-background shadow"
-                          style={{
-                            background: `linear-gradient(135deg, ${m.avatar[0]}, ${m.avatar[1]})`,
-                          }}
-                        >
+                        {/* One colour for everyone: the portal's blue, as on the top bar. */}
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[11px] font-bold text-accent ring-1 ring-accent/30">
                           {m.initials}
                         </span>
                         <span className="truncate text-sm font-medium">{m.name}</span>
