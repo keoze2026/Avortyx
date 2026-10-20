@@ -71,6 +71,13 @@ export function TrackingNumbersSection({
     );
   };
 
+  // One shared width per column (the longest value in it): every value then
+  // starts at the same place, and that block is centred under the heading.
+  const longest = (values: string[]) => values.reduce((m, v) => Math.max(m, v.length), 1);
+  const nameCh = Math.min(30, longest(numbers.map((n) => n.label ?? "")) + 3);
+  const publisherCh = Math.min(30, longest(numbers.map((n) => n.publisherName ?? "—")) + 1);
+  const payoutCh = longest(numbers.map((n) => formatCurrency(n.payoutPerCall ?? 0, true)));
+
   return (
     <section className="space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -133,9 +140,12 @@ export function TrackingNumbersSection({
                     </TableCell>
                     <TableCell className="min-w-[160px] text-center text-sm">
                       {readOnly ? (
-                        <span className={cn(!n.label && "text-muted-foreground")}>{n.label || "—"}</span>
+                        <div className="mx-auto text-left" style={{ width: `${nameCh}ch` }}>
+                          <span className={cn(!n.label && "text-muted-foreground")}>{n.label || "—"}</span>
+                        </div>
                       ) : (
                       <NumberNameCell
+                        widthCh={nameCh}
                         value={n.label ?? ""}
                         placeholder={t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder")}
                         ariaLabel={t("trafficUI.campaigns.settings.trackingNumbers.name.aria").replace("{number}", e164)}
@@ -150,12 +160,17 @@ export function TrackingNumbersSection({
                       />
                       )}
                     </TableCell>
-                    {/* Values centred in their column, like the Name column. */}
-                    <TableCell className="text-center text-xs text-muted-foreground">
-                      {n.publisherName ?? "—"}
+                    {/* The values start at the same place in every row, and that
+                        block is centred under the heading. */}
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="mx-auto whitespace-nowrap text-left" style={{ width: `${publisherCh}ch` }}>
+                        {n.publisherName ?? "—"}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-center font-mono text-xs tabular-nums">
-                      {formatCurrency(n.payoutPerCall ?? 0, true)}
+                    <TableCell className="font-mono text-xs tabular-nums">
+                      <div className="mx-auto whitespace-nowrap text-left" style={{ width: `${payoutCh}ch` }}>
+                        {formatCurrency(n.payoutPerCall ?? 0, true)}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <CampaignRiskBadge risk={campaignRisk([n])} />
@@ -237,11 +252,14 @@ export function TrackingNumbersSection({
  * text until hovered or focused, so the table reads the same as before.
  */
 function NumberNameCell({
+  widthCh,
   value,
   placeholder,
   ariaLabel,
   onSave,
 }: {
+  /** Width shared by the whole column, so every name starts at the same place. */
+  widthCh: number;
   value: string;
   placeholder: string;
   ariaLabel: string;
@@ -276,7 +294,8 @@ function NumberNameCell({
           requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
         }
       }}
-      className="mx-auto h-8 max-w-[240px] border-transparent bg-transparent px-2 text-center text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
+      style={{ width: `${widthCh}ch` }}
+      className="mx-auto h-8 max-w-[240px] border-transparent bg-transparent px-2 text-left text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
     />
   );
 }
