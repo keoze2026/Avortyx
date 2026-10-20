@@ -262,7 +262,7 @@ if (typeof window !== "undefined") {
  * If the status can't be loaded (`unavailable`) it does not block: the server
  * is the authority and answers 423 on its own if the data is protected.
  */
-export function useReportsAccess(needsPin: boolean): { canFetch: boolean; locked: boolean } {
+export function useReportsAccess(needsPin: boolean): { canFetch: boolean; locked: boolean; checking: boolean } {
   const load = useSecurityStore((s) => s.load);
   const configured = useSecurityStore((s) => s.configured);
   const unlocked = useSecurityStore((s) => s.unlocked);
@@ -275,5 +275,6 @@ export function useReportsAccess(needsPin: boolean): { canFetch: boolean; locked
 
   const known = load === "ready" || load === "unavailable";
   const locked = needsPin && configured && !unlocked;
-  return { canFetch: known && !locked, locked };
+  // `checking`: still finding out whether a PIN is set, so nothing can load yet.
+  return { canFetch: known && !locked, locked, checking: !known };
 }

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { BarChart3, Loader2, PieChart, X } from "lucide-react";
+
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 import { CallLogTable } from "@/components/reports/call-log-table";
@@ -179,6 +181,8 @@ export default function ReportsPage() {
    */
   const viewKey = fromKey && access.canFetch ? `${fromKey}|${toKey ?? fromKey}|${timeZone}` : "";
   const [loadedKey, setLoadedKey] = useState("");
+  // The view whose first load has finished (successfully or not).
+  const [settledKey, setSettledKey] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
   // Saved data of exactly this view (lib/reports-cache.ts): shown at once while
   // the fresh copy loads behind it - never another day's figures.
@@ -253,6 +257,7 @@ export default function ReportsPage() {
         loadInFlight.current = false;
         manualRefresh.current = false;
         setRangeLoading(false);
+        setSettledKey(viewKey);
       });
     // No cleanup: a newer load bumps loadSeq, which is what discards this one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -264,7 +269,18 @@ export default function ReportsPage() {
   const viewCalls = showingView ? rangeCalls : (cached?.calls ?? NO_RANGE_CALLS);
   const viewSummaries = showingView ? summaries : (cached?.summaries ?? NO_SUMMARIES);
   /** Loading a range with nothing to show yet (not a refresh, no saved copy). */
-  const switchingView = rangeLoading && !showingView && !cached;
+  /*
+   * Nothing to show yet for this view: still finding out whether a PIN is set,
+   * or the first download of this range is under way. Until it is in, the page
+   * shows ONE loading panel instead of the report with empty charts and only
+   * the live figures filled in (the "half report" for the first seconds after a
+   * refresh). A failed load settles too, so it never spins forever.
+   */
+  const initialLoading =
+    !access.locked &&
+    !showingView &&
+    !cached &&
+    ((viewKey === "" && access.checking) || (viewKey !== "" && settledKey !== viewKey));
 
   // A range that ends before today never changes, so the timer does not reload
   // it; a click on Refresh always does. Never while a load is running.
@@ -449,17 +465,21 @@ export default function ReportsPage() {
         onCancel={cancelHistorical}
         cancelLabel={REPORTS_POLICY.includeToday ? undefined : t("toolsUI.reports.page.backToDashboard")}
       >
-        {/* A new range is loading: nothing from the previous range is shown,
-            and this says so instead of the panels reading as "no calls". */}
-        {switchingView && (
-          <div
-            role="status"
-            className="mb-3 flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground"
-          >
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {t("common.loadingRange").replace("{range}", fromKey === toKey || !toKey ? (fromKey ?? "") : `${fromKey} – ${toKey}`)}
+        {initialLoading ? (
+          <div role="status" aria-live="polite" className="space-y-4">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {t("common.loadingRange").replace("{range}", fromKey === toKey || !toKey ? (fromKey ?? "") : `${fromKey} – ${toKey}`)}
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <Skeleton className="h-64 rounded-xl lg:col-span-2" />
+              <Skeleton className="h-64 rounded-xl" />
+            </div>
+            <Skeleton className="h-56 rounded-xl" />
+            <Skeleton className="h-72 rounded-xl" />
           </div>
-        )}
+        ) : (
+        <>
         {/* Row 1 — Hourly distribution (2/3) + perf card over donut (1/3).
             On mobile, only one of the two charts is shown at a time and the
             toggle button below the toolbar swaps between them. */}
@@ -603,6 +623,8 @@ export default function ReportsPage() {
               setRangeCalls((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
             }
           />
+        )}
+        </>
         )}
       </ReportsPinGate>
     </>
