@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useTranslation } from "@/hooks/use-translation";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePermissions } from "@/lib/my-permissions";
 import { CallDetailSheet } from "@/components/calls/call-detail-sheet";
 import { ALL_COLUMNS, CallsToolbar } from "@/components/calls/calls-toolbar";
 import { CallsTable } from "@/components/calls/calls-table";
@@ -68,6 +69,10 @@ function callExportColumns(destinationNames: ReadonlyMap<string, string>, withRe
 export default function CallsPage() {
   const { t } = useTranslation();
   const partnerCan = usePartnerPermissions().can;
+  // Staff logins whose role has Reporting > Download unticked get no export
+  // button either (Sir, 20 Oct: restrict downloads for Xypheria). The file is
+  // built here in the browser, so the server-side block alone never stopped it.
+  const canDownload = usePermissions().can("reporting", "download") && partnerCan("download_reports");
   const [query, setQuery] = useState("");
   const [range, setRange] = useState<DateRange>("7d");
   const [statuses, setStatuses] = useState<Set<CallStatus>>(new Set());
@@ -226,7 +231,7 @@ export default function CallsPage() {
           campaigns={campaigns}
           visibleColumns={visibleColumns}
           onToggleColumn={toggleColumn}
-          onExport={partnerCan("download_reports") ? onExport : undefined}
+          onExport={canDownload ? onExport : undefined}
           count={filtered.length}
           total={rangeCalls.length}
         />

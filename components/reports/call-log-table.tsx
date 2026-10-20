@@ -83,6 +83,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePermissions } from "@/lib/my-permissions";
 import { cn } from "@/lib/utils";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
@@ -522,6 +523,10 @@ export function CallLogTable({
   // And what the admin switched off under this partner's Permissions:
   // Audio Recording, Download Reports, Block Numbers, Manage Traffic.
   const partnerCan = usePartnerPermissions().can;
+  // Staff logins whose role has Reporting > Download unticked get no export
+  // button either (Sir, 20 Oct: restrict downloads for Xypheria). The file is
+  // built here in the browser, so the server-side block alone never stopped it.
+  const canDownload = usePermissions().can("reporting", "download") && partnerCan("download_reports");
   const columns = React.useMemo(() => {
     const out = { ...columnsState };
     if (role === "buyer") out.payout = false;
@@ -800,7 +805,7 @@ export function CallLogTable({
               </div>
             </PopoverContent>
           </Popover>
-          {partnerCan("download_reports") && (
+          {canDownload && (
             <ExportMenu onExport={onExport}>
               <Button
                 variant="ghost"

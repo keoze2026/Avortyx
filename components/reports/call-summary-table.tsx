@@ -41,6 +41,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePermissions } from "@/lib/my-permissions";
 import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
 
@@ -1104,7 +1105,12 @@ export function CallSummaryTable({
   // visibility (buyer / publisher logins only; never the admin's own view).
   const partnerHidden = usePartnerHiddenColumns().summary;
   // Download Reports switched off for this partner login: no export button.
-  const canDownload = usePartnerPermissions().can("download_reports");
+  const partnerCanDownload = usePartnerPermissions().can("download_reports");
+  // Staff logins whose role has Reporting > Download unticked get no export
+  // button either (Sir, 20 Oct: restrict downloads for Xypheria). The file is
+  // built here in the browser, so the server-side block alone never stopped it.
+  const staffCanDownload = usePermissions().can("reporting", "download");
+  const canDownload = partnerCanDownload && staffCanDownload;
   const hiddenForRole: ReadonlySet<ColumnKey> = React.useMemo(() => {
     const base: ColumnKey[] =
       role === "buyer"
