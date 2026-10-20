@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { CampaignRiskBadge } from "@/components/campaigns/campaign-risk-badge";
 import { Badge } from "@/components/ui/badge";
 import { campaignRisk } from "@/lib/campaign-risk";
+import { compareByRiskThenAssigned } from "@/lib/risk-order";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,10 @@ export function TrackingNumbersSection({
   const setNumberStatus = useNumbersStore((s) => s.setNumberStatus);
   const updateNumber = useNumbersStore((s) => s.updateNumber);
   const numbers = useMemo(
-    () => (allNumbers ?? []).filter((n) => n.campaignId === campaignId),
+    () =>
+      (allNumbers ?? [])
+        .filter((n) => n.campaignId === campaignId)
+        .sort((a, b) => compareByRiskThenAssigned(a, b)),
     [allNumbers, campaignId],
   );
 

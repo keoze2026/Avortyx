@@ -30,10 +30,13 @@ import { ROUTES } from "@/lib/constants";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { NumberPool, TrackingNumber } from "@/lib/types";
 import { usePermissions } from "@/lib/my-permissions";
+import { compareByRiskThenAssigned } from "@/lib/risk-order";
 
 /* ─── Sort definitions ───────────────────────────────────────────────── */
 
 type NumberSortKey =
+  | "type-newest"
+  | "type-oldest"
   | "number-asc"
   | "number-desc"
   | "calls-desc"
@@ -41,6 +44,8 @@ type NumberSortKey =
   | "renew-soonest";
 
 const NUMBER_SORT_KEYS: Array<{ id: NumberSortKey; labelKey: string }> = [
+  { id: "type-newest", labelKey: "trafficUI.numbers.sort.typeNewest" },
+  { id: "type-oldest", labelKey: "trafficUI.numbers.sort.typeOldest" },
   { id: "number-asc", labelKey: "trafficUI.numbers.sort.numberAsc" },
   { id: "number-desc", labelKey: "trafficUI.numbers.sort.numberDesc" },
   { id: "calls-desc", labelKey: "trafficUI.numbers.sort.callsDesc" },
@@ -112,7 +117,7 @@ export default function NumbersPage() {
   const [allQuery, setAllQuery] = React.useState("");
   const [allPageSize, setAllPageSize] = React.useState<PageSize>(PAGE_SIZE_OPTIONS[1]);
   const [allPage, setAllPage] = React.useState(0);
-  const [allSortKey, setAllSortKey] = React.useState<NumberSortKey>("number-asc");
+  const [allSortKey, setAllSortKey] = React.useState<NumberSortKey>("type-newest");
   const [allTypeFilter, setAllTypeFilter] = React.useState<Set<string>>(new Set());
   const [allColumns, setAllColumns] = React.useState<Set<string>>(DEFAULT_NUMBER_COLUMNS);
   const [allSelected, setAllSelected] = React.useState<Set<string>>(new Set());
@@ -338,6 +343,10 @@ function useFilteredNumbers(
     const sorted = [...items];
     sorted.sort((a, b) => {
       switch (args.sortKey) {
+        case "type-newest":
+          return compareByRiskThenAssigned(a, b, true);
+        case "type-oldest":
+          return compareByRiskThenAssigned(a, b, false);
         case "number-asc":
           return a.number.localeCompare(b.number);
         case "number-desc":
