@@ -919,7 +919,16 @@ export function CallLogTable({
                           {/* A fixed-width block, centred in the column, with
                               the words starting at the same place in every
                               row: centred and still lined up. */}
-                          <div className="mx-auto w-28 text-left">{failReasonOnScreen(c, locale, t) || "—"}</div>
+                          {(() => {
+                            const reason = failReasonOnScreen(c, locale, t);
+                            // Words start at the same place in every row; the
+                            // dash (no reason) sits in the middle of the block.
+                            return (
+                              <div className={reason ? "mx-auto w-24 text-left" : "mx-auto w-24 text-center"}>
+                                {reason || "—"}
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                       )}
                       {columns.recording && (
