@@ -47,6 +47,13 @@ const MAX_ENTRIES = 14;
 const PREFETCH_PAST_DAYS = 7;
 /** Saved data older than this is not shown while a fresh copy loads. */
 const MAX_AGE_MS = 6 * 60 * 60 * 1000;
+/**
+ * Today's saved copy is shown while a fresh one loads only if it is this young.
+ * Older than that (a page refresh, or coming back after a while) it is half a
+ * report: the chart and summary showed a copy hours old, up to 6, and then
+ * jumped when the real one landed. Past days never change, so they are exempt.
+ */
+export const TODAY_SHOW_MAX_AGE_MS = 30_000;
 /** A prefetch is skipped if the saved copy is younger than this. */
 const PREFETCH_FRESH_MS = 60_000;
 /** Larger views stay in memory only (sessionStorage holds ~5 MB). */

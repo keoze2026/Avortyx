@@ -42,6 +42,7 @@ import {
   prefetchRecentDays,
   prefetchReport,
   reportKey,
+  TODAY_SHOW_MAX_AGE_MS,
   todayAndYesterday,
 } from "@/lib/reports-cache";
 import { useCallsStore } from "@/lib/store/calls-store";
@@ -192,8 +193,15 @@ export default function ReportsPage() {
     const [dateFrom, dateTo, zone] = viewKey.split("|");
     return { dateFrom, dateTo, timeZone: zone };
   }, [viewKey]);
-  const cached = useMemo(
-    () => (view ? getCachedReport(reportKey(view)) : null),
+  const cached = useMemo(() => {
+    if (!view) return null;
+    const saved = getCachedReport(reportKey(view));
+    // Today's saved copy is only worth showing while it is fresh: an old one is
+    // a half report (hours old) that jumps when the real data arrives, so the
+    // loading panel is shown instead until the full report is in.
+    if (saved && !isPastView(view) && Date.now() - saved.takenAt > TODAY_SHOW_MAX_AGE_MS) return null;
+    return saved;
+  },
     // loadedKey: re-read after every load, so the saved copy is the newest one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [view, userId, loadedKey],
@@ -614,7 +622,11 @@ export default function ReportsPage() {
         {visibility.log && (
           <CallLogTable
             calls={logCalls}
-            loading={rangeLoading}
+            // The "Loading calls" row replaces the table only when there is
+            // nothing to show yet. During a refresh of a view already on screen
+            // (every auto refresh) the rows stay, so the log never blanks out
+            // under a chart and summary that are still showing.
+            loading={rangeLoading && !showingView && !cached}
             exportQuery={exportQuery}
             // Manual hang-up: refresh the row in place from the backend's
             // final state (status / duration / charged) rather than waiting
