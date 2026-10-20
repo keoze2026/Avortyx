@@ -150,15 +150,12 @@ export function TrackingNumbersSection({
                       />
                       )}
                     </TableCell>
-                    {/* Centred under the header, words starting at the same
-                        place in every row (same as the call log's Fail Reason). */}
-                    <TableCell className="text-xs text-muted-foreground">
-                      <div className="mx-auto w-28 truncate text-left" title={n.publisherName ?? undefined}>
-                        {n.publisherName ?? "—"}
-                      </div>
+                    {/* Values centred in their column, like the Name column. */}
+                    <TableCell className="text-center text-xs text-muted-foreground">
+                      {n.publisherName ?? "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs tabular-nums">
-                      <div className="mx-auto w-16 text-left">{formatCurrency(n.payoutPerCall ?? 0, true)}</div>
+                    <TableCell className="text-center font-mono text-xs tabular-nums">
+                      {formatCurrency(n.payoutPerCall ?? 0, true)}
                     </TableCell>
                     <TableCell>
                       <CampaignRiskBadge risk={campaignRisk([n])} />
