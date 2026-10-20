@@ -40,6 +40,7 @@ import { Crown, Landmark,
 
 import { ROUTES } from "./constants";
 import type { Role } from "./types/auth";
+import type { PartnerPermissionKey } from "@/hooks/use-partner-permissions";
 
 export interface NavItem {
   /** Shown only to the system owner (is_superuser), whatever the role says. */
@@ -51,6 +52,8 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   roles: readonly Role[];
+  /** Buyer / publisher logins see the item only when the admin turned this toggle on for them. */
+  partnerPermission?: PartnerPermissionKey;
   /** Optional badge text (e.g. "Live", "New") */
   badge?: string;
 }
@@ -108,7 +111,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "VoIP Shield",     nameKey: "nav.voipShield",     href: ROUTES.voipShield,     icon: Shield,      roles: ["admin"] },
       { label: "TCPA Shield",     nameKey: "nav.tcpaShield",     href: ROUTES.tcpaShield,     icon: ShieldAlert, roles: ["admin"] },
-      { label: "Blocked Numbers", nameKey: "nav.blockedNumbers", href: ROUTES.blockedNumbers, icon: PhoneOff,    roles: ["admin"] },
+      { label: "Blocked Numbers", nameKey: "nav.blockedNumbers", href: ROUTES.blockedNumbers, icon: PhoneOff,    roles: ["admin", "publisher"], partnerPermission: "block_numbers" },
     ],
   },
   {

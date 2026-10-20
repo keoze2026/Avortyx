@@ -44,6 +44,8 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { Can } from "@/components/shared/can";
 import { usePermissions } from "@/lib/my-permissions";
+import { PublisherOwnBlockedNumbers } from "@/components/publishers/publisher-own-blocked-numbers";
+import { useAuthStore } from "@/lib/store/auth-store";
 
 const ALL_CAMPAIGNS_ID = "__all__";
 
@@ -76,7 +78,7 @@ function displayNumber(entry: BlockedNumberEntry): string {
   return entry.scope === "prefix" ? `${base}*` : base;
 }
 
-export default function BlockedNumbersPage() {
+function AdminBlockedNumbersPage() {
   const { t, locale } = useTranslation();
   const { can } = usePermissions();
   const timeZone = useUIStore((s) => s.reportTimezone);
@@ -476,4 +478,10 @@ export default function BlockedNumbersPage() {
       </AlertDialog>
     </>
   );
+}
+
+/** A publisher login manages only its own publisher's blocks; everyone else gets the workspace list. */
+export default function BlockedNumbersPage() {
+  const role = useAuthStore((s) => s.user?.role);
+  return role === "publisher" ? <PublisherOwnBlockedNumbers /> : <AdminBlockedNumbersPage />;
 }

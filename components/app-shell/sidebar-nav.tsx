@@ -32,6 +32,7 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { BRAND, ROUTES } from "@/lib/constants";
 import { usePermissions } from "@/lib/my-permissions";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { NAV_GROUPS, type NavItem } from "@/lib/nav";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Role } from "@/lib/types";
@@ -54,6 +55,9 @@ export function AppSidebar() {
   // is left out of the menu, and opening its page directly goes back to the
   // Dashboard. Until the backend sends permissions, nothing changes.
   const { canSeePath } = usePermissions();
+  // Buyer / publisher logins: an item tied to one of their Permissions toggles
+  // (Blocked Numbers <- Block Numbers) shows only while that toggle is on.
+  const partner = usePartnerPermissions();
   React.useEffect(() => {
     if (!canSeePath(pathname)) {
       toast.error("Your role doesn't have access to this page.");
@@ -74,7 +78,7 @@ export function AppSidebar() {
       {/* Content — clean grouped sections without numeric prefixes */}
       <SidebarContent className="gap-0 px-3 py-4 group-data-[collapsible=icon]:px-1">
         {NAV_GROUPS.map((group, idx) => {
-          const visible = group.items.filter((i) => isVisibleForRole(i, role, isSuperuser) && canSeePath(i.href));
+          const visible = group.items.filter((i) => isVisibleForRole(i, role, isSuperuser) && canSeePath(i.href) && (!i.partnerPermission || !partner.isPartner || partner.can(i.partnerPermission)));
           if (visible.length === 0) return null;
           return (
             <section key={group.label ?? `g-${idx}`} className="mb-3">
