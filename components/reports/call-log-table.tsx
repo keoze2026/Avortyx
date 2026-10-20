@@ -18,6 +18,7 @@ import {
   Plus,
   Search,
   Settings,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -716,8 +717,18 @@ export function CallLogTable({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("toolsUI.reports.callLog.searchPlaceholder")}
-              className="h-8 w-56 pl-7 text-xs"
+              className={cn("h-8 w-56 pl-7 text-xs", query && "pr-7")}
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label={t("toolsUI.callLogs.toolbar.clearAria")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
           <Popover>
             <PopoverTrigger asChild>
