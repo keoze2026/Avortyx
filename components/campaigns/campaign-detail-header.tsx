@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useMemo } from "react";
 import { ArrowLeft, MoreVertical, Pause, Play, Settings as SettingsIcon, Trash2 } from "lucide-react";
 
+import { CampaignRiskBadge } from "./campaign-risk-badge";
 import { CampaignStatusBadge } from "./campaign-status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +18,8 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { useNumbersStore } from "@/lib/store/numbers-store";
+import { campaignRisk } from "@/lib/campaign-risk";
 import { VERTICAL_ACCENT, type Campaign } from "@/lib/types";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
@@ -45,6 +49,11 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
   const router = useRouter();
   const setStatus = useCampaignsStore((s) => s.setStatus);
   const remove = useCampaignsStore((s) => s.remove);
+  const allNumbers = useNumbersStore((s) => s.numbers);
+  const risk = useMemo(
+    () => campaignRisk((allNumbers ?? []).filter((n) => n.campaignId === campaign.id)),
+    [allNumbers, campaign.id],
+  );
 
   const tone = VERTICAL_ACCENT[campaign.vertical] ?? "cyan";
   const isActive = campaign.status === "active";
@@ -86,6 +95,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
             <span className="font-mono text-muted-foreground">{campaign.vertical}</span>
             <span className="text-muted-foreground/60">·</span>
             <span className="font-mono text-muted-foreground">{campaign.id}</span>
+            {risk.kind !== "none" && <CampaignRiskBadge risk={risk} className="ml-1" />}
           </div>
           <h1
             className="mt-1 text-base font-semibold tracking-tight sm:text-lg"

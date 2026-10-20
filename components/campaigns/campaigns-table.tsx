@@ -33,6 +33,9 @@ import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { Campaign } from "@/lib/types";
 import { localizeName } from "@/lib/name-translation";
 import { cn } from "@/lib/utils";
+import { CampaignRiskBadge } from "@/components/campaigns/campaign-risk-badge";
+import { campaignRisk } from "@/lib/campaign-risk";
+import type { TrackingNumber } from "@/lib/types";
 
 type ProgressState = "ready" | "paused" | "incomplete";
 
@@ -137,6 +140,17 @@ export function CampaignsTable({
     }
     return map;
   }, [allNumbers]);
+  // High / low risk per campaign, read from its attached numbers.
+  const riskByCampaign = React.useMemo(() => {
+    const groups = new Map<string, TrackingNumber[]>();
+    for (const n of allNumbers ?? []) {
+      if (!n.campaignId) continue;
+      const g = groups.get(n.campaignId);
+      if (g) g.push(n);
+      else groups.set(n.campaignId, [n]);
+    }
+    return new Map(Array.from(groups, ([id, list]) => [id, campaignRisk(list)] as const));
+  }, [allNumbers]);
   // Uncontrolled fallback so existing callers that don't pass `selectedIds`
   // still get their internal checkbox state. When the parent supplies both
   // `selectedIds` and `onSelectionChange`, the selection lives upstairs.
@@ -177,6 +191,7 @@ export function CampaignsTable({
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
               <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
+              {columns.risk && <TableHead>{t("campaignRisk.column")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
               {columns.daily && <TableHead>{t("trafficUI.campaigns.columns.daily")}</TableHead>}
@@ -239,6 +254,11 @@ export function CampaignsTable({
                         <User className="h-3.5 w-3.5" />
                         {t("trafficUI.common.public")}
                       </span>
+                    </TableCell>
+                  )}
+                  {columns.risk && (
+                    <TableCell>
+                      <CampaignRiskBadge risk={riskByCampaign.get(c.id) ?? { kind: "none", high: 0, low: 0, total: 0 }} />
                     </TableCell>
                   )}
                   {columns.live && (

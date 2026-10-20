@@ -21,6 +21,7 @@ import { routing } from "./routing";
 import { ivr } from "./ivr";
 import { reports } from "./reports";
 import { marketplace } from "./marketplace";
+import { risk } from "./risk";
 import { ownerCosts } from "./owner-costs";
 import type { ExtraTranslations } from "./types";
 

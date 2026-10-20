@@ -38,6 +38,7 @@ export type CampaignStatusFilter = "all" | "active" | "paused" | "draft" | "arch
 export type CampaignColumnKey =
   | "progress"
   | "access"
+  | "risk"
   | "live"
   | "hourly"
   | "daily"
@@ -48,6 +49,7 @@ export type CampaignColumnKey =
 export const CAMPAIGN_COLUMNS: Array<{ id: CampaignColumnKey; labelKey: string }> = [
   { id: "progress", labelKey: "trafficUI.campaigns.columns.progress" },
   { id: "access", labelKey: "trafficUI.campaigns.columns.access" },
+  { id: "risk", labelKey: "campaignRisk.column" },
   { id: "live", labelKey: "trafficUI.campaigns.columns.live" },
   { id: "hourly", labelKey: "trafficUI.campaigns.columns.hourly" },
   { id: "daily", labelKey: "trafficUI.campaigns.columns.daily" },

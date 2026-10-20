@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { AttachTrackingNumberDialog } from "@/components/campaigns/settings/attach-tracking-number-dialog";
 import { TrackingNumberEditDialog } from "@/components/campaigns/settings/tracking-number-edit-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
+import { CampaignRiskBadge } from "@/components/campaigns/campaign-risk-badge";
 import { Badge } from "@/components/ui/badge";
+import { campaignRisk } from "@/lib/campaign-risk";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -105,6 +107,7 @@ export function TrackingNumbersSection({
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-[11px]">{t("campaignRisk.column")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
                 {!readOnly && (
                   <TableHead className="pr-6 text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.actions")}</TableHead>
@@ -148,6 +151,9 @@ export function TrackingNumbersSection({
                     </TableCell>
                     <TableCell className="font-mono text-xs tabular-nums">
                       {formatCurrency(n.payoutPerCall ?? 0, true)}
+                    </TableCell>
+                    <TableCell>
+                      <CampaignRiskBadge risk={campaignRisk([n])} />
                     </TableCell>
                     <TableCell className="text-center">
                       {readOnly ? (
