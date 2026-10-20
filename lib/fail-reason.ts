@@ -35,6 +35,10 @@ export function failReasonLabel(reason: string | null | undefined): string {
   // The destination side could not take the call. Old rows say "Destination
   // Missed" (with or without a reason in brackets); new ones say it already.
   if (DESTINATION_MISSED.test(raw) || NO_DESTINATION.test(raw)) return "No Destination";
+  // Internal codes for a call whose end the switch never reported, closed by
+  // the platform's clean-up (backend CH-178). Shown as words, not as
+  // "Stale_timeout" / "Asterisk_gone".
+  if (/^(stale_timeout|asterisk_gone)$/i.test(raw)) return "No Hangup Report";
   const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
   return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
 }

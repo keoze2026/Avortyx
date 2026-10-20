@@ -214,6 +214,20 @@ function getTTCSeconds(c: Call): number | null {
   return typeof c.ttc === "number" ? c.ttc : null;
 }
 
+/** A live call's duration, counting up every second. The backend only writes
+ *  a duration when the call ends, so a call that had been talking for over an
+ *  hour showed 00:00:00 while the buyer's platform showed 1:36:45. Counted from
+ *  when the call came in, less the time to connect when we know it. */
+function LiveDuration({ call }: { call: Call }) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const elapsed = Math.floor((now - call.startedAt) / 1000) - (getTTCSeconds(call) ?? 0);
+  return <>{formatHMS(Math.max(elapsed, call.durationSec || 0, 0))}</>;
+}
+
 /**
  * Hang-up side per call. Derived deterministically from the call id so the
  * same row always shows the same direction across renders/refresh.
@@ -915,7 +929,7 @@ export function CallLogTable({
                       )}
                       {columns.duration && (
                         <TableCell className={NUMBER_CELL}>
-                          {formatHMS(c.durationSec)}
+                          {c.status === "in-progress" ? <LiveDuration call={c} /> : formatHMS(c.durationSec)}
                         </TableCell>
                       )}
                       {columns.hangUp && (
