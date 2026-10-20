@@ -575,14 +575,17 @@ export function CallLogTable({
   // Fail Reason comments set in two parallel columns: the first word of every
   // comment starts at the same place, and so does the second word ("Not" and
   // "No" in one row, "Connected" and "Destination" in the next). The widths
-  // come from the longest word on the page, and the block sits centred.
+  // come from the longest word on the page, measured by the browser in the real
+  // font (an invisible copy of that word sets each column's width), so the block
+  // has no spare room on either side and sits exactly centred under the header.
   const reasonLayout = React.useMemo(() => {
-    let first = 1;
-    let rest = 0;
+    let first = "";
+    let rest = "";
     for (const c of visible) {
       const [a, ...b] = failReasonOnScreen(c, locale, t).split(" ");
-      first = Math.max(first, a.length);
-      rest = Math.max(rest, b.join(" ").length);
+      const tail = b.join(" ");
+      if (a.length > first.length) first = a;
+      if (tail.length > rest.length) rest = tail;
     }
     return { first, rest };
   }, [visible, locale, t]);
@@ -936,14 +939,19 @@ export function CallLogTable({
                             if (!reason) return "\u2014";
                             const [firstWord, ...others] = reason.split(" ");
                             return (
-                              <div
-                                className="mx-auto flex whitespace-nowrap text-left"
-                                style={{ width: `${reasonLayout.first + 1 + reasonLayout.rest + 1}ch` }}
-                              >
-                                <span className="shrink-0" style={{ width: `${reasonLayout.first + 1}ch` }}>
-                                  {firstWord}
+                              <div className="mx-auto flex w-fit gap-x-[0.6em] whitespace-nowrap text-left">
+                                <span className="grid">
+                                  <span className="[grid-area:1/1]">{firstWord}</span>
+                                  <span aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
+                                    {reasonLayout.first}
+                                  </span>
                                 </span>
-                                <span>{others.join(" ")}</span>
+                                <span className="grid">
+                                  <span className="[grid-area:1/1]">{others.join(" ")}</span>
+                                  <span aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
+                                    {reasonLayout.rest}
+                                  </span>
+                                </span>
                               </div>
                             );
                           })()}
