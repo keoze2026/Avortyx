@@ -104,8 +104,14 @@ export function AppSidebar() {
               {/* Items */}
               <ul className="space-y-1">
                 {visible.map((item) => {
+                  // Owner and Owner > Carrier Costs share a prefix: the longer match wins.
                   const active =
-                    pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    (pathname === item.href || pathname.startsWith(`${item.href}/`)) &&
+                    !visible.some(
+                      (o) =>
+                        o.href.length > item.href.length &&
+                        (pathname === o.href || pathname.startsWith(`${o.href}/`)),
+                    );
                   return (
                     <SidebarItem
                       key={item.href}

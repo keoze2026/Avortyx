@@ -9,7 +9,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { Crown,
+import { Crown, Landmark,
   LayoutDashboard,
   Radio,
   Megaphone,
@@ -70,6 +70,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Workspace", nameKey: "nav.workspace", href: ROUTES.workspace, icon: Briefcase, roles: ["admin"] },
       { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true },
+      { label: "Carrier Costs", nameKey: "nav.carrierCosts", href: "/owner/carrier-costs", icon: Landmark, roles: ["admin"], superuserOnly: true },
     ],
   },
   {
