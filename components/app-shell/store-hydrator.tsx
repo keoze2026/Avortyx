@@ -11,6 +11,7 @@ import { useEffect } from "react";
 
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
+import { useBlockedCallersStore } from "@/lib/store/blocked-callers-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -66,6 +67,8 @@ export function StoreHydrator() {
     if (!isAuthed) return;
     const tick = () => {
       if (document.visibilityState !== "visible") return;
+      // A caller blocked from another account turns red here too (CH-185).
+      void useBlockedCallersStore.getState().fetch();
       // On the Dashboard these figures come from its single snapshot
       // request, so the separate polls are skipped while it's showing.
       if (useCallsStore.getState().snapshotDrivesKpis) return;
@@ -89,6 +92,8 @@ function loadSecondaryStores() {
   void useAiInsightsStore.getState().fetchAll();
   // Suppression list — blocked numbers (blacklist).
   void useBlockedNumbersStore.getState().fetch();
+  // Every blocked caller in the workspace, for the red colour in call logs (CH-185).
+  void useBlockedCallersStore.getState().fetch();
   // VoIP + TCPA shields (named policies).
   void useVoipShieldStore.getState().fetch();
   void useTcpaShieldStore.getState().fetch();

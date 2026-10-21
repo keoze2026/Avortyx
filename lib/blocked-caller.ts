@@ -2,7 +2,9 @@
  * Is this caller on the Blocked Numbers list?
  *
  * Shared by the Call Log on Reports and the Call Logs page, so a blocked
- * caller shows in red in both.
+ * caller shows in red in both - in every account, whoever blocked it (CH-185).
+ * The workspace-wide list of blocked callers is combined with this login's
+ * own list, so a number it has just blocked turns red at once.
  *
  * Numbers are compared on their national form. A caller is often stored
  * without the country code ("7194683580") while the Blocked Numbers list
@@ -13,6 +15,7 @@
 
 import * as React from "react";
 
+import { useBlockedCallersStore } from "@/lib/store/blocked-callers-store";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 
 type Entry = { number: string; scope: "number" | "prefix"; campaignId?: string };
@@ -60,5 +63,16 @@ export function makeBlockedMatcher(entries: Entry[]): (callerNumber: string, cam
 /** The matcher for the current Blocked Numbers list; updates as numbers are blocked or unblocked. */
 export function useBlockedCallerMatcher(): (callerNumber: string, campaignId?: string) => boolean {
   const numbers = useBlockedNumbersStore((s) => s.numbers);
-  return React.useMemo(() => makeBlockedMatcher(numbers), [numbers]);
+  const everyone = useBlockedCallersStore((s) => s.callers);
+  // This login blocked or unblocked something: refresh the workspace list too,
+  // so an unblocked caller stops being red straight away.
+  const first = React.useRef(true);
+  React.useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    void useBlockedCallersStore.getState().fetch();
+  }, [numbers]);
+  return React.useMemo(() => makeBlockedMatcher([...numbers, ...everyone]), [numbers, everyone]);
 }

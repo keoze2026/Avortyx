@@ -72,6 +72,12 @@ export interface BlockedNumberEntry {
   campaignId?: string;
   /** When the number was blocked (ms) - the backend's `created_at`. */
   blockedAt?: number;
+  /** Who blocked it (backend CH-185): main account, publisher or buyer login. */
+  blockedByType?: "main" | "publisher" | "buyer";
+  /** The user, publisher or buyer name that blocked it. */
+  blockedByName?: string;
+  /** What the block covers: "All calls", "Publisher X only", ... */
+  appliesTo?: string;
 }
 
 export const MOCK_VOIP_SHIELD: VoipShieldEntry[] = [

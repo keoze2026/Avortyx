@@ -56,7 +56,7 @@ interface BlockedNumbersState {
 const BULK_DELETE_CONCURRENCY = 10;
 
 /** Strip every non-digit so the store always holds canonical digits-only values. */
-function normalizeNumber(input: string): string {
+export function normalizeNumber(input: string): string {
   return input.replace(/\D/g, "");
 }
 
@@ -68,7 +68,7 @@ function encodeReason(scope: BlockedNumberScope, campaignId: string | undefined)
   return parts.join(";");
 }
 
-function decodeScope(reason: string | undefined): {
+export function decodeScope(reason: string | undefined): {
   scope: BlockedNumberScope;
   campaignId?: string;
 } {
@@ -94,6 +94,9 @@ function wireToEntry(w: SpamEntry): BlockedNumberEntry {
     campaignId,
     // When it was blocked, so the list can show the date and put the newest first.
     blockedAt: w.createdAt,
+    blockedByType: w.blockedByType,
+    blockedByName: w.blockedByName,
+    appliesTo: w.appliesTo,
   };
 }
 

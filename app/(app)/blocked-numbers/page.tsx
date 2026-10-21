@@ -95,6 +95,7 @@ function AdminBlockedNumbersPage() {
     { id: "number", label: t("toolsUI.suppression.columns.blockedNumber") },
     { id: "campaign", label: t("toolsUI.suppression.columns.campaign") },
     { id: "blockedOn", label: t("toolsUI.suppression.columns.blockedOn") },
+    { id: "blockedBy", label: t("blockedBy.column") },
     { id: "actions", label: t("toolsUI.suppression.columns.actions"), required: true },
   ];
   const DEFAULT_COLUMNS = new Set(COLUMN_OPTIONS.map((c) => c.id));
@@ -332,6 +333,9 @@ function AdminBlockedNumbersPage() {
                 {visibleColumns.has("blockedOn") && (
                   <TableHead className="text-left">{t("toolsUI.suppression.columns.blockedOn")}</TableHead>
                 )}
+                {visibleColumns.has("blockedBy") && (
+                  <TableHead className="text-left">{t("blockedBy.column")}</TableHead>
+                )}
                 <TableHead className="pr-4">{t("toolsUI.suppression.columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -368,6 +372,25 @@ function AdminBlockedNumbersPage() {
                     {visibleColumns.has("blockedOn") && (
                       <TableCell className="text-left tabular-nums text-muted-foreground">
                         {blockedOnLabel(e.blockedAt, locale, timeZone)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.has("blockedBy") && (
+                      <TableCell className="text-left">
+                        {/* Who blocked it - main account, a publisher or a buyer
+                            login - and what it covers (CH-185). */}
+                        {e.blockedByType ? (
+                          <div className="leading-tight">
+                            <div className="text-sm">
+                              <span className="font-medium">{t(`blockedBy.${e.blockedByType}`)}</span>
+                              {e.blockedByName ? <span className="text-muted-foreground"> · {e.blockedByName}</span> : null}
+                            </div>
+                            {e.appliesTo && e.appliesTo !== "All calls" ? (
+                              <div className="text-[11px] text-muted-foreground">{e.appliesTo}</div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     )}
                     <TableCell className="pr-4">

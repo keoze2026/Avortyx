@@ -15,6 +15,19 @@ export interface SpamEntry {
   isActive: boolean;
   expiresAt?: number;
   createdAt: number;
+  /** Who blocked it (backend CH-185): the main account, a publisher login or a buyer login. */
+  blockedByType?: "main" | "publisher" | "buyer";
+  /** The user, publisher or buyer name that blocked it. */
+  blockedByName?: string;
+  /** What the block covers, in words: "All calls", "Publisher X only", ... */
+  appliesTo?: string;
+}
+
+/** One blocked caller, for colouring the call log red (backend CH-185). */
+export interface BlockedCaller {
+  number: string;
+  reason?: string;
+  campaignId?: string;
 }
 
 export interface SpamReport {
@@ -38,6 +51,9 @@ interface SpamEntryWire {
   isActive: boolean;
   expiresAt?: string | null;
   createdAt: string;
+  blockedByType?: string | null;
+  blockedByName?: string | null;
+  appliesTo?: string | null;
 }
 
 interface SpamReportWire {
@@ -66,6 +82,12 @@ function wireToEntry(w: SpamEntryWire): SpamEntry {
     isActive: !!w.isActive,
     expiresAt: toTs(w.expiresAt ?? null),
     createdAt: toTs(w.createdAt) ?? Date.now(),
+    blockedByType:
+      w.blockedByType === "main" || w.blockedByType === "publisher" || w.blockedByType === "buyer"
+        ? w.blockedByType
+        : undefined,
+    blockedByName: w.blockedByName ?? undefined,
+    appliesTo: w.appliesTo ?? undefined,
   };
 }
 
@@ -135,7 +157,19 @@ function extractList<T>(
 export const spamService = {
   /* ─── Blacklist ──────────────────────────────────────────────────── */
   /** `publisherId` lists the blocks of that publisher's numbers only; without it the
-   *  workspace list comes back (publisher-scoped blocks are left out of it). */
+   *  workspace list comes back - every block, publisher and buyer ones included,
+   *  each saying who blocked it (backend CH-185). */
+  /** Every active blocked caller in the workspace, whoever blocked it, so a
+   *  blocked caller is red in every account's call log (backend CH-185). */
+  async listBlockedCallers(): Promise<BlockedCaller[]> {
+    const raw = await http.get<{ items?: Array<{ phoneNumber?: string; reason?: string; campaignId?: string | null }> }>(
+      "/api/spam/blocked-callers",
+    );
+    return (raw?.items ?? [])
+      .filter((x) => x.phoneNumber)
+      .map((x) => ({ number: x.phoneNumber!, reason: x.reason, campaignId: x.campaignId ?? undefined }));
+  },
+
   async listBlacklist(query: { page?: number; pageSize?: number; publisherId?: string } = {}): Promise<Paginated<SpamEntry>> {
     const raw = await http.get<unknown>("/api/spam/blacklist", { query });
     const page = extractList<SpamEntryWire>(raw, "/api/spam/blacklist");
