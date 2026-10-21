@@ -25,6 +25,7 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
+import { usePublishersStore } from "@/lib/store/publishers-store";
 import { toE164 } from "@/lib/format";
 import type { NumberStatus, TrackingNumber } from "@/lib/types";
 
@@ -43,12 +44,15 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
   const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const updateNumber = useNumbersStore((s) => s.updateNumber);
+  const publishers = usePublishersStore((s) => s.publishers);
+  const fetchPublishers = usePublishersStore((s) => s.fetch);
 
   const [name, setName] = useState("");
   const [campaignId, setCampaignId] = useState<string>(UNASSIGNED);
   const [allocated, setAllocated] = useState<number>(0);
   const [status, setStatus] = useState<NumberStatus>("active");
   const [carrierId, setCarrierId] = useState<string>(UNASSIGNED);
+  const [publisherId, setPublisherId] = useState<string>(UNASSIGNED);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +66,14 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
     setAllocated(number.allocatedCapacity ?? deriveAllocated(number));
     setStatus(number.status);
     setCarrierId(number.carrierId ?? UNASSIGNED);
+    setPublisherId(number.publisherId ?? UNASSIGNED);
   }, [number]);
+
+  // The publisher shown on the Numbers page. Without this field it could be
+  // set from a campaign but never taken off again here (CH-192).
+  useEffect(() => {
+    if (open && publishers.length === 0) void fetchPublishers();
+  }, [open, publishers.length, fetchPublishers]);
 
   // The carrier list is short and changes rarely, so it is fetched when the
   // dialog opens rather than held in a store. A failure leaves the select
@@ -108,6 +119,12 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
         // Empty string clears it; the service sends it either way so a clear
         // is not mistaken for "leave as it was".
         carrierId: carrierId === UNASSIGNED ? "" : carrierId,
+        // Always sent: "No publisher" goes out as null and clears it.
+        publisherId: publisherId === UNASSIGNED ? undefined : publisherId,
+        publisherName:
+          publisherId === UNASSIGNED
+            ? undefined
+            : publishers.find((p) => p.id === publisherId)?.name,
       });
       toast.success(
         t("trafficUI.numbers.track.editDialog.saved").replace("{number}", toE164(number.number)),
@@ -182,6 +199,31 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
                 {carriers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.code} — {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>{t("trafficUI.numbers.track.editDialog.labelPublisher")}</Label>
+            <Select value={publisherId} onValueChange={setPublisherId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>
+                  {t("trafficUI.numbers.track.editDialog.publisherNone")}
+                </SelectItem>
+                {/* Keep the current one listed even if it is not in the store. */}
+                {number.publisherId && !publishers.some((p) => p.id === number.publisherId) && (
+                  <SelectItem value={number.publisherId}>
+                    {number.publisherName ?? number.publisherId}
+                  </SelectItem>
+                )}
+                {publishers.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>

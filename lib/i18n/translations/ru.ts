@@ -2291,6 +2291,8 @@ export const ru: TranslationShape = {
           labelCampaign: "Кампания",
           labelCarrier: "Оператор",
           carrierNone: "Без оператора",
+          labelPublisher: "Издатель",
+          publisherNone: "Без издателя",
           unassigned: "— Без кампании —",
           labelAllocated: "Дневной лимит",
           labelStatus: "Статус",

@@ -2290,6 +2290,8 @@ export const ja: TranslationShape = {
           labelCampaign: "キャンペーン",
           labelCarrier: "キャリア",
           carrierNone: "キャリアなし",
+          labelPublisher: "パブリッシャー",
+          publisherNone: "パブリッシャーなし",
           unassigned: "— 未割当のまま —",
           labelAllocated: "割当キャップ",
           labelStatus: "ステータス",

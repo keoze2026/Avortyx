@@ -1728,6 +1728,8 @@ export const en = {
           labelCampaign: "Campaign",
           labelCarrier: "Carrier",
           carrierNone: "No carrier",
+          labelPublisher: "Publisher",
+          publisherNone: "No publisher",
           unassigned: "— Leave unassigned —",
           labelAllocated: "Allocated cap",
           labelStatus: "Status",
