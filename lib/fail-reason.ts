@@ -17,6 +17,7 @@
  *   "Callerid Blocked" (a caller the team blocked) ->  "Callerid Blocked"
  *   Any "Destination Missed" / "No Destination"      ->  "No Destination"
  *     (Sir: never "Destination Missed"; older rows still carry that wording)
+ *   "No Answer": the call was sent to the line and did not connect (CH-193)
  * Anything else: each word starts with a capital, "blocked" dropped.
  */
 /** "Callerid Blocked" / "Caller ID Blocked", as the backend writes it for a blocked caller. */
@@ -60,6 +61,8 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   if (/cc\s*full/i.test(raw)) return { key: `${k}destinationFull` };
   if (/destination\s*busy/i.test(raw)) return { key: `${k}destBusy` };
   if (/destination\s*no\s*answer/i.test(raw)) return { key: `${k}destNoAnswer` };
+  // The call reached the line and did not connect (backend CH-193, Revo's word).
+  if (/^no[\s_]*answer$/i.test(raw)) return { key: `${k}noAnswer` };
   if (/caller\s*hung\s*up/i.test(raw)) return { key: `${k}callerHungUp` };
   if (/daily\s*limit/i.test(raw)) return { key: `${k}campDailyLimit` };
   if (/monthly\s*limit/i.test(raw)) return { key: `${k}campMonthlyLimit` };
