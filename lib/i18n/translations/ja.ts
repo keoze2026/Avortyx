@@ -1680,6 +1680,12 @@ export const ja: TranslationShape = {
       },
       detail: {
         backToList: "キャンペーン一覧",
+        rename: "名前を変更",
+        renameTitle: "キャンペーン名を変更",
+        renameLabel: "キャンペーン名",
+        renameSave: "保存",
+        renamed: "キャンペーン名を「{name}」に変更しました",
+        renameFailed: "キャンペーン名を変更できませんでした",
         actionsMenu: "キャンペーン操作",
         archiveCampaign: "キャンペーンをアーカイブ",
         pause: "一時停止",

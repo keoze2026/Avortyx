@@ -1012,6 +1012,12 @@ export const zh: TranslationShape = {
       },
       detail: {
         backToList: "全部营销活动",
+        rename: "重命名",
+        renameTitle: "重命名营销活动",
+        renameLabel: "营销活动名称",
+        renameSave: "保存",
+        renamed: "营销活动已重命名为 {name}",
+        renameFailed: "无法重命名营销活动",
         actionsMenu: "营销活动操作",
         archiveCampaign: "归档营销活动",
         pause: "暂停",

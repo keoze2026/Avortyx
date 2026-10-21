@@ -1115,6 +1115,12 @@ export const en = {
       },
       detail: {
         backToList: "All campaigns",
+        rename: "Rename",
+        renameTitle: "Rename campaign",
+        renameLabel: "Campaign name",
+        renameSave: "Save",
+        renamed: "Campaign renamed to {name}",
+        renameFailed: "Couldn't rename the campaign",
         actionsMenu: "Campaign actions",
         archiveCampaign: "Archive campaign",
         pause: "Pause",

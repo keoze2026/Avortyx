@@ -1,11 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, MoreVertical, Pause, Play, Settings as SettingsIcon, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, MoreVertical, Pause, Pencil, Play, Settings as SettingsIcon, Trash2 } from "lucide-react";
 
 import { CampaignStatusBadge } from "./campaign-status-badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +55,37 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
   const router = useRouter();
   const setStatus = useCampaignsStore((s) => s.setStatus);
   const remove = useCampaignsStore((s) => s.remove);
+  const update = useCampaignsStore((s) => s.update);
+
+  // Rename (CH-195). The settings screen that replaced the old settings tab
+  // had no name field, so no campaign - a clone included - could be renamed.
+  const canEdit = !isPartner && can("campaigns", "edit-campaign");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const nameTooShort = newName.trim().length < 3;
+  const openRename = () => {
+    setNewName(campaign.name);
+    setRenameOpen(true);
+  };
+  const onRename = async () => {
+    const name = newName.trim();
+    if (name.length < 3) return;
+    if (name === campaign.name) {
+      setRenameOpen(false);
+      return;
+    }
+    setRenaming(true);
+    try {
+      await update(campaign.id, { name });
+      toast.success(t("trafficUI.campaigns.detail.renamed").replace("{name}", name));
+      setRenameOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : t("trafficUI.campaigns.detail.renameFailed"));
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   const tone = VERTICAL_ACCENT[campaign.vertical] ?? "cyan";
   const isActive = campaign.status === "active";
@@ -87,12 +128,26 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
             <span className="text-muted-foreground/60">·</span>
             <span className="font-mono text-muted-foreground">{campaign.id}</span>
           </div>
-          <h1
-            className="mt-1 text-base font-semibold tracking-tight sm:text-lg"
-            title={locale === "en" ? undefined : campaign.name}
-          >
-            {localizeName(campaign.name, locale)}
-          </h1>
+          <div className="mt-1 flex items-center gap-1.5">
+            <h1
+              className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg"
+              title={locale === "en" ? undefined : campaign.name}
+            >
+              {localizeName(campaign.name, locale)}
+            </h1>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={openRename}
+                aria-label={t("trafficUI.campaigns.detail.rename")}
+                title={t("trafficUI.campaigns.detail.rename")}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
           {campaign.description && (
             <p className="mt-1 max-w-2xl text-xs text-muted-foreground">{campaign.description}</p>
           )}
@@ -136,6 +191,45 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
           )}
         </div>
       </div>
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("trafficUI.campaigns.detail.renameTitle")}</DialogTitle>
+          </DialogHeader>
+          <form
+            className="space-y-2 py-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void onRename();
+            }}
+          >
+            <Label htmlFor="campaign-rename">{t("trafficUI.campaigns.detail.renameLabel")}</Label>
+            <Input
+              id="campaign-rename"
+              value={newName}
+              autoFocus
+              maxLength={255}
+              onChange={(e) => setNewName(e.target.value)}
+              aria-invalid={nameTooShort}
+            />
+            {nameTooShort && (
+              <p className="text-xs text-destructive">
+                {t("trafficUI.campaigns.settings.errors.nameMin")}
+              </p>
+            )}
+          </form>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)}>
+              {t("trafficUI.common.cancel")}
+            </Button>
+            <Button onClick={() => void onRename()} disabled={renaming || nameTooShort}>
+              {renaming && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {t("trafficUI.campaigns.detail.renameSave")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

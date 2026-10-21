@@ -1681,6 +1681,12 @@ export const ru: TranslationShape = {
       },
       detail: {
         backToList: "Все кампании",
+        rename: "Переименовать",
+        renameTitle: "Переименовать кампанию",
+        renameLabel: "Название кампании",
+        renameSave: "Сохранить",
+        renamed: "Кампания переименована в {name}",
+        renameFailed: "Не удалось переименовать кампанию",
         actionsMenu: "Действия кампании",
         archiveCampaign: "Отправить в архив",
         pause: "Пауза",
