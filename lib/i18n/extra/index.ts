@@ -28,9 +28,11 @@ import { campaignNumbers } from "./campaign-numbers";
 import { deletedTfns } from "./deleted-tfns";
 import { blockedBy } from "./blocked-by";
 import { routingCost } from "./routing-cost";
+import { fillMissing } from "./fill-missing";
+import { trafficUi } from "./traffic-ui";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
