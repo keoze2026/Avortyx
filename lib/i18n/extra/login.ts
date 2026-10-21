@@ -4,7 +4,8 @@ import type { ExtraTranslations } from "./types";
 export const loginScreen: ExtraTranslations = {
   en: {
     "loginScreen.live.title": "Live",
-    "loginScreen.live.label": "Live market",
+    "loginScreen.live.label": "Live time and market",
+    "loginScreen.live.est": "Eastern Standard Time (UTC−5)",
     "loginScreen.live.btc": "BTC/USD price",
     "loginScreen.live.btcLive": "Live BTC/USD price",
     "loginScreen.ai.ready": "Ready",
@@ -17,7 +18,8 @@ export const loginScreen: ExtraTranslations = {
   },
   ru: {
     "loginScreen.live.title": "Онлайн",
-    "loginScreen.live.label": "Рынок онлайн",
+    "loginScreen.live.label": "Время и рынок онлайн",
+    "loginScreen.live.est": "Восточное стандартное время (UTC−5)",
     "loginScreen.live.btc": "Цена BTC/USD",
     "loginScreen.live.btcLive": "Цена BTC/USD онлайн",
     "loginScreen.ai.ready": "Готова",
@@ -30,7 +32,8 @@ export const loginScreen: ExtraTranslations = {
   },
   ja: {
     "loginScreen.live.title": "ライブ",
-    "loginScreen.live.label": "ライブ相場",
+    "loginScreen.live.label": "ライブの時刻と相場",
+    "loginScreen.live.est": "米国東部標準時 (UTC−5)",
     "loginScreen.live.btc": "BTC/USD 価格",
     "loginScreen.live.btcLive": "BTC/USD のライブ価格",
     "loginScreen.ai.ready": "待機中",
@@ -43,7 +46,8 @@ export const loginScreen: ExtraTranslations = {
   },
   zh: {
     "loginScreen.live.title": "实时",
-    "loginScreen.live.label": "实时行情",
+    "loginScreen.live.label": "实时时间与行情",
+    "loginScreen.live.est": "美国东部标准时间 (UTC−5)",
     "loginScreen.live.btc": "BTC/USD 价格",
     "loginScreen.live.btcLive": "BTC/USD 实时价格",
     "loginScreen.ai.ready": "就绪",
