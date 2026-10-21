@@ -3,12 +3,18 @@
 import { useEffect, useState } from "react";
 import { BACKDROP_EVENT, type BackdropSignal } from "@/components/backdrop/backdrop-signal";
 
-// Pointer and sign-in form state, read by the scene each frame without React re-renders.
-// Only the status tag re-renders, via useAiMode().
+// What the page tells the 3D scene, gathered in one place the scene reads each frame (no React
+// re-renders): the pointer, and what the sign-in form is doing (backdrop-signal.ts):
+//  - a field has focus: she listens (brighter, holding together, looking at the field);
+//  - a keystroke in the card: a ripple through her (only that a key was pressed, never what);
+//  - Sign in: she comes apart at once and holds as a galaxy ("Verifying") until the sign-in's
+//    result: printed back lit up ("Welcome") or jolted ("Try again");
+// The status tag under her (ai-status.tsx) is the one thing that re-renders, via useAiMode().
 
 export type AiMode = "Ready" | "Listening" | "Verifying" | "Welcome" | "Try again";
 
-// smoothed frame step, so a hiccup frame doesn't make the animation jump
+// the animation's step per frame, eased: frame times wobble (and a hiccup gives one long frame), so
+// the scene advances by a smoothed step instead of the raw one, and moves evenly
 const clock = { frame: -1, step: 1 / 60 };
 export function frameStep(frame: number, delta: number) {
   if (frame !== clock.frame) {
@@ -18,7 +24,9 @@ export function frameStep(frame: number, delta: number) {
   return clock.step;
 }
 
-// pixel sizes scaled up on big or zoomed-out windows, so points keep their on-screen size
+// sizes drawn in pixels (the background's points and nodes) are scaled by the canvas's pixel density
+// and, once the window is larger than a laptop's (a big screen, or zoomed out), by how much larger,
+// so they keep their size on screen at any zoom
 export const pointScale = (dpr: number, width: number, height: number) => dpr * Math.max(1, width / 1600, height / 1000);
 
 export const input = {
@@ -47,6 +55,7 @@ export function useAiMode() {
   return m;
 }
 
+// wires the page's events to `input`; returns its own clean-up
 export function listen() {
   const onSignal = (ev: Event) => {
     const sig = (ev as CustomEvent<BackdropSignal>).detail;

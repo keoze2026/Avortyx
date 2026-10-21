@@ -88,7 +88,7 @@ export function AiScene() {
       {prepared && place && (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed -z-10 -translate-x-1/2 -translate-y-1/2 animate-[scene-in_1.2s_ease-out_both] rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.1),rgb(59_130_246/0.035)_55%,transparent)] forced-colors:hidden"
+          className="pointer-events-none fixed -z-10 -translate-x-1/2 -translate-y-1/2 animate-[scene-in_1.2s_ease-out_both] rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.2),rgb(59_130_246/0.07)_55%,transparent)] forced-colors:hidden"
           style={{ left: place.x, top: place.y, width: place.r * 4, height: place.r * 4 }}
         />
       )}
@@ -108,7 +108,7 @@ export function AiScene() {
           {place && portrait !== null && <Prepare onReady={setPrepared} />}
         </Canvas>
       </div>
-      {/* below the grid she folds into, but kept on screen */}
+      {/* below the galaxy she comes apart into, but kept on screen */}
       {place?.tag && <AiStatus x={place.x} y={Math.min(place.y + place.r * 1.85, window.innerHeight - 44)} />}
     </>
   );

@@ -1,19 +1,30 @@
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 
-// Builds the portrait's points and constellation from public/ai-portrait.png (scripts/portrait/make-portrait.py):
-// R brightness, G depth (0 outside her), B 255 sparks, 128 eyes, 64 the point to centre on. 2.8 units tall.
+// The AI's portrait as points, sampled once in JS (ai-portrait.tsx animates them on the GPU) from
+// public/ai-portrait.png, which the design prototype (Avortyx-Login: scripts/portrait/make-portrait.py) makes from her picture: per pixel
+// her brightness (R), depth (G, 0 outside her), the centres of the flecks on her face (B 255), which
+// glow, and of her eyes (B 128). A point on every pixel of her face, and on about half of those
+// round it (the wires and machinery frame her, they don't compete), with more again in her face
+// and most in her eyes, where people look (every second pixel each way on lighter devices); each a
+// little off the grid so no pattern shows, as bright as the pixel, so she is drawn in detail; the
+// darkest pixels are skipped. Each sits at the picture's depth, so she is in relief, not flat. Her neck fades
+// out where the picture cuts it off. The flecks become larger, glowing nodes, each joined to its nearest
+// two by lines (a constellation over her face). Every point has a seed (aRandom: when it leaves and
+// where it goes) and a size; the lines' ends carry their nodes'.
+// 2.8 units tall, centred; she faces the viewer (+z).
 
 export type PortraitData = { w: number; h: number; px: Uint8ClampedArray };
 
 const URL = "/ai-portrait.png";
 const HEIGHT = 2.8, DEPTH = 1.3;
-// depth above FACE is her helmet and face (the generator uses the same cut)
+// her face is the nearest of her (the generator finds it the same way); the size of her eyes, in her units
 const FACE = 0.7, EYE = { w: 0.15, h: 0.07 };
 
 let pending: Promise<PortraitData> | null = null;
 
-// pixels read exactly as stored: no colour management or premultiplying, the channels are data
+// fetched and decoded once (started as the scene's code loads, ai-scene.tsx), its pixels read
+// exactly as stored (no colour management, no premultiplying)
 export function loadPortrait() {
   pending ??= fetch(URL)
     .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${URL}: ${r.status}`))))
@@ -30,7 +41,7 @@ export function loadPortrait() {
   return pending;
 }
 
-// false if it couldn't load (the scene goes on without her)
+// the portrait's pixels once they're in; false if they couldn't be had (the scene goes on without her)
 export function usePortrait() {
   const [data, setData] = useState<PortraitData | false | null>(null);
   useEffect(() => {
@@ -47,8 +58,10 @@ export function usePortrait() {
 let seed = 1;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
-type PortraitGeometry = { points: THREE.BufferGeometry; lines: THREE.BufferGeometry; eyes: THREE.Vector4; centre: THREE.Vector2 };
+// eyes: her right and left eye's centres (x, y), in her space; far off when the picture marks none
+type PortraitGeometry = { points: THREE.BufferGeometry; lines: THREE.BufferGeometry; eyes: THREE.Vector4 };
 
+// one unit of her space per `step` pixels of the picture (so the points' spacing, for their size)
 export const portraitSpacing = (h: number, step: number) => (HEIGHT / h) * step;
 
 export function buildPortrait({ w, h, px }: PortraitData, step: number): PortraitGeometry {
@@ -58,11 +71,9 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
   const depthOf = (i: number) => ((px[i * 4 + 1] - 1) / 254 - 0.55) * DEPTH;
 
   const nodes: number[] = [], eyes: [number, number][] = [];
-  let mark: [number, number] | null = null;
   for (let i = 0; i < w * h; i++) {
     const b = px[i * 4 + 2];
     if (b > 200 && px[i * 4 + 1]) nodes.push(i);
-    else if (b > 40 && b < 90) mark = at((i % w) + 0.5, Math.floor(i / w) + 0.5, 0).slice(0, 2) as [number, number];
     else if (b > 100 && b < 160) {
       const [ex, ey] = at((i % w) + 0.5, Math.floor(i / w) + 0.5, 0);
       eyes.push([ex, ey]);
@@ -77,11 +88,12 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
     for (let x = 0; x < w; x += step) {
       const i = y * w + x;
       if (!px[i * 4 + 1]) continue;
-      // fade out where the picture cuts her off
+      // fewer down her neck, to none at the picture's edge
       const fade = Math.min(1, (h - 1 - y) / (h * 0.16)), b = (px[i * 4] / 255) * fade * fade;
       if (b < 0.03 && rnd() > b * 20) continue;
       const [hx, hy] = at(x, y, 0), eye = inEye(hx, hy);
-      // denser on her face and eyes, sparser round her
+      // her face: one point here and, as often as not, a second; her eyes: up to two more, and
+      // brighter; round her: one here every other time
       const face = (px[i * 4 + 1] - 1) / 254 > FACE;
       const n = face ? 1 + (rnd() < 0.6 ? 1 : 0) + Math.round(eye * 2) : rnd() < 0.5 ? 1 : 0;
       for (let k = 0; k < n; k++) {
@@ -92,6 +104,7 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
       }
     }
   const count = rand.length, total = count + nodes.length;
+  // the nodes, just in front of her skin
   for (const i of nodes) {
     const x = i % w, y = (i - x) / w;
     pos.push(...at(x + 0.5, y + 0.5, depthOf(i) + 0.04));
@@ -105,7 +118,7 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
   points.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(size), 1));
   points.setAttribute("aBright", new THREE.BufferAttribute(new Float32Array(bright), 1));
 
-  // each node to its nearest two (few nodes, so brute force)
+  // the constellation: each node to its nearest two (a hundred or so nodes, so simply compared)
   const lp: number[] = [], lr: number[] = [], seen = new Set<number>();
   for (let a = count; a < total; a++) {
     const near: [number, number][] = [];
@@ -127,6 +140,5 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
   lines.setAttribute("position", new THREE.BufferAttribute(new Float32Array(lp), 3));
   lines.setAttribute("aRandom", new THREE.BufferAttribute(new Float32Array(lr), 1));
   const [r, l] = eyes.length === 2 ? eyes : [[99, 99], [99, 99]];
-  const centre = mark ?? (eyes.length === 2 ? [(r[0] + l[0]) / 2, 0] : [0, 0]);
-  return { points, lines, eyes: new THREE.Vector4(r[0], r[1], l[0], l[1]), centre: new THREE.Vector2(...centre) };
+  return { points, lines, eyes: new THREE.Vector4(r[0], r[1], l[0], l[1]) };
 }
