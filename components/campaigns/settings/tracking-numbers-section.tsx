@@ -235,7 +235,7 @@ export function TrackingNumbersSection({
                     </TableCell>
                     <TableCell className="min-w-[160px] text-center text-sm">
                       {readOnly ? (
-                        <div className="mx-auto text-left" style={{ width: `${nameCh}ch` }}>
+                        <div className="mx-auto text-center" style={{ width: `${nameCh}ch` }}>
                           <span className={cn(!n.label && "text-muted-foreground")}>{n.label || "—"}</span>
                         </div>
                       ) : (
@@ -353,7 +353,7 @@ function NumberNameCell({
   ariaLabel,
   onSave,
 }: {
-  /** Width shared by the whole column, so every name starts at the same place. */
+  /** Width shared by the whole column; the name is centred in it, under the heading (CH-183). */
   widthCh: number;
   value: string;
   placeholder: string;
@@ -390,7 +390,7 @@ function NumberNameCell({
         }
       }}
       style={{ width: `${widthCh}ch` }}
-      className="mx-auto h-8 max-w-[240px] border-transparent bg-transparent px-2 text-left text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
+      className="mx-auto h-8 max-w-[240px] border-transparent bg-transparent px-2 text-center text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
     />
   );
 }
