@@ -27,9 +27,10 @@ import { ownerCosts } from "./owner-costs";
 import { campaignNumbers } from "./campaign-numbers";
 import { deletedTfns } from "./deleted-tfns";
 import { blockedBy } from "./blocked-by";
+import { routingCost } from "./routing-cost";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {

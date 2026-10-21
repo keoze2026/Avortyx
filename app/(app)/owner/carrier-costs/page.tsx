@@ -16,6 +16,7 @@ import { ChevronDown, ChevronRight, Pencil, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutingCostCard } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -125,16 +126,17 @@ function NumbersTable({
     <Table>
       <TableHeader>
         <TableRow className="hover:bg-transparent">
+          {/* Every column centred, values under their heading (Sir, 21 Oct, CH-186). */}
           {selectable && <TableHead className="w-10" />}
-          <TableHead>{t("owner.costs.col.tfn")}</TableHead>
-          <TableHead>{t("owner.costs.col.status")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.calls")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.connected")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.tcl")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.aht")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.numberFee")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.minuteCost")}</TableHead>
-          <TableHead className="text-right">{t("owner.costs.col.total")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.tfn")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.status")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.calls")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.connected")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.tcl")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.aht")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.numberFee")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.minuteCost")}</TableHead>
+          <TableHead className="text-center">{t("owner.costs.col.total")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -145,10 +147,10 @@ function NumbersTable({
                 <Checkbox checked={selected?.has(n.id) ?? false} onCheckedChange={() => onToggle?.(n.id)} />
               </TableCell>
             )}
-            <TableCell className="font-mono text-sm">{n.number}</TableCell>
-            <TableCell>
+            <TableCell className="text-center font-mono text-sm">{n.number}</TableCell>
+            <TableCell className="text-center">
               {n.deleted ? (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center justify-center gap-1.5">
                   <Badge variant="destructive">{t("owner.costs.deleted")}</Badge>
                   <span className="text-xs text-muted-foreground">{shortDate(n.deletedAt)}</span>
                 </span>
@@ -156,13 +158,13 @@ function NumbersTable({
                 <Badge variant="secondary">{t("owner.costs.live")}</Badge>
               )}
             </TableCell>
-            <TableCell className="text-right tabular-nums">{n.calls}</TableCell>
-            <TableCell className="text-right tabular-nums">{n.connected}</TableCell>
-            <TableCell className="text-right font-mono tabular-nums">{formatTimer(n.tclSeconds)}</TableCell>
-            <TableCell className="text-right font-mono tabular-nums">{formatTimer(n.ahtSeconds)}</TableCell>
-            <TableCell className="text-right tabular-nums">{money(n.numberFee)}</TableCell>
-            <TableCell className="text-right tabular-nums">{money(n.minuteCost)}</TableCell>
-            <TableCell className="text-right font-semibold tabular-nums">{money(n.total)}</TableCell>
+            <TableCell className="text-center tabular-nums">{n.calls}</TableCell>
+            <TableCell className="text-center tabular-nums">{n.connected}</TableCell>
+            <TableCell className="text-center font-mono tabular-nums">{formatTimer(n.tclSeconds)}</TableCell>
+            <TableCell className="text-center font-mono tabular-nums">{formatTimer(n.ahtSeconds)}</TableCell>
+            <TableCell className="text-center tabular-nums">{money(n.numberFee)}</TableCell>
+            <TableCell className="text-center tabular-nums">{money(n.minuteCost)}</TableCell>
+            <TableCell className="text-center font-semibold tabular-nums">{money(n.total)}</TableCell>
           </TableRow>
         ))}
         {rows.length === 0 && (
@@ -315,6 +317,9 @@ export default function CarrierCostsPage() {
           <div className="text-2xl font-semibold tabular-nums">{money(data?.grandTotal)}</div>
         </div>
       </div>
+
+      {/* What it costs to route calls on to buyers (XOLO termination), by day (CH-186). */}
+      <RoutingCostCard />
 
       {loading && !data && <p className="text-sm text-muted-foreground">{t("owner.costs.loading")}</p>}
 
