@@ -162,7 +162,7 @@ export function RechargeBalanceCard() {
                       ? "border-accent/60 bg-accent/10 text-accent"
                       : "border-border bg-secondary/40 text-muted-foreground hover:border-border/80 hover:text-foreground",
                   )}
-                  title={c.label}
+                  title={t(`y.currency.${c.code}`)}
                 >
                   <span className="text-base font-semibold">{c.symbol}</span>
                   <span className="font-mono">{c.code}</span>

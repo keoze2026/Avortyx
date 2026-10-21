@@ -82,7 +82,7 @@ export default function ReferralsPage() {
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(friendlyErrorMessage(e, "Couldn't load the Referral Program"));
+        setError(friendlyErrorMessage(e, t("y.err.referralLoad")));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -264,14 +264,14 @@ export default function ReferralsPage() {
                   <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     <span className="inline-flex items-center gap-2 text-xs">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Loading referred clients…
+                      {t("y.refp.loading")}
                     </span>
                   </TableCell>
                 </TableRow>
               ) : visibleClients.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={7} className="py-10 text-center text-xs text-muted-foreground">
-                    No referred clients yet — share your link to start earning.
+                    {t("y.refp.empty")}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -123,6 +123,7 @@ export default function MarketplacePage() {
 }
 
 function LiveAuctionsFloor() {
+  const { t } = useTranslation();
   const buyers = useBuyersStore((s) => s.buyers);
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +138,7 @@ function LiveAuctionsFloor() {
       const page = await marketplaceService.listAuctions({ page: 1, pageSize: 100 });
       setAuctions(page.items);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load auctions");
+      setError(e instanceof Error ? e.message : t("y.err.auctionsLoad"));
     } finally {
       setLoading(false);
     }
@@ -220,8 +221,8 @@ function LiveAuctionsFloor() {
   return (
     <>
       <PageHeader
-        title="Marketplace"
-        description="Real-time bidding floor — live calls being auctioned to buyers."
+        title={t("y.mkt.title")}
+        description={t("y.mkt.description")}
         actions={
           <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={loading}>
             {loading ? (
@@ -229,7 +230,7 @@ function LiveAuctionsFloor() {
             ) : (
               <RefreshCw className="h-3.5 w-3.5" />
             )}
-            Refresh
+            {t("y.mkt.refresh")}
           </Button>
         }
       />
@@ -238,25 +239,25 @@ function LiveAuctionsFloor() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <FloorStat
           icon={Activity}
-          label="Open auctions"
+          label={t("y.mkt.openAuctions")}
           value={stats.openCount.toString()}
           accent="text-accent"
         />
         <FloorStat
           icon={CheckCircle2}
-          label="Settled today"
+          label={t("y.mkt.settledToday")}
           value={stats.settledCount.toString()}
           accent="text-[color:var(--success)]"
         />
         <FloorStat
           icon={TrendingUp}
-          label="Avg winning bid"
+          label={t("y.mkt.avgWinningBid")}
           value={formatCurrency(stats.avgWinningBid, true)}
           accent="text-[color:var(--warning)]"
         />
         <FloorStat
           icon={Gavel}
-          label="Total volume"
+          label={t("y.mkt.totalVolume")}
           value={formatCurrency(stats.totalWinningSpend)}
           accent="text-foreground"
         />
@@ -271,17 +272,17 @@ function LiveAuctionsFloor() {
       {/* ─── Open auctions ───────────────────────────────────────── */}
       <section className="space-y-2">
         <header className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Open auctions</h2>
+          <h2 className="text-base font-semibold">{t("y.mkt.openAuctions")}</h2>
           <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {openAuctions.length} live
+            {t("y.mkt.liveCount").replace("{count}", String(openAuctions.length))}
           </span>
         </header>
         {openAuctions.length === 0 && !loading ? (
           <EmptyState
             icon={Gavel}
             tone="cyan"
-            title="No open auctions"
-            description="When a campaign sends a call to RTB, it'll appear here in real time."
+            title={t("y.mkt.emptyTitle")}
+            description={t("y.mkt.emptyDescription")}
           />
         ) : (
           <Card className="overflow-hidden p-0">
@@ -289,13 +290,13 @@ function LiveAuctionsFloor() {
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Auction</TableHead>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Caller</TableHead>
-                    <TableHead className="text-right">Bid floor</TableHead>
-                    <TableHead className="text-right">Winning bid</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Age</TableHead>
+                    <TableHead>{t("y.mkt.col.auction")}</TableHead>
+                    <TableHead>{t("y.mkt.col.campaign")}</TableHead>
+                    <TableHead>{t("y.mkt.col.caller")}</TableHead>
+                    <TableHead className="text-right">{t("y.mkt.bidFloor")}</TableHead>
+                    <TableHead className="text-right">{t("y.mkt.winningBid")}</TableHead>
+                    <TableHead>{t("y.mkt.col.status")}</TableHead>
+                    <TableHead className="text-right">{t("y.mkt.col.age")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -327,7 +328,7 @@ function LiveAuctionsFloor() {
                           </div>
                         ) : (
                           <span className="font-mono text-xs text-muted-foreground/60">
-                            no bids
+                            {t("y.mkt.noBids")}
                           </span>
                         )}
                       </TableCell>
@@ -337,7 +338,7 @@ function LiveAuctionsFloor() {
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />
                             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
                           </span>
-                          {a.status}
+                          {t(`y.mkt.status.${a.status}`)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground">
@@ -356,9 +357,9 @@ function LiveAuctionsFloor() {
       {settledAuctions.length > 0 && (
         <section className="space-y-2">
           <header className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-semibold">Recently settled</h2>
+            <h2 className="text-base font-semibold">{t("y.mkt.recentlySettled")}</h2>
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              last {settledAuctions.length}
+              {t("y.mkt.lastCount").replace("{count}", String(settledAuctions.length))}
             </span>
           </header>
           <Card className="overflow-hidden p-0">
@@ -366,10 +367,10 @@ function LiveAuctionsFloor() {
               <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Auction</TableHead>
-                    <TableHead>Winner</TableHead>
-                    <TableHead className="text-right">Winning bid</TableHead>
-                    <TableHead className="text-right">Settled</TableHead>
+                    <TableHead>{t("y.mkt.col.auction")}</TableHead>
+                    <TableHead>{t("y.mkt.col.winner")}</TableHead>
+                    <TableHead className="text-right">{t("y.mkt.winningBid")}</TableHead>
+                    <TableHead className="text-right">{t("y.mkt.col.settled")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -468,6 +469,7 @@ function AuctionDetailSheet({
   buyers: ReturnType<typeof useBuyersStore.getState>["buyers"];
   onBidPlaced: (bid: Bid) => void;
 }) {
+  const { t } = useTranslation();
   const open = !!auction;
   const [bids, setBids] = useState<Bid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
@@ -518,9 +520,9 @@ function AuctionDetailSheet({
       });
       setBids((prev) => [placed, ...prev]);
       onBidPlaced(placed);
-      toast.success(`Bid of ${formatCurrency(placed.amount, true)} placed`);
+      toast.success(t("y.mkt.bidPlaced").replace("{amount}", formatCurrency(placed.amount, true)));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Bid failed");
+      toast.error(e instanceof Error ? e.message : t("y.mkt.bidFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -538,12 +540,12 @@ function AuctionDetailSheet({
                 <span>{formatRelativeTime(auction.createdAt)}</span>
               </div>
               <SheetTitle className="font-mono text-lg">
-                {auction.callerNumber ? formatCallerId(auction.callerNumber) : "Auction"}
+                {auction.callerNumber ? formatCallerId(auction.callerNumber) : t("y.mkt.col.auction")}
               </SheetTitle>
               <SheetDescription className="flex items-center gap-2">
                 <Badge variant={STATUS_VARIANT[auction.status]} className="gap-1.5 text-[10px] uppercase tracking-wider">
                   <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                  {auction.status}
+                  {t(`y.mkt.status.${auction.status}`)}
                 </Badge>
                 <span className="text-xs">{auction.campaignName ?? "—"}</span>
               </SheetDescription>
@@ -552,9 +554,9 @@ function AuctionDetailSheet({
             <div className="flex-1 overflow-y-auto px-6 py-4">
               {/* Headline numbers */}
               <div className="grid grid-cols-2 gap-2 text-center">
-                <Stat label="Bid floor" value={formatCurrency(auction.bidFloor, true)} />
+                <Stat label={t("y.mkt.bidFloor")} value={formatCurrency(auction.bidFloor, true)} />
                 <Stat
-                  label={auction.status === "settled" ? "Winning bid" : "Current bid"}
+                  label={auction.status === "settled" ? t("y.mkt.winningBid") : t("y.mkt.currentBid")}
                   value={auction.winningBid !== undefined ? formatCurrency(auction.winningBid, true) : "—"}
                   highlight={auction.winningBid !== undefined}
                 />
@@ -563,14 +565,14 @@ function AuctionDetailSheet({
               {/* Bid history */}
               <section className="mt-6">
                 <h3 className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                  Bid history
+                  {t("y.mkt.bidHistory")}
                 </h3>
                 {bidsLoading ? (
                   <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading bids…
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("y.mkt.loadingBids")}
                   </div>
                 ) : bids.length === 0 ? (
-                  <p className="mt-2 text-xs italic text-muted-foreground">No bids yet.</p>
+                  <p className="mt-2 text-xs italic text-muted-foreground">{t("y.mkt.noBidsYet")}</p>
                 ) : (
                   <ol className="mt-2 space-y-1.5">
                     {bids.map((b) => (
@@ -593,7 +595,7 @@ function AuctionDetailSheet({
                           <div className="font-mono tabular-nums">{formatCurrency(b.amount, true)}</div>
                           {b.isWinning && (
                             <div className="text-[10px] font-medium text-[color:var(--success)]">
-                              Winning
+                              {t("y.mkt.winning")}
                             </div>
                           )}
                         </div>
@@ -608,14 +610,14 @@ function AuctionDetailSheet({
             {auction.status === "open" && (
               <div className="border-t border-border/60 bg-background/40 p-4">
                 <div className="mb-2 flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                  <Clock className="h-3 w-3" /> Place a bid
+                  <Clock className="h-3 w-3" /> {t("y.mkt.placeBid")}
                 </div>
                 <div className="space-y-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Bid as</Label>
+                    <Label className="text-xs">{t("y.mkt.bidAs")}</Label>
                     <Select value={buyerId} onValueChange={setBuyerId}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Pick a buyer" />
+                        <SelectValue placeholder={t("y.mkt.pickBuyer")} />
                       </SelectTrigger>
                       <SelectContent>
                         {buyers.map((b) => (
@@ -628,7 +630,7 @@ function AuctionDetailSheet({
                   </div>
                   <div className="flex items-end gap-2">
                     <div className="flex-1 space-y-1.5">
-                      <Label className="text-xs">Amount (USD)</Label>
+                      <Label className="text-xs">{t("y.mkt.amountUsd")}</Label>
                       <Input
                         type="number"
                         inputMode="decimal"
@@ -642,17 +644,17 @@ function AuctionDetailSheet({
                     <Button onClick={submit} disabled={!canBid}>
                       {submitting ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Placing…
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("y.mkt.placing")}
                         </>
                       ) : (
                         <>
-                          <Gavel className="h-3.5 w-3.5" /> Bid
+                          <Gavel className="h-3.5 w-3.5" /> {t("y.mkt.bid")}
                         </>
                       )}
                     </Button>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Bid must be at least {formatCurrency(auction.bidFloor, true)}.
+                    {t("y.mkt.bidMin").replace("{amount}", formatCurrency(auction.bidFloor, true))}
                   </p>
                 </div>
               </div>

@@ -19,19 +19,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/lib/api/services/auth.service";
 import { ROUTES } from "@/lib/constants";
+import { useTranslation } from "@/hooks/use-translation";
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function friendlyError(err: unknown): string {
+function friendlyError(err: unknown, t: (key: string) => string): string {
   const msg = err instanceof Error ? err.message : "";
   if (/invalid or expired/i.test(msg)) {
-    return "This link has expired or was already used. Use Forgot password on the sign-in page to get a new one.";
+    return t("y.auth.resetLinkExpired");
   }
-  if (/too many/i.test(msg)) return "Too many attempts. Please wait a minute and try again.";
-  return msg || "Couldn't set your password. Please try again.";
+  if (/too many/i.test(msg)) return t("y.auth.tooManyAttempts");
+  return msg || t("y.auth.setPasswordFailed");
 }
 
 export function ResetPasswordForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useSearchParams();
   const token = useMemo(() => params.get("token") ?? "", [params]);
@@ -44,13 +46,13 @@ export function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="space-y-3 text-center">
-        <h2 className="text-base font-semibold">Link incomplete</h2>
+        <h2 className="text-base font-semibold">{t("y.auth.linkIncomplete")}</h2>
         <p className="text-sm text-muted-foreground">
-          This link has no token. Open it directly from the email, or use{" "}
+          {t("y.auth.noTokenHint").split("{link}")[0]}
           <a href={ROUTES.forgotPassword} className="text-accent hover:underline">
-            Forgot password
-          </a>{" "}
-          to get a new one.
+            {t("y.auth.forgotPassword")}
+          </a>
+          {t("y.auth.noTokenHint").split("{link}")[1]}
         </p>
       </div>
     );
@@ -60,20 +62,20 @@ export function ResetPasswordForm() {
     e.preventDefault();
     if (pending) return;
     if (password.length < MIN_PASSWORD_LENGTH) {
-      toast.error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      toast.error(t("y.auth.passwordMin").replace("{min}", String(MIN_PASSWORD_LENGTH)));
       return;
     }
     if (password !== confirm) {
-      toast.error("Passwords don't match.");
+      toast.error(t("y.auth.passwordsMismatch"));
       return;
     }
     setPending(true);
     try {
       await authService.confirmPasswordReset(token, password);
-      toast.success("Password set. Sign in with your email address and your new password.");
+      toast.success(t("y.auth.passwordSet"));
       router.push(ROUTES.login);
     } catch (err) {
-      toast.error(friendlyError(err));
+      toast.error(friendlyError(err, t));
     } finally {
       setPending(false);
     }
@@ -82,7 +84,7 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4" autoComplete="off">
       <div className="space-y-2">
-        <Label htmlFor="rp-password">New password</Label>
+        <Label htmlFor="rp-password">{t("y.auth.newPassword")}</Label>
         <div className="relative">
           <Input
             id="rp-password"
@@ -99,18 +101,18 @@ export function ResetPasswordForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? t("y.auth.hidePassword") : t("y.auth.showPassword")}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          At least {MIN_PASSWORD_LENGTH} characters. Use a mix of letters, numbers and symbols.
+          {t("y.auth.passwordHint").replace("{min}", String(MIN_PASSWORD_LENGTH))}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="rp-confirm">Confirm password</Label>
+        <Label htmlFor="rp-confirm">{t("y.auth.confirmPassword")}</Label>
         <Input
           id="rp-confirm"
           type={showPassword ? "text" : "password"}
@@ -125,11 +127,11 @@ export function ResetPasswordForm() {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("y.auth.saving")}
           </>
         ) : (
           <>
-            Set password <ArrowRight className="h-4 w-4" />
+            {t("y.auth.setPassword")} <ArrowRight className="h-4 w-4" />
           </>
         )}
       </Button>

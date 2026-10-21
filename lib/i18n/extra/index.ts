@@ -36,9 +36,10 @@ import { sweep5 } from "./sweep-5";
 import { sweep6 } from "./sweep-6";
 import { acronyms } from "./acronyms";
 import { missingKeys } from "./missing-keys";
+import { sweepY } from "./sweep-y";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, missingKeys, acronyms];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {

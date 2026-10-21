@@ -243,7 +243,7 @@ export function TrackingNumberEditDialog({
                     <SelectValue placeholder={t("trafficUI.campaigns.settings.trackingNumbers.edit.vendor.choosePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_PUBLISHER}>No publisher</SelectItem>
+                    <SelectItem value={NO_PUBLISHER}>{t("y.tned.noPublisher")}</SelectItem>
                     {publishers.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}

@@ -131,14 +131,14 @@ export function NotificationsSection() {
 
   const toggle = async (event: string, channel: NotificationChannel) => {
     if (!userEmail) {
-      toast.error("Sign-in required to update notification preferences.");
+      toast.error(t("y.notif.signInRequired"));
       return;
     }
     const next = !isOn(event, channel);
     try {
       await setEnabled(event, channel, next, userEmail);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save preference");
+      toast.error(e instanceof Error ? e.message : t("y.err.prefSave"));
     }
   };
 

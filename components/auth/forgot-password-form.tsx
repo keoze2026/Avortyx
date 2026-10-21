@@ -32,7 +32,7 @@ export function ForgotPasswordForm() {
       setSent(true);
       toast.success(t("authUI.forgot.toastSent"));
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't send reset email"));
+      toast.error(friendlyErrorMessage(e, t("x5.profile.resetFailed")));
     } finally {
       setPending(false);
     }

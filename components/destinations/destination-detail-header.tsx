@@ -58,7 +58,7 @@ export function DestinationDetailHeader({
           : t("networkUI.destinations.toast.enabled").replace("{name}", destination.name),
       );
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't update destination."));
+      toast.error(friendlyErrorMessage(e, t("y.err.destUpdate")));
     }
   };
 
@@ -68,7 +68,7 @@ export function DestinationDetailHeader({
       toast.success(t("networkUI.destinations.toast.removed").replace("{name}", destination.name));
       router.push(ROUTES.destinations);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't delete destination."));
+      toast.error(friendlyErrorMessage(e, t("y.err.destDelete")));
     }
   };
 

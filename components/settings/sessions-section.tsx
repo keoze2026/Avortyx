@@ -22,7 +22,7 @@ export function SessionsSection() {
       await revokeSession(id);
       toast.success(t("settings.sessionsSection.sessionRevoked"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't revoke session");
+      toast.error(e instanceof Error ? e.message : t("y.err.sessionRevoke"));
     }
   };
 
@@ -33,7 +33,7 @@ export function SessionsSection() {
       await Promise.all(others.map((s) => revokeSession(s.id)));
       toast.success(t("settings.sessionsSection.allOthersRevoked"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't revoke sessions");
+      toast.error(e instanceof Error ? e.message : t("y.err.sessionsRevoke"));
     }
   };
 

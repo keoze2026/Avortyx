@@ -85,9 +85,9 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
     try {
       const created = await workspaceService.invite({ email, role });
       onMembersChange([created, ...members]);
-      toast.success(`${created.email} invited`);
+      toast.success(t("y.members.invited").replace("{email}", created.email));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't send invite");
+      toast.error(e instanceof Error ? e.message : t("y.err.inviteSend"));
     }
   };
 
@@ -107,7 +107,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
       onMembersChange(members.map((m) => (m.id === id ? updated : m)));
       toast.success(t("workspaceUI.members.updated").replace("{name}", updated.name));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't update member");
+      toast.error(e instanceof Error ? e.message : t("y.err.memberUpdate"));
     }
   };
 
@@ -120,7 +120,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
       toast.success(t("workspaceUI.members.removed").replace("{name}", m.name));
     } catch (e) {
       onMembersChange(prev);
-      toast.error(e instanceof Error ? e.message : "Couldn't remove member");
+      toast.error(e instanceof Error ? e.message : t("y.err.memberRemove"));
     }
   };
 
@@ -134,7 +134,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
           <div>
             <CardTitle className="text-base">{t("workspaceUI.members.title")}</CardTitle>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {activeCount} active{suspendedCount > 0 ? ` · ${suspendedCount} suspended` : ""}
+              {t("y.members.active").replace("{count}", String(activeCount))}{suspendedCount > 0 ? ` · ${t("y.members.suspendedCount").replace("{count}", String(suspendedCount))}` : ""}
             </p>
           </div>
           <Button size="sm" onClick={() => setInviteOpen(true)}>
@@ -146,7 +146,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
-              <p className="text-xs text-muted-foreground">Loading members…</p>
+              <p className="text-xs text-muted-foreground">{t("y.members.loading")}</p>
             </div>
           ) : members.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
@@ -154,9 +154,9 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
                 <Plus className="h-5 w-5" />
               </span>
               <div>
-                <h4 className="text-sm font-semibold">No team members yet</h4>
+                <h4 className="text-sm font-semibold">{t("y.members.emptyTitle")}</h4>
                 <p className="mt-1 max-w-md text-xs text-muted-foreground">
-                  Invite your first teammate using the button above.
+                  {t("y.members.emptyHint")}
                 </p>
               </div>
             </div>
@@ -197,7 +197,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
                         variant={m.status === "active" ? "success" : "destructive"}
                         className="inline-flex w-24 justify-center"
                       >
-                        {m.status === "active" ? "Active" : "Suspended"}
+                        {m.status === "active" ? t("y.members.statusActive") : t("y.members.statusSuspended")}
                       </Badge>
                     </TableCell>
                     <TableCell className="pr-4">

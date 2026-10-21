@@ -96,7 +96,7 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
         <div className="flex items-center gap-2">
           <PartnerStatusBadge status={buyer.status} />
           <Can area="buyers" action="edit"><Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
-            <Send className="h-3.5 w-3.5" /> Invite
+            <Send className="h-3.5 w-3.5" /> {t("y.bdh.invite")}
           </Button></Can>
           <Can area="buyers" action="edit"><Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
             {isActive ? (

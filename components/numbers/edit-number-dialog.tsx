@@ -114,7 +114,7 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
       );
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save number");
+      toast.error(e instanceof Error ? e.message : t("trafficUi.numbers.saveFailed"));
     } finally {
       setSubmitting(false);
     }

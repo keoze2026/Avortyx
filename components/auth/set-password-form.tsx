@@ -24,28 +24,30 @@ import { accessRequestsService } from "@/lib/api/services/access-requests.servic
 import { setTokens } from "@/lib/api/tokens";
 import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useTranslation } from "@/hooks/use-translation";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 /** Translate the backend's documented error codes into a friendlier message
  *  the user can act on. Falls back to the raw message for anything else. */
-function friendlyError(err: unknown): string {
+function friendlyError(err: unknown, t: (key: string) => string): string {
   if (err instanceof ApiError) {
     const code = (err.message ?? "").toLowerCase();
     if (code.includes("token_expired"))
-      return "This setup link has expired. Please request a new one.";
+      return t("y.auth.setupExpired");
     if (code.includes("token_already_used"))
-      return "This setup link has already been used. Try signing in instead.";
+      return t("y.auth.setupUsed");
     if (code.includes("token_invalid"))
-      return "This setup link isn't valid. Please double-check the URL or request a new invitation.";
+      return t("y.auth.setupInvalid");
     if (code.includes("password_too_weak"))
-      return "That password is too weak — try a longer one with a mix of letters, numbers, and symbols.";
+      return t("y.auth.passwordWeak");
   }
   if (err instanceof Error) return err.message;
-  return "Couldn't set your password — please try again.";
+  return t("y.auth.setPasswordFailed");
 }
 
 export function SetPasswordForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useSearchParams();
   const token = useMemo(() => params.get("token") ?? "", [params]);
@@ -60,10 +62,9 @@ export function SetPasswordForm() {
   if (!token) {
     return (
       <div className="space-y-3 text-center">
-        <h2 className="text-base font-semibold">Setup link missing</h2>
+        <h2 className="text-base font-semibold">{t("y.auth.setupMissing")}</h2>
         <p className="text-sm text-muted-foreground">
-          We couldn&apos;t find a setup token in your URL. Please open the link
-          directly from the email we sent — or contact{" "}
+          {t("y.auth.setupMissingHint")}{" "}
           <a href="mailto:hello@avortyx.io" className="text-accent hover:underline">
             hello@avortyx.io
           </a>
@@ -78,11 +79,11 @@ export function SetPasswordForm() {
     if (pending) return;
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      toast.error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      toast.error(t("y.auth.passwordMin").replace("{min}", String(MIN_PASSWORD_LENGTH)));
       return;
     }
     if (password !== confirm) {
-      toast.error("Passwords don't match.");
+      toast.error(t("y.auth.passwordsMismatch"));
       return;
     }
 
@@ -93,10 +94,10 @@ export function SetPasswordForm() {
       setTokens({ access: res.access, refresh: res.refresh });
       // Hydrate the auth store from /me so the rest of the app sees the user.
       await useAuthStore.getState().bootstrap();
-      toast.success("Welcome to Avortyx — you're signed in.");
+      toast.success(t("y.auth.welcomeSignedIn"));
       router.push(ROUTES.dashboard);
     } catch (err) {
-      toast.error(friendlyError(err));
+      toast.error(friendlyError(err, t));
     } finally {
       setPending(false);
     }
@@ -109,13 +110,12 @@ export function SetPasswordForm() {
           <CheckCircle2 className="h-4 w-4" />
         </span>
         <p className="text-xs text-muted-foreground">
-          Your access request has been approved. Set a password to finish
-          creating your account and sign in.
+          {t("y.auth.approvedSetPassword")}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t("y.auth.password")}</Label>
         <div className="relative">
           <Input
             id="password"
@@ -132,19 +132,18 @@ export function SetPasswordForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? t("y.auth.hidePassword") : t("y.auth.showPassword")}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          At least {MIN_PASSWORD_LENGTH} characters. Use a mix of letters,
-          numbers, and symbols.
+          {t("y.auth.passwordHint").replace("{min}", String(MIN_PASSWORD_LENGTH))}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirm">Confirm password</Label>
+        <Label htmlFor="confirm">{t("y.auth.confirmPassword")}</Label>
         <Input
           id="confirm"
           type={showPassword ? "text" : "password"}
@@ -159,11 +158,11 @@ export function SetPasswordForm() {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Setting password…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("y.auth.settingPassword")}
           </>
         ) : (
           <>
-            Set password &amp; sign in <ArrowRight className="h-4 w-4" />
+            {t("y.auth.setPasswordSignIn")} <ArrowRight className="h-4 w-4" />
           </>
         )}
       </Button>

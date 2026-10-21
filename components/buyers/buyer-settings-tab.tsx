@@ -103,7 +103,7 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
       }
       toast.success(t("networkUI.buyers.settings.saved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save buyer");
+      toast.error(e instanceof Error ? e.message : t("y.err.buyerSave"));
     } finally {
       setSubmitting(false);
     }

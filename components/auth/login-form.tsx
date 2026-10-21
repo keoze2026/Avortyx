@@ -151,14 +151,14 @@ export function LoginForm() {
         // MFA challenge — wait for the user to enter the 6-digit code. The
         // store's `pendingMfa` is now set; the JSX below re-renders the
         // challenge step.
-        toast.success("Password accepted — enter your authenticator code");
+        toast.success(t("y.login.passwordAccepted"));
         setCode("");
         return;
       }
-      toast.success("Welcome back to Avortyx");
+      toast.success(t("y.login.welcomeBack"));
       finishLogin();
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Sign in failed"));
+      toast.error(friendlyErrorMessage(e, t("y.login.signInFailed")));
     } finally {
       setPending(false);
     }
@@ -170,11 +170,11 @@ export function LoginForm() {
     setVerifying(true);
     try {
       await completeMfa(code, "admin");
-      toast.success("Welcome back to Avortyx");
+      toast.success(t("y.login.welcomeBack"));
       finishLogin();
     } catch (e) {
       toast.error(
-        friendlyErrorMessage(e, "Invalid code — check Google Authenticator and try again"),
+        friendlyErrorMessage(e, t("y.login.invalidCode")),
       );
     } finally {
       setVerifying(false);
@@ -220,7 +220,7 @@ export function LoginForm() {
         <SubmitButton disabled={code.length !== 6 || verifying}>
           {verifying ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Verifying…
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("y.login.verifying")}
             </>
           ) : (
             <>
@@ -283,7 +283,7 @@ export function LoginForm() {
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-[10px] top-[10px] grid h-[36px] w-[36px] place-items-center rounded-xl text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? t("y.auth.hidePassword") : t("y.auth.showPassword")}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

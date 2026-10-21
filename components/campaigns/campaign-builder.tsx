@@ -247,7 +247,7 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cb-revenue">Revenue per call (USD)</Label>
+                    <Label htmlFor="cb-revenue">{t("y.cb.revenueUsd")}</Label>
                     <div className="relative">
                       <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
@@ -261,10 +261,9 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
                       />
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      What the buyer pays you for each qualifying call. The Dashboard&apos;s Revenue and Profit are
-                      built from this and the payout above.
+                      {t("y.cb.revenueHint")}
                       {form.revenue === 0 && (
-                        <span className="text-[color:var(--warning)]"> At 0, Revenue will show $0 for this campaign.</span>
+                        <span className="text-[color:var(--warning)]"> {t("y.cb.revenueZero")}</span>
                       )}
                     </p>
                   </div>
@@ -325,7 +324,7 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                       <Field label={t("trafficUI.campaigns.builder.labels.payoutModel")} value={form.payoutModel} />
                       <Field label={t("trafficUI.campaigns.builder.labels.payoutLabel")} value={`$${form.payout.toFixed(2)}`} />
-                      <Field label="Revenue per call" value={`$${form.revenue.toFixed(2)}`} />
+                      <Field label={t("y.cb.revenue")} value={`$${form.revenue.toFixed(2)}`} />
                       <Field
                         label={t("trafficUI.campaigns.builder.labels.qualify")}
                         value={form.payoutModel === "per-qualified" ? `${form.qualifyDurationSec}s` : "—"}

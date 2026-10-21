@@ -154,7 +154,7 @@ export default function DestinationsPage() {
         });
       }
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't update destination."));
+      toast.error(friendlyErrorMessage(e, t("y.err.destUpdate")));
     }
   };
 
@@ -165,7 +165,7 @@ export default function DestinationsPage() {
       await remove(id);
       toast.success(t("networkUI.destinations.toast.removed").replace("{name}", d.name));
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't delete destination."));
+      toast.error(friendlyErrorMessage(e, t("y.err.destDelete")));
     }
   };
 
@@ -180,11 +180,11 @@ export default function DestinationsPage() {
     if (!cloneTarget) return;
     try {
       const copy = await cloneDestination(cloneTarget.id);
-      toast.success(`Cloned as "${copy.name}"`, {
-        description: "It is switched off. Change its number, or switch the original off, before turning it on.",
+      toast.success(t("x5.campaigns.clonedAs").replace("{name}", copy.name), {
+        description: t("y.dest.clonedHint"),
       });
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't clone the destination."));
+      toast.error(friendlyErrorMessage(e, t("y.err.destClone")));
       throw e; // keeps the dialog open so the user can try again
     }
   };
@@ -280,7 +280,7 @@ export default function DestinationsPage() {
           .replace("{value}", value > 0 ? value.toLocaleString("en-US", { useGrouping: false }) : "∞"),
       );
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't update cap."));
+      toast.error(friendlyErrorMessage(e, t("y.err.capUpdate")));
     }
   };
 
@@ -353,7 +353,7 @@ export default function DestinationsPage() {
         </div>
 
         <div className="text-xs text-muted-foreground tabular-nums">
-          {filtered.length} of {destinations.length}
+          {t("y.dest.countOf").replace("{shown}", String(filtered.length)).replace("{total}", String(destinations.length))}
         </div>
       </div>
 

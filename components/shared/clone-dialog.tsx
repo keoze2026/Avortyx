@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cloneName } from "@/lib/api/services/clone";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface CloneDialogProps {
   open: boolean;
@@ -42,7 +43,10 @@ export function CloneDialog({
   note,
   onConfirm,
 }: CloneDialogProps) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
+  const entityKey = `y.clone.entity.${entity}`;
+  const entityLabel = t(entityKey) === entityKey ? entity : t(entityKey);
 
   const confirm = async (e: MouseEvent) => {
     // Keep the dialog open while the clone is being created.
@@ -68,11 +72,11 @@ export function CloneDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Clone this {entity}?</AlertDialogTitle>
+          <AlertDialogTitle>{t("y.clone.title").replace("{entity}", entityLabel)}</AlertDialogTitle>
           <AlertDialogDescription>
-            A copy named{" "}
-            <span className="font-medium text-foreground">{cloneName(sourceName)}</span>{" "}
-            will be created with the same settings. You can rename it afterwards.
+            {t("y.clone.description").split("{name}")[0]}
+            <span className="font-medium text-foreground">{cloneName(sourceName)}</span>
+            {t("y.clone.description").split("{name}")[1]}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {note ? (
@@ -81,9 +85,9 @@ export function CloneDialog({
           </p>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("y.common.cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={confirm} disabled={busy}>
-            {busy ? "Cloning\u2026" : "Clone"}
+            {busy ? t("y.clone.cloning") : t("y.clone.clone")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

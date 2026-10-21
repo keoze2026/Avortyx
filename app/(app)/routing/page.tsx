@@ -32,6 +32,7 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 type Filter = "all" | "live" | "off" | "setup";
 const FILTERS: Array<{ id: Filter; label: string }> = [
@@ -54,6 +55,7 @@ async function eachLimited<T>(items: T[], limit: number, fn: (item: T) => Promis
 }
 
 export default function RoutingPage() {
+  const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const campaignsReady = useCampaignsStore((s) => s.hydrated);
   const numbers = useNumbersStore((s) => s.numbers);
@@ -158,12 +160,12 @@ export default function RoutingPage() {
   return (
     <>
       <PageHeader
-        title="Routing"
-        description="Choose the TFN each campaign's calls ring. Add the number, switch the campaign on, and calls start."
+        title={t("y.routing.title")}
+        description={t("y.routing.description")}
         actions={
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href={ADVANCED_ROUTING_HREF}>
-              <SlidersHorizontal className="h-3.5 w-3.5" /> Advanced routing
+              <SlidersHorizontal className="h-3.5 w-3.5" /> {t("y.routing.advanced")}
             </Link>
           </Button>
         }
@@ -173,14 +175,14 @@ export default function RoutingPage() {
         <StatTile
           icon={Radio}
           value={loading ? "—" : formatNumber(stats.live)}
-          label="Campaigns live"
+          label={t("y.routing.statLive")}
           accentClass="bg-[color:var(--success)]/10 text-[color:var(--success)]"
         />
-        <StatTile icon={PhoneForwarded} value={loading ? "—" : formatNumber(stats.tfns)} label="TFNs taking calls" />
+        <StatTile icon={PhoneForwarded} value={loading ? "—" : formatNumber(stats.tfns)} label={t("y.routing.statTfns")} />
         <StatTile
           icon={AlertTriangle}
           value={loading ? "—" : formatNumber(stats.setup)}
-          label="Campaigns without a TFN"
+          label={t("y.routing.statSetup")}
           accentClass={
             stats.setup > 0 && !loading
               ? "bg-[color:var(--warning)]/10 text-[color:var(--warning)]"
@@ -196,14 +198,14 @@ export default function RoutingPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search campaign or number"
+            placeholder={t("y.routing.searchPlaceholder")}
             className="h-9 w-full pl-8 text-xs sm:w-72"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery("")}
-              aria-label="Clear search"
+              aria-label={t("y.routing.clearSearch")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -221,21 +223,21 @@ export default function RoutingPage() {
                 f.id === filter ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {f.label}
+              {t(`y.routing.filter.${f.id}`)}
             </button>
           ))}
         </div>
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:ml-auto">
-          {formatNumber(filtered.length)} of {formatNumber(rows.length)} campaigns
+          {t("y.routing.countOf").replace("{shown}", formatNumber(filtered.length)).replace("{total}", formatNumber(rows.length))}
         </span>
       </div>
 
       {failed ? (
         <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-          <p className="text-sm font-medium">Couldn&apos;t load where calls go.</p>
-          <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+          <p className="text-sm font-medium">{t("y.routing.loadFailed")}</p>
+          <p className="text-xs text-muted-foreground">{t("y.routing.checkConnection")}</p>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void load()}>
-            <RefreshCw className="h-3.5 w-3.5" /> Try again
+            <RefreshCw className="h-3.5 w-3.5" /> {t("y.routing.tryAgain")}
           </Button>
         </Card>
       ) : loading ? (
@@ -248,16 +250,16 @@ export default function RoutingPage() {
         <EmptyState
           icon={Megaphone}
           tone="amber"
-          title="No campaigns yet"
-          description="Create a campaign and attach a tracking number, then come back here to choose where its calls ring."
+          title={t("y.routing.emptyTitle")}
+          description={t("y.routing.emptyDescription")}
           actions={
             <Button asChild size="sm">
-              <Link href={ROUTES.campaigns}>Go to Campaigns</Link>
+              <Link href={ROUTES.campaigns}>{t("y.routing.goToCampaigns")}</Link>
             </Button>
           }
         />
       ) : filtered.length === 0 ? (
-        <Card className="px-6 py-10 text-center text-xs text-muted-foreground">No campaign matches.</Card>
+        <Card className="px-6 py-10 text-center text-xs text-muted-foreground">{t("y.routing.noMatch")}</Card>
       ) : (
         <div className="space-y-3">
           {filtered.map((r) => (

@@ -75,7 +75,7 @@ export function ReferralSpendChart() {
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(friendlyErrorMessage(e, "Couldn't load spending tracker"));
+        setError(friendlyErrorMessage(e, t("y.err.spendLoad")));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

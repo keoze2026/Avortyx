@@ -16,6 +16,8 @@
 "use client";
 
 import { toast } from "sonner";
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
@@ -146,7 +148,7 @@ function scheduleSync(
         // Backend rejected the PATCH. Say so rather than leave a switch that
         // looks saved; the next page load reseeds from the server's
         // last-good value via `seed()`.
-        toast.error("Couldn't save campaign settings. Please try again.");
+        toast.error(tFor(useLocaleStore.getState().locale, "y.css.saveFailed"));
       });
   }, SYNC_DELAY_MS);
   pending.set(campaignId, timer);

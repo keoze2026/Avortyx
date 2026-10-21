@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { referralsService } from "@/lib/api/services/referrals.service";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface Props {
   open: boolean;
@@ -35,6 +36,7 @@ interface Props {
 const EMAIL_RX = /^\S+@\S+\.\S+$/;
 
 export function InviteReferralDialog({ open, onOpenChange }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -60,10 +62,10 @@ export function InviteReferralDialog({ open, onOpenChange }: Props) {
     setSubmitting(true);
     try {
       await referralsService.sendInvite({ name: trimmedName, email: trimmedEmail });
-      toast.success(`Invite sent to ${trimmedEmail}`);
+      toast.success(t("y.ref.sent").replace("{email}", trimmedEmail));
       onClose(false);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't send invite — please try again"));
+      toast.error(friendlyErrorMessage(e, t("y.ref.sendFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -78,9 +80,9 @@ export function InviteReferralDialog({ open, onOpenChange }: Props) {
               <Mail className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle>Invite a contact</DialogTitle>
+              <DialogTitle>{t("y.ref.title")}</DialogTitle>
               <DialogDescription>
-                We&apos;ll email them a personalized referral link tied to your code.
+                {t("y.ref.description")}
               </DialogDescription>
             </div>
           </div>
@@ -88,20 +90,20 @@ export function InviteReferralDialog({ open, onOpenChange }: Props) {
 
         <div className="space-y-3 py-2">
           <div className="space-y-2">
-            <Label htmlFor="ref-name">Name</Label>
+            <Label htmlFor="ref-name">{t("y.ref.name")}</Label>
             <Input
               id="ref-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Alex Chen"
+              placeholder={t("y.ref.namePlaceholder")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void onSubmit();
               }}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ref-email">Email</Label>
+            <Label htmlFor="ref-email">{t("y.ref.email")}</Label>
             <Input
               id="ref-email"
               type="email"
@@ -115,7 +117,7 @@ export function InviteReferralDialog({ open, onOpenChange }: Props) {
             />
             {email.length > 0 && !emailLooksValid && (
               <p className="text-xs text-destructive">
-                Please enter a valid email address.
+                {t("y.ref.invalidEmail")}
               </p>
             )}
           </div>
@@ -123,15 +125,15 @@ export function InviteReferralDialog({ open, onOpenChange }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onClose(false)}>
-            Cancel
+            {t("y.common.cancel")}
           </Button>
           <Button onClick={onSubmit} disabled={submitting || !canSubmit}>
             {submitting ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("y.common.sending")}
               </>
             ) : (
-              "Send invite"
+              t("y.ref.send")
             )}
           </Button>
         </DialogFooter>

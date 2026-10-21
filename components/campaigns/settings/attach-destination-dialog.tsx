@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { routingService } from "@/lib/api/services/routing.service";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { toE164 } from "@/lib/format";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface Props {
   campaignId: string;
@@ -61,6 +62,7 @@ export function AttachDestinationDialog({
   excludeNumbers,
   startPriority = 1,
 }: Props) {
+  const { t } = useTranslation();
   const destinations = useDestinationsStore((s) => s.destinations);
   const fetchDestinations = useDestinationsStore((s) => s.fetch);
 
@@ -148,24 +150,24 @@ export function AttachDestinationDialog({
           attached.push(d.tfn);
         }
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not attach destination", {
+        toast.error(e instanceof Error ? e.message : t("y.attDest.failed"), {
           description: attached.length
-            ? `${attached.length} of ${chosen.length} were attached: ${attached.join(", ")}`
-            : "Nothing was attached.",
+            ? t("y.attDest.partial").replace("{done}", String(attached.length)).replace("{total}", String(chosen.length)).replace("{numbers}", attached.join(", "))
+            : t("y.attDest.nothing"),
         });
         return;
       }
 
       toast.success(
         attached.length === 1
-          ? "1 destination routed"
-          : `${attached.length} destinations routed`,
-        { description: `Calls for "${campaignName}" will now be sent to them.` },
+          ? t("y.attDest.routedOne")
+          : t("y.attDest.routedMany").replace("{count}", String(attached.length)),
+        { description: t("y.attDest.routedHint").replace("{campaign}", campaignName) },
       );
       onAttached?.();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not attach destination");
+      toast.error(e instanceof Error ? e.message : t("y.attDest.failed"));
     } finally {
       setSubmitting(false);
     }
@@ -180,12 +182,11 @@ export function AttachDestinationDialog({
               <Target className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle>Route destinations</DialogTitle>
+              <DialogTitle>{t("y.attDest.title")}</DialogTitle>
               <DialogDescription>
-                Pick where calls for{" "}
-                <span className="font-medium text-foreground">{campaignName}</span>{" "}
-                should be sent. A campaign with no destination drops every call it
-                receives.
+                {t("y.attDest.description").split("{campaign}")[0]}
+                <span className="font-medium text-foreground">{campaignName}</span>
+                {t("y.attDest.description").split("{campaign}")[1]}
               </DialogDescription>
             </div>
           </div>
@@ -195,7 +196,7 @@ export function AttachDestinationDialog({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by number, name or buyer"
+            placeholder={t("y.attDest.search")}
             className="h-10 flex-1 text-sm"
           />
           <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-medium">
@@ -203,9 +204,9 @@ export function AttachDestinationDialog({
               checked={allShownSelected}
               disabled={filtered.length === 0}
               onCheckedChange={toggleAll}
-              aria-label="Select all"
+              aria-label={t("y.attDest.selectAll")}
             />
-            Select all ({filtered.length})
+            {t("y.attDest.selectAllCount").replace("{count}", String(filtered.length))}
           </label>
         </div>
 
@@ -214,9 +215,9 @@ export function AttachDestinationDialog({
             <p className="p-4 text-center text-xs text-muted-foreground">
               {available.length === 0
                 ? destinations.length === 0
-                  ? "No destinations yet. Create one under Destinations first."
-                  : "Every destination is already routed to this campaign."
-                : "Nothing matches that search."}
+                  ? t("y.attDest.noneYet")
+                  : t("y.attDest.allRouted")
+                : t("y.attDest.noMatch")}
             </p>
           ) : (
             filtered.map((d) => (
@@ -238,7 +239,7 @@ export function AttachDestinationDialog({
                 </span>
                 {!d.enabled && (
                   <span className="rounded border border-border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Off
+                    {t("y.attDest.off")}
                   </span>
                 )}
               </label>
@@ -248,12 +249,15 @@ export function AttachDestinationDialog({
 
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("y.common.cancel")}
           </Button>
           <Button size="sm" onClick={onSubmit} disabled={submitting || selected.size === 0}>
             {submitting && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-            Route {selected.size > 0 ? `${selected.size} ` : ""}
-            {selected.size === 1 ? "destination" : "destinations"}
+            {selected.size === 0
+              ? t("y.attDest.routeNone")
+              : selected.size === 1
+                ? t("y.attDest.routeOne")
+                : t("y.attDest.routeMany").replace("{count}", String(selected.size))}
           </Button>
         </DialogFooter>
       </DialogContent>

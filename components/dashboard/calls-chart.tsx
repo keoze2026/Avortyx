@@ -19,6 +19,7 @@ import { LAST_14_DAYS, TODAY_HOURLY } from "@/lib/mock/timeseries";
 import { formatNumber } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 type Range = "24h" | "14d";
 
@@ -38,6 +39,7 @@ interface CallsChartProps {
 }
 
 export function CallsChart({ calls }: CallsChartProps = {}) {
+  const { t } = useTranslation();
   const [range, setRange] = React.useState<Range>("24h");
   const hourly = React.useMemo(
     () => (calls ? bucketHourly(calls) : TODAY_HOURLY),
@@ -61,16 +63,16 @@ export function CallsChart({ calls }: CallsChartProps = {}) {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-2">
         <div>
-          <CardTitle className="text-sm font-semibold">Calls</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t("y.chart.calls")}</CardTitle>
           <div className="mt-1.5 flex items-baseline gap-2">
             <span className="text-2xl font-semibold tracking-tight tabular-nums">
               {formatNumber(total)}
             </span>
             <span className="text-[11px] text-muted-foreground">
-              peak {formatNumber(peak)}
-              {range === "24h" && peakPoint ? ` at ${peakPoint.full}` : null}
-              {" · avg "}
-              {formatNumber(avg)}
+              {t("y.chart.peak").replace("{n}", formatNumber(peak))}
+              {range === "24h" && peakPoint ? ` ${t("y.chart.at").replace("{time}", peakPoint.full)}` : null}
+              {" · "}
+              {t("y.chart.avg").replace("{n}", formatNumber(avg))}
             </span>
           </div>
         </div>
@@ -86,7 +88,7 @@ export function CallsChart({ calls }: CallsChartProps = {}) {
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {r.label}
+              {t(`y.chart.range.${r.id}`)}
             </button>
           ))}
         </div>

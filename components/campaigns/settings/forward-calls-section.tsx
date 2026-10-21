@@ -147,7 +147,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         setStrict(Boolean(c.duplicateStrict));
       })
       .catch(() => {
-        if (!cancelled) toast.error("Couldn't load the duplicate call setting.");
+        if (!cancelled) toast.error(t("y.fwd.dupLoadFailed"));
       });
     return () => {
       cancelled = true;
@@ -166,13 +166,13 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       setDupSavedHours(hours);
       toast.success(
         block
-          ? `Duplicate calls blocked — repeat callers within ${hours} hour${hours === 1 ? "" : "s"} are dropped.`
-          : "Duplicate call blocking turned off.",
+          ? t("y.fwd.dupOn").replace("{hours}", String(hours))
+          : t("y.err.dupOff"),
       );
     } catch {
       setDupBlock(prevBlock);
       setDupHours(prevHours);
-      toast.error("Couldn't save the duplicate call setting. Please try again.");
+      toast.error(t("y.fwd.dupSaveFailed"));
     } finally {
       setDupSaving(false);
     }
@@ -192,7 +192,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       await updateCampaign(campaignId, patch);
       toast.success(t("trafficUI.campaigns.settings.forward.duplicateSaved"));
     } catch {
-      toast.error("Couldn't save the duplicate routing setting. Please try again.");
+      toast.error(t("y.fwd.dupRoutingSaveFailed"));
     }
   };
   const routingLabel: Record<RoutingOption, string> = {
@@ -245,7 +245,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       setPriorities(Object.fromEntries(rows.map((r) => [r.id, r.priority ?? 1])));
       setWeights(Object.fromEntries(rows.map((r) => [r.id, r.weight ?? 100])));
     } catch {
-      toast.error("Couldn't load this campaign's routed destinations.");
+      toast.error(t("y.fwd.routedLoadFailed"));
     } finally {
       setRoutedLoaded(true);
     }
@@ -279,9 +279,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     try {
       await routingService.updateRule(ruleId, { status: "active" });
       setRuleStatus("active");
-      toast.success("Routing is on — calls will go to the destinations below.");
+      toast.success(t("y.fwd.routingOn"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't turn routing on.");
+      toast.error(e instanceof Error ? e.message : t("y.err.routingOn"));
     } finally {
       setTurningOn(false);
     }
@@ -309,7 +309,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       );
     } catch (e) {
       (field === "priority" ? setPriorities : setWeights)((p) => ({ ...p, [rowId]: old }));
-      toast.error(e instanceof Error ? e.message : "Couldn't save the change.");
+      toast.error(e instanceof Error ? e.message : t("y.err.changeSave"));
     }
   };
   // Per-destination conversion settings entered via the pencil-icon modal.
@@ -352,7 +352,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       void routingService
         .updateDestination(ruleId, id, { priority: next.priority, weight: next.weight })
         .then(() => loadRouted())
-        .catch(() => toast.error("Couldn't save priority / weight."));
+        .catch(() => toast.error(t("y.fwd.priorityFailed")));
     }
     closeEdit();
     toast.success(t("trafficUI.campaigns.settings.forward.toast.convSaved"));
@@ -367,7 +367,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       setRouted((rows) => rows.filter((r) => r.id !== id));
       toast.success(t("trafficUI.campaigns.settings.forward.toast.detached").replace("{name}", name));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't remove the destination.");
+      toast.error(e instanceof Error ? e.message : t("y.err.destRemove"));
     }
   };
 
@@ -420,13 +420,13 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         </div>
         <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
           <div>
-            <div className="text-xs font-medium">Block duplicate calls</div>
+            <div className="text-xs font-medium">{t("y.fwd.blockDup")}</div>
             <div className="text-[11px] text-muted-foreground">
-              Drop any call from a caller ID that already called this campaign within the time window.
+              {t("y.fwd.blockDupHint")}
             </div>
             {dupBlock && (
               <div className="mt-2 flex items-center gap-2 text-[11px]">
-                <span className="text-muted-foreground">Block repeat callers for</span>
+                <span className="text-muted-foreground">{t("y.fwd.blockRepeatFor")}</span>
                 <Input
                   type="number"
                   min={1}
@@ -443,10 +443,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                   }}
-                  aria-label="Duplicate window in hours"
+                  aria-label={t("y.fwd.dupWindowAria")}
                   className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="text-muted-foreground">hours (up to 43,800 = 5 years)</span>
+                <span className="text-muted-foreground">{t("y.fwd.hoursUpTo")}</span>
               </div>
             )}
           </div>
@@ -455,7 +455,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             checked={dupBlock}
             disabled={!dupLoaded || dupSaving}
             onCheckedChange={(on) => void saveDuplicate(on, dupHours)}
-            aria-label="Block duplicate calls"
+            aria-label={t("y.fwd.blockDup")}
           />
         </div>
       </Card>
@@ -475,23 +475,21 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         {routedLoaded && ruleId && ruleStatus !== "active" && (
           <div className="flex flex-col gap-2 border-b border-border bg-destructive/10 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-destructive">
-              Routing for this campaign is switched off ({ruleStatus ?? "off"}), so every call is dropped with
-              &quot;No matching rule found&quot;.
+              {t("y.fwd.routingOff").replace("{status}", ruleStatus ?? "off")}
             </p>
             <Button size="sm" variant="destructive" disabled={turningOn} onClick={() => void turnRoutingOn()}>
-              {turningOn && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Turn routing on
+              {turningOn && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {t("y.fwd.turnRoutingOn")}
             </Button>
           </div>
         )}
         {routedLoaded && (!ruleId || destinations.length === 0) && (
           <div className="border-b border-border bg-destructive/10 px-6 py-3 text-xs text-destructive">
-            No destination is routed to this campaign, so every call is dropped with &quot;No matching rule
-            found&quot;. Click <span className="font-semibold">+ Add</span> to route destinations.
+            {t("y.fwd.noDestination").split("{add}")[0]}<span className="font-semibold">+ {t("trafficUI.common.add")}</span>{t("y.fwd.noDestination").split("{add}")[1]}
           </div>
         )}
         {routedLoaded && destinations.length > 0 && destinations.every((d) => !d.enabled) && (
           <div className="border-b border-border bg-destructive/10 px-6 py-3 text-xs text-destructive">
-            Every routed destination is switched off, so calls are dropped. Switch at least one on under Status.
+            {t("y.fwd.allOff")}
           </div>
         )}
         {/* Compact density mode — shrink every cell's font + padding so a
@@ -515,7 +513,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             {destinations.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={8} className="pl-6 py-6 text-xs text-muted-foreground">
-                  {routedLoaded ? t("trafficUI.campaigns.settings.forward.empty") : "Loading…"}
+                  {routedLoaded ? t("trafficUI.campaigns.settings.forward.empty") : t("y.fwd.loading")}
                 </TableCell>
               </TableRow>
             ) : (

@@ -31,6 +31,7 @@ import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 /** Pages the user MUST be able to reach even when the gate would otherwise
  *  block them — otherwise they can't complete KYC or top up balance. */
@@ -48,6 +49,7 @@ function isExempt(pathname: string): boolean {
 }
 
 export function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const pathname = usePathname() ?? "";
   const { kycStatus, balance, loading, hydrated, refresh } = useOnboardingStore();
   const logout = useAuthStore((s) => s.logout);
@@ -88,7 +90,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Logo animated className="h-10 w-10" uid="onboarding" />
-          <p className="text-xs font-mono uppercase tracking-wider">Checking account…</p>
+          <p className="text-xs font-mono uppercase tracking-wider">{t("y.gate.checking")}</p>
         </div>
       </div>
     );
@@ -108,20 +110,20 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
     return (
       <GateScreen
         icon={ScanFace}
-        title="Verify your account to continue"
+        title={t("y.gate.verifyTitle")}
         description={
           kycStatus === "rejected"
-            ? "Your previous KYC submission was rejected. Resubmit your details below to regain access."
+            ? t("y.gate.rejected")
             : kycStatus === "submitted"
-              ? "Your submission is under review. This usually takes a few hours during business days."
-              : "We need to verify your identity before you can route calls. The process takes a few minutes."
+              ? t("y.gate.underReview")
+              : t("y.gate.needVerify")
         }
         status={kycStatus}
         primary={{
-          label: kycStatus === "submitted" ? "View status" : "Start verification",
+          label: kycStatus === "submitted" ? t("y.gate.viewStatus") : t("y.gate.startVerification"),
           href: ROUTES.kyc,
         }}
-        secondary={{ label: "Sign out", onClick: () => void logout() }}
+        secondary={{ label: t("y.gate.signOut"), onClick: () => void logout() }}
       />
     );
   }
@@ -130,11 +132,11 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   return (
     <GateScreen
       icon={CreditCard}
-      title="Add funds to activate your panel"
-      description="Your account is verified — add a starting balance to begin routing calls. The Recharge form on the Billing page supports card payments via Stripe and USDT via Capitalist."
+      title={t("y.gate.fundsTitle")}
+      description={t("y.gate.fundsDescription")}
       status="funded"
-      primary={{ label: "Recharge balance", href: ROUTES.billing }}
-      secondary={{ label: "Sign out", onClick: () => void logout() }}
+      primary={{ label: t("y.gate.recharge"), href: ROUTES.billing }}
+      secondary={{ label: t("y.gate.signOut"), onClick: () => void logout() }}
     />
   );
 }
@@ -158,6 +160,7 @@ function GateScreen({
   primary: { label: string; href: string };
   secondary: { label: string; onClick: () => void };
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6">
       <Logo animated className="h-10 w-10" uid="gate" />
@@ -186,7 +189,7 @@ function GateScreen({
                 )}
               >
                 <ShieldCheck className="h-3 w-3" />
-                {status === "funded" ? "Verified" : status}
+                {t(`y.gate.status.${status}`)}
               </span>
             )}
           </div>
@@ -216,9 +219,9 @@ function GateScreen({
       </Card>
 
       <p className="text-[11px] text-muted-foreground">
-        Need help?{" "}
+        {t("y.gate.needHelp")}{" "}
         <a href="mailto:hello@avortyx.io" className="text-accent hover:underline">
-          Contact support
+          {t("y.gate.contactSupport")}
         </a>
       </p>
     </div>
@@ -230,11 +233,12 @@ function GateScreen({
  *  after a submission/recharge. */
 export function OnboardingRefreshIndicator() {
   const loading = useOnboardingStore((s) => s.loading);
+  const { t } = useTranslation();
   if (!loading) return null;
   return (
     <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
       <Loader2 className="h-3 w-3 animate-spin" />
-      Re-checking account status…
+      {t("y.gate.rechecking")}
     </div>
   );
 }

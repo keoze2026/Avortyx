@@ -84,7 +84,7 @@ export function NewPlanDialog({ open, onOpenChange, defaultCampaignId }: Props) 
       onClose(false);
       router.push(`${ROUTES.routing}/${created.id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't create plan");
+      toast.error(e instanceof Error ? e.message : t("y.err.planCreate"));
     } finally {
       setSubmitting(false);
     }

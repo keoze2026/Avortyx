@@ -64,10 +64,10 @@ export function PaymentMethodCard() {
     setMethods((m) => m.filter((x) => x.id !== pm.id));
     try {
       await billingService.deletePaymentMethod(pm.id);
-      toast.success(`${BRAND_LABEL[pm.brand ?? ""] ?? "Card"} ending in ${pm.last4 ?? "—"} removed`);
+      toast.success(t("y.pay.removed").replace("{brand}", BRAND_LABEL[pm.brand ?? ""] ?? t("y.pay.card")).replace("{last4}", pm.last4 ?? "—"));
     } catch (e) {
       setMethods(prev);
-      toast.error(e instanceof Error ? e.message : "Couldn't remove card");
+      toast.error(e instanceof Error ? e.message : t("y.pay.removeFailed"));
     }
   };
 
@@ -76,14 +76,14 @@ export function PaymentMethodCard() {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base">{t("toolsUI.billing.payment.title")}</CardTitle>
         <Button size="sm" variant="outline" onClick={scrollToRecharge}>
-          <Plus className="h-3 w-3" /> Add card
+          <Plus className="h-3 w-3" /> {t("y.pay.addCard")}
         </Button>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {loading ? (
           <div className="flex items-center gap-2 py-6 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading saved cards…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("y.pay.loading")}
           </div>
         ) : methods.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/60 bg-secondary/20 px-4 py-10 text-center">
@@ -91,20 +91,19 @@ export function PaymentMethodCard() {
               <CreditCard className="h-5 w-5" />
             </span>
             <div>
-              <h4 className="text-sm font-semibold">No card on file</h4>
+              <h4 className="text-sm font-semibold">{t("y.pay.noCard")}</h4>
               <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                Pay with Visa, Mastercard, or Amex through the Recharge
-                Balance form below. Stripe handles security end-to-end.
+                {t("y.pay.noCardHint")}
               </p>
             </div>
             <Button size="sm" onClick={scrollToRecharge}>
-              Add a card
+              {t("y.pay.addACard")}
             </Button>
           </div>
         ) : (
           <ul className="space-y-2">
             {methods.map((pm) => {
-              const brand = BRAND_LABEL[pm.brand ?? ""] ?? "Card";
+              const brand = BRAND_LABEL[pm.brand ?? ""] ?? t("y.pay.card");
               return (
                 <li
                   key={pm.id}
@@ -122,13 +121,13 @@ export function PaymentMethodCard() {
                         </span>
                         {pm.isDefault && (
                           <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                            Default
+                            {t("y.pay.default")}
                           </Badge>
                         )}
                       </div>
                       {pm.expiryMonth && pm.expiryYear && (
                         <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                          Exp {pm.expiryMonth.toString().padStart(2, "0")}/
+                          {t("y.pay.exp")} {pm.expiryMonth.toString().padStart(2, "0")}/
                           {(pm.expiryYear % 100).toString().padStart(2, "0")}
                         </div>
                       )}
@@ -139,7 +138,7 @@ export function PaymentMethodCard() {
                     variant="ghost"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => removeCard(pm)}
-                    aria-label={`Remove ${brand} ending in ${pm.last4 ?? "—"}`}
+                    aria-label={t("y.pay.removeAria").replace("{brand}", brand).replace("{last4}", pm.last4 ?? "—")}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

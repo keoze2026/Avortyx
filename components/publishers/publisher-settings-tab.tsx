@@ -80,7 +80,7 @@ export function PublisherSettingsTab({ publisher }: Props) {
       // is shown. Only a real failure (server error, no connection) is reported.
       const status = (e as { status?: number })?.status;
       if (typeof status === "number" && status < 500) return;
-      toast.error("Couldn't save the time zone on the server. Please try again.");
+      toast.error(t("y.pst.tzFailed"));
     });
   };
   const capEnabled = access?.cap.enabled ?? false;
@@ -128,12 +128,10 @@ export function PublisherSettingsTab({ publisher }: Props) {
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--warning)]" />
         <div className="space-y-1">
           <div className="font-semibold text-[color:var(--warning)]">
-            {timezoneOnServer ? "Cap setting saves to this browser only" : "Time zone and cap setting save to this browser only"}
+            {timezoneOnServer ? t("y.pst.capLocal") : t("y.pst.tzCapLocal")}
           </div>
           <p className="text-muted-foreground">
-            Members, Permissions and Reporting visibility are saved on the
-            server and apply to this publisher's own login. The time zone and
-            the cap switch below will follow once the backend supports them.
+            {t("y.pst.localHint")}
           </p>
         </div>
       </div>

@@ -79,7 +79,7 @@ export function EditBuyerDialog({ buyerId, onOpenChange }: EditBuyerDialogProps)
       toast.success(t("networkUI.buyers.edit.updated").replace("{name}", name.trim()));
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save buyer");
+      toast.error(e instanceof Error ? e.message : t("y.err.buyerSave"));
     } finally {
       setSubmitting(false);
     }

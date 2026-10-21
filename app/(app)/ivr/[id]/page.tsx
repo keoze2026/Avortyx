@@ -468,7 +468,7 @@ function NodeConfigEditor({
   if (nodeType === "menu") {
     return (
       <div className="space-y-1.5">
-        <Label className="text-xs">Prompt</Label>
+        <Label className="text-xs">{t("y.ivr.prompt")}</Label>
         <Textarea
           rows={2}
           value={(config.prompt as string) ?? ""}
@@ -485,7 +485,7 @@ function NodeConfigEditor({
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
         <div className="space-y-1.5">
-          <Label className="text-xs">Prompt</Label>
+          <Label className="text-xs">{t("y.ivr.prompt")}</Label>
           <Input
             value={(config.prompt as string) ?? ""}
             onChange={(e) => onPatch({ prompt: e.target.value })}

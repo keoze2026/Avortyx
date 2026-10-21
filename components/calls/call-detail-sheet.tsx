@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/sheet";
 import { callsService, type CallDetail } from "@/lib/api/services/calls.service";
 import { ROUTES } from "@/lib/constants";
-import { formatCallerId, formatCurrency, formatDuration, formatLocalDateTime, formatRelativeTime, toE164 } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatDuration, formatLocalDateTime, formatRelativeTime, toE164, uiLocaleTag } from "@/lib/format";
 import type { Call } from "@/lib/types";
 
 interface Props {
@@ -80,6 +80,24 @@ function lineTypeLabel(raw: string | undefined): string {
   if (k === "tollfree") return "Toll-free";
   const t = raw!.trim();
   return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** A translation, or the given text when the key has none (values sent by the backend we have no word for). */
+function tOr(t: (key: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
+
+/** The country's name in the chosen language; falls back to the English name. */
+function localCountryName(code: string | undefined, fallback: string, t: (key: string) => string): string {
+  const c = (code ?? "").trim().toUpperCase();
+  if (!c) return fallback === UNKNOWN ? t("y.call.unknown") : fallback;
+  try {
+    const name = new Intl.DisplayNames([uiLocaleTag()], { type: "region" }).of(c);
+    return name && name !== c ? name : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 interface CallEnrichment {
@@ -169,7 +187,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                     icon={PhoneIncoming}
                     label={t("toolsUI.callLogs.detail.caller")}
                     value={formatCallerId(call.callerNumber)}
-                    sub={call.geo.state ? `${call.geo.city}, ${call.geo.state}` : t("toolsUI.callLogs.detail.unknownGeo")}
+                    sub={call.geo.state || call.geo.city ? [call.geo.city, call.geo.state].filter(Boolean).join(", ") : t("toolsUI.callLogs.detail.unknownGeo")}
                   />
                   <Step
                     icon={Users}
@@ -207,13 +225,13 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
               {/* Geo + caller meta */}
               <section className="mt-6 grid grid-cols-2 gap-3">
                 <MetaCell icon={MapPin} label={t("toolsUI.callLogs.detail.location")}>
-                  {call.geo.state ? `${call.geo.city}, ${call.geo.state}` : "—"}
+                  {call.geo.state || call.geo.city ? [call.geo.city, call.geo.state].filter(Boolean).join(", ") : "—"}
                 </MetaCell>
                 <MetaCell icon={Phone} label={t("toolsUI.callLogs.detail.destination")}>
                   <span className="font-mono">{toE164(call.destinationNumber)}</span>
                 </MetaCell>
                 <MetaCell icon={CheckCircle2} label={t("toolsUI.callLogs.detail.outcome")}>
-                  {call.status === "completed" ? t("toolsUI.callLogs.detail.outcomeQualified") : call.status}
+                  {call.status === "completed" ? t("toolsUI.callLogs.detail.outcomeQualified") : tOr(t, `y.call.status.${call.status}`, call.status)}
                 </MetaCell>
                 <MetaCell icon={DollarSign} label={t("toolsUI.callLogs.detail.revenuePayout")}>
                   <span className="font-mono">
@@ -229,11 +247,11 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                     <MetaCell icon={Flag} label={t("toolsUI.callLogs.detail.country")}>
                       <span className="inline-flex items-center gap-1.5">
                         <span aria-hidden>{enrichment.country.flag}</span>
-                        {enrichment.country.name}
+                        {localCountryName(call.geo?.country, enrichment.country.name, t)}
                       </span>
                     </MetaCell>
                     <MetaCell icon={Radio} label={t("toolsUI.callLogs.detail.carrier")}>
-                      {enrichment.carrier}
+                      {enrichment.carrier === UNKNOWN ? t("y.call.unknown") : enrichment.carrier}
                     </MetaCell>
                     <MetaCell icon={Signal} label={t("toolsUI.callLogs.detail.lineType")}>
                       <span className="inline-flex items-center gap-1.5">
@@ -249,7 +267,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                                   : "h-1.5 w-1.5 rounded-full bg-muted-foreground"
                           }
                         />
-                        {enrichment.lineType}
+                        {tOr(t, `y.call.lineType.${enrichment.lineType}`, enrichment.lineType)}
                       </span>
                     </MetaCell>
                   </>
@@ -263,7 +281,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                       <MessageSquareText className="h-3.5 w-3.5" />
-                      Transcription
+                      {t("y.call.transcription")}
                     </h3>
                     {detail.sentiment && (
                       <SentimentChip
@@ -277,7 +295,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                   </p>
                   {detail.transcription.status && detail.transcription.status !== "done" && (
                     <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Status · {detail.transcription.status}
+                      {t("y.call.transcriptionStatus").replace("{status}", detail.transcription.status)}
                     </p>
                   )}
                 </section>
@@ -289,7 +307,7 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                 <section className="mt-6 rounded-lg border border-border bg-card p-4">
                   <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                     <PlayCircle className="h-3.5 w-3.5 text-accent" />
-                    Recording
+                    {t("y.call.recording")}
                   </div>
                   <audio
                     src={detail?.recordingUrl ?? call.recordingUrl}

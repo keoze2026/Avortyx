@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function InviteBuyerDialog({
   open,
@@ -36,6 +37,7 @@ export function InviteBuyerDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const add = useBuyersStore((s) => s.add);
 
@@ -99,14 +101,13 @@ export function InviteBuyerDialog({
         conversionRate: 0,
         campaignIds: [],
       });
-      toast.success(`${created.name} added`, {
-        description:
-          "You can invite this buyer by email from their detail page.",
+      toast.success(t("y.ibd.added").replace("{name}", created.name), {
+        description: t("y.ibd.addedHint"),
       });
       onClose(false);
       router.push(`${ROUTES.buyers}/${created.id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't create buyer");
+      toast.error(e instanceof Error ? e.message : t("y.ibd.createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -121,10 +122,9 @@ export function InviteBuyerDialog({
               <Building2 className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle>Create a buyer</DialogTitle>
+              <DialogTitle>{t("y.ibd.title")}</DialogTitle>
               <DialogDescription>
-                Add a buyer to your network. You can invite them by email from
-                the buyer detail page after they&apos;re created.
+                {t("y.ibd.description")}
               </DialogDescription>
             </div>
           </div>
@@ -132,24 +132,24 @@ export function InviteBuyerDialog({
 
         <div className="space-y-3 py-2">
           <div className="space-y-2">
-            <Label htmlFor="ib-name">Buyer name</Label>
+            <Label htmlFor="ib-name">{t("y.ibd.name")}</Label>
             <Input
               id="ib-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. C11"
+              placeholder={t("y.ibd.namePlaceholder")}
               aria-invalid={nameTooShort || undefined}
             />
             {nameTooShort && (
               <p className="text-xs text-destructive">
-                Buyer name must be at least 2 characters.
+                {t("y.ibd.nameTooShort")}
               </p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="ib-bid">Bid per call ($)</Label>
+              <Label htmlFor="ib-bid">{t("y.ibd.bid")}</Label>
               <Input
                 id="ib-bid"
                 type="number"
@@ -161,7 +161,7 @@ export function InviteBuyerDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ib-cap">Daily cap</Label>
+              <Label htmlFor="ib-cap">{t("y.ibd.dailyCap")}</Label>
               <Input
                 id="ib-cap"
                 type="number"
@@ -173,28 +173,28 @@ export function InviteBuyerDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ib-desc">Notes</Label>
+            <Label htmlFor="ib-desc">{t("y.ibd.notes")}</Label>
             <Textarea
               id="ib-desc"
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Vertical, geo, anything routing-affecting."
+              placeholder={t("y.ibd.notesPlaceholder")}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onClose(false)}>
-            Cancel
+            {t("y.common.cancel")}
           </Button>
           <Button onClick={onSubmit} disabled={submitting || !canSubmit}>
             {submitting ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Creating…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("y.common.creating")}
               </>
             ) : (
-              "Create buyer"
+              t("y.ibd.create")
             )}
           </Button>
         </DialogFooter>

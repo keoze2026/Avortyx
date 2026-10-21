@@ -157,7 +157,7 @@ export function DestinationBuilder({
       }
       onOpenChange(false);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't save destination."));
+      toast.error(friendlyErrorMessage(e, t("y.err.destSave")));
     } finally {
       setSubmitting(false);
     }

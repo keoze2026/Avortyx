@@ -50,6 +50,7 @@ import {
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatLocalDate, formatLocalDateTime } from "@/lib/format";
+import { useTranslation } from "@/hooks/use-translation";
 
 /** True if the backend rejected an approve/reject call because the request is
  *  already in a terminal state. We treat this as success — the desired
@@ -75,6 +76,7 @@ const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
 ];
 
 export function WorkspaceAccessRequestsTable() {
+  const { t } = useTranslation();
   const [filter, setFilter] = React.useState<AccessRequestStatus | "all">("pending");
   const [requests, setRequests] = React.useState<AccessRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -100,7 +102,7 @@ export function WorkspaceAccessRequestsTable() {
       );
       setRequests(list);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't load access requests."));
+      toast.error(friendlyErrorMessage(e, t("y.war.loadFailed")));
     } finally {
       setLoading(false);
     }
@@ -117,7 +119,7 @@ export function WorkspaceAccessRequestsTable() {
     const target = approving;
     try {
       await accessRequestsService.approve(target.id, approveRole);
-      toast.success(`${target.email} approved — setup email sent.`);
+      toast.success(t("y.war.approved").replace("{email}", target.email));
       setApproving(null);
       void load();
     } catch (e) {
@@ -125,11 +127,11 @@ export function WorkspaceAccessRequestsTable() {
         // Backend says the request is already approved — desired state already
         // exists, so treat it as success and refresh the list so the row
         // moves out of the pending bucket.
-        toast.success("This request was already approved. Refreshing list.");
+        toast.success(t("y.war.alreadyApproved"));
         setApproving(null);
         void load();
       } else {
-        toast.error(friendlyErrorMessage(e, "Couldn't approve this request."));
+        toast.error(friendlyErrorMessage(e, t("y.war.approveFailed")));
       }
     } finally {
       setBusyId(null);
@@ -144,18 +146,18 @@ export function WorkspaceAccessRequestsTable() {
     const target = rejecting;
     try {
       await accessRequestsService.reject(target.id, rejectReason.trim() || undefined);
-      toast.success(`${target.email} rejected.`);
+      toast.success(t("y.war.rejected").replace("{email}", target.email));
       setRejecting(null);
       setRejectReason("");
       void load();
     } catch (e) {
       if (isAlreadyDecidedError(e)) {
-        toast.success("This request was already closed. Refreshing list.");
+        toast.success(t("y.war.alreadyClosed"));
         setRejecting(null);
         setRejectReason("");
         void load();
       } else {
-        toast.error(friendlyErrorMessage(e, "Couldn't reject this request."));
+        toast.error(friendlyErrorMessage(e, t("y.war.rejectFailed")));
       }
     } finally {
       setBusyId(null);
@@ -168,15 +170,14 @@ export function WorkspaceAccessRequestsTable() {
       <Card className="overflow-hidden p-0">
         <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border bg-secondary/20 px-4 py-3 space-y-0">
           <div>
-            <CardTitle className="text-base">Access requests</CardTitle>
+            <CardTitle className="text-base">{t("y.war.title")}</CardTitle>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Review and approve people requesting access to Avortyx. Approving
-              creates the user and emails them a one-time setup link.
+              {t("y.war.description")}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-            Refresh
+            {t("y.war.refresh")}
           </Button>
         </CardHeader>
 
@@ -196,7 +197,7 @@ export function WorkspaceAccessRequestsTable() {
                     : "border-border bg-secondary/30 text-muted-foreground hover:border-border/80 hover:text-foreground",
                 )}
               >
-                {f.label}
+                {t(`y.war.filter.${f.id}`)}
               </button>
             );
           })}
@@ -206,7 +207,7 @@ export function WorkspaceAccessRequestsTable() {
           {loading && requests.length === 0 ? (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading access requests…
+              {t("y.war.loading")}
             </div>
           ) : requests.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
@@ -215,11 +216,10 @@ export function WorkspaceAccessRequestsTable() {
               </span>
               <div>
                 <h4 className="text-sm font-semibold">
-                  No {filter === "all" ? "" : filter} requests
+                  {t(`y.war.empty.${filter}`)}
                 </h4>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  Prospects who submit the access form will appear here for
-                  review.
+                  {t("y.war.emptyHint")}
                 </p>
               </div>
             </div>
@@ -228,12 +228,12 @@ export function WorkspaceAccessRequestsTable() {
               <Table className="min-w-[820px]">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="pl-4 text-left">Person</TableHead>
-                    <TableHead className="text-left">Company</TableHead>
-                    <TableHead className="text-left">Use case</TableHead>
-                    <TableHead className="text-left">Submitted</TableHead>
-                    <TableHead className="text-left">Status</TableHead>
-                    <TableHead className="pr-4 text-right">Actions</TableHead>
+                    <TableHead className="pl-4 text-left">{t("y.war.col.person")}</TableHead>
+                    <TableHead className="text-left">{t("y.war.col.company")}</TableHead>
+                    <TableHead className="text-left">{t("y.war.col.useCase")}</TableHead>
+                    <TableHead className="text-left">{t("y.war.col.submitted")}</TableHead>
+                    <TableHead className="text-left">{t("y.war.col.status")}</TableHead>
+                    <TableHead className="pr-4 text-right">{t("y.war.col.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -289,7 +289,7 @@ export function WorkspaceAccessRequestsTable() {
                               }}
                             >
                               <X className="h-3.5 w-3.5" />
-                              Reject
+                              {t("y.war.reject")}
                             </Button>
                             <Button
                               size="sm"
@@ -305,7 +305,7 @@ export function WorkspaceAccessRequestsTable() {
                               ) : (
                                 <Check className="h-3.5 w-3.5" />
                               )}
-                              Approve
+                              {t("y.war.approve")}
                             </Button>
                           </div>
                         ) : (
@@ -329,16 +329,15 @@ export function WorkspaceAccessRequestsTable() {
       <Dialog open={!!approving} onOpenChange={(o) => !o && setApproving(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Approve access request</DialogTitle>
+            <DialogTitle>{t("y.war.approveTitle")}</DialogTitle>
             <DialogDescription>
-              We&apos;ll create the user account and email{" "}
-              <span className="font-mono text-foreground">{approving?.email}</span>{" "}
-              a one-time link to set their password. The email is sent
-              immediately and the link expires in 48 hours.
+              {t("y.war.approveDescription").split("{email}")[0]}
+              <span className="font-mono text-foreground">{approving?.email}</span>
+              {t("y.war.approveDescription").split("{email}")[1]}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label>Assign role</Label>
+            <Label>{t("y.war.assignRole")}</Label>
             <Select value={approveRole} onValueChange={(v) => setApproveRole(v as Role)}>
               <SelectTrigger>
                 <SelectValue />
@@ -346,29 +345,29 @@ export function WorkspaceAccessRequestsTable() {
               <SelectContent>
                 {ROLE_OPTIONS.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
-                    {r.label}
+                    {t(`y.war.role.${r.value}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              You can change this later from Workspace &gt; Members.
+              {t("y.war.changeLater")}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproving(null)} disabled={busyId !== null}>
-              Cancel
+              {t("y.war.cancel")}
             </Button>
             <Button onClick={onApprove} disabled={busyId !== null}>
               {busyId === approving?.id ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Sending email…
+                  {t("y.war.sendingEmail")}
                 </>
               ) : (
                 <>
                   <Check className="h-3.5 w-3.5" />
-                  Approve &amp; send setup email
+                  {t("y.war.approveSend")}
                 </>
               )}
             </Button>
@@ -380,25 +379,24 @@ export function WorkspaceAccessRequestsTable() {
       <Dialog open={!!rejecting} onOpenChange={(o) => !o && setRejecting(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject access request</DialogTitle>
+            <DialogTitle>{t("y.war.rejectTitle")}</DialogTitle>
             <DialogDescription>
-              Mark this request as rejected. The reason is optional but useful
-              if you reopen it later.
+              {t("y.war.rejectDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label htmlFor="reject-reason">Reason (optional)</Label>
+            <Label htmlFor="reject-reason">{t("y.war.reasonOptional")}</Label>
             <Textarea
               id="reject-reason"
               rows={3}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g. Outside of supported verticals, duplicate request, etc."
+              placeholder={t("y.war.reasonPlaceholder")}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejecting(null)} disabled={busyId !== null}>
-              Cancel
+              {t("y.war.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -408,12 +406,12 @@ export function WorkspaceAccessRequestsTable() {
               {busyId === rejecting?.id ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Rejecting…
+                  {t("y.war.rejecting")}
                 </>
               ) : (
                 <>
                   <X className="h-3.5 w-3.5" />
-                  Reject request
+                  {t("y.war.rejectRequest")}
                 </>
               )}
             </Button>
@@ -427,6 +425,7 @@ export function WorkspaceAccessRequestsTable() {
 /* ────────────────────────────────────────────────────────────────── */
 
 function StatusPill({ status }: { status: AccessRequestStatus }) {
+  const { t } = useTranslation();
   const map: Record<AccessRequestStatus, { label: string; className: string }> = {
     pending: {
       label: "Pending",
@@ -451,7 +450,7 @@ function StatusPill({ status }: { status: AccessRequestStatus }) {
         p.className,
       )}
     >
-      {p.label}
+      {t(`y.war.filter.${status}`)}
     </span>
   );
 }

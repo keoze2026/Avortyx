@@ -49,6 +49,7 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { Buyer, Campaign, Destination, TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/lib/my-permissions";
+import { useTranslation } from "@/hooks/use-translation";
 
 export const SHARE_LABEL: Record<Distribution, string> = {
   priority: "In order",
@@ -101,6 +102,7 @@ export function SimpleRoutingRow({
   const setStatus = useCampaignsStore((s) => s.setStatus);
   // Where a campaign's calls ring needs both Call Flows Edit and Edit Forward Calls To.
   const { can } = usePermissions();
+  const { t } = useTranslation();
   const canEdit = can("call-flows", "edit") && can("campaigns", "edit-forward");
   const buyerById = useMemo(() => new Map(buyers.map((b) => [b.id, b])), [buyers]);
   const destByNumber = useMemo(
@@ -139,12 +141,12 @@ export function SimpleRoutingRow({
   const add = async () => {
     const digits = tfn.replace(/\D/g, "");
     if (digits.length < 10 || digits.length > 15) {
-      toast.error("Enter a full phone number, e.g. +1 800 555 0100.");
+      toast.error(t("y.rrow.enterFullNumber"));
       return;
     }
     const number = toE164(tfn);
     if (routed.some((r) => toE164(r.number) === number)) {
-      toast.error(`${number} is already in this campaign.`);
+      toast.error(t("y.rrow.alreadyIn").replace("{number}", number));
       return;
     }
     setBusy(true);
@@ -164,10 +166,10 @@ export function SimpleRoutingRow({
       setTfn("");
       setBuyerId(NO_BUYER);
       toast.success(
-        live ? `${number} added — calls can ring it now.` : `${number} added. Switch the campaign on to start calls.`,
+        (live ? t("y.rrow.addedLive") : t("y.rrow.addedOff")).replace("{number}", number),
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't add the number.");
+      toast.error(e instanceof Error ? e.message : t("y.rrow.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -180,10 +182,10 @@ export function SimpleRoutingRow({
     onRoutedChange(rule.id, routed.filter((r) => r.id !== row.id));
     try {
       await campaignRouting.removeDestination(rule.id, row.id);
-      toast.success(`${toE164(row.number)} removed from ${campaign.name}.`);
+      toast.success(t("y.rrow.removed").replace("{number}", toE164(row.number)).replace("{campaign}", campaign.name));
     } catch (e) {
       onRoutedChange(rule.id, before);
-      toast.error(e instanceof Error ? e.message : "Couldn't remove the number.");
+      toast.error(e instanceof Error ? e.message : t("y.rrow.removeFailed"));
     }
   };
 
@@ -199,7 +201,7 @@ export function SimpleRoutingRow({
     try {
       for (const r of changed) await campaignRouting.updateDestination(rule.id, r.id, { priority: r.priority });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save the new order.");
+      toast.error(e instanceof Error ? e.message : t("y.rrow.orderFailed"));
       onReload();
     }
   };
@@ -221,7 +223,7 @@ export function SimpleRoutingRow({
     try {
       await campaignRouting.updateDestination(rule.id, row.id, { weight: value });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save the split.");
+      toast.error(e instanceof Error ? e.message : t("y.rrow.splitFailed"));
       onReload();
     }
   };
@@ -232,16 +234,16 @@ export function SimpleRoutingRow({
       const r = await ensureRule();
       await campaignRouting.setDistribution(r.id, next);
       onRuleChange({ ...r, ruleType: next });
-      toast.success(`${campaign.name}: calls shared ${SHARE_LABEL[next].toLowerCase()}.`);
+      toast.success(t("y.rrow.shareSaved").replace("{campaign}", campaign.name).replace("{mode}", t(`y.rrow.share.${next}`).toLowerCase()));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save how calls are shared.");
+      toast.error(e instanceof Error ? e.message : t("y.rrow.shareFailed"));
     }
   };
 
   // ─── Live switch ────────────────────────────────────────────────────────
   const toggleLive = async (on: boolean) => {
     if (on && !ready) {
-      toast.error("Add a TFN first, so the calls have somewhere to ring.");
+      toast.error(t("y.rrow.addTfnFirst"));
       if (!open) onToggleOpen();
       return;
     }
@@ -252,9 +254,9 @@ export function SimpleRoutingRow({
         await campaignRouting.setRuleStatus(rule.id, "active");
         onRuleChange({ ...rule, status: "active" });
       }
-      toast.success(on ? `${campaign.name} is live — calls are flowing.` : `${campaign.name} paused.`);
+      toast.success((on ? t("y.rrow.nowLive") : t("y.rrow.paused")).replace("{campaign}", campaign.name));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't change the campaign.");
+      toast.error(e instanceof Error ? e.message : t("y.rrow.changeFailed"));
     } finally {
       setSwitching(false);
     }
@@ -286,24 +288,24 @@ export function SimpleRoutingRow({
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{campaign.name}</div>
             <div className="text-[11px] text-muted-foreground">
-              {trackingNumbers.length} tracking number{trackingNumbers.length === 1 ? "" : "s"}
-              {routed.length > 1 && <> · {SHARE_LABEL[share]}</>}
+              {(trackingNumbers.length === 1 ? t("y.rrow.trackingOne") : t("y.rrow.trackingMany")).replace("{count}", String(trackingNumbers.length))}
+              {routed.length > 1 && <> · {t(`y.rrow.share.${share}`)}</>}
             </div>
           </div>
         </button>
 
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          <span className="mr-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Calls go to</span>
+          <span className="mr-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{t("y.rrow.callsGoTo")}</span>
           {routed.length === 0 ? (
             advancedCount > 0 ? (
-              <span className="text-[11px] text-muted-foreground">Advanced routing plan</span>
+              <span className="text-[11px] text-muted-foreground">{t("y.rrow.advancedPlan")}</span>
             ) : (
               <button
                 type="button"
                 onClick={() => !open && onToggleOpen()}
                 className="rounded-md border border-dashed border-[color:var(--warning)]/60 px-2 py-0.5 text-[11px] font-medium text-[color:var(--warning)] hover:bg-[color:var(--warning)]/10"
               >
-                + Add a TFN
+                + {t("y.rrow.addATfn")}
               </button>
             )
           ) : (
@@ -318,7 +320,7 @@ export function SimpleRoutingRow({
                 </span>
               ))}
               {routed.length > shown.length && (
-                <span className="text-[11px] text-muted-foreground">+{routed.length - shown.length} more</span>
+                <span className="text-[11px] text-muted-foreground">{t("y.rrow.more").replace("{count}", String(routed.length - shown.length))}</span>
               )}
             </>
           )}
@@ -331,23 +333,23 @@ export function SimpleRoutingRow({
               live ? "text-[color:var(--success)]" : "text-muted-foreground",
             )}
           >
-            {live ? "Live" : "Off"}
+            {live ? t("y.rrow.live") : t("y.rrow.off")}
           </span>
           <Switch
             className="data-[state=checked]:bg-accent"
             checked={live}
             disabled={switching || !canEdit}
             onCheckedChange={(on) => void toggleLive(on)}
-            aria-label={`Turn ${campaign.name} ${live ? "off" : "on"}`}
+            aria-label={(live ? t("y.rrow.turnOff") : t("y.rrow.turnOn")).replace("{campaign}", campaign.name)}
           />
           <Button
             variant="ghost"
             size="sm"
             className="h-8 gap-1 px-2 text-xs text-muted-foreground"
             onClick={onToggleOpen}
-            aria-label={open ? "Close" : `Edit ${campaign.name}`}
+            aria-label={open ? t("y.rrow.close") : t("y.rrow.editCampaign").replace("{campaign}", campaign.name)}
           >
-            {open ? "Close" : "Edit"}
+            {open ? t("y.rrow.close") : t("y.rrow.edit")}
             <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
           </Button>
         </div>
@@ -358,15 +360,15 @@ export function SimpleRoutingRow({
         <fieldset disabled={!canEdit} className="grid min-w-0 gap-6 border-t border-border bg-secondary/10 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="min-w-0 space-y-3">
             <div>
-              <div className="text-xs font-semibold">Send calls to</div>
+              <div className="text-xs font-semibold">{t("y.rrow.sendCallsTo")}</div>
               <p className="text-[11px] text-muted-foreground">
-                Type the TFN this campaign&apos;s calls should ring. Add more than one to share calls or have a backup.
+                {t("y.rrow.sendCallsHint")}
               </p>
             </div>
 
             {routed.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-                No TFN yet — calls to this campaign have nowhere to ring.
+                {t("y.rrow.noTfnYet")}
               </div>
             ) : (
               <ol className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border bg-card">
@@ -383,7 +385,7 @@ export function SimpleRoutingRow({
                         <div className="font-mono text-xs font-medium tabular-nums">{toE164(r.number)}</div>
                         <div className="truncate text-[10px] text-muted-foreground">
                           {known?.name && known.name !== r.number ? `${known.name} · ` : ""}
-                          {buyerName ?? "No buyer"}
+                          {buyerName ?? t("y.rrow.noBuyer")}
                         </div>
                       </div>
                       {share === "weighted" && (
@@ -396,20 +398,20 @@ export function SimpleRoutingRow({
                             onChange={(e) => setWeights((w) => ({ ...w, [r.id]: e.target.value }))}
                             onBlur={() => void saveWeight(r)}
                             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                            aria-label={`Share for ${toE164(r.number)}`}
+                            aria-label={t("y.rrow.shareFor").replace("{number}", toE164(r.number))}
                             className="h-7 w-16 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
                           <span className="w-9 text-right font-mono text-[10px] text-muted-foreground">{pct}%</span>
                         </div>
                       )}
                       <div className="flex items-center">
-                        <IconButton label="Move up" disabled={i === 0} onClick={() => void move(i, -1)}>
+                        <IconButton label={t("y.rrow.moveUp")} disabled={i === 0} onClick={() => void move(i, -1)}>
                           <ArrowUp className="h-3.5 w-3.5" />
                         </IconButton>
-                        <IconButton label="Move down" disabled={i === routed.length - 1} onClick={() => void move(i, 1)}>
+                        <IconButton label={t("y.rrow.moveDown")} disabled={i === routed.length - 1} onClick={() => void move(i, 1)}>
                           <ArrowDown className="h-3.5 w-3.5" />
                         </IconButton>
-                        <IconButton label={`Remove ${toE164(r.number)}`} tone="destructive" onClick={() => void remove(r)}>
+                        <IconButton label={t("y.rrow.remove").replace("{number}", toE164(r.number))} tone="destructive" onClick={() => void remove(r)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </IconButton>
                       </div>
@@ -430,11 +432,11 @@ export function SimpleRoutingRow({
               <Input
                 value={tfn}
                 onChange={(e) => onTfnChange(e.target.value)}
-                placeholder="TFN, e.g. +1 800 555 0100"
+                placeholder={t("y.rrow.tfnPlaceholder")}
                 list={`tfn-suggestions-${campaign.id}`}
                 inputMode="tel"
                 className="h-9 font-mono text-xs sm:flex-1"
-                aria-label="TFN to send calls to"
+                aria-label={t("y.rrow.tfnAria")}
               />
               <datalist id={`tfn-suggestions-${campaign.id}`}>
                 {destinations.map((d) => (
@@ -444,11 +446,11 @@ export function SimpleRoutingRow({
                 ))}
               </datalist>
               <Select value={buyerId} onValueChange={setBuyerId}>
-                <SelectTrigger className="h-9 text-xs sm:w-48" aria-label="Buyer (optional)">
-                  <SelectValue placeholder="Buyer (optional)" />
+                <SelectTrigger className="h-9 text-xs sm:w-48" aria-label={t("y.rrow.buyerOptional")}>
+                  <SelectValue placeholder={t("y.rrow.buyerOptional")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_BUYER}>No buyer</SelectItem>
+                  <SelectItem value={NO_BUYER}>{t("y.rrow.noBuyer")}</SelectItem>
                   {buyers.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -458,18 +460,18 @@ export function SimpleRoutingRow({
               </Select>
               <Button type="submit" size="sm" className="h-9 gap-1.5" disabled={busy || !tfn.trim()}>
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                Add TFN
+                {t("y.rrow.addTfn")}
               </Button>
             </form>
             <p className="text-[10px] text-muted-foreground">
-              Pick a buyer when the TFN belongs to one, so revenue and caps are counted for them.
+              {t("y.rrow.buyerHint")}
             </p>
           </div>
 
           {/* Right column */}
           <div className="space-y-5">
             <div className="space-y-2">
-              <div className="text-xs font-semibold">Share calls</div>
+              <div className="text-xs font-semibold">{t("y.rrow.shareCalls")}</div>
               <div className="space-y-1.5">
                 {SHARE_OPTIONS.map((opt) => {
                   const active = opt === share;
@@ -494,9 +496,9 @@ export function SimpleRoutingRow({
                         >
                           {active && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                         </span>
-                        {SHARE_LABEL[opt]}
+                        {t(`y.rrow.share.${opt}`)}
                       </div>
-                      <div className="mt-0.5 pl-5.5 text-[10px] leading-snug text-muted-foreground">{SHARE_HINT[opt]}</div>
+                      <div className="mt-0.5 pl-5.5 text-[10px] leading-snug text-muted-foreground">{t(`y.rrow.shareHint.${opt}`)}</div>
                     </button>
                   );
                 })}
@@ -505,19 +507,19 @@ export function SimpleRoutingRow({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold">Callers dial</div>
+                <div className="text-xs font-semibold">{t("y.rrow.callersDial")}</div>
                 <Link
                   href={`${ROUTES.campaigns}/${campaign.id}`}
                   className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-accent"
                 >
-                  Campaign <ExternalLink className="h-3 w-3" />
+                  {t("y.rrow.campaign")} <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>
               {trackingNumbers.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground">
-                  No tracking number yet.{" "}
+                  {t("y.rrow.noTrackingYet")}{" "}
                   <Link href={ROUTES.numbers} className="font-medium text-accent hover:underline">
-                    Attach one
+                    {t("y.rrow.attachOne")}
                   </Link>
                 </p>
               ) : (
@@ -531,7 +533,7 @@ export function SimpleRoutingRow({
                     </span>
                   ))}
                   {trackingNumbers.length > 6 && (
-                    <span className="text-[11px] text-muted-foreground">+{trackingNumbers.length - 6} more</span>
+                    <span className="text-[11px] text-muted-foreground">{t("y.rrow.more").replace("{count}", String(trackingNumbers.length - 6))}</span>
                   )}
                 </div>
               )}
@@ -544,8 +546,7 @@ export function SimpleRoutingRow({
               >
                 <SlidersHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Also has {advancedCount} advanced plan{advancedCount === 1 ? "" : "s"}. Calls matching{" "}
-                  {advancedCount === 1 ? "it" : "them"} are handled there first.
+                  {(advancedCount === 1 ? t("y.rrow.advancedOne") : t("y.rrow.advancedMany")).replace("{count}", String(advancedCount))}
                 </span>
               </Link>
             )}

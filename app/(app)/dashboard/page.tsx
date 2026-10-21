@@ -170,7 +170,7 @@ export default function DashboardPage() {
         if (viewChanged && !hadCache) setSnapshot(null);
         // "History is locked" is not an error: the PIN prompt below says so.
         if (isPinRequiredError(e)) return;
-        toast.error(friendlyErrorMessage(e, "Couldn't load the dashboard for this date range"), {
+        toast.error(friendlyErrorMessage(e, t("y.err.dashboardLoad")), {
           id: "dashboard-load-error",
         });
       } finally {

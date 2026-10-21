@@ -82,15 +82,15 @@ export function RecentCallsFeed() {
                     className="text-accent"
                     label={
                       c.status === "in-progress"
-                        ? "Call audio active"
-                        : "Call ringing, audio pending"
+                        ? t("y.feed.audioActive")
+                        : t("y.feed.audioPending")
                     }
                   />
                 )}
                 <div>
                   <div className="font-mono text-xs">{formatDuration(c.durationSec)}</div>
                   <div className="text-[10px] text-muted-foreground">
-                    {c.payout ? formatCurrency(c.payout, true) : meta.label}
+                    {c.payout ? formatCurrency(c.payout, true) : t(`y.feed.status.${c.status}`)}
                   </div>
                 </div>
               </div>

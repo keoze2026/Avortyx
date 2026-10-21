@@ -1,4 +1,6 @@
 "use client";
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 
 /**
  * Security store - the reports PIN, as the SERVER sees it.
@@ -182,7 +184,7 @@ export const useSecurityStore = create<SecurityState>()((set, get) => {
           set({ lockedOutUntil: until });
           return { ok: false, reason: "lockedOut", until };
         }
-        return { ok: false, reason: "error", message: friendlyErrorMessage(e, "Couldn't check the PIN. Please try again.") };
+        return { ok: false, reason: "error", message: friendlyErrorMessage(e, tFor(useLocaleStore.getState().locale, "y.err.pinCheck")) };
       }
     },
 

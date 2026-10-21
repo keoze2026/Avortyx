@@ -509,7 +509,7 @@ export default function OwnerPage() {
             )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{t("y.common.cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={busy} onClick={submitSuspend}>
               {suspendFor?.isActive ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
             </AlertDialogAction>
@@ -564,7 +564,7 @@ export default function OwnerPage() {
           )}
           <DialogFooter>
             <Button variant="outline" disabled={busy} onClick={() => setDeleteFor(null)}>
-              Cancel
+              {t("y.common.cancel")}
             </Button>
             <Button variant="destructive" disabled={busy || !canDelete} onClick={submitDelete}>
               {t("owner.orgs.delete")}

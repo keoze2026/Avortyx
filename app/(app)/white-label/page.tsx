@@ -32,6 +32,7 @@ import {
   type WhiteLabelDomain,
 } from "@/lib/api/services/white-label.service";
 import { formatLocalDate } from "@/lib/format";
+import { useTranslation } from "@/hooks/use-translation";
 
 const STATUS_TONE: Record<DomainStatus, { variant: "success" | "outline" | "destructive" | "warning"; icon: typeof CheckCircle2 }> = {
   verified: { variant: "success", icon: CheckCircle2 },
@@ -41,6 +42,7 @@ const STATUS_TONE: Record<DomainStatus, { variant: "success" | "outline" | "dest
 };
 
 export default function WhiteLabelPage() {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<WhiteLabel | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,9 +82,9 @@ export default function WhiteLabelPage() {
     try {
       const updated = await whiteLabelService.update(draft);
       setConfig(updated);
-      toast.success("Branding saved");
+      toast.success(t("y.wl.saved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : t("y.wl.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -97,9 +99,9 @@ export default function WhiteLabelPage() {
         c ? { ...c, domains: [added, ...c.domains] } : { id: "", companyName: "", domains: [added] },
       );
       setNewDomain("");
-      toast.success(`Domain ${trimmed} added — verify DNS to activate`);
+      toast.success(t("y.wl.domainAdded").replace("{domain}", trimmed));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't add domain");
+      toast.error(e instanceof Error ? e.message : t("y.wl.addFailed"));
     }
   };
 
@@ -116,11 +118,11 @@ export default function WhiteLabelPage() {
       );
       toast.success(
         updated.status === "verified"
-          ? `${d.domain} verified`
-          : `${d.domain} — verification in progress`,
+          ? t("y.wl.verified").replace("{domain}", d.domain)
+          : t("y.wl.verifying").replace("{domain}", d.domain),
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Verification failed");
+      toast.error(e instanceof Error ? e.message : t("y.wl.verifyFailed"));
     }
   };
 
@@ -130,23 +132,23 @@ export default function WhiteLabelPage() {
       setConfig((c) =>
         c ? { ...c, domains: c.domains.filter((x) => x.id !== d.id) } : c,
       );
-      toast.success(`${d.domain} removed`);
+      toast.success(t("y.wl.removed").replace("{domain}", d.domain));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Remove failed");
+      toast.error(e instanceof Error ? e.message : t("y.wl.removeFailed"));
     }
   };
 
   return (
     <>
       <PageHeader
-        title="White Label"
-        description="Custom branding and domains for your workspace."
+        title={t("y.wl.title")}
+        description={t("y.wl.description")}
       />
 
       {loading ? (
         <Card>
           <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading branding…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("y.wl.loading")}
           </CardContent>
         </Card>
       ) : (
@@ -154,57 +156,57 @@ export default function WhiteLabelPage() {
           {/* ─── Branding ─────────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Branding</CardTitle>
+              <CardTitle className="text-base">{t("y.wl.branding")}</CardTitle>
               <p className="text-xs text-muted-foreground">
-                Company identity and support contacts shown in customer-facing surfaces.
+                {t("y.wl.brandingHint")}
               </p>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field
-                label="Company name"
+                label={t("y.wl.companyName")}
                 value={draft.companyName ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, companyName: v }))}
               />
               <Field
-                label="Website URL"
+                label={t("y.wl.websiteUrl")}
                 value={draft.websiteUrl ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, websiteUrl: v }))}
                 placeholder="https://yourbrand.com"
               />
               <Field
-                label="Logo URL"
+                label={t("y.wl.logoUrl")}
                 value={draft.logoUrl ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, logoUrl: v }))}
                 placeholder="https://…/logo.svg"
               />
               <Field
-                label="Favicon URL"
+                label={t("y.wl.faviconUrl")}
                 value={draft.faviconUrl ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, faviconUrl: v }))}
                 placeholder="https://…/favicon.ico"
               />
               <Field
-                label="Support email"
+                label={t("y.wl.supportEmail")}
                 type="email"
                 value={draft.supportEmail ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, supportEmail: v }))}
                 placeholder="support@yourbrand.com"
               />
               <Field
-                label="Support phone"
+                label={t("y.wl.supportPhone")}
                 type="tel"
                 value={draft.supportPhone ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, supportPhone: v }))}
                 placeholder="+1 555 123 4567"
               />
               <Field
-                label="Primary color"
+                label={t("y.wl.primaryColor")}
                 value={draft.primaryColor ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, primaryColor: v }))}
                 placeholder="#5266E0"
               />
               <Field
-                label="Secondary color"
+                label={t("y.wl.secondaryColor")}
                 value={draft.secondaryColor ?? ""}
                 onChange={(v) => setDraft((d) => ({ ...d, secondaryColor: v }))}
                 placeholder="#818CF8"
@@ -213,10 +215,10 @@ export default function WhiteLabelPage() {
                 <Button onClick={saveBranding} disabled={saving}>
                   {saving ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("y.wl.saving")}
                     </>
                   ) : (
-                    "Save branding"
+                    t("y.wl.saveBranding")
                   )}
                 </Button>
               </div>
@@ -226,9 +228,9 @@ export default function WhiteLabelPage() {
           {/* ─── Domains ─────────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Custom domains</CardTitle>
+              <CardTitle className="text-base">{t("y.wl.customDomains")}</CardTitle>
               <p className="text-xs text-muted-foreground">
-                Point a CNAME at <span className="font-mono">cname.avortyx.io</span> and verify to activate.
+                {t("y.wl.cnameHint").split("{host}")[0]}<span className="font-mono">cname.avortyx.io</span>{t("y.wl.cnameHint").split("{host}")[1]}
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -240,7 +242,7 @@ export default function WhiteLabelPage() {
                   className="sm:flex-1"
                 />
                 <Button onClick={addDomain} disabled={!newDomain.trim()}>
-                  <Plus className="h-3.5 w-3.5" /> Add domain
+                  <Plus className="h-3.5 w-3.5" /> {t("y.wl.addDomain")}
                 </Button>
               </div>
 
@@ -263,14 +265,14 @@ export default function WhiteLabelPage() {
                               <span className="font-mono text-sm">{d.domain}</span>
                               {d.isPrimary && (
                                 <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                                  Primary
+                                  {t("y.wl.primary")}
                                 </Badge>
                               )}
                             </div>
                             <div className="mt-0.5 text-[11px] text-muted-foreground">
                               {d.verifiedAt
-                                ? `Verified ${formatLocalDate(d.verifiedAt)}`
-                                : "Awaiting DNS verification"}
+                                ? t("y.wl.verifiedOn").replace("{date}", formatLocalDate(d.verifiedAt))
+                                : t("y.wl.awaitingDns")}
                             </div>
                           </div>
                         </div>
@@ -279,11 +281,11 @@ export default function WhiteLabelPage() {
                             <Icon
                               className={`h-3 w-3 ${d.status === "verifying" ? "animate-spin" : ""}`}
                             />
-                            {d.status}
+                            {t(`y.wl.status.${d.status}`)}
                           </Badge>
                           {d.status !== "verified" && (
                             <Button size="sm" variant="outline" onClick={() => verifyDomain(d)}>
-                              Verify
+                              {t("y.wl.verify")}
                             </Button>
                           )}
                           <Button
@@ -291,7 +293,7 @@ export default function WhiteLabelPage() {
                             variant="ghost"
                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => removeDomain(d)}
-                            aria-label={`Remove ${d.domain}`}
+                            aria-label={t("y.wl.removeAria").replace("{domain}", d.domain)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -304,8 +306,8 @@ export default function WhiteLabelPage() {
                 <EmptyState
                   icon={Globe}
                   tone="cyan"
-                  title="No custom domains yet"
-                  description="Add a domain to white-label the operator portal."
+                  title={t("y.wl.emptyTitle")}
+                  description={t("y.wl.emptyDescription")}
                 />
               )}
             </CardContent>

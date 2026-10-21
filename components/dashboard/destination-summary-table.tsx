@@ -52,10 +52,11 @@ interface Row {
 
 /** Small green pill — every row in this table is, by filter, active. */
 function ActiveBadge() {
+  const { t } = useTranslation();
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-[oklch(0.78_0.18_155)]/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]">
       <span aria-hidden className="h-1 w-1 rounded-full bg-current" />
-      Active
+      {t("y.members.statusActive")}
     </span>
   );
 }
@@ -198,7 +199,7 @@ export function DestinationSummaryTable({
             {rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={7} className="pl-6 py-8 text-center text-sm text-muted-foreground">
-                  No destinations.
+                  {t("y.dash.noDestinations")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -262,7 +263,7 @@ export function DestinationSummaryTable({
                             <CallWaveform
                               size="sm"
                               bars={4}
-                              label={`${cc} live ${cc === 1 ? "call" : "calls"}`}
+                              label={(cc === 1 ? t("y.dash.liveOne") : t("y.dash.liveMany")).replace("{count}", String(cc))}
                             />
                           )}
                         </span>
@@ -297,7 +298,7 @@ export function DestinationSummaryTable({
                           </div>
                         </div>
                       ) : (
-                        <span className="text-[11px] text-muted-foreground">Unlimited</span>
+                        <span className="text-[11px] text-muted-foreground">{t("y.dash.unlimited")}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center text-xs tabular-nums">

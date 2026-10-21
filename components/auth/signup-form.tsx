@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { accessRequestsService } from "@/lib/api/services/access-requests.service";
 import { ApiError } from "@/lib/api/http";
+import { useTranslation } from "@/hooks/use-translation";
 
 /** A referral code is only ever letters, digits, "-" and "_" - anything else is dropped. */
 export function cleanReferralCode(raw: string | null | undefined): string | null {
@@ -42,6 +43,7 @@ interface SignupFormProps {
 }
 
 export function SignupForm({ referralCode }: SignupFormProps = {}) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [organization, setOrganization] = useState("");
@@ -56,7 +58,7 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
 
     const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length < 7) {
-      toast.error("Please enter a phone number we can reach you on.");
+      toast.error(t("y.signup.phoneRequired"));
       return;
     }
 
@@ -70,16 +72,16 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
         useCase: withReferral(useCase.trim(), referralCode),
       });
       setSubmitted(true);
-      toast.success("Request received — we'll be in touch shortly.");
+      toast.success(t("y.signup.received"));
     } catch (err) {
       // Backend rate-limits this endpoint to 5/min by IP — surface a friendlier
       // message than the raw "HTTP 429".
       const friendly =
         err instanceof ApiError && err.status === 429
-          ? "Too many requests — please wait a minute and try again."
+          ? t("y.signup.tooMany")
           : err instanceof Error
             ? err.message
-            : "Couldn't send your request. Please try again.";
+            : t("y.signup.sendFailed");
       toast.error(friendly);
     } finally {
       setPending(false);
@@ -93,14 +95,13 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
           <CheckCircle2 className="h-6 w-6" />
         </div>
         <div>
-          <h2 className="text-base font-semibold">Thanks — request received</h2>
+          <h2 className="text-base font-semibold">{t("y.signup.thanks")}</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Our team reviews access requests within one business day. We&apos;ll
-            email <span className="text-foreground">{email}</span> with next steps.
+            {t("y.signup.reviewHint").split("{email}")[0]}<span className="text-foreground">{email}</span>{t("y.signup.reviewHint").split("{email}")[1]}
           </p>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Urgent? Email{" "}
+          {t("y.signup.urgent")}{" "}
           <a href="mailto:hello@avortyx.io" className="text-accent hover:underline">
             hello@avortyx.io
           </a>
@@ -114,11 +115,11 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="name">Full name</Label>
+          <Label htmlFor="name">{t("y.signup.fullName")}</Label>
           <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="organization">Company</Label>
+          <Label htmlFor="organization">{t("y.signup.company")}</Label>
           <Input
             id="organization"
             value={organization}
@@ -129,7 +130,7 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Work email</Label>
+        <Label htmlFor="email">{t("y.signup.workEmail")}</Label>
         <Input
           id="email"
           type="email"
@@ -140,7 +141,7 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone</Label>
+        <Label htmlFor="phone">{t("y.signup.phone")}</Label>
         <Input
           id="phone"
           type="tel"
@@ -154,11 +155,11 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="use-case">What are you looking to route?</Label>
+        <Label htmlFor="use-case">{t("y.signup.useCase")}</Label>
         <Textarea
           id="use-case"
           rows={3}
-          placeholder="A few words on your verticals, monthly call volume, and current stack."
+          placeholder={t("y.signup.useCasePlaceholder")}
           value={useCase}
           onChange={(e) => setUseCase(e.target.value)}
         />
@@ -167,17 +168,17 @@ export function SignupForm({ referralCode }: SignupFormProps = {}) {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("y.signup.sending")}
           </>
         ) : (
           <>
-            Request access <ArrowRight className="h-4 w-4" />
+            {t("y.signup.requestAccess")} <ArrowRight className="h-4 w-4" />
           </>
         )}
       </Button>
 
       <p className="text-center text-[11px] text-muted-foreground">
-        Avortyx is invite-only. We&apos;ll review your request and reach out.
+        {t("y.signup.inviteOnly")}
       </p>
     </form>
   );

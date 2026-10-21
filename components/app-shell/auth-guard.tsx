@@ -17,6 +17,8 @@ import { Logo } from "@/components/brand/logo";
 import { TOKEN_STORAGE_KEY, TOKENS_CLEARED_EVENT } from "@/lib/api/tokens";
 import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -44,7 +46,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     const signOutHere = () => {
       if (!useAuthStore.getState().isAuthenticated) return; // a normal logout already did it
       useAuthStore.setState({ user: null, isAuthenticated: false });
-      toast.error("You have been signed out. Your access may have been removed.", { id: "signed-out" });
+      toast.error(tFor(useLocaleStore.getState().locale, "y.guard.signedOut"), { id: "signed-out" });
     };
     const onStorage = (e: StorageEvent) => {
       if (e.key === TOKEN_STORAGE_KEY && e.newValue === null) signOutHere();
@@ -71,7 +73,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Logo animated className="h-10 w-10" uid="guard" />
-          <p className="text-xs font-mono uppercase tracking-wider">Loading workspace…</p>
+          <p className="text-xs font-mono uppercase tracking-wider">{tFor(useLocaleStore.getState().locale, "y.guard.loading")}</p>
         </div>
       </div>
     );

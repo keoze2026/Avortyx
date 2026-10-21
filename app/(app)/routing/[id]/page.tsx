@@ -16,8 +16,10 @@ import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingEdge, RoutingNode, RoutingNodeData } from "@/lib/types";
 import { ADVANCED_ROUTING_HREF } from "@/lib/api/services/campaign-routing";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function RoutingEditorPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const plan = useRoutingStore((s) => s.getById(params.id));
@@ -146,8 +148,8 @@ export default function RoutingEditorPage() {
         <EmptyState
           icon={GitFork}
           tone="amber"
-          title="Plan not found"
-          description="It may have been deleted. Sending you back to the routing list…"
+          title={t("y.plan.notFound")}
+          description={t("y.plan.notFoundHint")}
         />
       </div>
     );
@@ -159,9 +161,9 @@ export default function RoutingEditorPage() {
     setSaving(true);
     try {
       await setGraph(plan.id, workingNodes, workingEdges);
-      toast.success("Plan saved");
+      toast.success(t("y.plan.saved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : t("y.wl.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -171,26 +173,26 @@ export default function RoutingEditorPage() {
     const next = plan.status === "published" ? "draft" : "published";
     try {
       await setStatus(plan.id, next);
-      toast.success(next === "published" ? "Plan published" : "Plan unpublished");
+      toast.success(next === "published" ? t("y.plan.published") : t("y.plan.unpublished"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't update status");
+      toast.error(e instanceof Error ? e.message : t("y.plan.statusFailed"));
     }
   };
 
   const onDelete = async () => {
     try {
       await remove(plan.id);
-      toast.success(`${plan.name} deleted`);
+      toast.success(t("y.plan.deleted").replace("{name}", plan.name));
       router.replace(ADVANCED_ROUTING_HREF);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : t("y.plan.deleteFailed"));
     }
   };
 
   const onTest = () => {
     if (dirty) {
-      toast.warning("Save your changes first", {
-        description: "Simulation runs against the published rule, so unsaved edits won't be exercised.",
+      toast.warning(t("y.plan.saveFirst"), {
+        description: t("y.plan.saveFirstHint"),
       });
       return;
     }

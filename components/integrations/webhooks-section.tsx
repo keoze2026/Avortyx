@@ -63,7 +63,7 @@ export function WebhooksSection() {
       await removeHook(id);
       toast.success(t("toolsUI.integrations.webhooks.toastRemoved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't remove webhook");
+      toast.error(e instanceof Error ? e.message : t("y.err.webhookRemove"));
     }
   };
 
@@ -72,7 +72,7 @@ export function WebhooksSection() {
       await sendTest(id);
       toast.success(t("toolsUI.integrations.webhooks.toastTestSent"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Test delivery failed");
+      toast.error(e instanceof Error ? e.message : t("x5.webhook.testFailed"));
     }
   };
 
@@ -114,7 +114,7 @@ export function WebhooksSection() {
         });
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save webhook");
+      toast.error(e instanceof Error ? e.message : t("y.err.webhookSave"));
     }
   };
 
@@ -183,7 +183,7 @@ export function WebhooksSection() {
                         {t("toolsUI.integrations.webhooks.sendTest")}
                       </DropdownMenuItem>)}
                       <DropdownMenuItem onSelect={() => setDeliveriesFor(h)}>
-                        <History className="h-4 w-4" /> View deliveries
+                        <History className="h-4 w-4" /> {t("y.wh.viewDeliveries")}
                       </DropdownMenuItem>
                       {can("integrations", "edit") && (<DropdownMenuItem onSelect={() => openEdit(h)}>
                         {t("toolsUI.integrations.webhooks.configure")}

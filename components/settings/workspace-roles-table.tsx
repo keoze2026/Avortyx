@@ -103,7 +103,7 @@ export function WorkspaceRolesTable({ members }: WorkspaceRolesTableProps) {
           className="h-8 gap-1.5 text-xs"
           onClick={() => router.push(`${ROUTES.workspace}/roles/new`)}
         >
-          <Plus className="h-3.5 w-3.5" /> New role
+          <Plus className="h-3.5 w-3.5" /> {t("y.roles.new")}
         </Button>
       </CardHeader>
 
