@@ -75,6 +75,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const campaign = campaigns.find((c) => c.id === campaignId);
   const allNumbers = useNumbersStore((s) => s.numbers);
+  const fetchNumbers = useNumbersStore((s) => s.fetch);
   const updateNumber = useNumbersStore((s) => s.updateNumber);
   const provisionNumber = useNumbersStore((s) => s.provisionNumber);
 
@@ -89,11 +90,14 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
   );
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | NumberType>("all");
+  // Sir, 21 Oct: see High Risk / Low Risk while picking numbers for a campaign.
+  const [riskFilter, setRiskFilter] = useState<"all" | "high" | "low">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return available.filter((n) => {
       if (typeFilter !== "all" && n.type !== typeFilter) return false;
+      if (riskFilter !== "all" && (n.risk ?? "low") !== riskFilter) return false;
       if (!q) return true;
       return (
         n.number.toLowerCase().includes(q) ||
@@ -102,7 +106,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         (n.city ?? "").toLowerCase().includes(q)
       );
     });
-  }, [available, query, typeFilter]);
+  }, [available, query, typeFilter, riskFilter]);
 
   // ─── "Buy new" state ──────────────────────────────────────────────────
   const [buyType, setBuyType] = useState<NumberType>("tollfree");
@@ -118,11 +122,16 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
     setMode("add");
     setQuery("");
     setTypeFilter("all");
+    setRiskFilter("all");
     setSelected(new Set());
+    // Reload the numbers each time the dialog opens: a number attached to a
+    // campaign since the page loaded must not be offered again (Sir, 21 Oct:
+    // "once a TFN is added in a campaign it shouldn't come in the list").
+    void fetchNumbers();
     setBuyType("tollfree");
     setBuyRegion(STATE_OPTIONS[0].code);
     setBuyCount(1);
-  }, [open]);
+  }, [open, fetchNumbers]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -313,6 +322,27 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                   </button>
                 ))}
               </div>
+              <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
+                {([
+                  ["all", t("x5.attachNumbers.all")],
+                  ["high", t("campaignRisk.high")],
+                  ["low", t("campaignRisk.low")],
+                ] as Array<["all" | "high" | "low", string]>).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setRiskFilter(v)}
+                    className={cn(
+                      "rounded px-3 py-1 text-xs font-medium transition-colors",
+                      riskFilter === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                      v === "high" && riskFilter !== v && "text-red-400/80",
+                      v === "low" && riskFilter !== v && "text-emerald-400/80",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
                 {t("x5.attachNumbers.countAvailable")
                   .replace("{shown}", String(filtered.length))
@@ -346,7 +376,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                       <TableHead className="text-left text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.carrier")}</TableHead>
                       <TableHead className="text-left text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.name")}</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">{t("trafficUI.common.type")}</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.region")}</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">{t("campaignRisk.column")}</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.status")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -384,7 +414,9 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                             {n.type === "tollfree" ? t("trafficUI.numbers.typeOptions.tollfree") : t("trafficUI.numbers.typeOptions.local")}
                           </TableCell>
                           <TableCell className="text-xs font-medium">
-                            {n.city ? `${n.city}, ${n.state ?? ""}` : n.state ?? "—"}
+                            <span className={n.risk === "high" ? "text-red-400" : "text-emerald-400"}>
+                              {n.risk === "high" ? t("campaignRisk.high") : t("campaignRisk.low")}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <NumberStatusPill status={n.status} />
