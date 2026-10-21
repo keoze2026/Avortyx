@@ -110,10 +110,11 @@ export function emailProblem(email: string) {
   return undefined;
 }
 
-// the bright primary button: a sheen crosses it on hover; while pending, a spinner and `busy`;
+// the primary button, in avortyx.com's button gradient (#2563eb to #1e40af; on hover #3b82f6 to
+// #1d4ed8): a sheen crosses it on hover; while pending, a spinner and `busy`;
 // `disabled` (the 2FA code not yet whole) dims it.
 // In High Contrast its gradient goes, so it gets a border to stay a button.
-export const PRIMARY = "group relative flex forced-colors:border h-[46px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[linear-gradient(120deg,var(--color-keppel-500),var(--color-keppel-600)_50%,#1d4ed8)] text-[14px] font-semibold text-white shadow-[0_12px_32px_-12px_rgba(59,130,246,0.65),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.2)] outline-none transition-[filter,box-shadow] duration-300 hover:shadow-[0_16px_40px_-12px_rgba(59,130,246,0.8),0_0_0_1px_rgba(96,165,250,0.25),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 focus-visible:ring-4 focus-visible:ring-signal-400/30 disabled:cursor-progress";
+export const PRIMARY = "group relative flex forced-colors:border h-[46px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,#2563eb,#1e40af)] hover:bg-[linear-gradient(180deg,#3b82f6,#1d4ed8)] text-[14px] font-semibold text-white shadow-[0_12px_32px_-12px_rgba(59,130,246,0.65),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.2)] outline-none transition-[filter,box-shadow] duration-300 hover:shadow-[0_16px_40px_-12px_rgba(59,130,246,0.8),0_0_0_1px_rgba(96,165,250,0.25),inset_0_1px_0_rgba(255,255,255,0.25)] focus-visible:ring-4 focus-visible:ring-signal-400/30 disabled:cursor-progress";
 export function PrimaryButton({ pending, idle, busy, disabled }: { pending: boolean; idle: string; busy: string; disabled?: boolean }) {
   return (
     <motion.button type="submit" disabled={pending || disabled} whileTap={{ scale: 0.985 }} className={disabled && !pending ? `${PRIMARY} opacity-60` : PRIMARY}>

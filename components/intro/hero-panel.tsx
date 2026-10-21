@@ -19,7 +19,7 @@ function Headline({ className }: { className: string }) {
     <h2 className={className}>
       <span className="whitespace-nowrap">{t("login.intro.lead")}</span>
       {t("login.intro.middle")}
-      <span className="bg-[linear-gradient(100deg,#dbeafe,var(--color-signal-300)_40%,var(--color-keppel-400)_75%,var(--color-keppel-500))] bg-clip-text text-transparent">
+      <span className="bg-[linear-gradient(135deg,#ffffff,#93c5fd_45%,#60a5fa_85%,#3b82f6)] bg-clip-text text-transparent">
         {t("login.intro.accent")}
       </span>
     </h2>

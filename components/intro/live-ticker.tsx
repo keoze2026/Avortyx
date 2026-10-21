@@ -7,16 +7,16 @@ import { chipMask, insetShape, type ChipShape } from "@/components/auth/chip-sha
 import { signalBackdrop } from "@/components/backdrop/backdrop-signal";
 import { RollingNumber } from "./rolling-number";
 import { formatUsd, useBtcPrice } from "@/hooks/use-btc-price";
-import { useEasternTime } from "./use-eastern-time";
+import { useSystemStatus } from "./use-system-status";
 
-// The live strip above the headline, in one glass chip — "● Live | EST 2:32:05 PM | BTC $82,431
-// +0.62% ⌇", always on one line. The price is real (Coinbase, via hooks/use-btc-price); the clock is
-// EST (use-eastern-time). The design prototype also showed a latency figure, but it was invented, so the real
+// The live strip above the headline, in one glass chip — "● Live | Status Operational | BTC $82,431
+// +0.62% ⌇", always on one line. The price is real (Coinbase, via hooks/use-btc-price); the status is
+// a real check of the API (use-system-status). The design prototype also showed a latency figure, but it was invented, so the real
 // sign-in leaves it out. Quiet in
 // size so the headline leads, but visibly live, its figures in the ice accent kept for live things:
 // digits roll, the price tints brighter ice or steel blue for a moment as it moves, and the live dot
 // and the end of its 24h line send out a ring each time it moves. compact (phones): no 24h line, and
-// no clock on the narrowest phones.
+// no status on the narrowest phones.
 // Each move of the price is also told to the backdrop (backdrop-signal.ts); the wide strip sends it,
 // so the two strips don't both do.
 
@@ -44,9 +44,9 @@ function Segment({ label, children, className }: { label: string; children: Reac
 }
 
 export function LiveTicker({ compact = false, className }: { compact?: boolean; className?: string }) {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const btc = useBtcPrice();
-  const est = useEasternTime(locale);
+  const status = useSystemStatus();
   const up = (btc.change24h ?? 0) >= 0;
   const moved = btc.ticks > 0 ? btc.direction : null;
   const points = btc.history.length > 1 && btc.priceUsd != null ? [...btc.history, btc.priceUsd] : btc.history;
@@ -80,10 +80,14 @@ export function LiveTicker({ compact = false, className }: { compact?: boolean; 
         </span>
 
         {/* (left out of the compact strip on the narrowest phones, where it wouldn't fit) */}
-        <Segment label="EST" className={compact ? "max-[389px]:hidden" : undefined}>
-          <span title={t("loginScreen.live.est")} className="inline-flex items-center">
-            {est ? <RollingNumber text={est} /> : "—"}
-          </span>
+        <Segment label={t("loginScreen.live.status")} className={compact ? "max-[389px]:hidden" : undefined}>
+          {status === "checking" ? (
+            "—"
+          ) : (
+            <span title={t(`loginScreen.live.${status}Hint`)} className={cn("inline-flex items-center", status === "degraded" && "text-[#3b82f6]")}>
+              {t(`loginScreen.live.${status}`)}
+            </span>
+          )}
         </Segment>
 
         <Segment label="BTC" className="pr-[16px]">
