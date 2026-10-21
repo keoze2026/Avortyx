@@ -1,12 +1,5 @@
-// The backdrop under the 3D scene (components/scene): dark and still, so the few lights on it (the
-// AI, the card's rim, the Sign in button) stand out. Plain CSS, no canvas, so it shows at once:
-//  - the ground: near black, with a little deep navy light from above;
-//  - three wide, faint glows in the Avortyx blues, still;
-//  - a fine grid, barely there, fading out from the middle of the page towards its edges;
-//  - a fine grain (it also keeps the long gradients from banding), a deep vignette.
-// In High Contrast (forced colours) it is hidden: the system's plain ground (globals.css).
-
-// the grain: an SVG noise texture, inline
+// The static CSS backdrop under the 3D scene: dark ground, faint glows, grid, grain, vignette.
+// The grain also keeps the long gradients from banding.
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E\")";
 

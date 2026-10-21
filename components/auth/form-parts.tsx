@@ -34,7 +34,8 @@ export function FloatingField({
           aria-invalid={error ? true : undefined}
           aria-describedby={[error ? `${id}-error` : "", inputProps?.["aria-describedby"] ?? ""].join(" ").trim() || undefined}
           className={cn(
-            "peer relative h-[54px] w-full rounded-2xl border bg-[#0b1222] bg-clip-padding pb-[4px] pl-[44px] pt-[19px] text-[14px] leading-[20px] text-foreground outline-none",
+            // (16px on touch screens: iOS zooms the page into a field whose text is any smaller as it takes focus)
+            "peer relative h-[54px] w-full rounded-2xl border bg-[#0b1222] bg-clip-padding pb-[4px] pl-[44px] pt-[19px] text-[14px] leading-[20px] text-foreground outline-none pointer-coarse:text-[16px]",
             "shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_-12px_24px_-18px_rgba(0,0,0,0.6)] transition-[border-color,background-color] duration-200",
             // a soft red rim while the field has a problem
             error ? "border-[#f0a0a8]/45 hover:border-[#f0a0a8]/60" : "border-white/10 hover:border-white/20",

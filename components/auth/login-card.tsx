@@ -6,6 +6,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { GlassCard } from "./glass-card";
 import { LoginForm } from "./login-form";
+import { TAP } from "./tap";
 
 // the sign-in card; under it, the way to sign up
 export function LoginCard() {
@@ -28,7 +29,7 @@ export function LoginCard() {
       below={
         <p className="mt-5 text-center text-[13px] text-muted-foreground">
           {t("login.newHere")}{" "}
-          <Link href={ROUTES.signup} className="font-medium text-[var(--color-keppel-300)] transition hover:text-signal-200">
+          <Link href={ROUTES.signup} className={`font-medium text-[var(--color-keppel-300)] transition hover:text-signal-200 ${TAP}`}>
             {t("login.createAccount")}
           </Link>
         </p>

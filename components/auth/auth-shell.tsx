@@ -9,6 +9,7 @@ import { Scene } from "@/components/backdrop/scene";
 import { Backdrop } from "@/components/backdrop/backdrop";
 import { CircuitField } from "@/components/backdrop/circuit-field";
 import { HeroPanel } from "@/components/intro/hero-panel";
+import { TAP } from "@/components/auth/tap";
 
 // The frame of the sign-in screen (app/(login)/login/page.tsx; the design prototype also puts its
 // reset-password and not-found cards in it): a calm backdrop (components/backdrop/backdrop.tsx), the circuit board the
@@ -66,8 +67,8 @@ export function AuthShell({ children, intro = true, fontClass }: { children: Rea
               </span>
             </span>
             <nav aria-label={t("loginScreen.legal")} className="flex items-center gap-5">
-              <a href="https://www.avortyx.com/terms_of_service" className="transition hover:text-foreground">{t("login.footer.terms")}</a>
-              <a href="https://www.avortyx.com/privacy_policy" className="transition hover:text-foreground">{t("login.footer.privacy")}</a>
+              <a href="https://www.avortyx.com/terms_of_service" className={`transition hover:text-foreground ${TAP}`}>{t("login.footer.terms")}</a>
+              <a href="https://www.avortyx.com/privacy_policy" className={`transition hover:text-foreground ${TAP}`}>{t("login.footer.privacy")}</a>
             </nav>
           </footer>
         </div>

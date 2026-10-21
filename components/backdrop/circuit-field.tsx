@@ -4,31 +4,18 @@ import { useEffect, useRef } from "react";
 import { BACKDROP_EVENT, type BackdropSignal } from "./backdrop-signal";
 import { textRight, useAiPlacement, type Placement } from "@/components/scene/use-ai-placement";
 
-// The circuit board the sign-in card sits on as a chip (glass-card.tsx), on wide screens where the
-// card stands beside the intro: one 2D canvas behind the page, drawn round the card. Quiet: thin
-// traces in a dim blue, lit only when something happens.
-//  - Traces: three from each side of the chip, the outer two turning away at 45 degrees, to a pad:
-//    on the left to Avortyx AI's portrait (so she and the chip read as one system), never into the
-//    intro's words (where there's no room, the left side is left out), on the right towards the
-//    edge. As the page opens they draw themselves out from the chip, one after another, once the
-//    chip has lit (.chip-on), and their pads light as each arrives; then they're drawn once per
-//    layout.
-//  - Pulses, which carry the page's meaning: each call that comes in (backdrop-signal.ts "call", not
-//    sent in the app yet) runs from her along a trace into the chip, then out of it along one on
-//    the right, to a buyer; Sign in sends one down every trace at once. A pulse is a head in the ice
-//    accent with a short tail.
-// While a sign-in field has focus the traces glow a little brighter. Still for reduced motion (one
-// frame, the traces drawn, no pulses), paused while the tab is hidden (no animation frames), hidden
-// in High Contrast and below 1024px.
+// The circuit traces round the sign-in card (a 2D canvas, wide screens only): wired to the AI on the
+// left, pulses running along them for each call (not sent in the app
+// yet) and on Sign in.
 
 const BLUE = "59,130,246", ICE = "219,234,254";
-const DRAW = { after: 1.5, each: 0.9, stagger: 0.12 }; // the traces drawing out: when, how long, one after another
+const DRAW = { after: 1.5, each: 0.9, stagger: 0.12 }; // the traces' draw-in timing
 
 type Trace = { pts: [number, number][]; len: number; side: -1 | 1; order: number };
 type Pulse = { trace: Trace; at: number; dur: number; inward: boolean; then?: boolean };
 type Layout = { box: [number, number, number, number]; traces: Trace[]; board: HTMLCanvasElement };
 
-// a soft dot of light, drawn once, stamped for each pulse
+// drawn once, stamped for each pulse
 function sprite(rgb: string, size: number, glow: number, dpr: number) {
   const s = Math.ceil((size + glow * 2) * dpr), c = document.createElement("canvas");
   c.width = c.height = s;
@@ -44,15 +31,13 @@ function sprite(rgb: string, size: number, glow: number, dpr: number) {
 
 function layout(card: DOMRect, her: Placement | null, words: number, W: number, dpr: number): Layout | null {
   const cy = card.top + card.height / 2, h = card.height;
-  // where the left side ends: at her right edge, else a fixed reach, and clear of the intro's words
-  // (`words`: their right edge); the right, short of the window's edge
+  // the left side stops at the AI, and never runs into the intro's words
   const leftEnd = Math.max(her?.tag ? her.x + her.r * 1.15 : card.left - 220, words + 32);
   const rightEnd = Math.min(W - 18, card.right + 260);
   const rBand = rightEnd - (card.right + 18), lBand = card.left - 18 - leftEnd;
   if (rBand < 40) return null;
   const sides = lBand >= 60 ? ([-1, 1] as const) : ([1] as const);
 
-  // from the chip's side, out 26px, round at 45 degrees (dy), and on to the pad
   const traces: Trace[] = [];
   const trace = (side: -1 | 1, y0: number, dy: number, end: number) => {
     const x0 = side < 0 ? card.left - 4 : card.right + 4, x1 = x0 + side * 26;
@@ -80,7 +65,7 @@ function layout(card: DOMRect, her: Placement | null, words: number, W: number, 
   return { box, traces, board };
 }
 
-// a trace drawn out to `k` of its length (its pad once it's all there), at `glow` of its brightness
+// drawn out to `k` of its length, at `glow` of its brightness
 function strokeTrace(c: CanvasRenderingContext2D, t: Trace, k: number, glow: number) {
   c.lineJoin = "round";
   c.lineCap = "round";
@@ -113,7 +98,6 @@ function strokeTrace(c: CanvasRenderingContext2D, t: Trace, k: number, glow: num
   c.fill();
 }
 
-// a point at distance s along a trace
 function along(t: Trace, s: number): [number, number] {
   for (let i = 1; i < t.pts.length; i++) {
     const [ax, ay] = t.pts[i - 1], [bx, by] = t.pts[i], l = Math.hypot(bx - ax, by - ay);
@@ -128,7 +112,6 @@ const ease = (k: number) => 1 - Math.pow(1 - k, 3);
 export function CircuitField() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const her = useAiPlacement();
-  // when the page opened, for the traces drawing out (kept as the layout changes)
   const opened = useRef(0);
 
   useEffect(() => {
@@ -152,7 +135,6 @@ export function CircuitField() {
       if (reduced) draw(born + 99);
     };
 
-    // a pulse along one of a side's traces (at random), starting `delay` seconds from now
     const send = (side: -1 | 1, inward: boolean, now: number, delay = 0, then = false) => {
       const on = lay?.traces.filter((t) => t.side === side);
       if (!on?.length) return;
@@ -168,7 +150,6 @@ export function CircuitField() {
       ctx.globalCompositeOperation = "lighter";
       energy.focus += ((energy.focused ? 1 : 0) - energy.focus) * 0.06;
 
-      // the traces: drawing themselves out as the page opens, then from the board
       const since = t - born - DRAW.after, total = DRAW.each + DRAW.stagger * (lay.traces.length - 1);
       if (since < total) {
         for (const tr of lay.traces) {
@@ -185,7 +166,7 @@ export function CircuitField() {
         }
       }
 
-      // the pulses: a head with a fading tail; one that came in from her goes on out to a buyer
+      // a pulse that came in from her goes on out to a buyer
       const hs = head.width / dpr / 2;
       pulses = pulses.filter((p) => {
         const k = (t - p.at) / p.dur;
@@ -212,7 +193,6 @@ export function CircuitField() {
       if (s.kind === "focus") energy.focused = true;
       else if (s.kind === "blur") energy.focused = false;
       else if (reduced || !lay || now - born < DRAW.after + 1) return;
-      // a call: in from her (or, with no room for her side, straight out to a buyer)
       else if (s.kind === "call") {
         if (pulses.length > 4) return;
         if (lay.traces.some((t) => t.side < 0)) send(-1, true, now, 0, true);

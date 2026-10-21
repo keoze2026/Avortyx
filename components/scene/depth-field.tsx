@@ -6,9 +6,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { frameStep, pointScale } from "./scene-input";
 import { FIELD_FS, FIELD_VS } from "./shaders";
 
-// The background's depth: faint points of light floating at many depths behind the scene (one draw
-// call), drifting slowly upward and twinkling; as the camera drifts with the pointer the near ones
-// shift more than the far ones, so the space reads as 3D.
+// Faint points drifting upward at many depths behind the scene, for parallax.
 
 export function DepthField({ count, reduced }: { count: number; reduced: boolean }) {
   const { viewport, size } = useThree();

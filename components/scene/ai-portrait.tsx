@@ -8,54 +8,38 @@ import { frameStep, input, setMode, type AiMode } from "./scene-input";
 import { PORTRAIT_LINES_FS, PORTRAIT_LINES_VS, PORTRAIT_POINTS_FS, PORTRAIT_POINTS_VS } from "./shaders";
 import type { Placement } from "./use-ai-placement";
 
-// The AI's portrait in 3D points (two draw calls: her points and the constellation on her face),
-// placed over the page where use-ai-placement.ts says, facing the card, swaying a little and
-// turning towards the pointer (only a little: she is a relief from one picture, so seen from far
-// round she would flatten). She opens as a galaxy of points and is printed out of it; then she
-// holds together a moment (breathing, a scan of light passing down her, her eyes following the
-// pointer, or the field being typed in, and blinking now and then; midway her points travel through
-// other forms, a globe with calls arcing between its cities, a speaking voice and the Avortyx mark,
-// and come back as her face),
-// burns away into the galaxy,
-// which turns a moment, and is printed back (uProgress 0 -> 1 -> 0; shaders.ts moves the points).
-// While a sign-in field has focus she holds together and listens (as her face: from a form, she
-// comes back to it first). Sign in sends her apart at once,
-// and she holds as the galaxy until the sign-in's answer (backdrop-signal.ts "result"; a few
-// seconds at most): a right password prints her back lit up, a wrong one prints her back quickly
-// and jolts her.
+// Avortyx AI's portrait in points: placement, its cycle (whole, forms, grid, back) and sign-in reactions.
+// shaders.ts moves the points; this drives the uniforms.
 
-const CYCLE = { whole: 21.5, apart: 2.6, cloud: 2.4, back: 3.4 };
-// her forms while whole (shaders.ts form(); 0 her face): from FORMS.from into each in turn, a new one every
-// FORMS.each seconds, FORMS.morph to change, and back to her face. Her face shows only briefly, about
-// three seconds at a time (once printed, and once back from the forms before she burns away), so
-// she is always on her way to another pattern
+const CYCLE = { whole: 21.5, apart: 2.6, grid: 2.4, back: 3.4 };
+// forms while whole (shaders.ts form(); 0 is her face)
 const FORMS = { from: 3, each: 4.5, morph: 1.8, seq: [0, 1, 2, 3, 0] };
 const FORMS_LAST = FORMS.from + (FORMS.seq.length - 2) * FORMS.each;
-const APART = CYCLE.whole, CLOUD = APART + CYCLE.apart, BACK = CLOUD + CYCLE.cloud, LENGTH = BACK + CYCLE.back;
-const WAIT = 8; // the longest she holds as the galaxy for a sign-in's answer
+const APART = CYCLE.whole, GRID = APART + CYCLE.apart, BACK = GRID + CYCLE.grid, LENGTH = BACK + CYCLE.back;
+const PATTERNS = 4; // the grid's patterns, in turn (shaders.ts gridOf())
+const WAIT = 8; // the longest she holds as the grid for a sign-in's answer
+const LEVEL = 0.75; // how bright she is overall: clear, yet under the page's words
 const FOV = 40, DIST = 6; // the camera's (ai-scene.tsx)
 const ease = (k: number) => k * k * (3 - 2 * k);
 type Forms = { a: number; b: number; m: number };
 const FACE: Forms = { a: 0, b: 0, m: 0 };
 
-// where she is in her cycle, kept outside the component so a switch to the lighter scene (which
-// remounts it) carries on where it was. She opens as the galaxy, a moment before she is printed
-// (once the canvas has faded in), printed a little quicker than in her cycle
+// module-level so a remount (switch to the lighter scene) carries on where it was; opens in the grid
 const cycle = {
   at: BACK - 0.8,
   speed: 1.5,
   seenSubmit: -1,
+  pattern: 0, // the grid's pattern this time round
   seenResult: -1,
   verifying: false,
   outcome: null as boolean | null, // the sign-in's answer, once the page has it
   waited: 0,
-  flash: -99, // when, on her clock, her last flash (a right password) and jolt (a wrong one) began
+  flash: -99, // start of the last flash (right password) and jolt (wrong one), on her clock
   glitch: -99,
-  said: { mode: "Ready" as AiMode, until: 0 }, // what her tag says for a while after an answer
+  said: { mode: "Ready" as AiMode, until: 0 },
   home: null as { from: number; at: number; dur: number } | null, // back to her face from a form, out of turn
 };
 
-// which forms she is between at c on her cycle (a -> b, m of the way)
 function formsAt(c: number): Forms {
   if (c < FORMS.from || c >= APART) return FACE;
   const i = Math.min(FORMS.seq.length - 2, Math.floor((c - FORMS.from) / FORMS.each));
@@ -64,7 +48,7 @@ function formsAt(c: number): Forms {
 
 function progressAt(c: number) {
   if (c < APART) return 0;
-  if (c < CLOUD) return ease((c - APART) / CYCLE.apart);
+  if (c < GRID) return ease((c - APART) / CYCLE.apart);
   if (c < BACK) return 1;
   return 1 - ease((c - BACK) / CYCLE.back);
 }
@@ -94,14 +78,14 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
       uShapeA: { value: 0 },
       uShapeB: { value: 0 },
       uMorph: { value: 0 },
-      uFaceX: { value: 0 },
+      uFace: { value: new THREE.Vector2() },
+      uPattern: { value: 0 }, // the grid's pattern (shaders.ts gridOf())
     }),
     [],
   );
   useEffect(() => {
     uniforms.uEyes.value.copy(geo.eyes);
-    // the midpoint between her eyes, so her face is centred where she's placed (none if her picture marks no eyes)
-    uniforms.uFaceX.value = Math.abs(geo.eyes.x) < 50 ? (geo.eyes.x + geo.eyes.z) / 2 : 0;
+    uniforms.uFace.value.copy(geo.centre);
   }, [uniforms, geo]);
   const pointsMat = useMemo(
     () => new THREE.ShaderMaterial({ vertexShader: PORTRAIT_POINTS_VS, fragmentShader: PORTRAIT_POINTS_FS, uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -113,7 +97,7 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
   );
   useEffect(() => () => (pointsMat.dispose(), linesMat.dispose()), [pointsMat, linesMat]);
 
-  // a still frame for reduced motion, drawn again whenever she moves
+  // reduced motion: redraw the still frame when she moves
   useEffect(() => invalidate(), [place, invalidate]);
 
   const state = useRef({ energy: 0, scale: 0, mouse: new THREE.Vector3(), blinkAt: 2.5, gaze: new THREE.Vector2() });
@@ -124,21 +108,22 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     const s = state.current, dt = reduced ? 0 : frameStep(gl.info.render.frame, delta);
     const t = (uniforms.uTime.value += dt);
 
-    // the form she is in, if she is in one now (not on her way between two)
     const now = formsAt(cycle.at), held = now.m >= 1 ? now.b : now.m <= 0 ? now.a : -1;
-    // back to her face out of turn, from the form she is in (or the nearer, on the way between two)
     const goHome = (dur: number) => {
       const from = held >= 0 ? held : now.m < 0.5 ? now.a : now.b;
       if (from) cycle.home = { from, at: t, dur };
       cycle.at = Math.max(cycle.at, FORMS_LAST + FORMS.morph);
     };
 
-    // Sign in: she comes apart now (a little quicker), and holds as the galaxy for the answer
     if (input.submittedAt > 0 && input.submittedAt !== cycle.seenSubmit) {
       cycle.seenSubmit = input.submittedAt;
       if (cycle.at < APART) {
         if (cycle.at > FORMS.from) goHome(0.9);
         cycle.at = APART;
+        cycle.speed = 1.4;
+      } else if (cycle.at >= BACK) {
+        // coming back from the grid: reverse into it from the same point
+        cycle.at = APART + CYCLE.apart * (1 - (cycle.at - BACK) / CYCLE.back);
         cycle.speed = 1.4;
       }
       cycle.verifying = true;
@@ -149,17 +134,14 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
       cycle.seenResult = input.result.at;
       if (cycle.verifying) cycle.outcome = input.result.ok;
     }
-    // once the answer is in, the rest of her time as the galaxy goes quickly
-    if (cycle.verifying && cycle.outcome !== null && cycle.at >= CLOUD && cycle.at < BACK) cycle.speed = 3;
-    // a field has focus while she is in a form: she comes back to her face, and listens
+    if (cycle.verifying && cycle.outcome !== null && cycle.at >= GRID && cycle.at < BACK) cycle.speed = 3;
     const listen = input.focused && !cycle.verifying && cycle.at < APART;
     if (listen && held > 0) goHome(1.6);
     const holdWhole = listen && held >= 0;
-    const holdCloud = cycle.verifying && cycle.outcome === null && cycle.at >= BACK - 0.05 && (cycle.waited += dt) < WAIT;
-    if (!holdWhole && !holdCloud) {
+    const holdGrid = cycle.verifying && cycle.outcome === null && cycle.at >= BACK - 0.05 && (cycle.waited += dt) < WAIT;
+    if (!holdWhole && !holdGrid) {
       const was = cycle.at;
       cycle.at += dt * cycle.speed;
-      // printed back after a sign-in: lit up (a right password) or quickly (a wrong one)
       if (was < BACK && cycle.at >= BACK && cycle.verifying) {
         cycle.speed = cycle.outcome === false ? 1.8 : 1.3;
         if (cycle.outcome) cycle.flash = t;
@@ -167,6 +149,7 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     }
     if (cycle.at >= LENGTH) {
       cycle.at -= LENGTH;
+      cycle.pattern = (cycle.pattern + 1) % PATTERNS;
       cycle.speed = 1;
       if (cycle.verifying && cycle.outcome !== null) {
         if (!cycle.outcome) cycle.glitch = t;
@@ -177,29 +160,27 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     }
     setMode(cycle.verifying ? "Verifying" : t < cycle.said.until ? cycle.said.mode : input.focused ? "Listening" : "Ready");
     uniforms.uProgress.value = reduced ? 0 : progressAt(cycle.at);
+    uniforms.uPattern.value = cycle.pattern;
     const home = cycle.home, h = home ? (t - home.at) / home.dur : 1;
     if (home && h >= 1) cycle.home = null;
     const forms = reduced ? FACE : home && h < 1 ? { a: home.from, b: 0, m: ease(h) } : formsAt(cycle.at);
     uniforms.uShapeA.value = forms.a;
     uniforms.uShapeB.value = forms.b;
     uniforms.uMorph.value = forms.m;
-    // coming back once she is all in the galaxy (where the switch can't be seen); coming apart once whole
+    // switched only while she is fully in the grid or whole, where the change can't be seen
     uniforms.uBack.value = cycle.at >= BACK ? 1 : 0;
     s.energy += ((input.focused ? 1 : 0) - s.energy) * Math.min(1, dt * 3);
     uniforms.uEnergy.value = s.energy;
     input.ripple *= Math.exp(-dt * 2.5);
     uniforms.uRipple.value = input.ripple;
-    // the flash rises as she is printed and fades once she is whole; the jolt, three quick jumps
     const f = t - cycle.flash, j = t - cycle.glitch;
     uniforms.uFlash.value = f < 0 ? 0 : Math.min(1, f / 0.6) * Math.exp(-Math.max(0, f - 1.2) * 1.6);
     uniforms.uGlitch.value = j < 0 || j > 0.75 ? 0 : (0.35 + 0.65 * Math.round((j * 4) % 1)) * (1 - j / 0.75);
 
-    // her eyes: a blink every 3 to 6 seconds (now and then two), only while she is whole
     if (t > s.blinkAt + 0.2) s.blinkAt = t + 3 + Math.random() * 3 - (Math.random() < 0.15 ? 2.6 : 0);
     const b = (t - s.blinkAt) / 0.2;
     uniforms.uBlink.value = b > 0 && b < 1 && cycle.at < APART && !reduced ? Math.sin(b * Math.PI) : 0;
 
-    // her place on screen, in the world at z = 0 (seen from the camera's distance)
     const perPx = (2 * Math.tan(((FOV / 2) * Math.PI) / 180) * DIST) / size.height;
     const wx = (place.x - size.width / 2) * perPx, wy = -(place.y - size.height / 2) * perPx, scale = place.r * perPx;
     const k = s.scale && !reduced ? Math.min(1, dt * 5) : 1;
@@ -209,23 +190,17 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     g.scale.setScalar(s.scale);
     g.rotation.set(0.04 * Math.sin(t * 0.3) + input.mouse.y * 0.1, 0.2 * Math.sin(t * 0.21) + input.mouse.x * 0.25, 0);
 
-    // where she looks: at the field being typed in, else at the pointer, else drifting a little;
-    // her eyes move quickly to it, as eyes do
     const look = input.focused ? input.field : input.mouse.px > -1e3 ? { x: input.mouse.px, y: input.mouse.py } : null;
     const gx = look ? (look.x - place.x) / Math.max(200, size.width * 0.35) : 0.3 * Math.sin(t * 0.17);
     const gy = look ? -(look.y - place.y) / Math.max(200, size.height * 0.4) : 0.2 * Math.sin(t * 0.11);
     s.gaze.set(Math.max(-1, Math.min(1, gx)), Math.max(-1, Math.min(1, gy)));
     uniforms.uGaze.value.lerp(s.gaze, Math.min(1, dt * 10));
 
-    // points a little wider than the gaps between them (one unit of hers is the placement's radius), in
-    // pixels; where that is under a pixel (she is small, in the header's corner) they're drawn at a
-    // pixel and dimmed to match. Small (on phones and tablets) she is lit up to a quarter as much again,
-    // or her few points would leave her faint
+    // sub-pixel points are drawn at a pixel and dimmed to match; small placements get a little extra light
     const px = place.r * portraitSpacing(data.h, step) * 1.5 * viewport.dpr;
     uniforms.uSize.value = px;
-    uniforms.uGain.value = Math.min(1, px * px) * (1 + 0.25 * Math.min(1, Math.max(0, (90 - place.r) / 40)));
+    uniforms.uGain.value = LEVEL * Math.min(1, px * px) * (1 + 0.25 * Math.min(1, Math.max(0, (90 - place.r) / 40)));
 
-    // the pointer, in her own space
     if (input.mouse.px > -1e3) {
       s.mouse.set((input.mouse.px - size.width / 2) * perPx, -(input.mouse.py - size.height / 2) * perPx, 0);
       g.worldToLocal(s.mouse);

@@ -13,6 +13,7 @@ import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useSecurityStore } from "@/lib/store/security-store";
 import { EmailCheck, FloatingField, FormNote, PrimaryButton, emailProblem } from "./form-parts";
+import { TAP } from "./tap";
 
 // The sign-in form (admin-only; buyers and publishers use their invite links), in two steps, as the
 // app's form signs in:
@@ -283,7 +284,7 @@ export function LoginForm() {
               e.preventDefault();
               router.push(`${ROUTES.forgotPassword}?email=${encodeURIComponent(typed)}`);
             }}
-            className="rounded text-xs text-muted-foreground transition-colors hover:text-signal-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal-400/60"
+            className={`rounded text-xs text-muted-foreground transition-colors hover:text-signal-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal-400/60 ${TAP}`}
           >
             {t("signIn.forgotPassword")}
           </Link>

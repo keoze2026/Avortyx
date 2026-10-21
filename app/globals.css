@@ -2271,7 +2271,7 @@
   --color-ice-200: #bfdbfe;
   --color-ice-300: #93c5fd;
   --color-rise: #93c5fd;
-  --color-fall: #8ea3c7;
+  --color-fall: #60a5fa;
 }
 /* headlines: Inter's "Display" cut, through its optical sizes (app/(login)/font.ts) */
 @theme inline {
@@ -2334,13 +2334,13 @@ html:has(.login-screen) body {
   transition: background-color 9999s ease-out 0s;
 }
 
-/* the live price (in the ice accent) takes a brighter blue (up) or steel blue (down) tint for a moment as it moves */
+/* the live price (in the ice accent) takes a brighter blue (up) or deeper blue (down) tint for a moment as it moves */
 @keyframes tick-soft-up {
   0% { color: #93c5fd; }
   100% { color: #dbeafe; }
 }
 @keyframes tick-soft-down {
-  0% { color: #8ea3c7; }
+  0% { color: #60a5fa; }
   100% { color: #dbeafe; }
 }
 /* the same two again under other names, so each tick can restart the tint (see live-ticker.tsx) */
@@ -2349,7 +2349,7 @@ html:has(.login-screen) body {
   100% { color: #dbeafe; }
 }
 @keyframes tick-soft-down-b {
-  0% { color: #8ea3c7; }
+  0% { color: #60a5fa; }
   100% { color: #dbeafe; }
 }
 /* a live dot's ring (the live strip's, the BTC line's end, the AI's tag): it grows and fades once,
