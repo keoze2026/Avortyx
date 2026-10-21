@@ -4,6 +4,7 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { useCountUp } from "@/hooks/use-count-up";
+import { useTranslation } from "@/hooks/use-translation";
 import { formatCompact, formatCurrency, formatDuration, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ interface KpiRowProps {
 
 interface KpiConfig {
   label: string;
+  labelKey: string;
   value: number;
   format: (v: number) => string;
   delta: number;
@@ -25,24 +27,28 @@ export function KpiRow({ callsToday, revenueToday, conversionRate, avgDurationSe
   const kpis: KpiConfig[] = [
     {
       label: "Revenue",
+      labelKey: "dashboard.revenue",
       value: revenueToday,
       format: (v) => formatCurrency(v),
       delta: 8.7,
     },
     {
       label: "Calls",
+      labelKey: "dashboard.calls",
       value: callsToday,
       format: (v) => formatCompact(Math.round(v)),
       delta: 12.4,
     },
     {
       label: "Conv. rate",
+      labelKey: "toolsUI.reports.summary.columns.conversionRate",
       value: conversionRate * 100,
       format: (v) => formatPercent(v),
       delta: -2.1,
     },
     {
       label: "Avg dur.",
+      labelKey: "x5.kpi.avgDuration",
       value: avgDurationSec,
       format: (v) => formatDuration(Math.round(v)),
       delta: 5.2,
@@ -71,13 +77,14 @@ export function KpiRow({ callsToday, revenueToday, conversionRate, avgDurationSe
   );
 }
 
-function KpiSection({ label, value, format, delta }: KpiConfig) {
+function KpiSection({ labelKey, value, format, delta }: KpiConfig) {
+  const { t } = useTranslation();
   const animated = useCountUp(value);
   const positive = delta >= 0;
   return (
     <div className="min-w-0">
       <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/80 truncate">
-        {label}
+        {t(labelKey)}
       </div>
       <div className="mt-1.5 flex items-baseline justify-between gap-2">
         <span className="truncate text-2xl font-semibold tabular-nums tracking-tight text-foreground">

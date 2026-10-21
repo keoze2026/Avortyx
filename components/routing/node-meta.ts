@@ -16,14 +16,21 @@ import {
   XOctagon,
 } from "lucide-react";
 
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 import type { RoutingNodeData, RoutingNodeKind } from "@/lib/types";
+
+/** Default text put into a newly dropped node, in the language chosen at that moment. */
+const tNow = (key: string) => tFor(useLocaleStore.getState().locale, key);
 
 export type NodeTone = "cyan" | "amber" | "violet" | "emerald" | "rose";
 
 export interface NodeMeta {
   kind: RoutingNodeKind;
   label: string;
+  labelKey: string;
   description: string;
+  descriptionKey: string;
   icon: LucideIcon;
   tone: NodeTone;
   /** Number of inbound and outbound handles — used by the renderer. */
@@ -37,7 +44,9 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   inbound: {
     kind: "inbound",
     label: "Inbound",
+    labelKey: "trafficUI.routing.nodes.inbound.label",
     description: "Where every call enters the plan.",
+    descriptionKey: "trafficUI.routing.nodes.inbound.description",
     icon: PhoneIncoming,
     tone: "cyan",
     inputs: 0,
@@ -47,7 +56,9 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   hoursFilter: {
     kind: "hoursFilter",
     label: "Hours filter",
+    labelKey: "trafficUI.routing.nodes.hoursFilter.label",
     description: "Pass only during certain hours / days.",
+    descriptionKey: "trafficUI.routing.nodes.hoursFilter.description",
     icon: Clock,
     tone: "amber",
     inputs: 1,
@@ -60,7 +71,9 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   geoFilter: {
     kind: "geoFilter",
     label: "Geo filter",
+    labelKey: "trafficUI.routing.nodes.geoFilter.label",
     description: "Pass calls from selected states.",
+    descriptionKey: "trafficUI.routing.nodes.geoFilter.description",
     icon: Globe2,
     tone: "violet",
     inputs: 1,
@@ -73,7 +86,9 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   tagFilter: {
     kind: "tagFilter",
     label: "Tag filter",
+    labelKey: "trafficUI.routing.nodes.tagFilter.label",
     description: "Match custom call metadata.",
+    descriptionKey: "trafficUI.routing.nodes.tagFilter.description",
     icon: Tags,
     tone: "violet",
     inputs: 1,
@@ -86,7 +101,9 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   weightSplit: {
     kind: "weightSplit",
     label: "Weight split",
+    labelKey: "trafficUI.routing.nodes.weightSplit.label",
     description: "Percentage split between two branches.",
+    descriptionKey: "trafficUI.routing.nodes.weightSplit.description",
     icon: Filter,
     tone: "cyan",
     inputs: 1,
@@ -99,20 +116,27 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   priority: {
     kind: "priority",
     label: "Priority",
+    labelKey: "trafficUI.routing.nodes.priority.label",
     description: "Try the primary path first; fall back if no match.",
+    descriptionKey: "trafficUI.routing.nodes.priority.description",
     icon: GitFork,
     tone: "cyan",
     inputs: 1,
     outputs: 2,
     defaultData: () => ({
       kind: "priority",
-      priority: { primaryLabel: "Primary", fallbackLabel: "Fallback" },
+      priority: {
+        primaryLabel: tNow("trafficUI.routing.nodes.priority.primary"),
+        fallbackLabel: tNow("trafficUI.routing.nodes.priority.fallback"),
+      },
     }),
   },
   capCheck: {
     kind: "capCheck",
     label: "Cap check",
+    labelKey: "trafficUI.routing.nodes.capCheck.label",
     description: "Stop routing once a limit is hit.",
+    descriptionKey: "trafficUI.routing.nodes.capCheck.description",
     icon: Gauge,
     tone: "amber",
     inputs: 1,
@@ -125,27 +149,31 @@ export const NODE_META: Record<RoutingNodeKind, NodeMeta> = {
   buyer: {
     kind: "buyer",
     label: "Buyer",
+    labelKey: "trafficUI.routing.nodes.buyer.label",
     description: "Hand the call off to a buyer (terminal).",
+    descriptionKey: "trafficUI.routing.nodes.buyer.description",
     icon: Building2,
     tone: "emerald",
     inputs: 1,
     outputs: 0,
     defaultData: () => ({
       kind: "buyer",
-      buyer: { buyerId: "", buyerName: "Pick a buyer" },
+      buyer: { buyerId: "", buyerName: tNow("trafficUI.routing.nodes.buyer.pickBuyer") },
     }),
   },
   deadEnd: {
     kind: "deadEnd",
     label: "Dead end",
+    labelKey: "trafficUI.routing.nodes.deadEnd.label",
     description: "Drop the call with a reason.",
+    descriptionKey: "trafficUI.routing.nodes.deadEnd.description",
     icon: XOctagon,
     tone: "rose",
     inputs: 1,
     outputs: 0,
     defaultData: () => ({
       kind: "deadEnd",
-      deadEnd: { reason: "Unmatched" },
+      deadEnd: { reason: tNow("toolsUI.callLogs.detail.unmatched") },
     }),
   },
 };

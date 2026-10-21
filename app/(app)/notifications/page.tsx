@@ -8,6 +8,7 @@ import { NotificationRow } from "@/components/app-shell/notification-row";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useTranslation } from "@/hooks/use-translation";
 import type { NotificationItem } from "@/lib/mock/notifications";
 import {
   anomalyToNotification,
@@ -19,14 +20,15 @@ import { cn } from "@/lib/utils";
 
 type TabId = "all" | "critical" | "insights" | "read";
 
-const TABS: Array<{ id: TabId; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "critical", label: "Alerts" },
-  { id: "insights", label: "Insights" },
-  { id: "read", label: "Read" },
+const TABS: Array<{ id: TabId; label: string; labelKey: string }> = [
+  { id: "all", label: "All", labelKey: "notificationsUI.menu.tabs.all" },
+  { id: "critical", label: "Alerts", labelKey: "notificationsUI.menu.tabs.alerts" },
+  { id: "insights", label: "Insights", labelKey: "notificationsUI.menu.tabs.insights" },
+  { id: "read", label: "Read", labelKey: "notificationsUI.menu.tabs.read" },
 ];
 
 export default function NotificationsPage() {
+  const { t: tr } = useTranslation();
   const [tab, setTab] = useState<TabId>("all");
 
   // Live data — anomalies (alerts) + recommendations (insights) from the AI
@@ -74,22 +76,22 @@ export default function NotificationsPage() {
 
   const markAllRead = () => {
     markAllReadStore(items.map((n) => n.id));
-    toast.success("All notifications marked as read");
+    toast.success(tr("x5.notifications.allMarkedRead"));
   };
 
   return (
     <>
       <PageHeader
-        title="Notifications"
+        title={tr("notificationsUI.menu.title")}
         description={
           unread > 0
-            ? `${unread} unread across alerts and insights.`
-            : "You're all caught up."
+            ? tr("x5.notifications.unreadSummary").replace("{count}", String(unread))
+            : tr("x5.notifications.allCaughtUp")
         }
         actions={
           unread > 0 ? (
             <Button variant="outline" size="sm" onClick={markAllRead}>
-              <CheckCheck className="h-4 w-4" /> Mark all read
+              <CheckCheck className="h-4 w-4" /> {tr("notificationsUI.menu.markAllRead")}
             </Button>
           ) : null
         }
@@ -112,7 +114,7 @@ export default function NotificationsPage() {
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {t.label}
+              {tr(t.labelKey)}
               <span
                 className={cn(
                   "rounded-full px-1.5 text-[10px] tabular-nums",
@@ -132,7 +134,7 @@ export default function NotificationsPage() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <Inbox className="h-7 w-7 text-muted-foreground/60" />
-            <p className="text-sm text-muted-foreground">No notifications in this filter.</p>
+            <p className="text-sm text-muted-foreground">{tr("x5.notifications.emptyFilter")}</p>
           </div>
         ) : (
           <ul className="divide-y divide-border/40">

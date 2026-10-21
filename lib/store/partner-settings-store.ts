@@ -36,6 +36,9 @@ export interface CatalogueItem {
   key: string;
   label: string;
   description: string;
+  /** Translation keys for label / description when the item is one we know (English above is the fallback). */
+  labelKey?: string;
+  descriptionKey?: string;
   default: boolean;
 }
 
@@ -56,21 +59,21 @@ export interface PartnerSettings {
 /** What the backend supported when this was written; used only if the catalogue can't be read. */
 const FALLBACK_CATALOGUE: PartnerCatalogue = {
   permissions: [
-    { key: "manage_traffic", label: "Manage Traffic", description: "Users can effectively manage and optimize traffic.", default: false },
-    { key: "number_creation", label: "Number Creation", description: "Users can purchase a new number within the system.", default: false },
-    { key: "audio_recording", label: "Audio Recording", description: "It provides users with the ability to view call recordings.", default: false },
-    { key: "block_numbers", label: "Block Numbers", description: "Reject calls from specific phone numbers.", default: false },
-    { key: "download_reports", label: "Download Reports", description: "Users can download reports about their call activity.", default: true },
+    { key: "manage_traffic", label: "Manage Traffic", description: "Users can effectively manage and optimize traffic.", labelKey: "x2.partnerPerm.manageTraffic", descriptionKey: "x2.partnerPerm.manageTrafficDesc", default: false },
+    { key: "number_creation", label: "Number Creation", description: "Users can purchase a new number within the system.", labelKey: "x2.partnerPerm.numberCreation", descriptionKey: "x2.partnerPerm.numberCreationDesc", default: false },
+    { key: "audio_recording", label: "Audio Recording", description: "It provides users with the ability to view call recordings.", labelKey: "x2.partnerPerm.audioRecording", descriptionKey: "x2.partnerPerm.audioRecordingDesc", default: false },
+    { key: "block_numbers", label: "Block Numbers", description: "Reject calls from specific phone numbers.", labelKey: "buyerAccess.perm.blockNumbers", descriptionKey: "buyerAccess.perm.blockNumbersDesc", default: false },
+    { key: "download_reports", label: "Download Reports", description: "Users can download reports about their call activity.", labelKey: "buyerAccess.perm.downloadReports", descriptionKey: "buyerAccess.perm.downloadReportsDesc", default: true },
   ],
   reportColumns: [
-    { key: "incoming", label: "Incoming", description: "Total inbound call attempts.", default: true },
-    { key: "connected", label: "Connected", description: "Calls that reached a destination.", default: true },
-    { key: "qualified", label: "Qualified", description: "Calls that met the buyer's quality criteria.", default: true },
-    { key: "converted", label: "Converted", description: "Calls that converted into a paid event.", default: true },
-    { key: "duplicate", label: "Duplicate", description: "Repeat callers inside the duplicate window.", default: true },
-    { key: "duration", label: "Duration", description: "Time connected, excluding ring time.", default: true },
-    { key: "payout", label: "Payout", description: "What this partner is paid.", default: true },
-    { key: "revenue", label: "Revenue", description: "What the call was sold for.", default: false },
+    { key: "incoming", label: "Incoming", description: "Total inbound call attempts.", labelKey: "sharedUI.reportingVisibility.columns.incoming.label", descriptionKey: "sharedUI.reportingVisibility.columns.incoming.description", default: true },
+    { key: "connected", label: "Connected", description: "Calls that reached a destination.", labelKey: "sharedUI.reportingVisibility.columns.connected.label", descriptionKey: "sharedUI.reportingVisibility.columns.connected.description", default: true },
+    { key: "qualified", label: "Qualified", description: "Calls that met the buyer's quality criteria.", labelKey: "sharedUI.reportingVisibility.columns.qualified.label", descriptionKey: "sharedUI.reportingVisibility.columns.qualified.description", default: true },
+    { key: "converted", label: "Converted", description: "Calls that converted into a paid event.", labelKey: "sharedUI.reportingVisibility.columns.converted.label", descriptionKey: "sharedUI.reportingVisibility.columns.converted.description", default: true },
+    { key: "duplicate", label: "Duplicate", description: "Repeat callers inside the duplicate window.", labelKey: "x2.reportCol.duplicate", descriptionKey: "x2.reportCol.duplicateDesc", default: true },
+    { key: "duration", label: "Duration", description: "Time connected, excluding ring time.", labelKey: "toolsUI.reports.callLog.columns.duration", descriptionKey: "x2.reportCol.durationDesc", default: true },
+    { key: "payout", label: "Payout", description: "What this partner is paid.", labelKey: "trafficUI.common.payout", descriptionKey: "x2.reportCol.payoutDesc", default: true },
+    { key: "revenue", label: "Revenue", description: "What the call was sold for.", labelKey: "trafficUI.common.revenue", descriptionKey: "x2.reportCol.revenueDesc", default: false },
   ],
 };
 
@@ -91,12 +94,18 @@ function itemsFromWire(list: Array<Partial<CatalogueItem>> | undefined, fallback
   if (!Array.isArray(list) || list.length === 0) return fallback;
   return list
     .filter((i) => typeof i?.key === "string" && i.key)
-    .map((i) => ({
-      key: String(i.key),
-      label: String(i.label ?? i.key),
-      description: String(i.description ?? ""),
-      default: i.default === true,
-    }));
+    .map((i) => {
+      // Known items keep their translation keys; new backend items show the backend's English.
+      const known = fallback.find((f) => f.key === String(i.key));
+      return {
+        key: String(i.key),
+        label: String(i.label ?? i.key),
+        description: String(i.description ?? ""),
+        labelKey: known?.labelKey,
+        descriptionKey: known?.descriptionKey,
+        default: i.default === true,
+      };
+    });
 }
 
 function settingsFromWire(w: SettingsWire | null | undefined): PartnerSettings {

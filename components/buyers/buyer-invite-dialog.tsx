@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
 import { useBuyerMembersStore } from "@/lib/store/buyer-members-store";
 import { markInvited } from "@/lib/partner-access";
@@ -40,6 +41,7 @@ interface BuyerInviteDialogProps {
 }
 
 export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProps) {
+  const { t } = useTranslation();
   const open = buyer !== null;
   const [email, setEmail] = useState("");
   const [contactName, setContactName] = useState("");
@@ -74,14 +76,16 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
       // A new invitation starts from scratch, even for an email seen before -
       // including the buyer's own contact address.
       markInvited([email]);
-      toast.success(`Invite sent to ${email.trim()}`);
+      toast.success(t("x5.buyerInvite.sent").replace("{email}", email.trim()));
       onOpenChange(false);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't send invite — please try again."));
+      toast.error(friendlyErrorMessage(e, t("x5.buyerInvite.sendFailed")));
     } finally {
       setSubmitting(false);
     }
   };
+
+  const descParts = t("x5.buyerInvite.description").split("{name}");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,10 +96,11 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
               <Mail className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle>Invite buyer</DialogTitle>
+              <DialogTitle>{t("x5.buyerInvite.title")}</DialogTitle>
               <DialogDescription>
-                Send <span className="font-mono">{buyer?.name}</span> a setup
-                link so they can sign in to the platform.
+                {descParts[0]}
+                <span className="font-mono">{buyer?.name}</span>
+                {descParts[1]}
               </DialogDescription>
             </div>
           </div>
@@ -103,7 +108,7 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
 
         <div className="space-y-3 py-2">
           <div className="space-y-2">
-            <Label htmlFor="bi-email">Email</Label>
+            <Label htmlFor="bi-email">{t("common.email")}</Label>
             <Input
               id="bi-email"
               type="email"
@@ -115,7 +120,7 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bi-contact">Contact name (optional)</Label>
+            <Label htmlFor="bi-contact">{t("x5.buyerInvite.contactOptional")}</Label>
             <Input
               id="bi-contact"
               value={contactName}
@@ -124,29 +129,29 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bi-message">Message (optional)</Label>
+            <Label htmlFor="bi-message">{t("x5.buyerInvite.messageOptional")}</Label>
             <Textarea
               id="bi-message"
               rows={3}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Any context to include in the invite email."
+              placeholder={t("x5.buyerInvite.messagePlaceholder")}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={onSubmit} disabled={submitting || !email.trim()}>
             {submitting ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("workspaceUI.invite.sending")}
               </>
             ) : (
               <>
-                <Mail className="h-3.5 w-3.5" /> Send invite
+                <Mail className="h-3.5 w-3.5" /> {t("common.sendInvite")}
               </>
             )}
           </Button>

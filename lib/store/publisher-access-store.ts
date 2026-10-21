@@ -213,8 +213,14 @@ export const TIMEZONES: Array<{ value: string; label: string }> = [
 
 export interface PermissionDef {
   key: PermissionKey;
+  /** English fallback. */
   label: string;
+  /** English fallback description. */
   description: string;
+  /** Translation key for the label. */
+  labelKey: string;
+  /** Translation key for the description. */
+  descriptionKey: string;
 }
 
 export interface ReportingColumnDef {
@@ -245,25 +251,35 @@ export const PERMISSIONS: PermissionDef[] = [
     key: "manageTraffic",
     label: "Manage Traffic",
     description: "Users can effectively manage and optimize traffic.",
+    labelKey: "x2.partnerPerm.manageTraffic",
+    descriptionKey: "x2.partnerPerm.manageTrafficDesc",
   },
   {
     key: "numberCreation",
     label: "Number Creation",
     description: "Users can purchase a new number within the system.",
+    labelKey: "x2.partnerPerm.numberCreation",
+    descriptionKey: "x2.partnerPerm.numberCreationDesc",
   },
   {
     key: "audioRecording",
     label: "Audio Recording",
     description: "It provides users with the ability to view call recordings.",
+    labelKey: "x2.partnerPerm.audioRecording",
+    descriptionKey: "x2.partnerPerm.audioRecordingDesc",
   },
   {
     key: "blockNumbers",
     label: "Block Numbers",
     description: "Reject calls from specific phone numbers.",
+    labelKey: "buyerAccess.perm.blockNumbers",
+    descriptionKey: "buyerAccess.perm.blockNumbersDesc",
   },
   {
     key: "downloadReports",
     label: "Download Reports",
     description: "Users can download reports about their call activity.",
+    labelKey: "buyerAccess.perm.downloadReports",
+    descriptionKey: "buyerAccess.perm.downloadReportsDesc",
   },
 ];

@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SetPasswordForm } from "@/components/auth/set-password-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 
 function SetPasswordFallback() {
@@ -26,16 +27,17 @@ function SetPasswordFallback() {
 }
 
 export default function SetPasswordPage() {
+  const { t } = useTranslation();
   return (
     <div className="mx-auto flex w-full max-w-md flex-col items-center">
       <AuthCard
-        title="Set your password"
-        description="Welcome to Avortyx. Pick a password to finish setting up your account."
+        title={t("x5.auth.setYourPassword")}
+        description={t("x5.auth.setDescription")}
         footer={
           <>
-            Already set up?{" "}
+            {t("x5.auth.alreadySetUp")}{" "}
             <Link href={ROUTES.login} className="text-accent hover:underline">
-              Sign in
+              {t("common.signIn")}
             </Link>
           </>
         }

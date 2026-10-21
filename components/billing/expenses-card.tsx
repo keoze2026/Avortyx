@@ -36,9 +36,9 @@ interface ExpenseTypeDef {
 }
 
 const EXPENSE_TYPES: ExpenseTypeDef[] = [
-  { key: "charge",     labelKey: "billing.transactionTypes.charge",     label: "Charges",     color: "#8B5CF6" },
-  { key: "payout",     labelKey: "billing.transactionTypes.payout",     label: "Payouts",     color: "#10B981" },
-  { key: "adjustment", labelKey: "billing.transactionTypes.adjustment", label: "Adjustments", color: "#F97316" },
+  { key: "charge",     labelKey: "x1.billing.transactionTypes.charge",     label: "Charges",     color: "#8B5CF6" },
+  { key: "payout",     labelKey: "x1.billing.transactionTypes.payout",     label: "Payouts",     color: "#10B981" },
+  { key: "adjustment", labelKey: "x1.billing.transactionTypes.adjustment", label: "Adjustments", color: "#F97316" },
 ];
 
 interface ExpenseRow extends ExpenseTypeDef {
@@ -130,7 +130,7 @@ export function ExpensesCard() {
           <Button
             variant="outline"
             size="icon"
-            aria-label="Refresh expenses"
+            aria-label={t("x1.expenses.refresh")}
             onClick={() => setRefreshNonce((n) => n + 1)}
           >
             <RefreshCw className="h-4 w-4" />
@@ -145,23 +145,23 @@ export function ExpensesCard() {
           </span>
           <div>
             <div className="text-xs text-muted-foreground">
-              {tr("billing.portalFee.title", "Monthly portal fee")}
+              {t("x1.billing.portalFee.title")}
             </div>
             <div className="font-mono text-base font-semibold tabular-nums">
               {rates ? formatCurrency(rates.monthlyPortalFee) : unavailable}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
-                {tr("billing.portalFee.perMonth", "/ month")}
+                {t("toolsUI.billing.subscription.perMonth")}
               </span>
             </div>
           </div>
         </div>
         <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
           <div>
-            <dt className="text-muted-foreground">{tr("billing.portalFee.nextDue", "Next due")}</dt>
+            <dt className="text-muted-foreground">{t("billing.rateRows.nextDue")}</dt>
             <dd className="font-mono tabular-nums">{nextDue ?? unavailable}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">{tr("billing.portalFee.lastCharged", "Last charged")}</dt>
+            <dt className="text-muted-foreground">{t("billing.rateRows.lastCharged")}</dt>
             <dd className="font-mono tabular-nums">{lastCharged ?? unavailable}</dd>
           </div>
         </dl>
@@ -219,7 +219,7 @@ export function ExpensesCard() {
                           {
                             key: "empty",
                             labelKey: "",
-                            label: "No expenses",
+                            label: t("x1.expenses.none"),
                             amount: 1,
                             color: "var(--muted)",
                           } as ExpenseRow,

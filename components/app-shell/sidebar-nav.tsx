@@ -33,8 +33,10 @@ import { useTranslation } from "@/hooks/use-translation";
 import { BRAND, ROUTES } from "@/lib/constants";
 import { usePermissions } from "@/lib/my-permissions";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { tFor } from "@/lib/i18n";
 import { NAV_GROUPS, type NavItem } from "@/lib/nav";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useLocaleStore } from "@/lib/store/locale-store";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +62,7 @@ export function AppSidebar() {
   const partner = usePartnerPermissions();
   React.useEffect(() => {
     if (!canSeePath(pathname)) {
-      toast.error("Your role doesn't have access to this page.");
+      toast.error(tFor(useLocaleStore.getState().locale, "x5.sidebar.noAccess"));
       router.replace(ROUTES.dashboard);
     }
   }, [pathname, canSeePath, router]);

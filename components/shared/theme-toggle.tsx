@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTranslation } from "@/hooks/use-translation";
 import { ACCENTS, DEFAULT_ACCENT_ID } from "@/lib/accent-themes";
 import { useAccentStore } from "@/lib/store/accent-store";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
+  const { t } = useTranslation();
   const { setTheme, theme, resolvedTheme } = useTheme();
   const accent = useAccentStore((s) => s.accent);
   const setAccent = useAccentStore((s) => s.setAccent);
@@ -37,7 +39,7 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
   // SSR placeholder — render a stable shell to avoid hydration mismatch
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className={cn("relative", className)} aria-label="Theme">
+      <Button variant="ghost" size="icon" className={cn("relative", className)} aria-label={t("topbar.theme")}>
         <Sun className="h-4 w-4 opacity-50" />
       </Button>
     );
@@ -53,7 +55,7 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
             variant="ghost"
             size="icon"
             className={cn("relative overflow-hidden", className)}
-            aria-label="Theme & accent"
+            aria-label={t("x2.theme.themeAndAccent")}
           >
             <AnimatePresence mode="wait" initial={false}>
               {isDark ? (
@@ -85,13 +87,13 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
         <PopoverContent align="end" className="w-60 p-3">
           {/* Mode segmented control */}
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Mode
+            {t("preferences.mode")}
           </div>
           <div className="mt-1.5 grid grid-cols-3 gap-1 rounded-md border border-border bg-secondary/40 p-0.5">
             {[
-              { id: "light", label: "Light", icon: Sun },
-              { id: "dark", label: "Dark", icon: Moon },
-              { id: "system", label: "Auto", icon: Monitor },
+              { id: "light", label: t("preferences.light"), icon: Sun },
+              { id: "dark", label: t("preferences.dark"), icon: Moon },
+              { id: "system", label: t("preferences.auto"), icon: Monitor },
             ].map((m) => {
               const Icon = m.icon;
               const active = theme === m.id;
@@ -116,7 +118,7 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
 
           {/* Color theme swatches — full palette swap */}
           <div className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Color theme
+            {t("preferences.colorTheme")}
           </div>
           <div className="mt-1.5 grid grid-cols-5 gap-1.5">
             {ACCENTS.map((a) => {
@@ -135,8 +137,8 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
                   // colors and CSS gradient strings — gradient themes are
                   // multi-stop linear gradients.
                   style={{ background: a.swatch }}
-                  aria-label={`Apply ${a.name} theme`}
-                  title={a.name}
+                  aria-label={t("x2.theme.applyTheme").replace("{name}", t(a.nameKey))}
+                  title={t(a.nameKey)}
                 >
                   {active && (
                     <Check className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />
@@ -146,14 +148,14 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
             })}
           </div>
           <div className="mt-2 truncate text-[11px] text-muted-foreground">
-            {(ACCENTS.find((a) => a.id === accent) ?? ACCENTS[0]).name}
+            {t((ACCENTS.find((a) => a.id === accent) ?? ACCENTS[0]).nameKey)}
             {accent !== DEFAULT_ACCENT_ID && (
               <button
                 type="button"
                 onClick={() => setAccent(DEFAULT_ACCENT_ID)}
                 className="ml-2 text-accent hover:underline"
               >
-                Reset
+                {t("preferences.reset")}
               </button>
             )}
           </div>
@@ -167,21 +169,21 @@ export function ThemeToggle({ className, variant = "menu" }: ThemeToggleProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("relative", className)} aria-label="Theme">
+        <Button variant="ghost" size="icon" className={cn("relative", className)} aria-label={t("topbar.theme")}>
           <Icon className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-36">
         <DropdownMenuItem onSelect={() => setTheme("light")}>
-          <Sun className="h-4 w-4" /> Light
+          <Sun className="h-4 w-4" /> {t("preferences.light")}
           {theme === "light" && <span className="ml-auto text-[10px] text-accent">●</span>}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme("dark")}>
-          <Moon className="h-4 w-4" /> Dark
+          <Moon className="h-4 w-4" /> {t("preferences.dark")}
           {theme === "dark" && <span className="ml-auto text-[10px] text-accent">●</span>}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme("system")}>
-          <Monitor className="h-4 w-4" /> System
+          <Monitor className="h-4 w-4" /> {t("x2.theme.system")}
           {theme === "system" && <span className="ml-auto text-[10px] text-accent">●</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>

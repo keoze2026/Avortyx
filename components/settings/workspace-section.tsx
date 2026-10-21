@@ -47,7 +47,7 @@ const TABS: Array<{ id: TabId; labelKey: string; fallbackLabel: string; icon: Re
   { id: "general", labelKey: "workspaceUI.tabs.general", fallbackLabel: "General", icon: SettingsIcon },
   { id: "members", labelKey: "workspaceUI.tabs.members", fallbackLabel: "Members", icon: Users },
   { id: "roles", labelKey: "workspaceUI.tabs.roles", fallbackLabel: "Roles", icon: ShieldCheck },
-  { id: "access-requests", labelKey: "workspaceUI.tabs.accessRequests", fallbackLabel: "Access requests", icon: Inbox },
+  { id: "access-requests", labelKey: "x6.workspace.tabs.accessRequests", fallbackLabel: "Access requests", icon: Inbox },
   { id: "activity", labelKey: "workspaceUI.tabs.activity", fallbackLabel: "Activity", icon: Activity },
 ];
 
@@ -110,7 +110,7 @@ export function WorkspaceSection() {
         const list = await workspaceService.listMembers();
         setMembers(list);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Couldn't load members");
+        toast.error(e instanceof Error ? e.message : t("x6.workspace.loadMembersFailed"));
         membersLoadedRef.current = false; // allow retry
       } finally {
         setMembersLoading(false);
@@ -127,7 +127,7 @@ export function WorkspaceSection() {
       setName(updated.name);
       toast.success(t("workspaceUI.identity.saved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : t("x6.workspace.saveFailed"));
     } finally {
       setSavingWorkspace(false);
     }
@@ -214,7 +214,7 @@ export function WorkspaceSection() {
                   {t("workspaceUI.identity.cancel")}
                 </Button>
                 <Button onClick={saveWorkspace} disabled={savingWorkspace || !name.trim()}>
-                  {savingWorkspace ? "Saving…" : t("workspaceUI.identity.save")}
+                  {savingWorkspace ? t("trafficUI.common.saving") : t("workspaceUI.identity.save")}
                 </Button>
               </div>
             </CardContent>

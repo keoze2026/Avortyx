@@ -21,7 +21,9 @@ import {
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
-import { formatCompact, formatLocalDate, formatNumber, formatTimer, toE164 } from "@/lib/format";
+import { formatCompact, formatLocalDate, formatNumber, formatTimer, toE164, uiLocaleTag } from "@/lib/format";
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -63,6 +65,30 @@ export function deriveName(n: TrackingNumber): string {
 
 export function deriveCountry(n: TrackingNumber): string {
   return n.country?.trim() || DASH;
+}
+
+/** The generated name in the chosen language ("TFN-0573" in English,
+ *  "免费号码-0573" in Chinese). Display only: anything that saves or searches
+ *  a name keeps using deriveName, so stored labels stay the same. */
+export function deriveDisplayName(n: TrackingNumber): string {
+  const last4 = n.number.replace(/\D/g, "").slice(-4);
+  if (n.city) return `${n.city} ${last4}`;
+  const locale = useLocaleStore.getState().locale;
+  const prefix = tFor(locale, n.type === "tollfree" ? "x6.numbers.tfnPrefix" : "x6.numbers.didPrefix");
+  return `${prefix}-${last4}`;
+}
+
+/** The country's name in the chosen language ("US" -> "美国"). Falls back to
+ *  the code the backend sent. */
+export function deriveCountryName(n: TrackingNumber): string {
+  const code = n.country?.trim();
+  if (!code) return DASH;
+  try {
+    const name = new Intl.DisplayNames([uiLocaleTag()], { type: "region" }).of(code.toUpperCase());
+    return name && name !== code.toUpperCase() ? name : code;
+  } catch {
+    return code;
+  }
 }
 
 export function derivePurchaseStatus(n: TrackingNumber): {
@@ -266,12 +292,12 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("name") && (
                       <TableCell className={cn("text-left", CELL)}>
-                        {n.label?.trim() || deriveName(n)}
+                        {n.label?.trim() || deriveDisplayName(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("country") && (
                       <TableCell className={cn("text-center", CELL)}>
-                        {deriveCountry(n)}
+                        {deriveCountryName(n)}
                       </TableCell>
                     )}
                     {visibleColumns.has("purchaseStatus") && (
@@ -328,7 +354,7 @@ export function TrackNumbersTable({
                     {visibleColumns.has("risk") && (
                       <TableCell className={CELL}>
                         <span className={n.risk === "high" ? "text-red-400" : "text-emerald-400"}>
-                          {n.risk === "high" ? "High Risk" : "Low Risk"}
+                          {n.risk === "high" ? t("campaignRisk.high") : t("campaignRisk.low")}
                         </span>
                       </TableCell>
                     )}

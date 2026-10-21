@@ -140,11 +140,11 @@ export default function CampaignsPage() {
     if (!cloneTarget) return;
     try {
       const copy = await cloneCampaign(cloneTarget.id);
-      toast.success(`Cloned as "${copy.name}"`, {
-        description: "It starts paused. Attach a tracking number, then switch it on.",
+      toast.success(t("x5.campaigns.clonedAs").replace("{name}", copy.name), {
+        description: t("x5.campaigns.clonedHint"),
       });
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't clone the campaign."));
+      toast.error(friendlyErrorMessage(e, t("x5.campaigns.cloneFailed")));
       throw e; // keeps the dialog open so the user can try again
     }
   };
@@ -288,7 +288,7 @@ export default function CampaignsPage() {
         onOpenChange={setCloneOpen}
         entity="campaign"
         sourceName={cloneTarget?.name ?? ""}
-        note="The copy starts paused. Tracking numbers are not copied (each number belongs to one campaign), so attach one before switching it on."
+        note={t("x5.campaigns.cloneNote")}
         onConfirm={onConfirmClone}
       />
     </>

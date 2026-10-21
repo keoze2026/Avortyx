@@ -27,8 +27,10 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
-import { formatTimer } from "@/lib/format";
+import { formatLocalDate, formatTimer } from "@/lib/format";
+import { tFor } from "@/lib/i18n";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useLocaleStore } from "@/lib/store/locale-store";
 
 // The http layer turns snake_case into camelCase on the way in.
 interface NumberRow {
@@ -84,10 +86,10 @@ interface CostsResponse {
 }
 
 /** Quick fills for the carriers Sir named; the owner can still type any value. */
-const PRESETS: { key: string; label: string; numberMonthlyCost: string; portalMonthlyFee: string; perMinuteCost: string }[] = [
-  { key: "xolo-high", label: "Xolo IP high risk", numberMonthlyCost: "15", portalMonthlyFee: "350", perMinuteCost: "0.40" },
-  { key: "xolo-fwd", label: "Xolo IP forwarding TFN", numberMonthlyCost: "5", portalMonthlyFee: "0", perMinuteCost: "0.15" },
-  { key: "freedom", label: "Freedom high risk", numberMonthlyCost: "6", portalMonthlyFee: "0", perMinuteCost: "0.04" },
+const PRESETS: { key: string; label: string; labelKey: string; numberMonthlyCost: string; portalMonthlyFee: string; perMinuteCost: string }[] = [
+  { key: "xolo-high", label: "Xolo IP high risk", labelKey: "x1.carrierCosts.preset.xoloHigh", numberMonthlyCost: "15", portalMonthlyFee: "350", perMinuteCost: "0.40" },
+  { key: "xolo-fwd", label: "Xolo IP forwarding TFN", labelKey: "x1.carrierCosts.preset.xoloForwarding", numberMonthlyCost: "5", portalMonthlyFee: "0", perMinuteCost: "0.15" },
+  { key: "freedom", label: "Freedom high risk", labelKey: "x1.carrierCosts.preset.freedomHigh", numberMonthlyCost: "6", portalMonthlyFee: "0", perMinuteCost: "0.04" },
 ];
 
 function money(v: string | number | null | undefined): string {
@@ -97,8 +99,7 @@ function money(v: string | number | null | undefined): string {
 
 function shortDate(iso: string | null): string {
   if (!iso) return "";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return formatLocalDate(iso, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function thisMonth(): string {
@@ -107,7 +108,7 @@ function thisMonth(): string {
 }
 
 function errText(e: unknown): string {
-  return e instanceof ApiError ? e.message : "Something went wrong. Try again.";
+  return e instanceof ApiError ? e.message : tFor(useLocaleStore.getState().locale, "x1.carrierCosts.genericError");
 }
 
 function NumbersTable({
@@ -458,7 +459,7 @@ export default function CarrierCostsPage() {
                     })
                   }
                 >
-                  {p.label}
+                  {p.labelKey ? t(p.labelKey) : p.label}
                 </Button>
               ))}
             </div>

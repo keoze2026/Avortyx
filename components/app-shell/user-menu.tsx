@@ -45,7 +45,7 @@ export function UserMenu() {
 
   const onResetDemo = () => {
     resetDemoStorage();
-    toast.success("Demo data reset. Reloading…");
+    toast.success(t("x5.userMenu.demoReset"));
     // Hard reload so every Zustand store rehydrates from fresh fixtures
     // and the auth store falls back to logged-out.
     setTimeout(() => {
@@ -60,7 +60,7 @@ export function UserMenu() {
           variant="ghost"
           size="icon"
           className="rounded-full"
-          aria-label={`Account menu for ${user.name}`}
+          aria-label={t("x5.userMenu.accountMenu").replace("{name}", user.name)}
         >
           <Avatar className="h-8 w-8 border border-border">
             {user.avatarUrl && (
@@ -93,7 +93,7 @@ export function UserMenu() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onResetDemo}>
-              <RotateCcw className="h-4 w-4" /> Reset demo data
+              <RotateCcw className="h-4 w-4" /> {t("x5.userMenu.resetDemo")}
             </DropdownMenuItem>
           </>
         )}

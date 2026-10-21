@@ -135,17 +135,17 @@ export default function CampaignDetailPage() {
 
       {loadState === "loading" && (
         <div className="rounded-md border border-border p-6 text-sm text-muted-foreground">
-          Loading campaign settings…
+          {t("x1.campaignDetail.loadingSettings")}
         </div>
       )}
 
       {loadState === "error" && (
         <div className="flex items-center justify-between gap-4 rounded-md border border-destructive/40 p-6 text-sm">
           <span className="text-muted-foreground">
-            Couldn&apos;t load this campaign&apos;s settings, so they are locked to protect what is saved.
+            {t("x1.campaignDetail.loadError")}
           </span>
           <Button size="sm" onClick={() => setAttempt((n) => n + 1)}>
-            Retry
+            {t("workspaceUI.apiKeys.retry")}
           </Button>
         </div>
       )}

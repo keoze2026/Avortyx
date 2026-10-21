@@ -37,6 +37,7 @@ import {
   type SimulateResult,
 } from "@/lib/api/services/routing.service";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface Props {
   open: boolean;
@@ -46,6 +47,7 @@ interface Props {
 }
 
 export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props) {
+  const { t } = useTranslation();
   const [callerNumber, setCallerNumber] = useState("");
   const [state, setState] = useState("");
   const [country, setCountry] = useState("");
@@ -77,11 +79,13 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
       });
       setResult(r);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Simulation failed"));
+      toast.error(friendlyErrorMessage(e, t("x1.testCaller.simulationFailed")));
     } finally {
       setRunning(false);
     }
   };
+
+  const [descBefore, descAfter = ""] = t("x1.testCaller.description").split("{rule}");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,10 +96,11 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
               <Phone className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle>Test caller</DialogTitle>
+              <DialogTitle>{t("x1.testCaller.title")}</DialogTitle>
               <DialogDescription>
-                Walk a hypothetical inbound call through{" "}
-                <span className="font-medium text-foreground">{ruleName}</span> — without affecting live traffic.
+                {descBefore}
+                <span className="font-medium text-foreground">{ruleName}</span>
+                {descAfter}
               </DialogDescription>
             </div>
           </div>
@@ -104,7 +109,7 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
         <div className="space-y-4 py-1">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.5fr_1fr_1fr]">
             <div className="space-y-1.5">
-              <Label htmlFor="sim-num">Caller number (E.164)</Label>
+              <Label htmlFor="sim-num">{t("x1.testCaller.callerNumber")}</Label>
               <Input
                 id="sim-num"
                 autoFocus
@@ -115,7 +120,7 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sim-state">Caller state</Label>
+              <Label htmlFor="sim-state">{t("x1.testCaller.callerState")}</Label>
               <Input
                 id="sim-state"
                 value={state}
@@ -126,7 +131,7 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sim-country">Country</Label>
+              <Label htmlFor="sim-country">{t("trafficUI.common.country")}</Label>
               <Input
                 id="sim-country"
                 value={country}
@@ -142,11 +147,11 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
             <Button onClick={onRun} disabled={!canRun} size="sm">
               {running ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Running…
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("x1.testCaller.running")}
                 </>
               ) : (
                 <>
-                  <Phone className="h-3.5 w-3.5" /> Run simulation
+                  <Phone className="h-3.5 w-3.5" /> {t("x1.testCaller.runSimulation")}
                 </>
               )}
             </Button>
@@ -155,7 +160,7 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
           {result && (
             <div className="space-y-4 border-t border-border/60 pt-4">
               {/* Selected destination — the headline outcome */}
-              <ResultSection title="Selected destination">
+              <ResultSection title={t("x1.testCaller.selectedDestination")}>
                 {result.selectedDestination ? (
                   <div className="rounded-lg border border-[color:var(--success)]/40 bg-[color:var(--success)]/10 p-3">
                     <div className="flex items-center gap-2 text-sm font-semibold">
@@ -164,15 +169,15 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
                     </div>
                     <div className="mt-1 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
                       <span>
-                        <span className="font-mono uppercase tracking-wider">Buyer</span>{" "}
+                        <span className="font-mono uppercase tracking-wider">{t("dashboard.columns.buyer")}</span>{" "}
                         <span className="text-foreground">{result.selectedDestination.buyerName}</span>
                       </span>
                       <span>
-                        <span className="font-mono uppercase tracking-wider">Priority</span>{" "}
+                        <span className="font-mono uppercase tracking-wider">{t("trafficUI.campaigns.settings.forward.headers.priority")}</span>{" "}
                         <span className="text-foreground tabular-nums">{result.selectedDestination.priority}</span>
                       </span>
                       <span>
-                        <span className="font-mono uppercase tracking-wider">Weight</span>{" "}
+                        <span className="font-mono uppercase tracking-wider">{t("trafficUI.campaigns.settings.forward.headers.weight")}</span>{" "}
                         <span className="text-foreground tabular-nums">{result.selectedDestination.weight}</span>
                       </span>
                     </div>
@@ -180,19 +185,19 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
                 ) : (
                   <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
                     <div className="inline-flex items-center gap-2 font-semibold text-destructive">
-                      <XCircle className="h-4 w-4" /> No destination selected
+                      <XCircle className="h-4 w-4" /> {t("x1.testCaller.noDestination")}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Trace below shows where the call dropped out.
+                      {t("x1.testCaller.noDestinationHint")}
                     </p>
                   </div>
                 )}
               </ResultSection>
 
               {/* Conditions — which rule conditions matched */}
-              <ResultSection title="Matched conditions">
+              <ResultSection title={t("x1.testCaller.matchedConditions")}>
                 {result.matchedConditions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No conditions evaluated.</p>
+                  <p className="text-xs text-muted-foreground">{t("x1.testCaller.noConditions")}</p>
                 ) : (
                   <ul className="grid grid-cols-1 gap-1.5">
                     {result.matchedConditions.map((c) => (
@@ -218,9 +223,9 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
               </ResultSection>
 
               {/* Trace — step-by-step walkthrough */}
-              <ResultSection title="Trace">
+              <ResultSection title={t("x1.testCaller.trace")}>
                 {result.trace.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No trace returned.</p>
+                  <p className="text-xs text-muted-foreground">{t("x1.testCaller.noTrace")}</p>
                 ) : (
                   <ol className="space-y-1">
                     {result.trace.map((s, i) => (
@@ -245,7 +250,7 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Close
+            {t("common.close")}
           </Button>
         </DialogFooter>
       </DialogContent>

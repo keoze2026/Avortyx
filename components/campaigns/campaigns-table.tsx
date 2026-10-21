@@ -358,6 +358,7 @@ function ProgressPill({ state }: { state: ProgressState }) {
  * number cells in the row.
  */
 function LiveBox({ campaignId, current, cap }: { campaignId: string; current: number; cap: number }) {
+  const { t } = useTranslation();
   const setConcurrency = useCampaignsStore((s) => s.setConcurrency);
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(String(cap));
@@ -381,7 +382,7 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
     setDraft(String(next));
     if (next === cap) return;
     setConcurrency(campaignId, next).catch(() => {
-      toast.error("Couldn't save the CC limit. Please try again.");
+      toast.error(t("x1.campaignCcLimit.saveError"));
     });
   };
 
@@ -397,7 +398,7 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
           ? "border-accent bg-accent font-semibold text-white"
           : "border-border bg-secondary/30",
       )}
-      title={full ? "Campaign full: every CC slot is in use" : undefined}
+      title={full ? t("x1.campaignCcLimit.full") : undefined}
     >
       <span>{current}</span>
       <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
@@ -422,7 +423,7 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
             }
           }}
           onClick={(e) => e.stopPropagation()}
-          aria-label="CC limit (0 = unlimited)"
+          aria-label={t("x1.campaignCcLimit.input")}
           className="w-14 rounded border border-accent/50 bg-background px-1 py-0.5 text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-accent"
         />
       ) : (
@@ -433,8 +434,8 @@ function LiveBox({ campaignId, current, cap }: { campaignId: string; current: nu
             setDraft(String(cap));
             setEditing(true);
           }}
-          title="Click to change the CC limit (0 = unlimited)"
-          aria-label="Change CC limit"
+          title={t("x1.campaignCcLimit.edit")}
+          aria-label={t("x1.campaignCcLimit.change")}
           className={cn(
             "cursor-text rounded px-1 tabular-nums transition-colors",
             full ? "hover:bg-white/15 hover:ring-1 hover:ring-white/50" : "hover:bg-accent/10 hover:ring-1 hover:ring-accent/40",

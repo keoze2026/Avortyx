@@ -150,12 +150,12 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
     if (isAdmin) return;
     const trimmedName = name.trim();
     if (!trimmedName) {
-      toast.error("Give the role a name first.");
+      toast.error(t("x2.setupRole.nameRequired"));
       return;
     }
     const capabilities = stateToCapabilities(state);
     if (capabilities.length === 0) {
-      toast.error("Pick at least one capability.");
+      toast.error(t("x2.setupRole.capabilityRequired"));
       return;
     }
     setSaving(true);
@@ -166,7 +166,7 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
           description: description.trim(),
           capabilities,
         });
-        toast.success(`Role "${trimmedName}" created`);
+        toast.success(t("x2.setupRole.created").replace("{name}", trimmedName));
       } else {
         // Update THIS role. Everyone who has it gets the new permissions.
         await workspaceService.updateWorkspaceRole(serverId, {
@@ -174,11 +174,11 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
           description: description.trim(),
           capabilities,
         });
-        toast.success(`Role "${trimmedName}" saved. Its members get the new permissions on their next page load.`);
+        toast.success(t("x2.setupRole.updated").replace("{name}", trimmedName));
       }
       router.push(ROUTES.workspace);
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, isNew ? "Couldn't create role" : "Couldn't save the role"));
+      toast.error(friendlyErrorMessage(e, isNew ? t("x2.setupRole.createFailed") : t("x2.setupRole.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -202,7 +202,7 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
       <CardContent className="p-0">
         {isAdmin && (
           <p className="border-b border-border bg-secondary/20 px-5 py-2.5 text-xs text-muted-foreground">
-            Admin always has every permission, so the workspace can never be locked out. Edit the other roles instead.
+            {t("x2.setupRole.adminNote")}
           </p>
         )}
         {/* Identity inputs — required by the backend POST. The permission
@@ -211,25 +211,25 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
         <div className="grid gap-4 border-b border-border px-5 py-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="role-name" className="text-xs">
-              Role name
+              {t("x2.setupRole.roleName")}
             </Label>
             <Input
               id="role-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Compliance Reviewer"
+              placeholder={t("x2.setupRole.roleNamePlaceholder")}
               autoFocus={isNew}
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="role-desc" className="text-xs">
-              Description
+              {t("workspaceUI.roles.columnDescription")}
             </Label>
             <Input
               id="role-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="One line — what's this role for?"
+              placeholder={t("x2.setupRole.descriptionPlaceholder")}
             />
           </div>
         </div>
@@ -258,10 +258,10 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
                     {groupLabel}
                     {INACTIVE_GROUPS.has(group.id) && (
                       <span
-                        title="This area is not in the portal yet, so its ticks change nothing today."
+                        title={t("x2.setupRole.inactiveHint")}
                         className="rounded border border-border px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
                       >
-                        Not active yet
+                        {t("x2.setupRole.inactive")}
                       </span>
                     )}
                   </Label>
@@ -319,7 +319,7 @@ export function SetupRoleForm({ roleId }: SetupRoleFormProps) {
           <Button onClick={onSave} disabled={saving || loading || isAdmin}>
             {saving ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("workspaceUI.editMember.saving")}
               </>
             ) : (
               t("workspaceUI.setupRole.save")

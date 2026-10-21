@@ -71,9 +71,9 @@ function TwoFactorCard() {
                 <Check className="h-4 w-4" />
               </span>
               <div>
-                <div className="text-sm font-medium">2FA is on</div>
+                <div className="text-sm font-medium">{t("x5.security.twoFactorOn")}</div>
                 <div className="text-[11px] text-muted-foreground">
-                  Codes are checked from Google Authenticator on every sign-in.
+                  {t("x5.security.twoFactorOnHint")}
                 </div>
               </div>
             </div>
@@ -113,12 +113,12 @@ function TwoFactorCard() {
               try {
                 await enableMfa({ secret, code });
                 setSetupOpen(false);
-                toast.success("Two-factor authentication enabled");
+                toast.success(t("settings.securitySection.twoFactorEnabled"));
               } catch (e) {
                 toast.error(
                   friendlyErrorMessage(
                     e,
-                    "Couldn't enable 2FA — code rejected or session expired.",
+                    t("x5.security.enableFailed"),
                   ),
                 );
               }
@@ -136,7 +136,7 @@ function TwoFactorCard() {
                 toast.error(
                   friendlyErrorMessage(
                     e,
-                    "Couldn't disable 2FA — code rejected.",
+                    t("x5.security.disableFailed"),
                   ),
                 );
               }
@@ -157,6 +157,7 @@ interface DisableTwoFactorProps {
  *  alone can't turn off the second factor. The backend rejects the request
  *  if the code doesn't match. */
 function DisableTwoFactor({ onCancel, onConfirm }: DisableTwoFactorProps) {
+  const { t } = useTranslation();
   const [code, setCode] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -173,15 +174,14 @@ function DisableTwoFactor({ onCancel, onConfirm }: DisableTwoFactorProps) {
   return (
     <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
       <div className="text-sm font-medium text-foreground">
-        Disable two-factor authentication
+        {t("x5.security.disableTitle")}
       </div>
       <p className="text-xs text-muted-foreground">
-        Enter the current 6-digit code from your authenticator app to confirm.
-        We require proof of possession before tearing down the second factor.
+        {t("x5.security.disableHint")}
       </p>
       <div className="grid gap-1.5">
         <Label htmlFor="totp-disable" className="text-xs">
-          Authenticator code
+          {t("login.twoFactor.label")}
         </Label>
         <Input
           id="totp-disable"
@@ -205,14 +205,14 @@ function DisableTwoFactor({ onCancel, onConfirm }: DisableTwoFactorProps) {
         >
           {submitting ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Disabling…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("x5.security.disabling")}
             </>
           ) : (
-            "Disable 2FA"
+            t("x5.security.disable2fa")
           )}
         </Button>
         <Button variant="ghost" onClick={onCancel} disabled={submitting}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </div>
@@ -226,6 +226,7 @@ interface TwoFactorSetupProps {
 }
 
 function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupProps) {
+  const { t } = useTranslation();
   // Generate exactly once per setup — re-rendering the parent should not
   // shuffle the QR on the user.
   const [secret] = React.useState(() => generateTotpSecret());
@@ -244,10 +245,10 @@ function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupPro
     try {
       await navigator.clipboard.writeText(secret);
       setCopied(true);
-      toast.success("Secret copied");
+      toast.success(t("settings.securitySection.secretCopied"));
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      toast.error("Couldn't copy — please copy manually");
+      toast.error(t("x5.security.copyFailed"));
     }
   };
 
@@ -272,19 +273,19 @@ function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupPro
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={qrSrc}
-            alt="Google Authenticator setup QR code"
+            alt={t("x5.security.qrAlt")}
             width={240}
             height={240}
             className="h-[240px] w-[240px]"
           />
         </div>
         <span className="text-[10px] text-muted-foreground">
-          Scan with Google Authenticator
+          {t("x5.security.scanWith")}
         </span>
       </div>
       <div className="space-y-3">
         <div>
-          <Label className="text-xs">Or enter this secret manually</Label>
+          <Label className="text-xs">{t("x5.security.enterManually")}</Label>
           <div className="mt-1 flex items-center gap-2">
             <code className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 font-mono text-xs tracking-wider">
               {formatSecretForDisplay(secret)}
@@ -295,7 +296,7 @@ function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupPro
               size="sm"
               className="h-8 shrink-0"
               onClick={copySecret}
-              aria-label="Copy secret"
+              aria-label={t("x5.security.copySecret")}
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
@@ -303,7 +304,7 @@ function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupPro
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="totp-code" className="text-xs">
-            Confirm with a 6-digit code
+            {t("x5.security.confirmCode")}
           </Label>
           <Input
             id="totp-code"
@@ -318,21 +319,21 @@ function TwoFactorSetup({ accountEmail, onCancel, onConfirm }: TwoFactorSetupPro
             autoComplete="one-time-code"
           />
           <p className="text-[11px] text-muted-foreground">
-            Open Google Authenticator and type the current 6-digit code.
+            {t("x5.security.confirmCodeHint")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={confirm} disabled={code.length !== 6 || submitting}>
             {submitting ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Enabling…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("x5.security.enabling")}
               </>
             ) : (
-              "Enable 2FA"
+              t("x5.security.enable2fa")
             )}
           </Button>
           <Button variant="ghost" onClick={onCancel} disabled={submitting}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </div>
@@ -383,9 +384,9 @@ function ReportsPinCard() {
   };
 
   const onSave = async () => {
-    if (!/^\d{4}$/.test(pin)) return setError("The PIN must be exactly 4 digits.");
-    if (pin !== confirm) return setError("The two PINs don't match.");
-    if (!password) return setError("Enter your account password to continue.");
+    if (!/^\d{4}$/.test(pin)) return setError(t("x5.security.pinMustBe4"));
+    if (pin !== confirm) return setError(t("x5.security.pinMismatch"));
+    if (!password) return setError(t("x5.security.passwordRequired"));
     setSubmitting(true);
     setError(null);
     try {
@@ -393,14 +394,14 @@ function ReportsPinCard() {
       toast.success(t("settings.securitySection.pinSaved"));
       close();
     } catch (e) {
-      setError(friendlyErrorMessage(e, "Couldn't save the PIN."));
+      setError(friendlyErrorMessage(e, t("x5.security.pinSaveFailed")));
     } finally {
       setSubmitting(false);
     }
   };
 
   const onRemove = async () => {
-    if (!password) return setError("Enter your account password to continue.");
+    if (!password) return setError(t("x5.security.passwordRequired"));
     setSubmitting(true);
     setError(null);
     try {
@@ -408,11 +409,13 @@ function ReportsPinCard() {
       toast.success(t("settings.securitySection.pinRemoved"));
       close();
     } catch (e) {
-      setError(friendlyErrorMessage(e, "Couldn't remove the PIN."));
+      setError(friendlyErrorMessage(e, t("x5.security.pinRemoveFailed")));
     } finally {
       setSubmitting(false);
     }
   };
+
+  const removeWarning = t("x5.security.removeWarning").split("{everyone}");
 
   return (
     <Card>
@@ -421,11 +424,11 @@ function ReportsPinCard() {
           <Lock className="h-4 w-4 text-accent" />
           {t("settings.securitySection.reportsPin")}
           <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Whole workspace
+            {t("x5.security.wholeWorkspace")}
           </span>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Keeps reports for yesterday and earlier locked until the PIN is entered.
+          {t("x5.security.pinCardHint")}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -433,11 +436,9 @@ function ReportsPinCard() {
           <div className="flex items-start gap-2.5 rounded-md border border-border/80 bg-secondary/30 p-3 text-xs">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <div className="space-y-0.5">
-              <div className="font-semibold">One PIN, enforced by the server</div>
+              <div className="font-semibold">{t("x5.security.serverEnforcedTitle")}</div>
               <p className="text-muted-foreground">
-                It applies to everyone in this workspace: the main account, buyers, publishers and
-                team members. Only the main account can create, change or remove it, and has to
-                confirm with the account password each time.
+                {t("x5.security.serverEnforcedBody")}
               </p>
             </div>
           </div>
@@ -445,14 +446,14 @@ function ReportsPinCard() {
 
         {load === "idle" || load === "loading" ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("common.loading")}
           </div>
         ) : load === "unavailable" ? (
           <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3 text-xs text-muted-foreground">
             <div className="flex items-start justify-between gap-3">
-              <span>PIN protection isn&apos;t available from this server right now.</span>
+              <span>{t("x5.security.pinUnavailable")}</span>
               <Button size="sm" variant="outline" onClick={() => void fetchStatus()}>
-                Check again
+                {t("x5.security.checkAgain")}
               </Button>
             </div>
             {statusError && (
@@ -468,12 +469,12 @@ function ReportsPinCard() {
             </span>
             <div>
               <div className="text-sm font-medium">
-                {configured ? "A reports PIN is active" : "No reports PIN is set"}
+                {configured ? t("x5.security.pinActive") : t("x5.security.pinNotSet")}
               </div>
               <div className="text-[11px] text-muted-foreground">
                 {configured
-                  ? "Managed by your account administrator. Ask them for the PIN if you need it."
-                  : "Your account administrator can set one."}
+                  ? t("x5.security.managedByAdmin")
+                  : t("x5.security.adminCanSet")}
               </div>
             </div>
           </div>
@@ -487,7 +488,7 @@ function ReportsPinCard() {
                 <div>
                   <div className="text-sm font-medium">{t("settings.securitySection.pinIsSet")}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    Required before anyone views yesterday's or older reports.
+                    {t("x5.security.pinRequiredHint")}
                   </div>
                 </div>
               </div>
@@ -500,7 +501,7 @@ function ReportsPinCard() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setMode("remove")}
-                  aria-label="Remove PIN"
+                  aria-label={t("settings.securitySection.removePin")}
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -514,14 +515,14 @@ function ReportsPinCard() {
                   <Lock className="h-4 w-4" />
                 </span>
                 <div>
-                  <div className="text-sm font-medium">No PIN set</div>
+                  <div className="text-sm font-medium">{t("x5.security.noPin")}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    Anyone in this workspace can open past reports.
+                    {t("x5.security.anyoneCanOpen")}
                   </div>
                 </div>
               </div>
               <Button size="sm" onClick={() => setMode("edit")}>
-                Set PIN
+                {t("x5.security.setPin")}
               </Button>
             </div>
           )
@@ -552,27 +553,28 @@ function ReportsPinCard() {
                 onClick={onSave}
                 disabled={pin.length !== 4 || confirm.length !== 4 || !password || submitting}
               >
-                {submitting ? "Saving…" : t("settings.securitySection.savePin")}
+                {submitting ? t("trafficUI.common.saving") : t("settings.securitySection.savePin")}
               </Button>
               <Button variant="ghost" onClick={close} disabled={submitting}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
             <p className="text-xs text-muted-foreground">
-              Removing the PIN unlocks past reports for <span className="font-medium">everyone</span>{" "}
-              in this workspace. Enter your account password to confirm.
+              {removeWarning[0]}
+              <span className="font-medium">{t("x5.security.everyone")}</span>
+              {removeWarning[1]}
             </p>
             <PasswordField value={password} onChange={setPassword} />
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex items-center gap-2">
               <Button variant="destructive" onClick={onRemove} disabled={!password || submitting}>
-                {submitting ? "Removing…" : "Remove PIN"}
+                {submitting ? t("x5.security.removing") : t("settings.securitySection.removePin")}
               </Button>
               <Button variant="ghost" onClick={close} disabled={submitting}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
@@ -590,10 +592,11 @@ function PasswordField({
   value: string;
   onChange: (next: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="grid gap-1.5">
       <Label htmlFor="pin-account-password" className="text-xs">
-        Your account password
+        {t("x5.security.yourPassword")}
       </Label>
       <Input
         id="pin-account-password"
@@ -601,7 +604,7 @@ function PasswordField({
         autoComplete="current-password"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Enter your login password"
+        placeholder={t("x5.security.passwordPlaceholder")}
       />
     </div>
   );

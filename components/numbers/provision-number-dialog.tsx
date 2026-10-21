@@ -114,7 +114,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as { detail?: string }).detail ?? `Search failed (${res.status})`);
+        throw new Error((err as { detail?: string }).detail ?? t("trafficUi.numbers.provision.searchFailedStatus").replace("{status}", String(res.status)));
       }
 
       const data: unknown = await res.json();
@@ -125,12 +125,12 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
           [];
 
       if (items.length === 0) {
-        toast.warning("No numbers found. Try a different area code or type.");
+        toast.warning(t("trafficUi.numbers.provision.noneFound"));
         return;
       }
       setResults(items);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Search failed");
+      toast.error(e instanceof Error ? e.message : t("'+P+'searchFailed"));
     } finally {
       setSearching(false);
     }
@@ -147,7 +147,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
 
   const onProvision = async () => {
     if (selected.size === 0) {
-      toast.warning("Select at least one number to provision.");
+      toast.warning(t("trafficUi.numbers.provision.selectAtLeastOne"));
       return;
     }
     setProvisioning(true);
@@ -168,12 +168,12 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          errors.push((err as { detail?: string }).detail ?? `Failed: ${num.phone_number}`);
+          errors.push((err as { detail?: string }).detail ?? t("trafficUi.numbers.provision.failedFor").replace("{number}", num.phone_number));
         } else {
           provisioned++;
         }
       } catch {
-        errors.push(`Network error for ${num.phone_number}`);
+        errors.push(t("trafficUi.numbers.provision.networkError").replace("{number}", num.phone_number));
       }
     }
 
@@ -182,11 +182,11 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
         ? campaigns.find((c) => c.id === campaignId)
         : undefined;
       toast.success(
-        `Provisioned ${provisioned} number${provisioned > 1 ? "s" : ""}`,
+        t(provisioned > 1 ? "'+P+'provisionedMany" : "'+P+'provisionedOne").replace("{count}", String(provisioned)),
         {
           description: campaign
-            ? `Attached to ${campaign.name}`
-            : "No campaign attached",
+            ? t("trafficUI.numbers.provision.toast.attachedTo").replace("{name}", campaign.name)
+            : t("'+P+'noCampaign"),
         },
       );
     }
@@ -214,12 +214,12 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
               <DialogTitle>
                 {step === "form"
                   ? t("trafficUI.numbers.provision.title")
-                  : "Available Numbers"}
+                  : t("'+P+'availableTitle")}
               </DialogTitle>
               <DialogDescription>
                 {step === "form"
                   ? t("trafficUI.numbers.provision.description")
-                  : `${results.length} numbers found — select to provision`}
+                  : t("'+P+'foundCount").replace("{count}", String(results.length))}
               </DialogDescription>
             </div>
           </div>
@@ -260,13 +260,13 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
             {/* Area code */}
             <div className="space-y-2">
               <Label htmlFor="prov-area">
-                {numberType === "toll_free" ? "Toll-Free Prefix (optional)" : "Area Code (optional)"}
+                {numberType === "toll_free" ? t("'+P+'tollFreePrefix") : t("'+P+'areaCode")}
               </Label>
               <Input
                 id="prov-area"
                 type="text"
                 inputMode="numeric"
-                placeholder={numberType === "toll_free" ? "e.g. 844, 800, 888" : "e.g. 512, 213"}
+                placeholder={numberType === "toll_free" ? t("'+P+'tollFreeExample") : t("'+P+'areaCodeExample")}
                 value={areaCode}
                 onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
                 className="font-mono"
@@ -275,7 +275,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
 
             {/* How many results to fetch */}
             <div className="space-y-2">
-              <Label htmlFor="prov-limit">Results to fetch</Label>
+              <Label htmlFor="prov-limit">{t("trafficUi.numbers.provision.resultsToFetch")}</Label>
               <Input
                 id="prov-limit"
                 type="number"
@@ -356,7 +356,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                   </span>
                   {num.monthly_price != null && (
                     <span className="text-xs text-muted-foreground">
-                      ${Number(num.monthly_price).toFixed(2)}/mo
+                      {t("'+P+'perMonth").replace("{price}", Number(num.monthly_price).toFixed(2))}
                     </span>
                   )}
                 </button>
@@ -374,11 +374,11 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
               <Button onClick={onSearch} disabled={searching}>
                 {searching ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("trafficUi.numbers.provision.searching")}
                   </>
                 ) : (
                   <>
-                    <Search className="h-3.5 w-3.5" /> Search Numbers
+                    <Search className="h-3.5 w-3.5" /> {t("trafficUi.numbers.provision.searchNumbers")}
                   </>
                 )}
               </Button>
@@ -390,7 +390,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                 onClick={() => { setResults([]); setSelected(new Set()); }}
                 disabled={provisioning}
               >
-                <ArrowLeft className="h-3.5 w-3.5" /> Back
+                <ArrowLeft className="h-3.5 w-3.5" /> {t("trafficUI.common.back")}
               </Button>
               <Button
                 onClick={onProvision}
@@ -405,8 +405,8 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                   <>
                     <Plus className="h-3.5 w-3.5" />{" "}
                     {selected.size > 1
-                      ? `Provision ${selected.size} Numbers`
-                      : "Provision Number"}
+                      ? t("'+P+'provisionMany").replace("{count}", String(selected.size))
+                      : t("'+P+'provisionOne")}
                   </>
                 )}
               </Button>

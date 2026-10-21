@@ -42,9 +42,13 @@ type SwitchKey = {
   [K in keyof AutopilotConfig]: AutopilotConfig[K] extends boolean ? K : never;
 }[keyof AutopilotConfig];
 
+type T = (key: string) => string;
+
 interface Limit {
   field: NumberKey;
   unit: string;
+  /** Translation key for a word unit (sec, calls…); symbols like % and $ have none. */
+  unitKey?: string;
   min: number;
   max: number;
 }
@@ -53,12 +57,13 @@ interface RuleDef {
   id: string;
   group: "act" | "alert" | "schedule";
   label: string;
+  labelKey: string;
   tone: Tone;
   icon: LucideIcon;
   /** The on/off switch. A row without one is a setting that applies to the rules above it. */
   toggle?: SwitchKey;
   limit?: Limit;
-  describe: (c: AutopilotConfig) => string;
+  describe: (c: AutopilotConfig, t: T) => string;
 }
 
 /** Every option on the card. Each one is read by the server's rule engine. */
@@ -67,116 +72,131 @@ const RULES: RuleDef[] = [
     id: "pauseOnHighNoAnswer",
     group: "act",
     label: "Pause on high no-answer rate",
+    labelKey: "x5.autopilot.rules.pauseOnHighNoAnswer.label",
     tone: "caution",
     icon: ShieldAlert,
     toggle: "pauseOnHighNoAnswer",
     limit: { field: "noAnswerThreshold", unit: "%", min: 10, max: 100 },
-    describe: (c) => `Auto-pause a buyer when more than ${c.noAnswerThreshold}% of its calls in the last 24 hours go unanswered.`,
+    describe: (c, t) => t("x5.autopilot.rules.pauseOnHighNoAnswer.desc").replace("{n}", String(c.noAnswerThreshold)),
   },
   {
     id: "pauseOnShortCalls",
     group: "act",
     label: "Pause on very short calls",
+    labelKey: "x5.autopilot.rules.pauseOnShortCalls.label",
     tone: "caution",
     icon: Timer,
     toggle: "pauseOnShortCalls",
-    limit: { field: "shortCallSeconds", unit: "sec", min: 1, max: 600 },
-    describe: (c) => `Auto-pause a buyer whose answered calls average under ${c.shortCallSeconds} seconds (they answer and hang up).`,
+    limit: { field: "shortCallSeconds", unit: "sec", unitKey: "x5.autopilot.units.sec", min: 1, max: 600 },
+    describe: (c, t) => t("x5.autopilot.rules.pauseOnShortCalls.desc").replace("{n}", String(c.shortCallSeconds)),
   },
   {
     id: "minCallsToJudge",
     group: "act",
     label: "Minimum calls before judging a buyer",
+    labelKey: "x5.autopilot.rules.minCallsToJudge.label",
     tone: "safe",
     icon: ShieldCheck,
-    limit: { field: "minCallsToJudge", unit: "calls", min: 3, max: 500 },
-    describe: (c) => `A buyer needs at least ${c.minCallsToJudge} calls in the window before either pause rule can apply.`,
+    limit: { field: "minCallsToJudge", unit: "calls", unitKey: "x5.autopilot.units.calls", min: 3, max: 500 },
+    describe: (c, t) => t("x5.autopilot.rules.minCallsToJudge.desc").replace("{n}", String(c.minCallsToJudge)),
   },
   {
     id: "resumeRecoveredBuyers",
     group: "act",
     label: "Resume buyers it paused",
+    labelKey: "x5.autopilot.rules.resumeRecoveredBuyers.label",
     tone: "caution",
     icon: RotateCcw,
     toggle: "resumeRecoveredBuyers",
-    limit: { field: "resumeAfterMinutes", unit: "min", min: 5, max: 1440 },
-    describe: (c) => `Turn a buyer back on ${c.resumeAfterMinutes} minutes after Autopilot paused it. Buyers you paused yourself are never touched.`,
+    limit: { field: "resumeAfterMinutes", unit: "min", unitKey: "x5.autopilot.units.min", min: 5, max: 1440 },
+    describe: (c, t) => t("x5.autopilot.rules.resumeRecoveredBuyers.desc").replace("{n}", String(c.resumeAfterMinutes)),
   },
   {
     id: "alertOnVolumeDrop",
     group: "alert",
     label: "Alert on volume drop",
+    labelKey: "x5.autopilot.rules.alertOnVolumeDrop.label",
     tone: "safe",
     icon: TrendingDown,
     toggle: "alertOnVolumeDrop",
     limit: { field: "volumeDropThreshold", unit: "%", min: 10, max: 95 },
-    describe: (c) => `Email the admins when today's calls are more than ${c.volumeDropThreshold}% under the 7-day average for this time of day.`,
+    describe: (c, t) => t("x5.autopilot.rules.alertOnVolumeDrop.desc").replace("{n}", String(c.volumeDropThreshold)),
   },
   {
     id: "alertOnRevenueDrop",
     group: "alert",
     label: "Alert on revenue drop",
+    labelKey: "x5.autopilot.rules.alertOnRevenueDrop.label",
     tone: "safe",
     icon: Coins,
     toggle: "alertOnRevenueDrop",
     limit: { field: "revenueDropThreshold", unit: "%", min: 10, max: 95 },
-    describe: (c) => `Email the admins when today's revenue is more than ${c.revenueDropThreshold}% under the 7-day average for this time of day.`,
+    describe: (c, t) => t("x5.autopilot.rules.alertOnRevenueDrop.desc").replace("{n}", String(c.revenueDropThreshold)),
   },
   {
     id: "alertOnLowBalance",
     group: "alert",
     label: "Alert on low balance",
+    labelKey: "x5.autopilot.rules.alertOnLowBalance.label",
     tone: "safe",
     icon: Wallet,
     toggle: "alertOnLowBalance",
     limit: { field: "lowBalanceAmount", unit: "$", min: 1, max: 100000 },
-    describe: (c) => `Email the admins when the balance is $${c.lowBalanceAmount} or less, before calls stop.`,
+    describe: (c, t) => t("x5.autopilot.rules.alertOnLowBalance.desc").replace("{n}", String(c.lowBalanceAmount)),
   },
   {
     id: "alertOnNoCalls",
     group: "alert",
     label: "Alert when calls go quiet",
+    labelKey: "x5.autopilot.rules.alertOnNoCalls.label",
     tone: "safe",
     icon: PhoneOff,
     toggle: "alertOnNoCalls",
-    limit: { field: "noCallsHours", unit: "hours", min: 1, max: 12 },
-    describe: (c) => `Email the admins when no call arrives for ${c.noCallsHours} hour${c.noCallsHours === 1 ? "" : "s"} during business hours (8am to 9pm Eastern).`,
+    limit: { field: "noCallsHours", unit: "hours", unitKey: "x5.autopilot.units.hours", min: 1, max: 12 },
+    describe: (c, t) =>
+      t(c.noCallsHours === 1 ? "x5.autopilot.rules.alertOnNoCalls.descOne" : "x5.autopilot.rules.alertOnNoCalls.desc").replace(
+        "{n}",
+        String(c.noCallsHours),
+      ),
   },
   {
     id: "alertOnHighSpam",
     group: "alert",
     label: "Alert on high spam rate",
+    labelKey: "x5.autopilot.rules.alertOnHighSpam.label",
     tone: "safe",
     icon: ShieldAlert,
     toggle: "alertOnHighSpam",
     limit: { field: "spamRateThreshold", unit: "%", min: 5, max: 100 },
-    describe: (c) => `Email the admins when more than ${c.spamRateThreshold}% of today's calls are blocked by the spam checks.`,
+    describe: (c, t) => t("x5.autopilot.rules.alertOnHighSpam.desc").replace("{n}", String(c.spamRateThreshold)),
   },
   {
     id: "alertOnCampaignWithoutBuyers",
     group: "alert",
     label: "Alert on campaign with no buyer",
+    labelKey: "x5.autopilot.rules.alertOnCampaignWithoutBuyers.label",
     tone: "safe",
     icon: Megaphone,
     toggle: "alertOnCampaignWithoutBuyers",
-    describe: () => "Email the admins when an active campaign has no active buyer, because its calls will fail.",
+    describe: (_c, t) => t("x5.autopilot.rules.alertOnCampaignWithoutBuyers.desc"),
   },
   {
     id: "autoRun",
     group: "schedule",
     label: "Run automatically",
+    labelKey: "x5.autopilot.rules.autoRun.label",
     tone: "aggressive",
     icon: CalendarClock,
     toggle: "autoRun",
-    limit: { field: "runEveryMinutes", unit: "min", min: 5, max: 1440 },
-    describe: (c) => `Run every switched-on rule by itself every ${c.runEveryMinutes} minutes, without anyone pressing Run now.`,
+    limit: { field: "runEveryMinutes", unit: "min", unitKey: "x5.autopilot.units.min", min: 5, max: 1440 },
+    describe: (c, t) => t("x5.autopilot.rules.autoRun.desc").replace("{n}", String(c.runEveryMinutes)),
   },
 ];
 
-const GROUPS: { id: RuleDef["group"]; title: string }[] = [
-  { id: "act", title: "Take action" },
-  { id: "alert", title: "Send alerts" },
-  { id: "schedule", title: "Schedule" },
+const GROUPS: { id: RuleDef["group"]; title: string; titleKey: string }[] = [
+  { id: "act", title: "Take action", titleKey: "x5.autopilot.groups.act" },
+  { id: "alert", title: "Send alerts", titleKey: "x5.autopilot.groups.alert" },
+  { id: "schedule", title: "Schedule", titleKey: "x5.autopilot.groups.schedule" },
 ];
 
 const TONE: Record<Tone, { icon: LucideIcon; chip: string; iconBg: string }> = {
@@ -198,10 +218,16 @@ const TONE: Record<Tone, { icon: LucideIcon; chip: string; iconBg: string }> = {
 };
 
 const ACTION_LABEL: Record<string, string> = {
-  paused_buyer: "Paused buyer",
-  resumed_buyer: "Resumed buyer",
-  alert_sent: "Alert sent",
-  still_active: "Still active",
+  paused_buyer: "x5.autopilot.actions.pausedBuyer",
+  resumed_buyer: "x5.autopilot.actions.resumedBuyer",
+  alert_sent: "x5.autopilot.actions.alertSent",
+  still_active: "x5.autopilot.actions.stillActive",
+};
+
+const TONE_LABEL: Record<Tone, string> = {
+  safe: "x5.autopilot.tone.safe",
+  caution: "x5.autopilot.tone.caution",
+  aggressive: "x5.autopilot.tone.aggressive",
 };
 
 /** A number that saves when you leave the box or press Enter, and snaps back if it is out of range. */
@@ -218,6 +244,8 @@ function LimitInput({
   disabled: boolean;
   onSave: (field: NumberKey, value: number) => Promise<void>;
 }) {
+  const { t } = useTranslation();
+  const unit = limit.unitKey ? t(limit.unitKey) : limit.unit;
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
 
@@ -225,7 +253,7 @@ function LimitInput({
     const n = Number(text);
     if (!Number.isFinite(n) || n < limit.min || n > limit.max) {
       setText(String(value));
-      if (text !== String(value)) toast.error(`Enter a number from ${limit.min} to ${limit.max}`);
+      if (text !== String(value)) toast.error(t("x5.autopilot.enterRange").replace("{min}", String(limit.min)).replace("{max}", String(limit.max)));
       return;
     }
     if (n === value) return;
@@ -241,7 +269,7 @@ function LimitInput({
         max={limit.max}
         value={text}
         disabled={disabled}
-        aria-label={`${label} (${limit.unit})`}
+        aria-label={`${label} (${unit})`}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => void commit()}
         onKeyDown={(e) => {
@@ -249,7 +277,7 @@ function LimitInput({
         }}
         className="h-8 w-16 rounded-md border border-input bg-transparent px-2 text-right text-sm tabular-nums text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <span className="w-8">{limit.unit}</span>
+      <span className="w-8">{unit}</span>
     </label>
   );
 }
@@ -303,7 +331,7 @@ export function AutopilotCard() {
       setConfig(saved);
     } catch (e) {
       setConfig(prev);
-      toast.error(e instanceof Error ? e.message : "Couldn't update autopilot");
+      toast.error(e instanceof Error ? e.message : t("x5.autopilot.updateFailed"));
       throw e;
     }
   };
@@ -315,7 +343,7 @@ export function AutopilotCard() {
       await save({ [rule.toggle]: next } as Partial<AutopilotConfig>);
       toast.success(
         next ? t("toolsUI.insights.autopilot.toastEnabled") : t("toolsUI.insights.autopilot.toastDisabled"),
-        { description: rule.label },
+        { description: t(rule.labelKey) },
       );
     } catch {
       /* save() already told the user */
@@ -325,7 +353,7 @@ export function AutopilotCard() {
   const saveNumber = async (field: NumberKey, value: number) => {
     try {
       await save({ [field]: value } as Partial<AutopilotConfig>);
-      toast.success("Saved");
+      toast.success(t("trafficUI.common.saved"));
     } catch {
       /* save() already told the user */
     }
@@ -338,20 +366,23 @@ export function AutopilotCard() {
       const done = actions.filter((a) => a.action !== "still_active");
       if (actions.length === 0) {
         toast.success(t("toolsUI.insights.autopilot.title"), {
-          description: "No actions taken. Everything looks healthy.",
+          description: t("x5.autopilot.noActions"),
         });
       } else if (done.length === 0) {
         toast.success(t("toolsUI.insights.autopilot.title"), {
-          description: "Nothing new. The alerts below were already sent.",
+          description: t("x5.autopilot.nothingNew"),
         });
       } else {
         toast.success(t("toolsUI.insights.autopilot.title"), {
-          description: `${done.length} action${done.length === 1 ? "" : "s"} executed`,
+          description:
+            done.length === 1
+              ? t("x5.autopilot.executedOne")
+              : t("x5.autopilot.executedMany").replace("{count}", String(done.length)),
         });
       }
       void load(); // pulls the new "last run" and history
     } catch {
-      toast.error("Autopilot pass failed");
+      toast.error(t("x5.autopilot.passFailed"));
     } finally {
       setRunning(false);
     }
@@ -377,16 +408,16 @@ export function AutopilotCard() {
         </CardTitle>
         <p className="text-xs text-muted-foreground">{t("toolsUI.insights.autopilot.description")}</p>
         {!editable && (
-          <p className="text-xs text-muted-foreground">You can view these settings. Changing them needs the Edit Advanced Settings tick.</p>
+          <p className="text-xs text-muted-foreground">{t("x5.autopilot.viewOnly")}</p>
         )}
       </CardHeader>
 
       <CardContent className="space-y-4">
         {loadFailed && !config && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs">
-            <span>Couldn&apos;t load the Autopilot settings.</span>
+            <span>{t("x5.autopilot.loadFailed")}</span>
             <Button size="sm" variant="outline" onClick={() => void load()}>
-              Try again
+              {t("marketplace.tryAgain")}
             </Button>
           </div>
         )}
@@ -394,7 +425,7 @@ export function AutopilotCard() {
         {GROUPS.map((group) => (
           <section key={group.id} className="space-y-1">
             <h3 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {group.title}
+              {t(group.titleKey)}
             </h3>
             {RULES.filter((r) => r.group === group.id).map((r, i) => {
               const tone = TONE[r.tone];
@@ -413,20 +444,20 @@ export function AutopilotCard() {
                   </span>
                   <div className="min-w-0 flex-1 basis-48">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium">{r.label}</span>
+                      <span className="text-sm font-medium">{t(r.labelKey)}</span>
                       <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize", tone.chip)}>
-                        {r.tone}
+                        {t(TONE_LABEL[r.tone])}
                       </span>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {config ? r.describe(config) : "Loading…"}
+                      {config ? r.describe(config, t) : t("common.loading")}
                     </p>
                   </div>
                   <div className="ml-auto flex shrink-0 items-center gap-3">
                     {config && r.limit && (
                       <LimitInput
                         limit={r.limit}
-                        label={r.label}
+                        label={t(r.labelKey)}
                         value={config[r.limit.field]}
                         disabled={!editable || (!!r.toggle && !on)}
                         onSave={saveNumber}
@@ -438,7 +469,7 @@ export function AutopilotCard() {
                         checked={!!on}
                         disabled={!config || !editable}
                         onCheckedChange={() => void toggle(r)}
-                        aria-label={r.label}
+                        aria-label={t(r.labelKey)}
                       />
                     )}
                   </div>
@@ -452,21 +483,21 @@ export function AutopilotCard() {
             and returns what it did. */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2.5">
           <div className="min-w-0 flex-1 basis-48">
-            <div className="text-sm font-medium">Run autopilot pass</div>
+            <div className="text-sm font-medium">{t("x5.autopilot.runPassTitle")}</div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {config?.lastRunAt
-                ? `Last run ${when(config.lastRunAt)}.`
-                : "Runs every switched-on rule once, right now."}
+                ? t("x5.autopilot.lastRun").replace("{when}", when(config.lastRunAt))
+                : t("x5.autopilot.runsEveryRule")}
             </p>
           </div>
           <Button size="sm" onClick={onRunPass} disabled={running || !config || !editable} className="shrink-0">
             {running ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Running…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("x5.autopilot.running")}
               </>
             ) : (
               <>
-                <PlayCircle className="h-3.5 w-3.5" /> Run now
+                <PlayCircle className="h-3.5 w-3.5" /> {t("x5.autopilot.runNow")}
               </>
             )}
           </Button>
@@ -476,21 +507,21 @@ export function AutopilotCard() {
           <div className="space-y-1">
             <h3 className="flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <Clock className="h-3 w-3" />
-              {lastActions.length > 0 ? "Last pass" : "Recent activity"}
+              {lastActions.length > 0 ? t("x5.autopilot.lastPass") : t("x5.autopilot.recentActivity")}
             </h3>
             <ul className="space-y-1 text-xs text-muted-foreground">
               {shown.map(({ key, item }) => (
                 <li key={key} className="flex items-start gap-2">
                   <Check className="mt-0.5 h-3 w-3 shrink-0 text-[color:var(--success)]" />
                   <span>
-                    <span className="font-medium text-foreground">{ACTION_LABEL[item.action] ?? item.action}</span>{" "}
+                    <span className="font-medium text-foreground">{ACTION_LABEL[item.action] ? t(ACTION_LABEL[item.action]) : item.action}</span>{" "}
                     <span className="font-mono">{item.entity}</span>
                     {item.reason && <span>. {item.reason}</span>}
                     {item.at && (
                       <span className="text-muted-foreground/70">
                         {" "}
                         ({when(item.at)}
-                        {item.source === "auto" ? ", automatic" : ""})
+                        {item.source === "auto" ? t("x5.autopilot.automatic") : ""})
                       </span>
                     )}
                   </span>

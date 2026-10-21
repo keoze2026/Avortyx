@@ -54,7 +54,7 @@ export function ProviderConfigurationCard({ config, onChange }: Props) {
       );
       toast.success(t("toolsUI.suppression.providerConfig.toastTestSuccess"));
     } catch (e) {
-      const message = e instanceof Error ? e.message : "The provider did not answer";
+      const message = e instanceof Error ? e.message : t("x1.providerConfig.noAnswer");
       setResponse(
         JSON.stringify(
           {
@@ -159,7 +159,7 @@ export function ProviderConfigurationCard({ config, onChange }: Props) {
             className="pr-10 tabular-nums"
           />
           <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] uppercase tracking-wider text-muted-foreground">
-            ms
+            {t("trafficUI.common.msSuffix")}
           </span>
         </div>
       </div>

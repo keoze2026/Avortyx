@@ -32,8 +32,10 @@ import {
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { isPinRequiredError } from "@/lib/reports-scope";
+import { tFor } from "@/lib/i18n";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
+import { useLocaleStore } from "@/lib/store/locale-store";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
@@ -120,7 +122,7 @@ export default function CallsPage() {
       .catch((e) => {
         if (cancelled) return;
         // "History is locked" is not an error: the PIN prompt says so.
-        if (!isPinRequiredError(e)) toast.error(friendlyErrorMessage(e, "Couldn't load calls for this range"));
+        if (!isPinRequiredError(e)) toast.error(friendlyErrorMessage(e, tFor(useLocaleStore.getState().locale, "toolsUI.reports.page.loadError")));
         setRangeCalls([]);
       })
       .finally(() => {

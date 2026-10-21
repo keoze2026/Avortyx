@@ -151,11 +151,9 @@ export function PaymentIntegrationsCard() {
               <Wallet className="h-5 w-5" />
             </span>
             <div>
-              <h4 className="text-sm font-semibold">No payment provider connected</h4>
+              <h4 className="text-sm font-semibold">{t("x1.paymentIntegrations.emptyTitle")}</h4>
               <p className="mt-1 max-w-md text-xs text-muted-foreground">
-                Wallet listing isn&apos;t exposed by the backend yet. You can still
-                fund your account using the Recharge form below — payments
-                route to Capitalist USDT.
+                {t("x1.paymentIntegrations.emptyDescription")}
               </p>
             </div>
           </div>

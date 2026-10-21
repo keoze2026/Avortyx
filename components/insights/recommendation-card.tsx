@@ -126,10 +126,9 @@ export function RecommendationCard({ recommendation: r, onAction }: Props) {
     `toolsUI.insights.recommendations.data.${r.id}.body`,
     r.body,
   );
-  const translatedImpactLabel = translateOrFallback(
-    `toolsUI.insights.recommendations.data.${r.id}.impactLabel`,
-    r.impact.label,
-  );
+  const translatedImpactLabel = r.impact.labelKey
+    ? t(r.impact.labelKey)
+    : translateOrFallback(`toolsUI.insights.recommendations.data.${r.id}.impactLabel`, r.impact.label);
   const translatedScopeType = translateOrFallback(
     `toolsUI.insights.recommendations.scope.${r.scope.type}`,
     r.scope.type,

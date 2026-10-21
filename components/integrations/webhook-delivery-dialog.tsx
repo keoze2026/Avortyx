@@ -23,6 +23,7 @@ import {
   webhooksService,
   type WebhookDelivery,
 } from "@/lib/api/services/webhooks.service";
+import { useTranslation } from "@/hooks/use-translation";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +36,15 @@ interface Props {
 
 const PAGE_SIZE = 25;
 
+/** Delivery statuses the server sends, shown in the chosen language. */
+const STATUS_KEY: Record<string, string> = {
+  delivered: "toolsUI.integrations.webhooks.deliveryLog.delivered",
+  failed: "toolsUI.integrations.webhooks.deliveryLog.failed",
+  retrying: "toolsUI.integrations.webhooks.deliveryLog.retrying",
+};
+
 export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookName }: Props) {
+  const { t } = useTranslation();
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -52,7 +61,7 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
       setTotal(res.total);
       setPage(targetPage);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load deliveries");
+      setError(e instanceof Error ? e.message : t("x5.webhookDeliveries.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -76,9 +85,11 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
         <DialogHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <DialogTitle>Delivery log</DialogTitle>
+              <DialogTitle>{t("x5.webhookDeliveries.title")}</DialogTitle>
               <DialogDescription>
-                {webhookName ? `Recent attempts for ${webhookName}` : "Recent delivery attempts"}
+                {webhookName
+                  ? t("x5.webhookDeliveries.recentFor").replace("{name}", webhookName)
+                  : t("x5.webhookDeliveries.recent")}
               </DialogDescription>
             </div>
             <Button size="sm" variant="outline" onClick={() => void load(page)} disabled={loading}>
@@ -87,7 +98,7 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-              Refresh
+              {t("common.refresh")}
             </Button>
           </div>
         </DialogHeader>
@@ -100,11 +111,11 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
 
         {loading && deliveries.length === 0 ? (
           <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading deliveries…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("x5.webhookDeliveries.loading")}
           </div>
         ) : deliveries.length === 0 && !error ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            No delivery attempts yet.
+            {t("x5.webhookDeliveries.empty")}
           </div>
         ) : (
           <ul className="max-h-[60vh] divide-y divide-border/60 overflow-y-auto rounded-md border border-border/60">
@@ -137,7 +148,7 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
                       failing && "border-destructive/40 bg-destructive/10 text-destructive",
                     )}
                   >
-                    {d.status}
+                    {STATUS_KEY[d.status.toLowerCase()] ? t(STATUS_KEY[d.status.toLowerCase()]) : d.status}
                   </Badge>
                 </li>
               );
@@ -148,7 +159,10 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
         {total > PAGE_SIZE && (
           <div className="flex items-center justify-between border-t border-border/60 pt-3 text-xs">
             <span className="text-muted-foreground">
-              Page {page} of {totalPages} · {total} deliveries
+              {t("x5.webhookDeliveries.pageOf")
+                .replace("{page}", String(page))
+                .replace("{pages}", String(totalPages))
+                .replace("{total}", String(total))}
             </span>
             <div className="flex items-center gap-1.5">
               <Button
@@ -157,7 +171,7 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
                 onClick={() => void load(page - 1)}
                 disabled={page <= 1 || loading}
               >
-                Previous
+                {t("trafficUI.common.previous")}
               </Button>
               <Button
                 size="sm"
@@ -165,7 +179,7 @@ export function WebhookDeliveryDialog({ open, onOpenChange, webhookId, webhookNa
                 onClick={() => void load(page + 1)}
                 disabled={page >= totalPages || loading}
               >
-                Next
+                {t("trafficUI.common.next")}
               </Button>
             </div>
           </div>

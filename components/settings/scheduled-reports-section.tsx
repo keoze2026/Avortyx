@@ -112,7 +112,7 @@ export function ScheduledReportsSection() {
       );
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : "Couldn't trigger the report",
+        e instanceof Error ? e.message : t("x6.scheduledReports.runFailed"),
       );
     } finally {
       setSending(false);
@@ -223,8 +223,8 @@ export function ScheduledReportsSection() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
-                      <SelectItem value="PM">PM</SelectItem>
+                      <SelectItem value="AM">{t("x6.time.am")}</SelectItem>
+                      <SelectItem value="PM">{t("x6.time.pm")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -378,7 +378,7 @@ export function ScheduledReportsSection() {
                 }
                 title={
                   !reportId
-                    ? "Save the schedule first by enabling + entering a recipient"
+                    ? t("x6.scheduledReports.saveFirstHint")
                     : undefined
                 }
               >

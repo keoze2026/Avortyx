@@ -78,6 +78,27 @@ const OPERATORS = [
   "In List",
 ] as const;
 
+/** Translation keys for the parameter / operator names. The English names
+ *  are what gets saved, so only what is shown is translated. */
+const OPTION_LABEL_KEYS: Record<string, string> = {
+  "Caller ID": "toolsUI.reports.callLog.columns.callerId",
+  "Caller State": "x6.destFilter.param.callerState",
+  "Caller Area Code": "x6.destFilter.param.callerAreaCode",
+  "Call Duration": "x6.destFilter.param.callDuration",
+  "Time of Day": "x6.destFilter.param.timeOfDay",
+  "Day of Week": "x6.destFilter.param.dayOfWeek",
+  Tag: "toolsUI.reports.callLog.columns.tag",
+  "Custom Header": "x6.destFilter.param.customHeader",
+  Equals: "x6.destFilter.op.equals",
+  "Not Equals": "x6.destFilter.op.notEquals",
+  Contains: "x6.destFilter.op.contains",
+  "Starts With": "x6.destFilter.op.startsWith",
+  "Ends With": "x6.destFilter.op.endsWith",
+  "Greater Than": "x6.destFilter.op.greaterThan",
+  "Less Than": "x6.destFilter.op.lessThan",
+  "In List": "x6.destFilter.op.inList",
+};
+
 const WEEKDAYS: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 function uid(prefix: string) {
@@ -840,6 +861,7 @@ function FieldSelect({
   options: readonly string[];
   onChange: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-1">
       <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -852,7 +874,7 @@ function FieldSelect({
         <SelectContent>
           {options.map((o) => (
             <SelectItem key={o} value={o}>
-              {o}
+              {OPTION_LABEL_KEYS[o] ? t(OPTION_LABEL_KEYS[o]) : o}
             </SelectItem>
           ))}
         </SelectContent>

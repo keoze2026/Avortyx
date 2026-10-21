@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslation } from "@/hooks/use-translation";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { numbersService } from "@/lib/api/services/numbers.service";
@@ -70,6 +71,7 @@ const STATE_OPTIONS = [
  * value." */
 
 export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: Props) {
+  const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const campaign = campaigns.find((c) => c.id === campaignId);
   const allNumbers = useNumbersStore((s) => s.numbers);
@@ -155,13 +157,13 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
       );
       toast.success(
         selected.size === 1
-          ? "1 tracking number attached"
-          : `${selected.size} tracking numbers attached`,
-        { description: `Routing to "${campaign.name}".` },
+          ? t("x5.attachNumbers.toastAttachedOne")
+          : t("x5.attachNumbers.toastAttachedMany").replace("{count}", String(selected.size)),
+        { description: t("x5.attachNumbers.routingTo").replace("{name}", campaign.name) },
       );
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not attach numbers");
+      toast.error(e instanceof Error ? e.message : t("x5.attachNumbers.attachFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -187,9 +189,11 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
       if (available.length < buyCount) {
         toast.error(
           available.length === 0
-            ? "The carrier has no numbers available for that selection"
-            : `Only ${available.length} of ${buyCount} numbers are available`,
-          { description: "Nothing was purchased. Try a different area or a smaller count." },
+            ? t("x5.attachNumbers.carrierNone")
+            : t("x5.attachNumbers.onlyAvailable")
+                .replace("{available}", String(available.length))
+                .replace("{count}", String(buyCount)),
+          { description: t("x5.attachNumbers.nothingPurchased") },
         );
         return;
       }
@@ -211,25 +215,33 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
       } catch (e) {
         // Say exactly how far it got. The numbers already bought are real and
         // billable, and pretending otherwise leaves them unaccounted for.
-        toast.error(e instanceof Error ? e.message : "Could not purchase number", {
+        toast.error(e instanceof Error ? e.message : t("x5.attachNumbers.purchaseFailed"), {
           description: bought.length
-            ? `${bought.length} of ${buyCount} were purchased and attached: ${bought.join(", ")}`
-            : "No numbers were purchased.",
+            ? t("x5.attachNumbers.partialPurchased")
+                .replace("{bought}", String(bought.length))
+                .replace("{count}", String(buyCount))
+                .replace("{numbers}", bought.join(", "))
+            : t("x5.attachNumbers.noneBought"),
         });
         return;
       }
 
       toast.success(
-        bought.length === 1 ? "1 number purchased" : `${bought.length} numbers purchased`,
-        { description: `Attached to "${campaign.name}".` },
+        bought.length === 1
+          ? t("x5.attachNumbers.purchasedOne")
+          : t("x5.attachNumbers.purchasedMany").replace("{count}", String(bought.length)),
+        { description: t("x5.attachNumbers.attachedTo").replace("{name}", campaign.name) },
       );
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not purchase number");
+      toast.error(e instanceof Error ? e.message : t("x5.attachNumbers.purchaseFailed"));
     } finally {
       setSubmitting(false);
     }
   };
+
+  const descParts = t("x5.attachNumbers.description").split("{campaign}");
+  const emptyHintParts = t("x5.attachNumbers.emptyHint").split("{buyNew}");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,11 +254,11 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
               <Hash className="h-4 w-4" />
             </span>
             <div>
-              <DialogTitle className="uppercase tracking-wide">Add numbers</DialogTitle>
+              <DialogTitle className="uppercase tracking-wide">{t("x5.attachNumbers.title")}</DialogTitle>
               <DialogDescription>
-                Pick one or more numbers for{" "}
-                <span className="font-medium text-foreground">{campaign?.name ?? "this campaign"}</span>
-                {" "}— calls to them forward to the routed destinations.
+                {descParts[0]}
+                <span className="font-medium text-foreground">{campaign?.name ?? t("x5.attachNumbers.thisCampaign")}</span>
+                {descParts[1]}
               </DialogDescription>
             </div>
           </div>
@@ -264,7 +276,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {m === "add" ? "Add existing numbers" : "Buy new numbers"}
+              {m === "add" ? t("x5.attachNumbers.modeAdd") : t("x5.attachNumbers.modeBuy")}
             </button>
           ))}
         </div>
@@ -278,15 +290,15 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by number, code, name or city"
+                  placeholder={t("x5.attachNumbers.searchPlaceholder")}
                   className="pl-8 text-xs"
                 />
               </div>
               <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
                 {([
-                  ["all", "All"],
-                  ["tollfree", "Toll-free"],
-                  ["local", "Local"],
+                  ["all", t("x5.attachNumbers.all")],
+                  ["tollfree", t("trafficUI.numbers.typeOptions.tollfree")],
+                  ["local", t("trafficUI.numbers.typeOptions.local")],
                 ] as Array<["all" | NumberType, string]>).map(([v, label]) => (
                   <button
                     key={v}
@@ -302,16 +314,20 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 ))}
               </div>
               <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
-                {filtered.length} of {available.length} available
+                {t("x5.attachNumbers.countAvailable")
+                  .replace("{shown}", String(filtered.length))
+                  .replace("{total}", String(available.length))}
               </span>
             </div>
 
             {available.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-12 text-center">
                 <Hash className="mx-auto h-6 w-6 text-muted-foreground" />
-                <p className="mt-2 text-sm font-medium">No unassigned numbers in inventory</p>
+                <p className="mt-2 text-sm font-medium">{t("x5.attachNumbers.emptyTitle")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Switch to <span className="font-medium text-foreground">Buy new numbers</span> above to purchase some.
+                  {emptyHintParts[0]}
+                  <span className="font-medium text-foreground">{t("x5.attachNumbers.modeBuy")}</span>
+                  {emptyHintParts[1]}
                 </p>
               </div>
             ) : (
@@ -323,22 +339,22 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                         <Checkbox
                           checked={allShownSelected || (someShownSelected && "indeterminate")}
                           onCheckedChange={toggleAll}
-                          aria-label="Select all shown numbers"
+                          aria-label={t("x5.attachNumbers.selectAllShown")}
                         />
                       </TableHead>
-                      <TableHead className="text-left text-[11px] uppercase tracking-wider">Number</TableHead>
-                      <TableHead className="text-left text-[11px] uppercase tracking-wider">Code</TableHead>
-                      <TableHead className="text-left text-[11px] uppercase tracking-wider">Name</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Type</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Region</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Status</TableHead>
+                      <TableHead className="text-left text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.number")}</TableHead>
+                      <TableHead className="text-left text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.carrier")}</TableHead>
+                      <TableHead className="text-left text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.name")}</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">{t("trafficUI.common.type")}</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.region")}</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">{t("trafficUI.numbers.track.headers.status")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={7} className="py-10 text-center text-xs text-muted-foreground">
-                          No numbers match your search.
+                          {t("x5.attachNumbers.noMatch")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -353,7 +369,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                             <Checkbox
                               checked={selected.has(n.id)}
                               onCheckedChange={() => toggle(n.id)}
-                              aria-label={`Select ${toE164(n.number)}`}
+                              aria-label={t("trafficUI.numbers.track.selectRow").replace("{number}", toE164(n.number))}
                             />
                           </TableCell>
                           <TableCell className="text-left text-xs font-medium tabular-nums whitespace-nowrap">
@@ -365,7 +381,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                           </TableCell>
                           <TableCell className="text-left text-xs font-medium">{n.label?.trim() || "—"}</TableCell>
                           <TableCell className="text-xs font-medium">
-                            {n.type === "tollfree" ? "Toll-free" : "Local"}
+                            {n.type === "tollfree" ? t("trafficUI.numbers.typeOptions.tollfree") : t("trafficUI.numbers.typeOptions.local")}
                           </TableCell>
                           <TableCell className="text-xs font-medium">
                             {n.city ? `${n.city}, ${n.state ?? ""}` : n.state ?? "—"}
@@ -384,24 +400,28 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
             <DialogFooter className="items-center sm:justify-between">
               <span className="text-xs font-medium tabular-nums text-muted-foreground">
                 {selected.size === 0
-                  ? "Tick one or more numbers to add them"
-                  : `${selected.size} number${selected.size === 1 ? "" : "s"} selected`}
+                  ? t("x5.attachNumbers.tickHint")
+                  : selected.size === 1
+                    ? t("x5.attachNumbers.selectedOne")
+                    : t("x5.attachNumbers.selectedMany").replace("{count}", String(selected.size))}
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={onSubmitAdd} disabled={submitting || selected.size === 0}>
                   {submitting ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Adding…
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("x5.attachNumbers.adding")}
                     </>
                   ) : (
                     <>
                       <Plus className="h-3.5 w-3.5" />{" "}
                       {selected.size > 0
-                        ? `Add ${selected.size} number${selected.size === 1 ? "" : "s"}`
-                        : "Add"}
+                        ? selected.size === 1
+                          ? t("x5.attachNumbers.addOne")
+                          : t("x5.attachNumbers.addMany").replace("{count}", String(selected.size))
+                        : t("common.add")}
                     </>
                   )}
                 </Button>
@@ -411,7 +431,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         ) : (
           <div className="mx-auto w-full max-w-xl space-y-4 overflow-auto">
             <div className="space-y-2">
-              <Label>Number type</Label>
+              <Label>{t("x5.attachNumbers.numberType")}</Label>
               <div className="grid grid-cols-2 gap-2">
                 {(["tollfree", "local"] as NumberType[]).map((nt) => (
                   <button
@@ -425,9 +445,9 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                         : "border-border bg-secondary/30 hover:border-border/80",
                     )}
                   >
-                    <div className="text-sm font-medium">{nt === "tollfree" ? "Toll-free" : "Local"}</div>
+                    <div className="text-sm font-medium">{nt === "tollfree" ? t("trafficUI.numbers.typeOptions.tollfree") : t("trafficUI.numbers.typeOptions.local")}</div>
                     <div className="mt-0.5 text-[10px] text-muted-foreground">
-                      {nt === "tollfree" ? "8xx prefix — best for national campaigns." : "Geo-targeted area code."}
+                      {nt === "tollfree" ? t("x5.attachNumbers.tollfreeHint") : t("x5.attachNumbers.localHint")}
                     </div>
                   </button>
                 ))}
@@ -436,7 +456,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
 
             {buyType === "local" && (
               <div className="space-y-2">
-                <Label>Region</Label>
+                <Label>{t("trafficUI.numbers.track.headers.region")}</Label>
                 <Select value={buyRegion} onValueChange={setBuyRegion}>
                   <SelectTrigger>
                     <SelectValue />
@@ -453,7 +473,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="buy-count">How many</Label>
+              <Label htmlFor="buy-count">{t("x5.attachNumbers.howMany")}</Label>
               <Input
                 id="buy-count"
                 type="number"
@@ -463,22 +483,22 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 onChange={(e) => setBuyCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
                 className="tabular-nums"
               />
-              <p className="text-[10px] text-muted-foreground">Up to 20 per batch.</p>
+              <p className="text-[10px] text-muted-foreground">{t("x5.attachNumbers.upTo20")}</p>
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={onSubmitBuy} disabled={submitting}>
                 {submitting ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Purchasing…
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("x5.attachNumbers.purchasing")}
                   </>
                 ) : (
                   <>
                     <Plus className="h-3.5 w-3.5" />{" "}
-                    {buyCount > 1 ? `Buy ${buyCount} numbers & add` : "Buy & add"}
+                    {buyCount > 1 ? t("x5.attachNumbers.buyManyAdd").replace("{count}", String(buyCount)) : t("x5.attachNumbers.buyAdd")}
                   </>
                 )}
               </Button>
@@ -490,8 +510,16 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
   );
 }
 
+const STATUS_KEY: Record<string, string> = {
+  active: "trafficUI.numbers.statusOptions.active",
+  paused: "trafficUI.numbers.statusOptions.paused",
+  pending: "trafficUI.numbers.statusOptions.pending",
+  expired: "trafficUI.numbers.statusOptions.expired",
+};
+
 /** Active / Paused / Pending / Expired as a small coloured pill. */
 function NumberStatusPill({ status }: { status: TrackingNumber["status"] }) {
+  const { t } = useTranslation();
   const tone =
     status === "active"
       ? "bg-[color:var(--success)]/15 text-[color:var(--success)]"
@@ -502,7 +530,7 @@ function NumberStatusPill({ status }: { status: TrackingNumber["status"] }) {
           : "bg-muted text-muted-foreground";
   return (
     <span className={cn("inline-flex min-w-[4.5rem] justify-center rounded-md px-2 py-0.5 text-[11px] font-medium capitalize", tone)}>
-      {status}
+      {STATUS_KEY[status] ? t(STATUS_KEY[status]) : status}
     </span>
   );
 }

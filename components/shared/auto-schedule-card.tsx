@@ -23,7 +23,6 @@ import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import {
   PORTAL_TIMEZONES,
-  formatTime12,
   to12h,
   to24h,
   type AutoSchedule,
@@ -62,7 +61,16 @@ export function AutoScheduleCard({ target, id, entityLabel }: Props) {
   const play = to12h(schedule.playHour);
   const pause = to12h(schedule.pauseHour);
 
-  const labelNoun = entityLabel ?? target;
+  // The noun goes into a translated sentence, so it is translated too (with
+  // the case the sentence needs); an unknown noun is shown as passed.
+  const nounKey = `x6.autoSchedule.entity.${entityLabel ?? target}`;
+  const translatedNoun = t(nounKey);
+  const labelNoun = translatedNoun === nounKey ? entityLabel ?? target : translatedNoun;
+  // "08:00 AM" with AM / PM in the chosen language.
+  const formatTime12 = (hour24: number, minute: number) => {
+    const { hour, period } = to12h(hour24);
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${t(period === "AM" ? "x6.time.am" : "x6.time.pm")}`;
+  };
   const tzLabel =
     PORTAL_TIMEZONES.find((tz) => tz.iana === portalTimezone)?.label ?? portalTimezone;
 
@@ -155,6 +163,7 @@ function TimeField({
   period: "AM" | "PM";
   onChange: (hour: number, minute: number, period: "AM" | "PM") => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-1.5">
       <Label className="text-sm">{label}</Label>
@@ -199,8 +208,8 @@ function TimeField({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="AM">AM</SelectItem>
-            <SelectItem value="PM">PM</SelectItem>
+            <SelectItem value="AM">{t("x6.time.am")}</SelectItem>
+            <SelectItem value="PM">{t("x6.time.pm")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -55,13 +55,13 @@ export function ProfileSection() {
       if (user && trimmedName !== user.name) patch.name = trimmedName;
       if (user && trimmedPhone !== (user.phone ?? "")) patch.phone = trimmedPhone;
       if (Object.keys(patch).length === 0) {
-        toast.info("No changes to save");
+        toast.info(t("x5.profile.noChanges"));
         return;
       }
       await updateProfile(patch);
       toast.success(t("settings.profileSection.profileSaved"));
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't save profile"));
+      toast.error(friendlyErrorMessage(e, t("x5.profile.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -80,7 +80,7 @@ export function ProfileSection() {
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      toast.error("Avatar must be under 1.5 MB");
+      toast.error(t("x5.profile.avatarTooBig"));
       return;
     }
 
@@ -92,7 +92,7 @@ export function ProfileSection() {
       await uploadAvatar(file);
       toast.success(t("settings.profileSection.avatarUpdated"));
     } catch (err) {
-      toast.error(friendlyErrorMessage(err, "Couldn't upload avatar"));
+      toast.error(friendlyErrorMessage(err, t("x5.profile.uploadFailed")));
     } finally {
       setAvatarBusy(false);
     }
@@ -104,7 +104,7 @@ export function ProfileSection() {
       await setAvatar(null);
       toast.success(t("settings.profileSection.avatarRemoved"));
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't remove avatar"));
+      toast.error(friendlyErrorMessage(e, t("x5.profile.removeFailed")));
     } finally {
       setAvatarBusy(false);
     }
@@ -116,7 +116,7 @@ export function ProfileSection() {
       await authService.requestPasswordReset(user.email);
       toast.success(t("settings.profileSection.resetEmailSent"));
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Couldn't send reset email"));
+      toast.error(friendlyErrorMessage(e, t("x5.profile.resetFailed")));
     }
   };
 
@@ -142,7 +142,7 @@ export function ProfileSection() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={user.avatarUrl}
-                alt={`${name}'s avatar`}
+                alt={t("x5.profile.avatarAlt").replace("{name}", name)}
                 className="h-20 w-20 rounded-2xl object-cover shadow-lg"
               />
             ) : (

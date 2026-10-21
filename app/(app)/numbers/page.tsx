@@ -11,6 +11,8 @@ import {
   TrackNumbersTable,
   TRACK_NUMBERS_COLUMNS,
   deriveCountry,
+  deriveCountryName,
+  deriveDisplayName,
   deriveName,
   deriveVendor,
 } from "@/components/numbers/track-numbers-table";
@@ -333,7 +335,7 @@ function useFilteredNumbers(
     const q = args.query.trim().toLowerCase();
     if (q) {
       items = items.filter((n) => {
-        const haystack = `${n.number} ${deriveName(n)} ${deriveCountry(n)} ${deriveVendor(n)} ${n.campaignName ?? ""} ${n.state ?? ""}`;
+        const haystack = `${n.number} ${deriveName(n)} ${deriveDisplayName(n)} ${deriveCountry(n)} ${deriveCountryName(n)} ${deriveVendor(n)} ${n.campaignName ?? ""} ${n.state ?? ""}`;
         return haystack.toLowerCase().includes(q);
       });
     }

@@ -71,10 +71,6 @@ export function InvoicesTable() {
     };
   }, []);
 
-  const tr = (key: string, fallback: string) => {
-    const v = t(key);
-    return v === key ? fallback : v;
-  };
   const rates = account?.rates;
   const portalNextDue = formatDay(rates?.portalFeeNextDue);
   const portalLastCharged = formatDay(rates?.portalFeeChargedAt);
@@ -126,7 +122,7 @@ export function InvoicesTable() {
               );
               toast.success(t("toolsUI.billing.invoices.toastExported"));
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Export failed");
+              toast.error(e instanceof Error ? e.message : t("x1.invoices.exportFailed"));
             }
           }}
         >
@@ -140,19 +136,19 @@ export function InvoicesTable() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/60 bg-accent/5 px-4 py-3">
             <div className="flex items-center gap-2 text-xs">
               <CalendarClock className="h-3.5 w-3.5 text-accent" />
-              <span className="font-medium">{tr("toolsUI.billing.invoices.portalFee.label", "Monthly portal fee")}</span>
+              <span className="font-medium">{t("x1.billing.portalFee.title")}</span>
               <span className="font-mono tabular-nums">{formatCurrency(rates.monthlyPortalFee)}</span>
               <span className="text-muted-foreground">
-                {tr("toolsUI.billing.invoices.portalFee.cycle", "· charged automatically every 30 days")}
+                {t("x1.invoices.portalFee.cycle")}
               </span>
             </div>
             <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
               <div className="flex gap-1.5">
-                <dt className="text-muted-foreground">{tr("toolsUI.billing.invoices.portalFee.lastCharged", "Last charged")}</dt>
+                <dt className="text-muted-foreground">{t("billing.rateRows.lastCharged")}</dt>
                 <dd className="font-mono tabular-nums">{portalLastCharged ?? "—"}</dd>
               </div>
               <div className="flex gap-1.5">
-                <dt className="text-muted-foreground">{tr("toolsUI.billing.invoices.portalFee.nextDue", "Next due")}</dt>
+                <dt className="text-muted-foreground">{t("billing.rateRows.nextDue")}</dt>
                 <dd className="font-mono tabular-nums">{portalNextDue ?? "—"}</dd>
               </div>
             </dl>
@@ -179,9 +175,10 @@ export function InvoicesTable() {
                 const date = inv.periodEnd ? new Date(inv.periodEnd) : new Date();
                 const periodStart = inv.periodStart ? formatLocalDate(inv.periodStart) : "";
                 const periodEnd = inv.periodEnd ? formatLocalDate(inv.periodEnd) : "";
+                const callsText = t("publisherBlocks.recentCalls").replace("{count}", String(inv.totalCalls));
                 const description = periodStart && periodEnd
-                  ? `${periodStart} → ${periodEnd} · ${inv.totalCalls} calls`
-                  : `${inv.totalCalls} calls`;
+                  ? `${periodStart} → ${periodEnd} · ${callsText}`
+                  : callsText;
                 return (
                   <motion.tr
                     key={inv.id}

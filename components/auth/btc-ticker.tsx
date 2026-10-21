@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd, formatUsdShort, useBtcPrice } from "@/hooks/use-btc-price";
 
 // The live BTC ticker above the headline (Avortyx also has a trading view). Quiet in size and
@@ -48,15 +49,16 @@ function RollingPrice({ text }: { text: string }) {
 }
 
 export function BtcTicker({ className, compact = false }: { className?: string; compact?: boolean }) {
+  const { t } = useTranslation();
   const btc = useBtcPrice();
   const up = (btc.change24h ?? 0) >= 0;
   const points = btc.history.length > 1 && btc.priceUsd != null ? [...btc.history, btc.priceUsd] : btc.history;
   const W = 120, H = 22;
   const chart = points.length > 1 ? chartPath(points, W, H) : null;
   const details = [
-    btc.high24h != null && `H ${formatUsdShort(btc.high24h)}`,
-    btc.low24h != null && `L ${formatUsdShort(btc.low24h)}`,
-    btc.volume24h != null && `Vol ${Math.round(btc.volume24h).toLocaleString("en-US")} BTC`,
+    btc.high24h != null && t("x6.btc.high").replace("{value}", formatUsdShort(btc.high24h)),
+    btc.low24h != null && t("x6.btc.low").replace("{value}", formatUsdShort(btc.low24h)),
+    btc.volume24h != null && t("x6.btc.volume").replace("{value}", Math.round(btc.volume24h).toLocaleString("en-US")),
   ].filter(Boolean);
   const moved = btc.ticks > 0 ? btc.direction : null;
 
@@ -66,7 +68,7 @@ export function BtcTicker({ className, compact = false }: { className?: string; 
         "inline-flex max-w-full flex-col items-start gap-[6px] rounded-xl border border-white/[0.07] bg-white/[0.025] px-[14px] py-[10px] backdrop-blur-md",
         className,
       )}
-      title={btc.live ? "Live BTC/USD price" : "BTC/USD price"}
+      title={btc.live ? t("x6.btc.titleLive") : t("x6.btc.title")}
     >
       {/* 12px: the rolling digits move in whole 12px steps, so they stay sharp */}
       <div className="flex items-center gap-3 text-[12px] leading-[16px]">
@@ -112,7 +114,7 @@ export function BtcTicker({ className, compact = false }: { className?: string; 
       </div>
       {/* compact (phones): the price line only */}
       {!compact && details.length > 0 && (
-        <p className="text-[11px] leading-[16px] tabular-nums tracking-[0.01em] text-muted-foreground">24h · {details.join(" · ")}</p>
+        <p className="text-[11px] leading-[16px] tabular-nums tracking-[0.01em] text-muted-foreground">{t("x6.btc.period24h")} · {details.join(" · ")}</p>
       )}
     </div>
   );

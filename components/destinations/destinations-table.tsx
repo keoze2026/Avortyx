@@ -392,7 +392,7 @@ export function DestinationsTable({
                         {onClone && can("destinations", "edit") ? (
                           <RowActionIcon
                             icon={CirclePlus}
-                            label={`Clone ${destination.name}`}
+                            label={t("x6.destinations.cloneAria").replace("{name}", destination.name)}
                             onClick={() => onClone(destination.id)}
                           />
                         ) : null}

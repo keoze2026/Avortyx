@@ -88,22 +88,66 @@ function dayOf(iso: string | undefined, timeZone: string): string {
   });
 }
 
+/** Translation keys for the event detail keys, status words, routing check
+ *  names and line types the backend is known to send. Outside English these
+ *  are shown translated; anything else is shown as sent. */
+const DETAIL_LABEL_KEYS: Record<string, string> = {
+  from: "x6.activity.detail.from",
+  destination: "toolsUI.reports.activity.destination",
+  buyer: "toolsUI.reports.activity.buyer",
+  conversionAmount: "x6.activity.detail.conversionAmount",
+  duration: "toolsUI.callLogs.detail.duration",
+  status: "common.status",
+};
+const STATUS_KEYS: Record<string, string> = {
+  completed: "toolsUI.reports.callLog.statusLabel.completed",
+  failed: "toolsUI.callLogs.statusBadge.failed",
+  no_answer: "toolsUI.reports.callLog.failReasons.noAnswer",
+  "in-progress": "toolsUI.reports.filter.statusOptions.inProgress",
+  in_progress: "toolsUI.reports.filter.statusOptions.inProgress",
+  busy: "toolsUI.reports.callLog.statusLabel.busy",
+  ringing: "toolsUI.reports.callLog.statusLabel.ringing",
+};
+const STEP_KEYS: Record<string, string> = {
+  blacklist: "x6.activity.step.blacklist",
+  duplicate: "x6.activity.step.duplicate",
+  campaign_cap: "x6.activity.step.campaignCap",
+  balance: "x6.activity.step.balance",
+};
+const LINE_TYPE_KEYS: Record<string, string> = {
+  mobile: "toolsUI.reports.summary.value.mobile",
+  landline: "toolsUI.reports.summary.value.landline",
+  voip: "toolsUI.reports.summary.value.voip",
+};
+
 /** Turn an event's free-form `detail` object into label/value rows. Keys
  *  arrive camelCased by the HTTP layer; they're de-camelised for display so
  *  a new backend key needs no frontend change to read properly. */
-function detailRows(detail: Record<string, unknown> | null | undefined): Array<[string, string]> {
+function detailRows(
+  detail: Record<string, unknown> | null | undefined,
+  t: (key: string) => string,
+  locale: string,
+): Array<[string, string]> {
   if (!detail) return [];
   const out: Array<[string, string]> = [];
   for (const [k, v] of Object.entries(detail)) {
     if (v === null || v === undefined || v === "") continue;
     if (typeof v === "object") continue;
-    const label = k
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (c) => c.toUpperCase())
-      .trim();
+    const label =
+      locale !== "en" && DETAIL_LABEL_KEYS[k]
+        ? t(DETAIL_LABEL_KEYS[k])
+        : k
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (c) => c.toUpperCase())
+            .trim();
     // Status words arrive raw ("failed", "no_answer"): show them as
     // "Failed", "No answer". Other values are shown as sent.
-    const value = k === "status" ? capitalizeFirst(String(v).replace(/_/g, " ")) ?? "" : String(v);
+    const value =
+      k === "status"
+        ? locale !== "en" && STATUS_KEYS[String(v).toLowerCase()]
+          ? t(STATUS_KEYS[String(v).toLowerCase()])
+          : capitalizeFirst(String(v).replace(/_/g, " ")) ?? ""
+        : String(v);
     out.push([label, value]);
   }
   return out;
@@ -227,7 +271,7 @@ interface TimelineItem {
 }
 
 function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const trace = data.routingTrace;
   // The routing decision happens before the dial, so the call-plan block is
   // slotted in immediately above the first `destination_dialed` event and
@@ -248,8 +292,9 @@ function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) 
   data.timeline.forEach((event, i) => {
     if (i === dialIndex) items.push(planItem(event.at));
     const meta = EVENT_META[event.event] ?? { icon: PhoneIncoming, tint: "bg-muted text-muted-foreground" };
-    // The backend's own label wins; the fallback keeps unknown events
-    // readable so a new event type needs no frontend release.
+    // The backend's own label wins in English (it is English); in other
+    // languages a known event is shown translated. The fallback keeps
+    // unknown events readable so a new event type needs no frontend release.
     const fallbackKey = `toolsUI.reports.activity.events.${event.event}`;
     const translated = t(fallbackKey);
     items.push({
@@ -257,6 +302,7 @@ function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) 
       icon: meta.icon,
       tint: meta.tint,
       title:
+        (locale !== "en" && translated !== fallbackKey ? translated : undefined) ??
         event.label ??
         (translated === fallbackKey
           ? event.event.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
@@ -266,7 +312,7 @@ function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) 
         event.event === "caller_lookup" ? (
           <ProfileFields profile={data.callerProfile} />
         ) : (
-          <FieldList rows={detailRows(event.detail)} />
+          <FieldList rows={detailRows(event.detail, t, locale)} />
         ),
     });
   });
@@ -372,7 +418,7 @@ function capitalizeFirst(v: string | null | undefined): string | undefined {
 }
 
 function ProfileFields({ profile }: { profile: CallerProfile | undefined }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   if (!profile) return null;
   const rows: Array<[string, string]> = [];
   const add = (key: string, v: unknown) => {
@@ -385,7 +431,8 @@ function ProfileFields({ profile }: { profile: CallerProfile | undefined }) {
   add("country", profile.country);
   add("timezone", profile.timezone);
   add("zipCode", profile.zipCode);
-  add("lineType", capitalizeFirst(profile.lineType));
+  const lineTypeKey = profile.lineType ? LINE_TYPE_KEYS[profile.lineType.toLowerCase()] : undefined;
+  add("lineType", locale !== "en" && lineTypeKey ? t(lineTypeKey) : capitalizeFirst(profile.lineType));
   if (profile.isVoip !== null && profile.isVoip !== undefined) {
     add("voip", profile.isVoip ? t("common.yes") : t("common.no"));
   }
@@ -409,7 +456,7 @@ function ProfileFields({ profile }: { profile: CallerProfile | undefined }) {
 /* ─── Call plan / routing trace ─────────────────────────────────────── */
 
 function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const present = hasRoutingTrace(trace);
   const s = trace?.summary ?? {};
 
@@ -456,7 +503,9 @@ function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
           <ul className="space-y-1 pt-1">
             {(trace?.steps ?? []).map((step) => (
               <li key={step.step} className="flex items-center justify-between gap-3 text-[9.5px] font-medium">
-                <span className="text-muted-foreground">{capitalizeFirst(step.step.replace(/_/g, " "))}</span>
+                <span className="text-muted-foreground">
+                  {locale !== "en" && STEP_KEYS[step.step] ? t(STEP_KEYS[step.step]) : capitalizeFirst(step.step.replace(/_/g, " "))}
+                </span>
                 <span className={step.passed ? "text-[color:var(--success)]" : "text-destructive"}>
                   {capitalizeFirst(
                     step.passed
@@ -560,7 +609,9 @@ function ParametersTab({ data }: { data: CallActivity }) {
         [t("toolsUI.reports.activity.profit"), money(data.financials?.profit)],
         [
           t("toolsUI.reports.activity.minDuration"),
-          data.financials?.minCallDuration == null ? undefined : `${data.financials.minCallDuration}s`,
+          data.financials?.minCallDuration == null
+            ? undefined
+            : t("common.secondsShort").replace("{n}", String(data.financials.minCallDuration)),
         ],
       ],
     },

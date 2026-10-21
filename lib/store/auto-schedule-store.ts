@@ -14,6 +14,8 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { toast } from "sonner";
 
 import { campaignsService } from "@/lib/api/services/campaigns.service";
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 
 export type ScheduleTarget = "campaign" | "buyer" | "destination";
 
@@ -72,9 +74,9 @@ export const useAutoScheduleStore = create<State>()(
         // Buyers and destinations have no columns yet, so they stay local —
         // and that is said out loud rather than left to look saved.
         if (target !== "campaign") {
-          toast.warning("Saved on this device only", {
-            description:
-              "Schedules for buyers and destinations aren't stored on the server yet, so they won't run.",
+          const locale = useLocaleStore.getState().locale;
+          toast.warning(tFor(locale, "x2.autoSchedule.savedLocally"), {
+            description: tFor(locale, "x2.autoSchedule.savedLocallyDesc"),
           });
           return;
         }
@@ -88,8 +90,9 @@ export const useAutoScheduleStore = create<State>()(
             autoScheduleTimezone: get().portalTimezone,
           } as Record<string, unknown>)
           .catch((e: unknown) => {
-            toast.error(e instanceof Error ? e.message : "Could not save the schedule", {
-              description: "The change was not saved. Reload to see the current values.",
+            const locale = useLocaleStore.getState().locale;
+            toast.error(e instanceof Error ? e.message : tFor(locale, "x2.autoSchedule.saveFailed"), {
+              description: tFor(locale, "x2.autoSchedule.saveFailedDesc"),
             });
           });
       },

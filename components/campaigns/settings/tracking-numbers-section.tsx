@@ -237,7 +237,7 @@ export function TrackingNumbersSection({
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {n.type}
+                        {n.type === "tollfree" ? t("trafficUI.numbers.typeOptions.tollfree") : n.type === "local" ? t("trafficUI.numbers.typeOptions.local") : t("trafficUI.numbers.typeOptions.international")}
                       </Badge>
                     </TableCell>
                     <TableCell className="min-w-[160px] text-sm">

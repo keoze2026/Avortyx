@@ -79,6 +79,7 @@ function wireToRecommendation(w: WireRecommendation, idx: number): AiRecommendat
     confidence: 0.85,
     impact: {
       label: "Expected effect",
+      labelKey: "x2.insights.expectedEffect",
       value: w.action,
       direction: kind === "pause" ? "down" : "up",
     },

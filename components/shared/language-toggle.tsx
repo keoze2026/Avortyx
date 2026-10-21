@@ -93,7 +93,7 @@ export function LanguageToggle({ className }: Props) {
         variant="ghost"
         size="icon"
         className={cn("relative", className)}
-        aria-label="Language"
+        aria-label={t("topbar.language")}
       >
         <Globe className="h-4 w-4 opacity-50" />
       </Button>

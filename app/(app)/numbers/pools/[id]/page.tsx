@@ -58,6 +58,7 @@ import { ROUTES } from "@/lib/constants";
 import {
   derivePurchaseStatus,
   deriveName as deriveNumberName,
+  deriveDisplayName,
 } from "@/components/numbers/track-numbers-table";
 import { toE164 } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
@@ -70,11 +71,18 @@ import type {
 import { Can } from "@/components/shared/can";
 
 const VENDOR_OPTIONS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
-const PHONE_FORMATS: { id: PhoneNumberFormat; label: string }[] = [
+const PHONE_FORMATS: { id: PhoneNumberFormat; label: string; labelKey?: string }[] = [
   { id: "E164", label: "E164" },
-  { id: "national", label: "National" },
-  { id: "international", label: "International" },
+  { id: "national", label: "National", labelKey: "x5.pools.formatNational" },
+  { id: "international", label: "International", labelKey: "trafficUI.numbers.typeOptions.international" },
 ];
+
+const STATUS_KEY: Record<string, string> = {
+  active: "trafficUI.numbers.statusOptions.active",
+  paused: "trafficUI.numbers.statusOptions.paused",
+  pending: "trafficUI.numbers.statusOptions.pending",
+  expired: "trafficUI.numbers.statusOptions.expired",
+};
 
 export default function NumberPoolDetailPage() {
   const { t } = useTranslation();
@@ -248,7 +256,7 @@ function SetupNumberPoolCard({
           <SelectContent>
             {PHONE_FORMATS.map((f) => (
               <SelectItem key={f.id} value={f.id}>
-                {f.label}
+                {f.labelKey ? t(f.labelKey) : f.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -306,7 +314,7 @@ function AttachNumbersCard({
     const q = query.trim().toLowerCase();
     if (!q) return attached;
     return attached.filter((n) =>
-      `${n.number} ${deriveNumberName(n)}`.toLowerCase().includes(q),
+      `${n.number} ${deriveNumberName(n)} ${deriveDisplayName(n)}`.toLowerCase().includes(q),
     );
   }, [attached, query]);
   const visible = filtered.slice(0, pageSize);
@@ -363,7 +371,7 @@ function AttachNumbersCard({
                       <Checkbox aria-label={t("trafficUI.numbers.track.selectRow").replace("{number}", toE164(n.number))} />
                     </TableCell>
                     <TableCell className="font-mono text-xs">{toE164(n.number)}</TableCell>
-                    <TableCell className="font-medium">{deriveNumberName(n)}</TableCell>
+                    <TableCell className="font-medium">{deriveDisplayName(n)}</TableCell>
                     <TableCell>
                       <Badge variant={purchase.tone}>{t(purchase.labelKey)}</Badge>
                     </TableCell>
@@ -372,7 +380,7 @@ function AttachNumbersCard({
                         {n.type === "tollfree" ? t("trafficUI.numbers.typeOptions.tollfree") : n.type === "local" ? t("trafficUI.numbers.typeOptions.local") : t("trafficUI.numbers.typeOptions.international")}
                       </Badge>
                     </TableCell>
-                    <TableCell className="capitalize">{n.status}</TableCell>
+                    <TableCell className="capitalize">{STATUS_KEY[n.status] ? t(STATUS_KEY[n.status]) : n.status}</TableCell>
                     <TableCell className="pr-4">
                       <Can area="number-pools" action="edit"><Button
                         variant="ghost"
@@ -440,7 +448,7 @@ function AttachNumbersDialog({
     return allNumbers.filter((n) => {
       if (attachedIds.includes(n.id)) return false;
       if (!q) return true;
-      return `${n.number} ${deriveNumberName(n)}`.toLowerCase().includes(q);
+      return `${n.number} ${deriveNumberName(n)} ${deriveDisplayName(n)}`.toLowerCase().includes(q);
     });
   }, [allNumbers, attachedIds, query]);
 
@@ -589,8 +597,8 @@ function TrafficSourcesCard({
   const onAdd = () => {
     const next: TrafficSourceEntry = {
       id: `ts_${Math.random().toString(36).slice(2, 8)}`,
-      name: `Source ${sources.length + 1}`,
-      integration: "Custom",
+      name: t("x5.pools.sourceN").replace("{n}", String(sources.length + 1)),
+      integration: t("x5.pools.custom"),
       events: 0,
       conversions: 0,
     };
@@ -724,6 +732,7 @@ function SecondsInput({
   value: number;
   onChange: (n: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="relative">
       <Input
@@ -738,7 +747,7 @@ function SecondsInput({
         className="pr-10 tabular-nums"
       />
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] uppercase tracking-wider text-muted-foreground">
-        sec
+        {t("trafficUI.common.sec")}
       </span>
     </div>
   );

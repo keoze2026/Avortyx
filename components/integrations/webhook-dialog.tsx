@@ -146,13 +146,15 @@ export function WebhookDialog({ open, onOpenChange, initial, onSave }: Props) {
         } else {
           toast.error(
             res.error
-              ? `Test failed (${res.statusCode ?? "?"}): ${res.error}`
-              : `Test failed with status ${res.statusCode ?? "?"}`,
+              ? t("x5.webhook.testFailedWith")
+                  .replace("{status}", String(res.statusCode ?? "?"))
+                  .replace("{error}", res.error)
+              : t("x5.webhook.testFailedStatus").replace("{status}", String(res.statusCode ?? "?")),
           );
         }
       }
     } catch (e) {
-      toast.error(friendlyErrorMessage(e, "Test delivery failed"));
+      toast.error(friendlyErrorMessage(e, t("x5.webhook.testFailed")));
     } finally {
       setTesting(false);
     }

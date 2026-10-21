@@ -17,6 +17,7 @@ import { Suspense } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 
 function ResetPasswordFallback() {
@@ -30,16 +31,17 @@ function ResetPasswordFallback() {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   return (
     <div className="mx-auto flex w-full max-w-md flex-col items-center">
       <AuthCard
-        title="Set your password"
-        description="Choose a password for your Avortyx account."
+        title={t("x5.auth.setYourPassword")}
+        description={t("x5.auth.resetDescription")}
         footer={
           <>
-            Already have a password?{" "}
+            {t("x5.auth.alreadyHavePassword")}{" "}
             <Link href={ROUTES.login} className="text-accent hover:underline">
-              Sign in
+              {t("common.signIn")}
             </Link>
           </>
         }

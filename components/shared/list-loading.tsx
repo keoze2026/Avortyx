@@ -5,10 +5,13 @@
  * When loading failed, it shows the error and a Try again button instead.
  */
 
+"use client";
+
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function ListLoading({
   rows = 5,
@@ -20,21 +23,22 @@ export function ListLoading({
   error?: string | null;
   onRetry?: () => void;
 }) {
+  const { t } = useTranslation();
   if (error) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-10 text-center">
-        <p className="text-sm font-medium">Couldn&apos;t load this list.</p>
+        <p className="text-sm font-medium">{t("x5.list.loadFailed")}</p>
         <p className="max-w-md text-xs text-muted-foreground">{error}</p>
         {onRetry && (
           <Button size="sm" variant="outline" className="gap-1.5" onClick={onRetry}>
-            <RefreshCw className="h-3.5 w-3.5" /> Try again
+            <RefreshCw className="h-3.5 w-3.5" /> {t("marketplace.tryAgain")}
           </Button>
         )}
       </div>
     );
   }
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card" aria-busy="true" aria-label="Loading">
+    <div className="overflow-hidden rounded-xl border border-border bg-card" aria-busy="true" aria-label={t("common.loading")}>
       <div className="flex items-center gap-4 border-b border-border px-4 py-3">
         {[10, 22, 14, 10, 10, 10].map((w, i) => (
           <Skeleton key={i} className="h-3 rounded" style={{ width: `${w}%` }} />

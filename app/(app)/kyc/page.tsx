@@ -41,6 +41,9 @@ import {
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { cn } from "@/lib/utils";
 import { formatLocalDateTime } from "@/lib/format";
+import { useTranslation } from "@/hooks/use-translation";
+import { tFor } from "@/lib/i18n";
+import { useLocaleStore } from "@/lib/store/locale-store";
 
 type KycMode = "individual" | "company";
 
@@ -50,6 +53,7 @@ interface UploadedDoc {
 }
 
 export default function KycPage() {
+  const { t } = useTranslation();
   const refreshOnboarding = useOnboardingStore((s) => s.refresh);
 
   const [loading, setLoading] = React.useState(true);
@@ -80,6 +84,7 @@ export default function KycPage() {
     setLoading(true);
     try {
       const current = await kycService.get();
+      const locale = useLocaleStore.getState().locale;
       setSubmission(current);
       if (current) {
         setMode(current.kycType);
@@ -93,17 +98,17 @@ export default function KycPage() {
         setTaxId(current.taxId ?? "");
         setDirectorName(current.directorName ?? "");
         if (current.governmentIdUrl) {
-          setGovernmentId({ fileName: "Previously uploaded", url: current.governmentIdUrl });
+          setGovernmentId({ fileName: tFor(locale, "x2.kyc.previouslyUploaded"), url: current.governmentIdUrl });
         }
         if (current.businessRegistrationDocUrl) {
           setBusinessRegistrationDoc({
-            fileName: "Previously uploaded",
+            fileName: tFor(locale, "x2.kyc.previouslyUploaded"),
             url: current.businessRegistrationDocUrl,
           });
         }
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Couldn't load KYC status.";
+      const msg = e instanceof Error ? e.message : tFor(useLocaleStore.getState().locale, "x2.kyc.loadFailed");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -120,11 +125,11 @@ export default function KycPage() {
 
     if (mode === "individual") {
       if (!fullLegalName.trim() || !dateOfBirth || !country.trim() || !address.trim() || !phoneNumber.trim()) {
-        toast.error("Please fill in every field.");
+        toast.error(t("x2.kyc.fillEveryField"));
         return;
       }
       if (!governmentId) {
-        toast.error("Upload a copy of your government-issued ID.");
+        toast.error(t("x2.kyc.uploadGovIdRequired"));
         return;
       }
     } else {
@@ -137,11 +142,11 @@ export default function KycPage() {
         !address.trim() ||
         !phoneNumber.trim()
       ) {
-        toast.error("Please fill in every field.");
+        toast.error(t("x2.kyc.fillEveryField"));
         return;
       }
       if (!businessRegistrationDoc) {
-        toast.error("Upload your business registration certificate.");
+        toast.error(t("x2.kyc.uploadBizRegRequired"));
         return;
       }
     }
@@ -169,12 +174,12 @@ export default function KycPage() {
               businessRegistrationDocUrl: businessRegistrationDoc!.url,
             });
       setSubmission(fresh);
-      toast.success("Submission received — our compliance team will review it shortly.");
+      toast.success(t("x2.kyc.submissionReceived"));
       // The onboarding gate keys on KYC status; refresh so the gate
       // re-evaluates once the backend approves the submission.
       void refreshOnboarding();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Submission failed.";
+      const msg = e instanceof Error ? e.message : t("x2.kyc.submissionFailed");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -184,11 +189,11 @@ export default function KycPage() {
   if (loading) {
     return (
       <>
-        <PageHeader title="Verification" description="Verify your account to unlock call routing." />
+        <PageHeader title={t("x2.kyc.title")} description={t("x2.kyc.subtitle")} />
         <Card>
           <CardContent className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading verification status…
+            {t("x2.kyc.loadingStatus")}
           </CardContent>
         </Card>
       </>
@@ -199,12 +204,12 @@ export default function KycPage() {
   if (submission?.status === "submitted") {
     return (
       <>
-        <PageHeader title="Verification" description="Verify your account to unlock call routing." />
+        <PageHeader title={t("x2.kyc.title")} description={t("x2.kyc.subtitle")} />
         <StatusCard
           icon={Clock}
           tone="warning"
-          title="Submission under review"
-          description="Our compliance team is reviewing your KYC submission. Reviews typically complete within one business day."
+          title={t("x2.kyc.underReviewTitle")}
+          description={t("x2.kyc.underReviewDesc")}
           submittedAt={submission.submittedAt}
         />
       </>
@@ -214,12 +219,12 @@ export default function KycPage() {
   if (submission?.status === "approved") {
     return (
       <>
-        <PageHeader title="Verification" description="Your account is verified." />
+        <PageHeader title={t("x2.kyc.title")} description={t("x2.kyc.verifiedSubtitle")} />
         <StatusCard
           icon={CheckCircle2}
           tone="success"
-          title="Verified"
-          description="Your KYC submission has been approved. You now have full access to the platform."
+          title={t("x2.kyc.verifiedTitle")}
+          description={t("x2.kyc.approvedDesc")}
           reviewedAt={submission.reviewedAt}
         />
       </>
@@ -230,8 +235,8 @@ export default function KycPage() {
   return (
     <>
       <PageHeader
-        title="Verification"
-        description="Verify your account to unlock call routing. Submissions are reviewed by our compliance team."
+        title={t("x2.kyc.title")}
+        description={t("x2.kyc.formSubtitle")}
       />
 
       {submission?.status === "rejected" && submission.rejectionReason && (
@@ -239,10 +244,10 @@ export default function KycPage() {
           <CardContent className="flex items-start gap-3 p-4">
             <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <div>
-              <h3 className="text-sm font-semibold text-destructive">Previous submission rejected</h3>
+              <h3 className="text-sm font-semibold text-destructive">{t("x2.kyc.previousRejected")}</h3>
               <p className="mt-1 text-xs text-muted-foreground">{submission.rejectionReason}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Correct the issue below and resubmit to regain access.
+                {t("x2.kyc.correctAndResubmit")}
               </p>
             </div>
           </CardContent>
@@ -254,22 +259,22 @@ export default function KycPage() {
         <Card>
           <CardContent className="p-4">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              Submission type
+              {t("x2.kyc.submissionType")}
             </Label>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ModeCard
                 selected={mode === "individual"}
                 onClick={() => setMode("individual")}
                 icon={ScanFace}
-                title="Individual"
-                description="Sole operator — verify with a government-issued ID."
+                title={t("x2.kyc.individual")}
+                description={t("x2.kyc.individualDesc")}
               />
               <ModeCard
                 selected={mode === "company"}
                 onClick={() => setMode("company")}
                 icon={Building2}
-                title="Company"
-                description="Registered business — verify with company registration."
+                title={t("x2.kyc.company")}
+                description={t("x2.kyc.companyDesc")}
               />
             </div>
           </CardContent>
@@ -279,21 +284,21 @@ export default function KycPage() {
         <Card>
           <CardContent className="space-y-4 p-4">
             <h3 className="text-sm font-semibold">
-              {mode === "individual" ? "Personal details" : "Company details"}
+              {mode === "individual" ? t("x2.kyc.personalDetails") : t("x2.kyc.companyDetails")}
             </h3>
 
             {mode === "individual" ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field
                   id="full-legal-name"
-                  label="Full legal name"
+                  label={t("x2.kyc.fullLegalName")}
                   value={fullLegalName}
                   onChange={setFullLegalName}
                   required
                 />
                 <Field
                   id="date-of-birth"
-                  label="Date of birth"
+                  label={t("x2.kyc.dateOfBirth")}
                   type="date"
                   value={dateOfBirth}
                   onChange={setDateOfBirth}
@@ -304,28 +309,28 @@ export default function KycPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field
                   id="company-legal-name"
-                  label="Legal company name"
+                  label={t("x2.kyc.legalCompanyName")}
                   value={companyLegalName}
                   onChange={setCompanyLegalName}
                   required
                 />
                 <Field
                   id="director-name"
-                  label="Director / authorized officer"
+                  label={t("x2.kyc.director")}
                   value={directorName}
                   onChange={setDirectorName}
                   required
                 />
                 <Field
                   id="business-registration-number"
-                  label="Business registration number"
+                  label={t("x2.kyc.businessRegNumber")}
                   value={businessRegistrationNumber}
                   onChange={setBusinessRegistrationNumber}
                   required
                 />
                 <Field
                   id="tax-id"
-                  label="Tax ID / EIN"
+                  label={t("x2.kyc.taxId")}
                   value={taxId}
                   onChange={setTaxId}
                   required
@@ -338,11 +343,11 @@ export default function KycPage() {
         {/* Address + contact */}
         <Card>
           <CardContent className="space-y-4 p-4">
-            <h3 className="text-sm font-semibold">Address &amp; contact</h3>
+            <h3 className="text-sm font-semibold">{t("x2.kyc.addressContact")}</h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field
                 id="country"
-                label="Country"
+                label={t("trafficUI.common.country")}
                 value={country}
                 onChange={setCountry}
                 placeholder="United States"
@@ -350,7 +355,7 @@ export default function KycPage() {
               />
               <Field
                 id="phone"
-                label="Phone number"
+                label={t("authUI.signup.labelPhone")}
                 type="tel"
                 value={phoneNumber}
                 onChange={setPhoneNumber}
@@ -359,13 +364,13 @@ export default function KycPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">{t("x2.kyc.address")}</Label>
               <Textarea
                 id="address"
                 rows={2}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street, city, state / region, postal code"
+                placeholder={t("x2.kyc.addressPlaceholder")}
                 required
               />
             </div>
@@ -376,12 +381,12 @@ export default function KycPage() {
         <Card>
           <CardContent className="space-y-3 p-4">
             <h3 className="text-sm font-semibold">
-              {mode === "individual" ? "Government-issued ID" : "Business registration certificate"}
+              {mode === "individual" ? t("x2.kyc.govId") : t("x2.kyc.bizRegCert")}
             </h3>
             <p className="text-xs text-muted-foreground">
               {mode === "individual"
-                ? "Upload a clear photo or scan of your passport, driver's licence, or national ID card."
-                : "Upload your certificate of incorporation or equivalent registration document."}
+                ? t("x2.kyc.govIdHint")
+                : t("x2.kyc.bizRegHint")}
             </p>
 
             <DocumentUploader
@@ -403,12 +408,12 @@ export default function KycPage() {
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Submitting…
+                {t("x2.kyc.submitting")}
               </>
             ) : submission?.status === "rejected" ? (
-              "Resubmit for review"
+              t("x2.kyc.resubmit")
             ) : (
-              "Submit for review"
+              t("x2.kyc.submit")
             )}
           </Button>
         </div>
@@ -504,6 +509,7 @@ function DocumentUploader({
   onUploaded: (doc: UploadedDoc) => void;
   onClear: () => void;
 }) {
+  const { t } = useTranslation();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = React.useState(false);
 
@@ -512,9 +518,9 @@ function DocumentUploader({
     try {
       const { url } = await kycService.uploadDocument(file, documentType);
       onUploaded({ fileName: file.name, url });
-      toast.success(`${file.name} uploaded.`);
+      toast.success(t("x2.kyc.fileUploaded").replace("{name}", file.name));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Upload failed.";
+      const msg = e instanceof Error ? e.message : t("x2.kyc.uploadFailed");
       toast.error(msg);
     } finally {
       setUploading(false);
@@ -537,12 +543,12 @@ function DocumentUploader({
               rel="noreferrer"
               className="truncate text-[11px] text-accent hover:underline"
             >
-              View uploaded file
+              {t("x2.kyc.viewUploaded")}
             </a>
           </div>
         </div>
         <Button type="button" variant="ghost" size="sm" onClick={onClear}>
-          Replace
+          {t("settings.profileSection.replace")}
         </Button>
       </div>
     );
@@ -569,13 +575,13 @@ function DocumentUploader({
         {uploading ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Uploading…</span>
+            <span className="text-xs text-muted-foreground">{t("x2.kyc.uploading")}</span>
           </>
         ) : (
           <>
             <Upload className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium">Click to upload</span>
-            <span className="text-[11px] text-muted-foreground">PDF, JPG, or PNG · up to 10 MB</span>
+            <span className="text-sm font-medium">{t("x2.kyc.clickToUpload")}</span>
+            <span className="text-[11px] text-muted-foreground">{t("x2.kyc.fileTypes")}</span>
           </>
         )}
       </button>
@@ -598,6 +604,7 @@ function StatusCard({
   submittedAt?: number;
   reviewedAt?: number;
 }) {
+  const { t } = useTranslation();
   const toneClasses =
     tone === "success"
       ? "border-[color:var(--success)]/40 bg-[color:var(--success)]/5 text-[color:var(--success)]"
@@ -614,9 +621,9 @@ function StatusCard({
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           {(submittedAt || reviewedAt) && (
             <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-              {submittedAt && <>Submitted {formatLocalDateTime(submittedAt)}</>}
+              {submittedAt && <>{t("x2.kyc.submittedAt").replace("{date}", formatLocalDateTime(submittedAt))}</>}
               {submittedAt && reviewedAt && " · "}
-              {reviewedAt && <>Reviewed {formatLocalDateTime(reviewedAt)}</>}
+              {reviewedAt && <>{t("x2.kyc.reviewedAt").replace("{date}", formatLocalDateTime(reviewedAt))}</>}
             </p>
           )}
         </div>

@@ -22,7 +22,7 @@ export interface AiRecommendation {
   /** 0..1 — model confidence */
   confidence: number;
   /** The headline impact if applied */
-  impact: { label: string; value: string; direction: "up" | "down" };
+  impact: { label: string; /** Translation key for `label`, when it is a fixed text. */ labelKey?: string; value: string; direction: "up" | "down" };
   /** Trailing baseline series + forward projected (used for the micro-chart) */
   baseline: number[];
   projected: number[];

@@ -21,8 +21,8 @@ export const REQUEST_ACCESS_MAILTO = `mailto:${BRAND.email}?subject=${encodeURIC
 
 /** The primary call-to-action: into the portal, or an access request. */
 export const PORTAL_CTA = PUBLIC_PORTAL_LINKS
-  ? { label: "Get started", href: "/signup" }
-  : { label: "Request access", href: REQUEST_ACCESS_HREF };
+  ? { label: "Get started", labelKey: "common.getStarted", href: "/signup" }
+  : { label: "Request access", labelKey: "x2.portal.requestAccess", href: REQUEST_ACCESS_HREF };
 
 /** Route into the portal when links are public, otherwise the access request. */
 export function portalHref(route: string): string {

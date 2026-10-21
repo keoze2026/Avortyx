@@ -7,6 +7,7 @@ import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function AppError({
   error,
@@ -15,6 +16,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     // Surface to monitoring once we wire one — for now the digest helps support.
     if (process.env.NODE_ENV !== "production") {
@@ -46,7 +48,7 @@ export default function AppError({
           <div className="relative text-center">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-destructive">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-              fault detected
+              {t("x1.appError.badge")}
             </div>
 
             <div className="mt-5 inline-flex h-12 w-12 items-center justify-center rounded-full border border-destructive/30 bg-destructive/5">
@@ -54,27 +56,26 @@ export default function AppError({
             </div>
 
             <h1 className="mt-4 text-lg font-semibold tracking-tight sm:text-xl">
-              Something went sideways
+              {t("x1.appError.title")}
             </h1>
             <p className="mt-1 max-w-md mx-auto text-sm text-muted-foreground">
-              We hit an unexpected error rendering this view. Retry, or head back to
-              the dashboard while we look into it.
+              {t("x1.appError.description")}
             </p>
 
             {error?.digest ? (
               <div className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                <span className="text-muted-foreground/60">trace</span>
+                <span className="text-muted-foreground/60">{t("x1.appError.trace")}</span>
                 <span className="text-foreground/85">{error.digest}</span>
               </div>
             ) : null}
 
             <div className="mt-7 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button size="sm" onClick={reset} className="gap-1.5">
-                <RotateCcw className="h-3.5 w-3.5" /> Retry
+                <RotateCcw className="h-3.5 w-3.5" /> {t("workspaceUI.apiKeys.retry")}
               </Button>
               <Link href={ROUTES.dashboard}>
                 <Button size="sm" variant="outline" className="gap-1.5">
-                  <Home className="h-3.5 w-3.5" /> Dashboard
+                  <Home className="h-3.5 w-3.5" /> {t("nav.dashboard")}
                 </Button>
               </Link>
             </div>

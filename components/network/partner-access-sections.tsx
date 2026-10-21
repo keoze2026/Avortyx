@@ -64,6 +64,7 @@ export function PartnerReportingVisibility({
   /** Keeps checkbox ids unique when the box is on screen twice. */
   idPrefix: string;
 }) {
+  const { t } = useTranslation();
   const label = useLabel();
   const { catalogue, settings, status } = usePartnerSettings(kind, id);
   const toggleColumn = usePartnerSettingsStore((s) => s.toggleColumn);
@@ -75,7 +76,7 @@ export function PartnerReportingVisibility({
     try {
       await toggleColumn(kind, id, key);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save reporting visibility");
+      toast.error(e instanceof Error ? e.message : t("x2.partnerAccess.saveVisibilityFailed"));
     }
   };
 
@@ -87,7 +88,7 @@ export function PartnerReportingVisibility({
         .replace("{total}", String(columns.length))}
     >
       {status === "error" && !settings ? (
-        <p className="px-4 pb-4 text-xs text-destructive">Couldn&apos;t load the saved settings. Reload the page to try again.</p>
+        <p className="px-4 pb-4 text-xs text-destructive">{t("x2.partnerAccess.loadFailed")}</p>
       ) : (
         <ul className="grid grid-cols-1 gap-1 px-2 py-2 sm:grid-cols-2">
           {columns.map((col) => {
@@ -111,10 +112,12 @@ export function PartnerReportingVisibility({
                   />
                   <div className="min-w-0">
                     <div className="text-sm font-medium leading-tight">
-                      {label(`sharedUI.reportingVisibility.columns.${k}.label`, col.label)}
+                      {col.labelKey ? t(col.labelKey) : label(`sharedUI.reportingVisibility.columns.${k}.label`, col.label)}
                     </div>
                     <div className="mt-0.5 text-xs text-muted-foreground">
-                      {label(`sharedUI.reportingVisibility.columns.${k}.description`, col.description)}
+                      {col.descriptionKey
+                        ? t(col.descriptionKey)
+                        : label(`sharedUI.reportingVisibility.columns.${k}.description`, col.description)}
                     </div>
                   </div>
                 </label>
@@ -144,6 +147,7 @@ export function PartnerPermissions({
   /** With a {label} placeholder. */
   toggleAria: string;
 }) {
+  const { t } = useTranslation();
   const { catalogue, settings } = usePartnerSettings(kind, id);
   const togglePermission = usePartnerSettingsStore((s) => s.togglePermission);
   const items = (catalogue?.permissions ?? []).filter((p) => !only || only.includes(p.key));
@@ -152,27 +156,32 @@ export function PartnerPermissions({
     try {
       await togglePermission(kind, id, key);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save the permission");
+      toast.error(e instanceof Error ? e.message : t("x2.partnerAccess.savePermissionFailed"));
     }
   };
 
   return (
     <Section title={title} description={description}>
       <ul className="divide-y divide-border">
-        {items.map((p) => (
-          <li key={p.key} className="flex items-center justify-between gap-4 px-4 py-3.5">
-            <div>
-              <div className="text-sm font-medium leading-tight">{p.label}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">{p.description}</div>
-            </div>
-            <Switch
-              checked={settings ? settings.permissions[p.key] ?? p.default : false}
-              disabled={!settings}
-              onCheckedChange={() => void onToggle(p.key)}
-              aria-label={toggleAria.replace("{label}", p.label)}
-            />
-          </li>
-        ))}
+        {items.map((p) => {
+          const pLabel = p.labelKey ? t(p.labelKey) : p.label;
+          return (
+            <li key={p.key} className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <div>
+                <div className="text-sm font-medium leading-tight">{pLabel}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {p.descriptionKey ? t(p.descriptionKey) : p.description}
+                </div>
+              </div>
+              <Switch
+                checked={settings ? settings.permissions[p.key] ?? p.default : false}
+                disabled={!settings}
+                onCheckedChange={() => void onToggle(p.key)}
+                aria-label={toggleAria.replace("{label}", pLabel)}
+              />
+            </li>
+          );
+        })}
       </ul>
     </Section>
   );
