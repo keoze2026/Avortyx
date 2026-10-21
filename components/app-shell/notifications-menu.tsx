@@ -69,9 +69,12 @@ export function NotificationsMenu() {
   // "TFNs deleted" (backend CH-179): pinned above the tabs until 12 PM
   // Eastern (CH-182); only numbers not yet Seen count on the bell. Not part
   // of "Mark all read" on purpose.
+  // Backend CH-182 keeps seen numbers until 12 PM itself; `kept` (the browser's
+  // own copy) is only a fallback for an older backend.
   const deletedCount = useDeletedTfnsStore((s) => s.count);
+  const deletedUnseen = useDeletedTfnsStore((s) => s.unseenCount);
   const keptCount = useDeletedTfnsStore((s) => s.kept.length);
-  const unread = items.filter((n) => !n.read).length + deletedCount;
+  const unread = items.filter((n) => !n.read).length + deletedUnseen;
 
   /** All alert-severity items (`critical` + `warn`). Used both for the
    *  "Alerts" tab count and the sub-chip counts. */
@@ -290,20 +293,27 @@ export function NotificationsMenu() {
  *  only clears the badge, so numbers already seen are dimmed, not removed. */
 function DeletedTfnsCard() {
   const { t } = useTranslation();
-  const unseen = useDeletedTfnsStore((s) => s.count);
+  const total = useDeletedTfnsStore((s) => s.count);
+  const unseen = useDeletedTfnsStore((s) => s.unseenCount);
   const numbers = useDeletedTfnsStore((s) => s.numbers);
   const kept = useDeletedTfnsStore((s) => s.kept);
   const markSeen = useDeletedTfnsStore((s) => s.markSeen);
   const [busy, setBusy] = React.useState(false);
-  const count = unseen + kept.length;
-  const listed = [...numbers.map((n) => ({ ...n, seen: false })), ...kept.map((n) => ({ ...n, seen: true }))];
+  const count = total + kept.length;
+  // The server marks what this user has Seen (backend CH-182).
+  const listed = [...numbers.map((n) => ({ ...n, seen: !!n.seen })), ...kept.map((n) => ({ ...n, seen: true }))];
   const shown = listed.slice(0, 8);
   const more = count - shown.length;
 
   return (
-    <div className="mx-4 mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+    <div
+      className={cn(
+        "mx-4 mb-3 rounded-md border p-3",
+        unseen > 0 ? "border-destructive/40 bg-destructive/10" : "border-border bg-secondary/30",
+      )}
+    >
       <div className="flex items-start gap-2">
-        <PhoneOff className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+        <PhoneOff className={cn("mt-0.5 h-4 w-4 shrink-0", unseen > 0 ? "text-destructive" : "text-muted-foreground")} />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-foreground">
             {count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count))}

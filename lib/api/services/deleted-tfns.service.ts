@@ -14,22 +14,31 @@ export interface DeletedTfn {
   carrierCode: string;
   reason: string;
   retiredAt: string;
+  /** Retired before this user last clicked Seen (backend CH-182). */
+  seen?: boolean;
 }
 
 export interface DeletedTfnsNotice {
+  /** Backend CH-182: everything listed until 12 PM Eastern, seen or not. */
   count: number;
+  /** Backend CH-182: retired since this user last clicked Seen. Drives the
+   *  bell badge, the banner and the Seen button. */
+  unseenCount: number;
   numbers: DeletedTfn[];
   seenAt: string | null;
   /** The newest retirement in `numbers`; sent back with Seen. */
   newestAt: string | null;
 }
 
-const EMPTY: DeletedTfnsNotice = { count: 0, numbers: [], seenAt: null, newestAt: null };
+const EMPTY: DeletedTfnsNotice = { count: 0, unseenCount: 0, numbers: [], seenAt: null, newestAt: null };
 
 function normalise(w: Partial<DeletedTfnsNotice> | null | undefined): DeletedTfnsNotice {
   if (!w) return EMPTY;
   return {
     count: typeof w.count === "number" ? w.count : 0,
+    // An older backend sends no unseen_count: there, count meant "unseen".
+    unseenCount:
+      typeof w.unseenCount === "number" ? w.unseenCount : typeof w.count === "number" ? w.count : 0,
     numbers: Array.isArray(w.numbers) ? w.numbers : [],
     seenAt: w.seenAt ?? null,
     newestAt: w.newestAt ?? null,

@@ -83,6 +83,7 @@ export const useDeletedTfnsStore = create<State>()(
       };
       return {
         count: 0,
+        unseenCount: 0,
         numbers: [],
         seenAt: null,
         newestAt: null,

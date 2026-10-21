@@ -22,7 +22,8 @@ export function useDeletedTfnsRuntime() {
   const user = useAuthStore((s) => s.user);
   const isStaff = !!user && user.role !== "buyer" && user.role !== "publisher";
   const load = useDeletedTfnsStore((s) => s.load);
-  const count = useDeletedTfnsStore((s) => s.count);
+  // Only numbers not yet Seen raise the banner (backend CH-182).
+  const count = useDeletedTfnsStore((s) => s.unseenCount);
   const numbers = useDeletedTfnsStore((s) => s.numbers);
   const newestAt = useDeletedTfnsStore((s) => s.newestAt);
   const markSeen = useDeletedTfnsStore((s) => s.markSeen);
@@ -50,7 +51,7 @@ export function useDeletedTfnsRuntime() {
     // One banner per batch: a new retirement raises it again.
     if (bannerFor.current === newestAt) return;
     bannerFor.current = newestAt;
-    const shown = numbers.slice(0, 5).map((n) => n.number).join(", ");
+    const shown = numbers.filter((n) => !n.seen).slice(0, 5).map((n) => n.number).join(", ");
     const more = count > 5 ? " " + t("deletedTfns.more").replace("{count}", String(count - 5)) : "";
     toast.warning(
       count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count)),

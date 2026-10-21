@@ -139,7 +139,14 @@ export function TrackingNumbersSection({
   // One shared width per column (the longest value in it): every value then
   // starts at the same place, and that block is centred under the heading.
   const longest = (values: string[]) => values.reduce((m, v) => Math.max(m, v.length), 1);
-  const nameCh = Math.min(30, longest(numbers.map((n) => n.label ?? "")) + 3);
+  // Name column (Sir, 21 Oct: "name in center", like the Not Connected / Fail
+  // Reason column): the names form one block exactly as wide as the widest of
+  // them - measured by the browser in the real font from invisible copies -
+  // centred under the heading, every name starting at the same place.
+  const namePlaceholder = t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder");
+  const nameSizers = Array.from(
+    new Set(numbers.map((n) => n.label?.trim() || (readOnly ? "—" : namePlaceholder))),
+  );
   const publisherCh = Math.min(30, longest(numbers.map((n) => n.publisherName ?? "—")) + 1);
   const payoutCh = longest(numbers.map((n) => formatCurrency(n.payoutPerCall ?? 0, true)));
 
@@ -233,16 +240,22 @@ export function TrackingNumbersSection({
                         {n.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="min-w-[160px] text-center text-sm">
+                    <TableCell className="min-w-[160px] text-sm">
+                      <div className="mx-auto grid w-fit max-w-[240px]">
                       {readOnly ? (
-                        <div className="mx-auto text-center" style={{ width: `${nameCh}ch` }}>
-                          <span className={cn(!n.label && "text-muted-foreground")}>{n.label || "—"}</span>
-                        </div>
+                        <span
+                          className={cn(
+                            "whitespace-nowrap text-left [grid-area:1/1]",
+                            !n.label && "text-muted-foreground",
+                          )}
+                        >
+                          {n.label || "—"}
+                        </span>
                       ) : (
                       <NumberNameCell
-                        widthCh={nameCh}
+                        className="[grid-area:1/1]"
                         value={n.label ?? ""}
-                        placeholder={t("trafficUI.campaigns.settings.trackingNumbers.name.placeholder")}
+                        placeholder={namePlaceholder}
                         ariaLabel={t("trafficUI.campaigns.settings.trackingNumbers.name.aria").replace("{number}", e164)}
                         onSave={async (label) => {
                           try {
@@ -254,6 +267,11 @@ export function TrackingNumbersSection({
                         }}
                       />
                       )}
+                      <WidestOf
+                        values={nameSizers}
+                        className={readOnly ? undefined : "border border-transparent px-2"}
+                      />
+                      </div>
                     </TableCell>
                     {/* The values start at the same place in every row, and that
                         block is centred under the heading. */}
@@ -347,14 +365,14 @@ export function TrackingNumbersSection({
  * text until hovered or focused, so the table reads the same as before.
  */
 function NumberNameCell({
-  widthCh,
+  className,
   value,
   placeholder,
   ariaLabel,
   onSave,
 }: {
-  /** Width shared by the whole column; the name is centred in it, under the heading (CH-183). */
-  widthCh: number;
+  /** Placement in the column's grid; the column block sets the width (CH-183). */
+  className?: string;
   value: string;
   placeholder: string;
   ariaLabel: string;
@@ -375,6 +393,9 @@ function NumberNameCell({
   return (
     <Input
       value={draft}
+      // A text box's built-in width would set the column's width; size 1 hands
+      // that to the names measured by WidestOf, and w-full fills it.
+      size={1}
       maxLength={255}
       placeholder={placeholder}
       aria-label={ariaLabel}
@@ -389,9 +410,33 @@ function NumberNameCell({
           requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
         }
       }}
-      style={{ width: `${widthCh}ch` }}
-      className="mx-auto h-8 max-w-[240px] border-transparent bg-transparent px-2 text-center text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent"
+      className={cn(
+        "h-8 w-full min-w-0 border-transparent bg-transparent px-2 text-left text-sm shadow-none hover:border-border focus-visible:border-input dark:bg-transparent",
+        className,
+      )}
     />
+  );
+}
+
+/**
+ * Every value of a column, invisible and stacked in one grid cell, so the
+ * column's block is exactly as wide as its widest value in the real font
+ * (the same technique as the Fail Reason column, CH-170). Zero height, so it
+ * adds width only.
+ */
+function WidestOf({ values, className }: { values: string[]; className?: string }) {
+  return (
+    <>
+      {values.map((v) => (
+        <span
+          key={v}
+          aria-hidden
+          className={cn("invisible h-0 overflow-hidden whitespace-pre text-sm [grid-area:1/1]", className)}
+        >
+          {v}
+        </span>
+      ))}
+    </>
   );
 }
 
