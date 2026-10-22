@@ -504,7 +504,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.name")}</TableHead>
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.number")}</TableHead>
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.type")}</TableHead>
-              <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.revenue")}</TableHead>
+              <TableHead className="text-center uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.revenue")}</TableHead>
               <TableHead className="text-center uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.status")}</TableHead>
               <TableHead className="pr-6 text-center uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.actions")}</TableHead>
             </TableRow>
@@ -576,7 +576,8 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         {conversions[d.id]?.convertOn ?? "Call Connected"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-[11px] tabular-nums">
+                    {/* Centred under REVENUE like the other columns (it was right-aligned). */}
+                    <TableCell className="text-center font-mono text-[11px] tabular-nums">
                       {formatCurrency(
                         conversions[d.id]?.rate ?? buyer?.bidAmount ?? 0,
                         true,
