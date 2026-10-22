@@ -114,7 +114,7 @@ export function AnomalyStream() {
                       {t(sev.labelKey)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {a.scope.type} · {a.scope.name}
+                      {a.scope.type === "network" ? "Network" : a.scope.type} · {a.scope.name}
                     </span>
                   </div>
                   <div className="mt-1 text-sm font-medium">{a.title}</div>

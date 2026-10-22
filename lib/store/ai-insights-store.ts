@@ -124,6 +124,24 @@ function anomalySeverity(w: WireAnomaly): AnomalySeverity {
   return anomalySeverityFromChange(w.changePercent);
 }
 
+/** What the portal calls a metric. The backend sends its internal names
+ *  ("call_volume"), which were shown as-is under every alert (CH-210). */
+const METRIC_LABELS: Record<string, string> = {
+  call_volume: "Call Volume",
+  revenue: "Revenue",
+  live_activity: "Live Activity",
+};
+
+function metricLabel(metric: string): string {
+  const known = METRIC_LABELS[metric.toLowerCase()];
+  if (known) return known;
+  return metric
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function wireToAnomaly(w: WireAnomaly, idx: number): Anomaly {
   // Backend occasionally returns rows with metric missing; coerce to a string
   // so downstream consumers (notifications dropdown) can safely .toLowerCase().
@@ -134,7 +152,7 @@ function wireToAnomaly(w: WireAnomaly, idx: number): Anomaly {
     severity: anomalySeverity(w),
     title: w.title,
     body: w.message,
-    scope: { type: "network", name: metric },
+    scope: { type: "network", name: metricLabel(metric) },
     detectedAt: Date.now(),
     delta: {
       metric,
