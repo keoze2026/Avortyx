@@ -44,6 +44,8 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LiveBadge } from "@/components/campaigns/settings/live-badge";
+import { liveFor, useLiveCounts } from "@/lib/use-live-counts";
 
 type RoutingOption = "Standard" | "Menu" | "Call Flow" | "Revenue";
 type DuplicateHandling = "Normal" | "Original" | "Different";
@@ -107,6 +109,8 @@ interface RoutedRow {
   /** The Destination record behind the number, when there is one. */
   destId?: string;
   enabled: boolean;
+  /** The destination's concurrency cap (0 = no cap), for the LIVE column. */
+  concurrencyCap: number;
 }
 
 /** Longest duplicate window offered: five years, in hours (5 × 8,760). */
@@ -212,6 +216,8 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   };
 
   const allDestinations = useDestinationsStore((s) => s.destinations);
+  // Calls up right now on each destination, for the LIVE column (Sir, CH-212).
+  const live = useLiveCounts();
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
   const buyers = useBuyersStore((s) => s.buyers);
   const buyerById = useMemo(() => new Map(buyers.map((b) => [b.id, b])), [buyers]);
@@ -268,6 +274,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         buyerName: r.buyerName ?? dest?.buyerName,
         destId: dest?.id,
         enabled: dest ? dest.enabled : true,
+        concurrencyCap: dest?.concurrencyCap ?? 0,
       };
     });
   }, [routed, allDestinations]);
@@ -505,6 +512,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.number")}</TableHead>
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.type")}</TableHead>
               <TableHead className="text-center uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.revenue")}</TableHead>
+              <TableHead className="text-center uppercase tracking-wider text-[10px]">{t("networkUI.destinations.table.live")}</TableHead>
               <TableHead className="text-center uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.status")}</TableHead>
               <TableHead className="pr-6 text-center uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.actions")}</TableHead>
             </TableRow>
@@ -512,7 +520,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           <TableBody>
             {destinations.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={8} className="pl-6 py-6 text-xs text-muted-foreground">
+                <TableCell colSpan={9} className="pl-6 py-6 text-xs text-muted-foreground">
                   {routedLoaded ? t("trafficUI.campaigns.settings.forward.empty") : t("y.fwd.loading")}
                 </TableCell>
               </TableRow>
@@ -582,6 +590,15 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         conversions[d.id]?.rate ?? buyer?.bidAmount ?? 0,
                         true,
                       )}
+                    </TableCell>
+                    {/* LIVE: calls up now / the destination's concurrency cap,
+                        as on the Destinations page and in Revo. */}
+                    <TableCell className="text-center">
+                      <LiveBadge
+                        live={liveFor(live.destinations, d.tfn)}
+                        cap={d.concurrencyCap}
+                        loaded={live.loaded}
+                      />
                     </TableCell>
                     <TableCell className="text-center">
                       <Switch className="data-[state=checked]:bg-accent"
