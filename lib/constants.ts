@@ -29,6 +29,7 @@ export const ROUTES = {
   live: "/live",
   campaigns: "/campaigns",
   numbers: "/numbers",
+  tfnCheck: "/tfn-check",
   routing: "/routing",
   buyers: "/buyers",
   destinations: "/destinations",
