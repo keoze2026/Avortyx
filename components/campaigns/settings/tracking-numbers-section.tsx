@@ -29,6 +29,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LiveBadge } from "@/components/campaigns/settings/live-badge";
+import { liveFor, useLiveCounts } from "@/lib/use-live-counts";
 
 export function TrackingNumbersSection({
   campaignId,
@@ -43,6 +45,8 @@ export function TrackingNumbersSection({
   const { t } = useTranslation();
   // Stable selector + useMemo to avoid the new-ref-per-render Zustand loop.
   const allNumbers = useNumbersStore((s) => s.numbers);
+  // Calls up right now on each tracking number, for the LIVE column (Sir, CH-212).
+  const live = useLiveCounts();
   const setNumberStatus = useNumbersStore((s) => s.setNumberStatus);
   const updateNumber = useNumbersStore((s) => s.updateNumber);
   const numbers = useMemo(
@@ -212,6 +216,7 @@ export function TrackingNumbersSection({
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
                 <TableHead className="uppercase tracking-wider text-[11px]">{t("campaignRisk.column")}</TableHead>
+                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("networkUI.destinations.table.live")}</TableHead>
                 <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
                 {!readOnly && (
                   <TableHead className="pr-6 text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.actions")}</TableHead>
@@ -287,6 +292,9 @@ export function TrackingNumbersSection({
                     </TableCell>
                     <TableCell>
                       <CampaignRiskBadge risk={campaignRisk([n])} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <LiveBadge live={liveFor(live.tracking, n.number)} loaded={live.loaded} />
                     </TableCell>
                     <TableCell className="text-center">
                       {readOnly ? (
