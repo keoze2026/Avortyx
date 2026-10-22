@@ -5,7 +5,6 @@ import { CheckCircle2, DollarSign, Gauge, PhoneCall, Users } from "lucide-react"
 
 import { BuyerFunnelChart } from "@/components/buyers/buyer-funnel-chart";
 import { RecentCallsFeed } from "@/components/dashboard/recent-calls-feed";
-import { AutoScheduleCard } from "@/components/shared/auto-schedule-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
@@ -18,11 +17,8 @@ export function BuyerOverviewTab({ buyer }: { buyer: Buyer }) {
 
   return (
     <div className="space-y-4">
-      {/* Auto schedule — daily play/pause on portal time. Lifted up to the
-          Overview tab so the operator doesn't have to dig into Settings to
-          see whether the buyer is being auto-paused. */}
-      <AutoScheduleCard target="buyer" id={buyer.id} entityLabel="buyer" />
-
+      {/* No buyer auto-schedule (CH-203): it was saved only in one browser and
+          that browser's open tabs paused the buyer for everybody. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <BuyerFunnelChart buyer={buyer} />

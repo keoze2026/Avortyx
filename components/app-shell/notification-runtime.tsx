@@ -1,7 +1,6 @@
 "use client";
 
 import { PushNotifications } from "./push-notifications";
-import { useAutoScheduleRuntime } from "@/lib/auto-schedule-runtime";
 import * as React from "react";
 
 import { useAnomalyPopupRuntime } from "@/lib/anomaly-popup-runtime";
@@ -11,8 +10,16 @@ import { useAlertPreferencesStore } from "@/lib/store/alert-preferences-store";
 
 /**
  * Mounted once at the (app) layout level. Boots client-side runtimes:
- * iPhone-style push banner stack, and the auto-schedule runtime that flips
- * campaigns / buyers / destinations between active and paused on schedule.
+ * the iPhone-style push banner stack and the alert watchers below.
+ *
+ * The browser auto-schedule runtime is gone (CH-203, Sir 22 Oct: "tfns
+ * getting switched off automatically"). Every open tab ran it every 30
+ * seconds and switched campaigns, buyers and destination lines on or off
+ * from schedules saved in THAT browser's localStorage, using whoever was
+ * logged in. A forgotten schedule in one browser kept switching lines off
+ * for everybody, and it showed in the activity log as that person.
+ * Campaign schedules are run by the server (tasks.apply_auto_schedules);
+ * nothing in a browser changes anything by itself any more.
  *
  * The previous `useScheduledReportsRuntime()` that fired toast/push events
  * pretending to "send" scheduled report emails has been removed — backend
@@ -34,7 +41,6 @@ export function NotificationRuntime() {
   React.useEffect(() => {
     void fetchPrefs();
   }, [fetchPrefs]);
-  useAutoScheduleRuntime();
   useCapWatchRuntime();
   useAnomalyPopupRuntime();
   useDeletedTfnsRuntime();
