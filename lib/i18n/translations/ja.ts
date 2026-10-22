@@ -1574,11 +1574,11 @@ export const ja: TranslationShape = {
       timezones: {
         callerLocal: "発信者ローカル",
         callerLocalAuto: "自動 (発信者のローカル時刻)",
-        eastern: "東部 · America/New_York",
+        eastern: "EST · America/New_York",
         central: "中部 · America/Chicago",
         mountain: "山岳部 · America/Denver",
         pacific: "太平洋 · America/Los_Angeles",
-        easternShort: "東部",
+        easternShort: "EST",
         centralShort: "中部",
         mountainShort: "山岳部",
         pacificShort: "太平洋",

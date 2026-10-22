@@ -906,11 +906,11 @@ export const zh: TranslationShape = {
       timezones: {
         callerLocal: "来电者本地时间",
         callerLocalAuto: "自动(来电者本地时间)",
-        eastern: "东部 · America/New_York",
+        eastern: "EST · America/New_York",
         central: "中部 · America/Chicago",
         mountain: "山地 · America/Denver",
         pacific: "太平洋 · America/Los_Angeles",
-        easternShort: "东部",
+        easternShort: "EST",
         centralShort: "中部",
         mountainShort: "山地",
         pacificShort: "太平洋",

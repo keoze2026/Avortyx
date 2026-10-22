@@ -1575,11 +1575,11 @@ export const ru: TranslationShape = {
       timezones: {
         callerLocal: "Местное время звонящего",
         callerLocalAuto: "Авто (местное время звонящего)",
-        eastern: "Восточное · America/New_York",
+        eastern: "EST · America/New_York",
         central: "Центральное · America/Chicago",
         mountain: "Горное · America/Denver",
         pacific: "Тихоокеанское · America/Los_Angeles",
-        easternShort: "Восточное",
+        easternShort: "EST",
         centralShort: "Центральное",
         mountainShort: "Горное",
         pacificShort: "Тихоокеанское",

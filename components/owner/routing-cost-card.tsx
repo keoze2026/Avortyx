@@ -45,7 +45,7 @@ interface RoutingCost {
   totals: { forwarded: number; connected: number; seconds: number; minutes: string; cost: string; costExact: string };
 }
 
-type Preset = "yesterday" | "today" | "month" | "custom";
+type Preset = "today" | "yesterday" | "week" | "month" | "custom";
 
 /** Today's date in Eastern time, YYYY-MM-DD (the days the backend counts in). */
 function easternToday(): string {
@@ -64,6 +64,11 @@ function rangeFor(preset: Exclude<Preset, "custom">): { start: string; end: stri
   if (preset === "yesterday") {
     const y = shiftDay(today, -1);
     return { start: y, end: y };
+  }
+  if (preset === "week") {
+    // This week, Monday to today (EST).
+    const weekday = new Date(`${today}T12:00:00Z`).getUTCDay(); // 0 = Sunday
+    return { start: shiftDay(today, -((weekday + 6) % 7)), end: today };
   }
   return { start: `${today.slice(0, 8)}01`, end: today };
 }
@@ -148,7 +153,8 @@ export function RoutingCostCard() {
             )}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {(["yesterday", "today", "month"] as const).map((p) => (
+            {/* Sir, 23 Oct: Today, then Yesterday, then Week, then Month, then the dates. */}
+            {(["today", "yesterday", "week", "month"] as const).map((p) => (
               <Button key={p} size="sm" variant={preset === p ? "default" : "outline"} onClick={() => pick(p)}>
                 {t(`routingCost.preset.${p}`)}
               </Button>

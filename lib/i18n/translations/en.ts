@@ -1009,11 +1009,11 @@ export const en = {
       timezones: {
         callerLocal: "Caller-local",
         callerLocalAuto: "Auto (caller's local time)",
-        eastern: "Eastern · America/New_York",
+        eastern: "EST · America/New_York",
         central: "Central · America/Chicago",
         mountain: "Mountain · America/Denver",
         pacific: "Pacific · America/Los_Angeles",
-        easternShort: "Eastern",
+        easternShort: "EST",
         centralShort: "Central",
         mountainShort: "Mountain",
         pacificShort: "Pacific",
