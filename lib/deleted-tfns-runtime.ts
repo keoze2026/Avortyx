@@ -51,7 +51,15 @@ export function useDeletedTfnsRuntime() {
     // One banner per batch: a new retirement raises it again.
     if (bannerFor.current === newestAt) return;
     bannerFor.current = newestAt;
-    const shown = numbers.filter((n) => !n.seen).slice(0, 5).map((n) => n.number).join(", ");
+    // Numbers only, written +1 877-489-3790 like the alert (CH-199).
+    const shown = numbers
+      .filter((n) => !n.seen)
+      .slice(0, 5)
+      .map((n) => {
+        const d = n.number.replace(/\D/g, "");
+        return d.length === 11 && d.startsWith("1") ? `+1 ${d.slice(1, 4)}-${d.slice(4, 7)}-${d.slice(7)}` : n.number;
+      })
+      .join(", ");
     const more = count > 5 ? " " + t("deletedTfns.more").replace("{count}", String(count - 5)) : "";
     toast.warning(
       count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count)),

@@ -323,11 +323,8 @@ function DeletedTfnsCard() {
           <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
             {shown.map((n) => (
               <li key={n.id} className={cn("flex items-baseline justify-between gap-2 text-[11px]", n.seen && "opacity-60")}>
-                <span className="font-mono text-foreground">
-                  {n.number}
-                  {n.carrierCode ? <span className="ml-1 text-muted-foreground">{n.carrierCode}</span> : null}
-                </span>
-                <span className="truncate text-right text-muted-foreground" title={n.reason}>{n.reason}</span>
+                {/* The number only (CH-199): carrier codes and rules are for our backend. */}
+                <span className="font-mono text-foreground">{prettyTfn(n.number)}</span>
               </li>
             ))}
           </ul>
@@ -365,4 +362,11 @@ function DeletedTfnsCard() {
       </div>
     </div>
   );
+}
+
+/** +18774893790 -> +1 877-489-3790, as in the TFNs Expired alert (CH-199). */
+function prettyTfn(number: string): string {
+  const d = (number || "").replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) return `+1 ${d.slice(1, 4)}-${d.slice(4, 7)}-${d.slice(7)}`;
+  return number;
 }

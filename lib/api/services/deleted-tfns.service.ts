@@ -11,8 +11,9 @@ export interface DeletedTfn {
   id: string;
   number: string;
   name: string;
-  carrierCode: string;
-  reason: string;
+  /** No longer sent (CH-199): carrier codes and rules stay in the backend. */
+  carrierCode?: string;
+  reason?: string;
   retiredAt: string;
   /** Retired before this user last clicked Seen (backend CH-182). */
   seen?: boolean;
