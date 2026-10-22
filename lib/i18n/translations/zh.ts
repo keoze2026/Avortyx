@@ -3816,7 +3816,7 @@ export const zh: TranslationShape = {
           paid: "已付款",
           converted: "已接通",
           noConnect: "未接通",
-          dupe: "重复",
+          dupe: "重复来电",
           conversionRate: "转化率",
           tcl: "总通话时长",
           acl: "平均通话时长",

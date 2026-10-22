@@ -3938,7 +3938,7 @@ export const en = {
           paid: "Paid",
           converted: "Converted",
           noConnect: "Not Connected",
-          dupe: "Dupe",
+          dupe: "Repeated",
           conversionRate: "Conv. rate",
           tcl: "TCL",
           acl: "ACL",

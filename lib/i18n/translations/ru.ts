@@ -3816,7 +3816,7 @@ export const ru: TranslationShape = {
           paid: "Оплачены",
           converted: "Конверсии",
           noConnect: "Без соединения",
-          dupe: "Дубль",
+          dupe: "Повторные",
           conversionRate: "Конв. %",
           tcl: "Общая длительность",
           acl: "Средняя длительность",

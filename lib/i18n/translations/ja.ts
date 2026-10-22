@@ -3815,7 +3815,7 @@ export const ja: TranslationShape = {
           paid: "支払済",
           converted: "接続済み",
           noConnect: "未接続",
-          dupe: "重複",
+          dupe: "リピート",
           conversionRate: "コンバージョン率",
           tcl: "合計通話時間",
           acl: "平均通話時間",

@@ -1413,6 +1413,19 @@
   html, body {
     color-scheme: light dark;
   }
+  /* Native pickers (date, time, month popups, scrollbars) follow the
+     portal's theme, not the computer's. With "light dark" a dark portal on a
+     light-mode computer opened white system popups (Sir, 23 Oct: "match
+     color with portal"). */
+  html.dark,
+  html.dark body,
+  .dark {
+    color-scheme: dark;
+  }
+  html:not(.dark),
+  html:not(.dark) body {
+    color-scheme: light;
+  }
   body {
     @apply bg-background text-foreground;
   }

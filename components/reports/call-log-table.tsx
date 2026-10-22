@@ -99,6 +99,7 @@ type ColumnKey =
   | "publisher"
   | "caller"
   | "dialed"
+  | "repeated"
   | "buyer"
   | "revenue"
   | "payout"
@@ -114,6 +115,9 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "publisher", label: "Publisher" },
   { id: "caller", label: "Caller ID" },
   { id: "dialed", label: "Called Number" },
+  // Sir, 23 Oct: a caller who already called inside the campaign's duplicate
+  // window - Revo's "Dupe", in Sir's word "Repeated".
+  { id: "repeated", label: "Repeated" },
   { id: "buyer", label: "Buyer" },
   { id: "revenue", label: "Revenue" },
   { id: "payout", label: "Payout" },
@@ -130,6 +134,7 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   publisher: "toolsUI.reports.callLog.columns.publisher",
   caller: "toolsUI.reports.callLog.columns.callerId",
   dialed: "toolsUI.reports.callLog.columns.dialed",
+  repeated: "toolsUI.reports.callLog.columns.repeated",
   buyer: "toolsUI.reports.callLog.columns.buyer",
   revenue: "toolsUI.reports.callLog.columns.revenue",
   payout: "toolsUI.reports.callLog.columns.payout",
@@ -348,6 +353,8 @@ function sortValue(c: Call, key: LogSortKey, publisherNameById: Map<string, stri
       return digitsOf(c.callerNumber);
     case "dialed":
       return digitsOf(c.destinationNumber);
+    case "repeated":
+      return c.isDuplicate ? 1 : 0;
     case "revenue":
       return c.revenue;
     case "payout":
@@ -424,6 +431,8 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
       return formatCallerId(c.callerNumber);
     case "dialed":
       return toE164(c.destinationNumber);
+    case "repeated":
+      return c.isDuplicate ? "Yes" : "No";
     case "buyer":
       return c.buyerName ?? "";
     case "revenue":
@@ -833,6 +842,7 @@ export function CallLogTable({
                 {columns.publisher && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.caller && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.repeated && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.repeated")} sortKey="repeated" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -906,6 +916,11 @@ export function CallLogTable({
                       {columns.dialed && (
                         <TableCell className={NUMBER_CELL}>
                           {toE164(c.destinationNumber)}
+                        </TableCell>
+                      )}
+                      {columns.repeated && (
+                        <TableCell className={cn(CELL, "text-center")}>
+                          {c.isDuplicate ? t("toolsUI.reports.callLog.repeatedYes") : t("toolsUI.reports.callLog.repeatedNo")}
                         </TableCell>
                       )}
                       {columns.buyer && (

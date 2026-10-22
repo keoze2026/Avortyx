@@ -50,6 +50,7 @@ const SUMMARY_KEYS: Record<string, string[]> = {
 
 /** Call Log column -> backend keys, most specific first. */
 const LOG_KEYS: Record<string, string[]> = {
+  repeated: ["duplicate"],
   revenue: ["revenue"],
   payout: ["payout"],
   duration: ["duration", "tcl"],
@@ -78,6 +79,34 @@ const REFRESH_MS = 30_000;
 
 type Cached = { userId: string; at: number; list: string[] | null };
 let cached: Cached | null = null;
+
+/*
+ * The last allowed list is also kept on the device (Sir, 23 Oct: the publisher
+ * and buyer Reports "refresh issue"). In memory alone it was lost on every page
+ * refresh, and until three requests in a row had answered, the Call Summary
+ * showed nothing but the Live column. Now a refresh starts from the list this
+ * login last had - the admin's latest choice still replaces it within seconds.
+ */
+const STORE_KEY = "avortyx.partnerReportColumns";
+
+function readStored(userId: string): string[] | null {
+  try {
+    const raw = window.localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { userId?: string; list?: unknown };
+    return v.userId === userId ? asList(v.list) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(userId: string, list: string[]): void {
+  try {
+    window.localStorage.setItem(STORE_KEY, JSON.stringify({ userId, list }));
+  } catch {
+    /* private mode or full storage: memory is enough */
+  }
+}
 let inflight: { userId: string; promise: Promise<string[] | null> } | null = null;
 
 const asList = (v: unknown): string[] | null => (Array.isArray(v) ? v.map(String) : null);
@@ -117,7 +146,10 @@ function loadAllowed(userId: string, kind: "buyer" | "publisher"): Promise<strin
   if (inflight && inflight.userId === userId) return inflight.promise;
   const promise = readAllowed(kind)
     .then((list) => {
-      if (list) cached = { userId, at: Date.now(), list };
+      if (list) {
+        cached = { userId, at: Date.now(), list };
+        writeStored(userId, list);
+      }
       return list;
     })
     .finally(() => {
@@ -145,6 +177,8 @@ export function usePartnerHiddenColumns(): { summary: ReadonlySet<string>; log: 
   const catalogue = usePartnerSettingsStore((s) => s.catalogue);
   const fetchCatalogue = usePartnerSettingsStore((s) => s.fetchCatalogue);
 
+  // The device copy is read in the effect below, not here: reading storage
+  // during the first render would differ from the server's render.
   const fresh = cached && cached.userId === userId ? cached.list : null;
   // undefined = still looking; null = couldn't find out; array = the allowed keys.
   const [allowed, setAllowed] = React.useState<string[] | null | undefined>(fresh ?? undefined);
@@ -153,6 +187,8 @@ export function usePartnerHiddenColumns(): { summary: ReadonlySet<string>; log: 
     if (!kind || !userId) return;
     let alive = true;
     void fetchCatalogue();
+    const stored = cached && cached.userId === userId ? null : readStored(userId);
+    if (stored) cached = { userId, at: 0, list: stored }; // shown now, re-read below
     const have = cached && cached.userId === userId ? cached : null;
     if (have) setAllowed(have.list);
     if (!have || Date.now() - have.at > REFRESH_MS) {

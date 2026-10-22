@@ -202,7 +202,7 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "paid", label: "Paid" },
   { id: "converted", label: "Converted" },
   { id: "noConnect", label: "Not Connected" },
-  { id: "dupe", label: "Dupe" },
+  { id: "dupe", label: "Repeated" },
   { id: "conversionRate", label: "Conv. rate" },
   { id: "tcl", label: "TCL" },
   { id: "acl", label: "ACL" },

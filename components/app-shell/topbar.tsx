@@ -86,8 +86,17 @@ export function Topbar() {
     // login screen's fine ring lines for a moment after signing in. Both read
     // as strike-through lines across "$8,790 / Live: 0 / Total: 1710". Phones
     // held sideways are wider than the old sm cut-off, so it is lg now.
-    <header className="sticky top-0 z-30 border-b border-border/50 bg-background lg:bg-background/85 lg:backdrop-blur-xl">
-      <div className="relative flex h-16 items-center gap-4 px-4 sm:px-6">
+    // Glass only on computers with a mouse (pointer-fine). On iPhone and iPad
+    // Safari the blur under the stats smeared them into streaks across
+    // "$7,367 Live: 0 Total: 1433" (Sir, 23 Oct), so touch screens get the
+    // solid bar at every width.
+    //
+    // The bar is a size container (@container/topbar): what fits is decided by
+    // the bar's own width, not the screen's. With the sidebar open a tablet is
+    // wide enough to count as a desktop while the bar itself is narrow, and
+    // the stats were squeezed - fine again the moment the sidebar closed.
+    <header className="sticky top-0 z-30 border-b border-border/50 bg-background lg:pointer-fine:bg-background/85 lg:pointer-fine:backdrop-blur-xl">
+      <div className="@container/topbar relative flex h-16 items-center gap-4 px-4 sm:px-6">
         {/* LEFT — sidebar trigger only */}
         <div className="flex items-center">
           <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/70 bg-secondary/40">
@@ -99,7 +108,7 @@ export function Topbar() {
             middle of the bar (boss request), whatever is on the left and the
             right; on smaller screens it keeps to the free space between them
             so it never covers the stats. */}
-        <div className="relative mx-auto hidden w-full max-w-lg lg:block 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:mx-0 2xl:max-w-md 2xl:-translate-x-1/2 2xl:-translate-y-1/2 min-[1700px]:max-w-lg">
+        <div className="relative mx-auto hidden w-full max-w-lg @5xl/topbar:block 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:mx-0 2xl:max-w-md 2xl:-translate-x-1/2 2xl:-translate-y-1/2 min-[1700px]:max-w-lg">
           <CommandSearch placeholder={t("topbar.searchPlaceholder")} />
         </div>
 
@@ -127,7 +136,11 @@ export function Topbar() {
               `overflow-x-auto scrollbar-hide` stays as a last-resort safety
               net for extreme page zoom — the shell layout clips horizontal
               overflow instead of reflowing it (see app/(app)/layout.tsx). */}
-          <div className="flex min-w-0 flex-col items-end gap-1 overflow-x-auto scrollbar-hide sm:flex-row sm:items-center sm:gap-6">
+          {/* One row once the bar is wide enough, two lines below that -
+              by the bar's width (container query), so an open sidebar counts.
+              overflow-hidden, not a scroll box: Safari smeared the figures in
+              a scrolling box when it was squeezed. */}
+          <div className="flex min-w-0 flex-col items-end gap-1 overflow-hidden @3xl/topbar:flex-row @3xl/topbar:items-center @3xl/topbar:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
             <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">

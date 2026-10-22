@@ -16,6 +16,7 @@ import { ChevronDown, ChevronRight, Pencil, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { MonthPicker } from "@/components/shared/month-picker";
 import { RoutingCostCard } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -304,13 +305,11 @@ export default function CarrierCostsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="costs-month">{t("owner.costs.month")}</Label>
-          <Input
+          <MonthPicker
             id="costs-month"
-            type="month"
             value={month}
             max={thisMonth()}
-            onChange={(e) => e.target.value && setMonth(e.target.value)}
-            className="w-44"
+            onChange={setMonth}
           />
         </div>
         <div className="text-right">
