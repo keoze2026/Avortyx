@@ -23,7 +23,6 @@ import { formatNumber, toE164 } from "@/lib/format";
 import type { Buyer, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Can } from "@/components/shared/can";
-import { LastSwitched } from "./last-switched";
 import { usePermissions } from "@/lib/my-permissions";
 
 type CapField = "concurrencyCap" | "dailyCap" | "monthlyCap";
@@ -375,7 +374,6 @@ export function DestinationsTable({
                             : t("networkUI.destinations.table.enableAria").replace("{name}", destination.name)
                         }
                       />
-                      <LastSwitched info={destination.lastSwitched} />
                     </TableCell>
 
                     {/* ACTIONS — row-level edit / delete */}
