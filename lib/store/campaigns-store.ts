@@ -8,6 +8,7 @@
 import { create } from "zustand";
 
 import { campaignsService } from "@/lib/api/services/campaigns.service";
+import { routingService } from "@/lib/api/services/routing.service";
 import { allowedCampaignIds } from "@/lib/partner-campaign-scope";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Campaign, CampaignStatus } from "@/lib/types";
@@ -38,7 +39,10 @@ interface CampaignsState {
   /**
    * Create a copy of a campaign named "<name> (Clone)". Copies everything the
    * campaign itself stores (payout, caps, schedule, call audio, duplicate
-   * blocking and all advanced settings). Tracking numbers are NOT copied.
+   * blocking and all advanced settings) and its routing: every rule with its
+   * conditions and routed destinations, so the copy shows them the moment it
+   * opens (CH-198). Tracking numbers are NOT copied: a TFN belongs to one
+   * campaign.
    * The copy starts paused. Resolves with the new campaign.
    */
   clone: (id: string) => Promise<Campaign>;
@@ -183,6 +187,7 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
         duplicateCallBlock: source.duplicateCallBlock,
         duplicateCallBlockHours: source.duplicateCallBlockHours,
       });
+      await copyRouting(id, created.id);
       set((s) => ({ campaigns: [full, ...s.campaigns] }));
       return full;
     } catch (e) {
@@ -205,6 +210,42 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
     }
   },
 }));
+
+/**
+ * Copy a campaign's routing to another campaign: each rule with its conditions
+ * and its routed destinations (buyer TFNs), with the same priority, weight and
+ * on/off state (CH-198). Cloning used to leave ROUTED DESTINATIONS empty, and
+ * the team re-added every destination by hand before the copy could take calls.
+ */
+async function copyRouting(sourceCampaignId: string, targetCampaignId: string): Promise<void> {
+  const rules = await routingService.listRules({ campaignId: sourceCampaignId, pageSize: 50 });
+  for (const rule of rules.items) {
+    const copy = await routingService.createRule({
+      name: rule.name,
+      ruleType: rule.ruleType,
+      campaignId: targetCampaignId,
+      priority: rule.priority,
+    });
+    for (const c of rule.conditions ?? []) {
+      await routingService.addCondition(copy.id, c.conditions);
+    }
+    const destinations = await routingService.listDestinations(rule.id);
+    for (const d of destinations) {
+      if (!d.destination) continue;
+      await routingService.addDestination(copy.id, {
+        destination: d.destination,
+        destinationType: d.destinationType,
+        buyerId: d.buyerId,
+        weight: d.weight,
+        priority: d.priority,
+      });
+    }
+    // New rules start active; keep a paused one paused.
+    if (rule.status === "paused") {
+      await routingService.updateRule(copy.id, { status: "paused" });
+    }
+  }
+}
 
 function messageFromError(e: unknown): string {
   if (e instanceof Error) return e.message;
