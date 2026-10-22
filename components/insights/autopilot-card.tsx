@@ -91,16 +91,6 @@ const RULES: RuleDef[] = [
     describe: (c, t) => t("x5.autopilot.rules.pauseOnShortCalls.desc").replace("{n}", String(c.shortCallSeconds)),
   },
   {
-    id: "minCallsToJudge",
-    group: "act",
-    label: "Minimum calls before judging a buyer",
-    labelKey: "x5.autopilot.rules.minCallsToJudge.label",
-    tone: "safe",
-    icon: ShieldCheck,
-    limit: { field: "minCallsToJudge", unit: "calls", unitKey: "x5.autopilot.units.calls", min: 3, max: 500 },
-    describe: (c, t) => t("x5.autopilot.rules.minCallsToJudge.desc").replace("{n}", String(c.minCallsToJudge)),
-  },
-  {
     id: "resumeRecoveredBuyers",
     group: "act",
     label: "Resume buyers it paused",
