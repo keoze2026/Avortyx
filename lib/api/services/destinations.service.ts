@@ -65,6 +65,8 @@ export type DestinationListQuery = {
  */
 interface DestinationWire {
   id: string | number;
+  /** Who last switched the line on or off (CH-200). */
+  lastSwitched?: { enabled: boolean; by: string; byEmail?: string; at: string } | null;
   buyerId?: string | number | null;
   buyerName?: string;
   /** Aggregate-row spelling of `buyer_name`. */
@@ -198,6 +200,7 @@ function wireToDestination(w: DestinationWire): Destination {
     monthlyCap: w.monthlyCap ?? w.maxCallsMonthly ?? 0,
     // On / off, whichever way the server spells it (see enabledFromWire).
     enabled: enabledFromWire(w),
+    lastSwitched: w.lastSwitched ?? null,
     ringDurationSec: w.ringDurationSec ?? 25,
     filterEnabled: !!w.filterEnabled,
     filterGroups: Array.isArray(w.filterGroups) ? w.filterGroups : [],

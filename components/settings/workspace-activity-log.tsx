@@ -459,6 +459,18 @@ function ActivityRow({
           </div>
         </TableCell>
         <TableCell className="px-2 py-1.5 text-left text-xs text-muted-foreground">
+          {lineSwitch(event) && (
+            <span
+              className={cn(
+                "mr-1.5 inline-flex rounded border px-1.5 py-0 text-xs font-medium",
+                lineSwitch(event) === "off"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+              )}
+            >
+              {lineSwitch(event) === "off" ? t("lineSwitch.switchedOff") : t("lineSwitch.switchedOn")}
+            </span>
+          )}
           {changes.length > 0 ? (
             <button
               type="button"
@@ -500,6 +512,14 @@ function ActivityRow({
       )}
     </>
   );
+}
+
+/** "off" / "on" when this entry switched a buyer line, else null (CH-200). */
+function lineSwitch(e: WorkspaceActivityEvent): "off" | "on" | null {
+  if (e.targetType !== "destination") return null;
+  const c = (e.changes ?? []).find((x) => x.field === "enabled");
+  if (!c) return null;
+  return String(c.new).toLowerCase() === "true" ? "on" : "off";
 }
 
 /** The FIELD / OLD / NEW table under an edited row. */

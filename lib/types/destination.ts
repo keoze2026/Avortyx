@@ -53,6 +53,8 @@ export interface Destination {
   monthlyCap: number;
   /** When false, the router skips this destination. */
   enabled: boolean;
+  /** Who last switched this line on or off, and when (backend CH-200). */
+  lastSwitched?: LineSwitch | null;
   /* ─── Advanced settings (optional — populated via the settings tab) ─── */
   /** "number" routes to a TFN, "sip" routes to a SIP endpoint. */
   forwardType?: DestinationForwardType;
@@ -97,4 +99,15 @@ export interface Destination {
   monthlySpend: number;
   /** Lifetime payout. */
   globalSpend: number;
+}
+
+/** One on/off switch of a buyer line, from the workspace activity log. */
+export interface LineSwitch {
+  /** The state it was switched to. */
+  enabled: boolean;
+  /** The person's name (or email when no name is set). */
+  by: string;
+  byEmail?: string;
+  /** ISO time of the switch. */
+  at: string;
 }

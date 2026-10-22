@@ -38,6 +38,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import { routingService, type RoutingDestination } from "@/lib/api/services/routing.service";
 import { AttachDestinationDialog } from "./attach-destination-dialog";
+import { LastSwitched } from "@/components/destinations/last-switched";
+import type { LineSwitch } from "@/lib/types";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -107,6 +109,8 @@ interface RoutedRow {
   /** The Destination record behind the number, when there is one. */
   destId?: string;
   enabled: boolean;
+  /** Who last switched the line on or off (CH-200). */
+  lastSwitched?: LineSwitch | null;
 }
 
 /** Longest duplicate window offered: five years, in hours (5 × 8,760). */
@@ -268,6 +272,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         buyerName: r.buyerName ?? dest?.buyerName,
         destId: dest?.id,
         enabled: dest ? dest.enabled : true,
+        lastSwitched: dest?.lastSwitched ?? null,
       };
     });
   }, [routed, allDestinations]);
@@ -597,6 +602,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         }}
                         aria-label={t("trafficUI.campaigns.settings.forward.row.toggle").replace("{name}", d.name)}
                       />
+                      <LastSwitched info={d.lastSwitched} />
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="inline-flex items-center gap-0.5">
