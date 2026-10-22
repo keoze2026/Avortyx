@@ -3029,6 +3029,7 @@ export const ru: TranslationShape = {
         critical: "Критическая",
         warning: "Предупреждение",
         info: "Инфо",
+        good: "Хорошие новости",
         investigate: "Исследовать",
       },
       recommendations: {

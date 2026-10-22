@@ -3028,6 +3028,7 @@ export const ja: TranslationShape = {
         critical: "重大",
         warning: "警告",
         info: "情報",
+        good: "朗報",
         investigate: "調査する",
       },
       recommendations: {

@@ -112,6 +112,18 @@ function anomalySeverityFromChange(pct: number | null): AnomalySeverity {
   return "info";
 }
 
+/** The backend says how serious an anomaly is; only fall back to the size of
+ *  the change when it doesn't. A volume spike of +103% was shown as Critical
+ *  because the size alone was used - Sir: more calls is good news (CH-208). */
+function anomalySeverity(w: WireAnomaly): AnomalySeverity {
+  const t = (w.type ?? "").toLowerCase();
+  if (t === "success" || t === "good") return "good";
+  if (t === "critical" || t === "warning" || t === "info") return t;
+  const metric = (w.metric ?? "").toLowerCase();
+  if (metric.includes("volume") && (w.changePercent ?? 0) > 0) return "good";
+  return anomalySeverityFromChange(w.changePercent);
+}
+
 function wireToAnomaly(w: WireAnomaly, idx: number): Anomaly {
   // Backend occasionally returns rows with metric missing; coerce to a string
   // so downstream consumers (notifications dropdown) can safely .toLowerCase().
@@ -119,7 +131,7 @@ function wireToAnomaly(w: WireAnomaly, idx: number): Anomaly {
   return {
     id: `${w.type}:${metric}:${idx}`,
     kind: anomalyKindFromMetric(metric),
-    severity: anomalySeverityFromChange(w.changePercent),
+    severity: anomalySeverity(w),
     title: w.title,
     body: w.message,
     scope: { type: "network", name: metric },

@@ -3142,6 +3142,7 @@ export const en = {
         critical: "Critical",
         warning: "Warning",
         info: "Info",
+        good: "Good News",
         investigate: "Investigate",
       },
       recommendations: {

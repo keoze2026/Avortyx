@@ -30,7 +30,8 @@ export interface AiRecommendation {
   status: RecommendationStatus;
 }
 
-export type AnomalySeverity = "info" | "warning" | "critical";
+/** "good": a change for the better, e.g. more calls than yesterday (CH-208). */
+export type AnomalySeverity = "info" | "warning" | "critical" | "good";
 export type AnomalyKind =
   | "conversion-drop"
   | "volume-spike"

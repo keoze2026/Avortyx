@@ -3029,6 +3029,7 @@ export const zh: TranslationShape = {
         critical: "严重",
         warning: "警告",
         info: "信息",
+        good: "好消息",
         investigate: "调查",
       },
       recommendations: {

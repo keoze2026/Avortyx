@@ -47,6 +47,13 @@ const SEVERITY: Record<
     chip: "border-accent/30 bg-accent/10 text-accent",
     labelKey: "toolsUI.insights.anomalies.info",
   },
+  // Good news (more calls than yesterday) - green, never red (CH-208).
+  good: {
+    dot: "bg-[color:var(--success)]",
+    ring: "ring-[color:var(--success)]/30",
+    chip: "border-[color:var(--success)]/40 bg-[color:var(--success)]/10 text-[color:var(--success)]",
+    labelKey: "toolsUI.insights.anomalies.good",
+  },
 };
 
 const SCOPE_HREF = (a: Anomaly): string | undefined => {
