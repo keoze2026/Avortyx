@@ -152,6 +152,9 @@ export function TrackingNumbersSection({
     new Set(numbers.map((n) => n.label?.trim() || (readOnly ? "—" : namePlaceholder))),
   );
   const publisherCh = Math.min(30, longest(numbers.map((n) => n.publisherName ?? "—")) + 1);
+  // One width for every data column, so the headings sit at even gaps: 9
+  // columns beside the checkbox, 8 on the read-only (partner) view.
+  const col = readOnly ? "w-[12.5%]" : "w-[11%]";
   const payoutCh = longest(numbers.map((n) => formatCurrency(n.payoutPerCall ?? 0, true)));
 
   return (
@@ -198,7 +201,11 @@ export function TrackingNumbersSection({
         />
       ) : (
         <Card className="overflow-hidden p-0">
-          <Table>
+          {/* Even columns (Sir, 23 Oct): a fixed layout with one width for every
+              data column, and every heading and value centred under it. The
+              widths used to follow each column's content, so the headings sat
+              at uneven gaps. Scrolls sideways on a phone instead of squeezing. */}
+          <Table className="min-w-[900px] table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 {!readOnly && (
@@ -210,16 +217,16 @@ export function TrackingNumbersSection({
                     />
                   </TableHead>
                 )}
-                <TableHead className={cn(readOnly && "pl-6", "uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.number")}</TableHead>
-                <TableHead className="uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.type")}</TableHead>
-                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
-                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
-                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
-                <TableHead className="uppercase tracking-wider text-[11px]">{t("campaignRisk.column")}</TableHead>
-                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("networkUI.destinations.table.live")}</TableHead>
-                <TableHead className="text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.number")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.type")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.name")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.publisher")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.payout")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("campaignRisk.column")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("networkUI.destinations.table.live")}</TableHead>
+                <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.status")}</TableHead>
                 {!readOnly && (
-                  <TableHead className="pr-6 text-center uppercase tracking-wider text-[11px]">{t("trafficUI.campaigns.settings.trackingNumbers.headers.actions")}</TableHead>
+                  <TableHead className={cn(col, "text-center uppercase tracking-wider text-[11px]")}>{t("trafficUI.campaigns.settings.trackingNumbers.headers.actions")}</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -237,16 +244,16 @@ export function TrackingNumbersSection({
                         />
                       </TableCell>
                     )}
-                    <TableCell className={cn(readOnly && "pl-6", "font-mono text-xs whitespace-nowrap")}>
+                    <TableCell className="text-center font-mono text-xs whitespace-nowrap">
                       {e164}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <Badge variant="outline" className="capitalize">
                         {n.type === "tollfree" ? t("trafficUI.numbers.typeOptions.tollfree") : n.type === "local" ? t("trafficUI.numbers.typeOptions.local") : t("trafficUI.numbers.typeOptions.international")}
                       </Badge>
                     </TableCell>
-                    <TableCell className="min-w-[160px] text-sm">
-                      <div className="mx-auto grid w-fit max-w-[240px]">
+                    <TableCell className="text-sm">
+                      <div className="mx-auto grid w-fit max-w-full">
                       {readOnly ? (
                         <span
                           className={cn(
@@ -281,7 +288,7 @@ export function TrackingNumbersSection({
                     {/* The values start at the same place in every row, and that
                         block is centred under the heading. */}
                     <TableCell className="text-xs text-muted-foreground">
-                      <div className="mx-auto whitespace-nowrap text-left" style={{ width: `${publisherCh}ch` }}>
+                      <div className="mx-auto max-w-full truncate text-left" style={{ width: `${publisherCh}ch` }}>
                         {n.publisherName ?? "—"}
                       </div>
                     </TableCell>
@@ -290,7 +297,7 @@ export function TrackingNumbersSection({
                         {formatCurrency(n.payoutPerCall ?? 0, true)}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <CampaignRiskBadge risk={campaignRisk([n])} />
                     </TableCell>
                     <TableCell className="text-center">
@@ -317,7 +324,7 @@ export function TrackingNumbersSection({
                       )}
                     </TableCell>
                     {!readOnly && (
-                    <TableCell className="pr-6">
+                    <TableCell className="text-center">
                       <div className="inline-flex items-center justify-center gap-0.5">
                         <RowActionIcon
                           icon={Pencil}
