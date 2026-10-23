@@ -130,7 +130,7 @@ export function BuyerDestinationsTab({ buyer }: BuyerDestinationsTabProps) {
                       <span className={cn(cc > 0 ? "text-accent" : "text-muted-foreground")}>
                         {cc}
                       </span>
-                      <span className="text-muted-foreground"> / {d.concurrencyCap}</span>
+                      <span className="text-muted-foreground"> / {d.concurrencyCap > 0 ? d.concurrencyCap : "∞"}</span>
                     </dd>
                   </div>
                   <div>

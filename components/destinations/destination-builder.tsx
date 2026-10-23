@@ -114,11 +114,13 @@ export function DestinationBuilder({
 
   // Buyer is REQUIRED on create — the backend answers 400 without one ("a
   // destination with no buyer can never receive calls").
+  // Caps are NOT checked: 0 on any of them (concurrency, daily, monthly) means
+  // no limit - routing skips a cap of 0. The concurrency cap had to be above 0,
+  // so a line with no limits (0 / 0 / 0) could not be created at all (CH-235).
   const canSubmit =
     form.name.trim().length >= 2 &&
     isValidTfn(form.tfn) &&
-    form.buyerId !== "" &&
-    form.concurrencyCap > 0;
+    form.buyerId !== "";
 
   const onSubmit = async () => {
     if (!canSubmit) return;
@@ -238,7 +240,7 @@ export function DestinationBuilder({
               <Input
                 id="dest-cc"
                 type="number"
-                min={1}
+                min={0}
                 value={form.concurrencyCap}
                 onChange={(e) =>
                   setForm((f) => ({

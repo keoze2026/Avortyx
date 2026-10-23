@@ -1179,7 +1179,7 @@ export const ja: TranslationShape = {
         concurrencyCap: "同時接続上限",
         dailyCap: "日次上限",
         monthlyCap: "月次上限",
-        zeroHint: "日次 / 月次上限を",
+        zeroHint: "同時通話 / 日次 / 月次上限を",
         zeroHintRest: "にすると無制限の意味になります。",
         enabled: "有効",
         enabledDesc: "オフにすると、ルーターはこの宛先をスキップします。",

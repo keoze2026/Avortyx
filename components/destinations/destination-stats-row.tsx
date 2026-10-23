@@ -39,7 +39,7 @@ export function DestinationStatsRow({ destination }: DestinationStatsRowProps) {
     {
       icon: Activity,
       label: t("networkUI.destinations.stats.concurrentNow"),
-      value: `${stats.cc} / ${destination.concurrencyCap}`,
+      value: `${stats.cc} / ${destination.concurrencyCap > 0 ? destination.concurrencyCap : "∞"}`,
     },
     {
       icon: Gauge,

@@ -277,7 +277,7 @@ export function DestinationSummaryTable({
                         </span>
                         <span className="text-muted-foreground">/</span>
                         <span className="w-6 text-left text-muted-foreground">
-                          {destination.concurrencyCap}
+                          {destination.concurrencyCap > 0 ? destination.concurrencyCap : "∞"}
                         </span>
                       </div>
                     </TableCell>

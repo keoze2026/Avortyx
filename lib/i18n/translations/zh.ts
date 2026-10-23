@@ -2339,7 +2339,7 @@ export const zh: TranslationShape = {
         dailyCap: "每日上限",
         monthlyCap: "每月上限",
         zeroHint: "使用",
-        zeroHintRest: "在每日/每月上限上表示无限制。",
+        zeroHintRest: "在并发/每日/每月上限上表示无限制。",
         enabled: "已启用",
         enabledDesc: "关闭后,路由器会跳过此目的地。",
         cancel: "取消",
