@@ -12,12 +12,17 @@ import { PageHeader } from "@/components/shared/page-header";
 import { CheckLinksCard } from "@/components/tfn-check/check-links-card";
 import { TfnCheckPanel } from "@/components/tfn-check/tfn-check-panel";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { tfnCheckService } from "@/lib/api/services/tfn-check.service";
 import { usePermissions } from "@/lib/my-permissions";
 
 export default function TfnCheckPage() {
   const { t } = useTranslation();
   const { can } = usePermissions();
+  // A publisher login (CH-240): its own TFNs only, test calls only with
+  // "TFN Test Calls" on in its Publisher Access, and no share links.
+  const partner = usePartnerPermissions();
+  const mayTest = !partner.isPartner || partner.can("tfn_test");
   const onCheck = React.useCallback(
     (numbers: string, test: boolean) => tfnCheckService.check(numbers, test),
     [],
@@ -26,17 +31,19 @@ export default function TfnCheckPage() {
   return (
     <div className="space-y-8">
       <PageHeader title={t("tfnCheck.title")} description={t("tfnCheck.portalDescription")} />
-      {/* Every portal login may test its own numbers; a publisher's are
-          limited to theirs by the backend. */}
+      {/* Staff test any number; a publisher only its own, and the backend
+          enforces both. */}
       <TfnCheckPanel
         onCheck={onCheck}
-        onStartTest={tfnCheckService.startTestCall}
-        onGetTest={tfnCheckService.getTestCall}
+        onStartTest={mayTest ? tfnCheckService.startTestCall : undefined}
+        onGetTest={mayTest ? tfnCheckService.getTestCall : undefined}
       />
-      <CheckLinksCard
-        canEdit={can("tracking-numbers", "edit")}
-        canDelete={can("tracking-numbers", "delete")}
-      />
+      {!partner.isPartner && (
+        <CheckLinksCard
+          canEdit={can("tracking-numbers", "edit")}
+          canDelete={can("tracking-numbers", "delete")}
+        />
+      )}
     </div>
   );
 }

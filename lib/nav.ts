@@ -92,7 +92,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Campaigns",     nameKey: "nav.campaigns",    href: ROUTES.campaigns, icon: Megaphone,       roles: ["admin", "publisher"] },
       { label: "Phone Numbers", nameKey: "nav.phoneNumbers", href: ROUTES.numbers,   icon: Hash,            roles: ["admin"] },
-      { label: "TFN Check",     nameKey: "nav.tfnCheck",     href: ROUTES.tfnCheck,  icon: SearchCheck,     roles: ["admin"] },
+      // Publishers see it only with "TFN Test Calls" on in their Publisher Access (CH-240).
+      { label: "TFN Check",     nameKey: "nav.tfnCheck",     href: ROUTES.tfnCheck,  icon: SearchCheck,     roles: ["admin", "publisher"], partnerPermission: "tfn_test" },
       { label: "Routing",       nameKey: "nav.routing",      href: ROUTES.routing,   icon: GitFork,         roles: ["admin"] },
       { label: "IVR",           nameKey: "nav.ivr",          href: ROUTES.ivr,       icon: PhoneForwarded,  roles: ["admin"] },
       { label: "Call Queue",    nameKey: "nav.callQueue",    href: ROUTES.queue,     icon: PhoneIncoming,   roles: ["admin"] },

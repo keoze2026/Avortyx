@@ -165,6 +165,14 @@ export function TfnCheckPanel({
         lastChecked.current = numbers;
         setResult(res);
         setFilter(null);
+        // A new Check starts clean: an earlier test call's result described
+        // the number as it was then (Sir, 24 Oct: a test failed before the
+        // number was added to a campaign and still showed afterwards).
+        if (!quiet) {
+          Object.values(timers.current).forEach((id) => window.clearTimeout(id));
+          timers.current = {};
+          setTests({});
+        }
       } catch (e) {
         if (!quiet) {
           toast.error(e instanceof ApiError ? e.friendlyMessage : t("tfnCheck.errors.failed"));

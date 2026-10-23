@@ -30,7 +30,8 @@ export type PartnerPermissionKey =
   | "number_creation"
   | "audio_recording"
   | "block_numbers"
-  | "download_reports";
+  | "download_reports"
+  | "tfn_test";
 
 type Perms = Record<PartnerPermissionKey, boolean>;
 
@@ -41,6 +42,7 @@ const DEFAULTS: Perms = {
   audio_recording: false,
   block_numbers: false,
   download_reports: true,
+  tfn_test: false,
 };
 const NOTHING: Perms = {
   manage_traffic: false,
@@ -48,6 +50,7 @@ const NOTHING: Perms = {
   audio_recording: false,
   block_numbers: false,
   download_reports: false,
+  tfn_test: false,
 };
 
 const REFRESH_MS = 30_000;

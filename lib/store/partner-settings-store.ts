@@ -64,6 +64,7 @@ const FALLBACK_CATALOGUE: PartnerCatalogue = {
     { key: "audio_recording", label: "Audio Recording", description: "It provides users with the ability to view call recordings.", labelKey: "x2.partnerPerm.audioRecording", descriptionKey: "x2.partnerPerm.audioRecordingDesc", default: false },
     { key: "block_numbers", label: "Block Numbers", description: "Reject calls from specific phone numbers.", labelKey: "buyerAccess.perm.blockNumbers", descriptionKey: "buyerAccess.perm.blockNumbersDesc", default: false },
     { key: "download_reports", label: "Download Reports", description: "Users can download reports about their call activity.", labelKey: "buyerAccess.perm.downloadReports", descriptionKey: "buyerAccess.perm.downloadReportsDesc", default: true },
+    { key: "tfn_test", label: "TFN Test Calls", description: "Can check and test-call their own TFNs on TFN Check.", labelKey: "x2.partnerPerm.tfnTest", descriptionKey: "x2.partnerPerm.tfnTestDesc", default: false },
   ],
   reportColumns: [
     { key: "incoming", label: "Incoming", description: "Total inbound call attempts.", labelKey: "sharedUI.reportingVisibility.columns.incoming.label", descriptionKey: "sharedUI.reportingVisibility.columns.incoming.description", default: true },
