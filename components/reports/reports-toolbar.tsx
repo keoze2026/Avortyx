@@ -117,6 +117,9 @@ interface ReportsToolbarProps {
   /** The newest day that can be picked; later days and "Today" are removed.
    *  Leave out for no limit. */
   latestDay?: Date;
+  /** CH-220: server time (ms) at which the report on screen was last
+   *  confirmed current. Null hides the label (past ranges, not checked yet). */
+  updatedAt?: number | null;
 }
 
 export function ReportsToolbar({
@@ -130,6 +133,7 @@ export function ReportsToolbar({
   liveNow,
   showLive = true,
   latestDay,
+  updatedAt = null,
 }: ReportsToolbarProps) {
   const { t } = useTranslation();
   // The auto-refresh choice is remembered in this browser, so "Off" stays
@@ -188,6 +192,22 @@ export function ReportsToolbar({
   }, [intervalSec]);
 
   const active = intervalSec > 0;
+  // "Updated 4:27:05 PM": the server's time, shown in the report's time zone.
+  const updatedLabel = useMemo(() => {
+    if (updatedAt == null) return "";
+    let time: string;
+    try {
+      time = new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone,
+      }).format(updatedAt);
+    } catch {
+      time = new Date(updatedAt).toLocaleTimeString();
+    }
+    return t("toolsUI.reports.toolbar.updatedAt").replace("{time}", time);
+  }, [updatedAt, timeZone, t]);
   const refreshLabel = t(REFRESH_LABEL_KEYS[refresh]);
   const countdownLabel = active ? `${refreshLabel} · ${t("common.secondsShort").replace("{n}", String(remaining))}` : refreshLabel;
 
@@ -288,6 +308,15 @@ export function ReportsToolbar({
         />
 
         <ReportsFilterPopover filters={filters} onChange={onFiltersChange} />
+
+        {updatedLabel && (
+          <span
+            className="hidden whitespace-nowrap text-[11px] tabular-nums text-muted-foreground sm:inline"
+            title={t("toolsUI.reports.toolbar.updatedHint")}
+          >
+            {updatedLabel}
+          </span>
+        )}
 
         <Button
           variant="outline"

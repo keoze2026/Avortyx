@@ -45,6 +45,7 @@ import {
   TODAY_SHOW_MAX_AGE_MS,
   todayAndYesterday,
 } from "@/lib/reports-cache";
+import { useReportChangeWatch } from "@/lib/report-watch";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useReportsAccess } from "@/lib/store/security-store";
@@ -299,12 +300,23 @@ export default function ReportsPage() {
   const liveVisible =
     REPORTS_POLICY.showLive ||
     (fromKey === zonedDayKey(Date.now(), timeZone) && toKey === zonedDayKey(Date.now(), timeZone));
-  const onRefresh = (source: "auto" | "manual" = "manual") => {
-    if (!viewKey || loadInFlight.current) return;
-    if (source === "auto" && !includesToday) return;
+  /** Reload this view. False when it could not start (no view, a load is
+   *  running, or an automatic reload of a past range). */
+  const onRefresh = (source: "auto" | "manual" = "manual"): boolean => {
+    if (!viewKey || loadInFlight.current) return false;
+    if (source === "auto" && !includesToday) return false;
     manualRefresh.current = source === "manual";
     setRefreshTick((n) => n + 1);
+    return true;
   };
+  // CH-220: today's report keeps itself current whatever the auto refresh
+  // setting - it reloads (quietly) as soon as a call arrives, is answered or
+  // ends, and nothing is reloaded while nothing changes.
+  const confirmedAt = useReportChangeWatch({
+    view,
+    enabled: !!view && includesToday,
+    onChange: () => onRefresh("auto"),
+  });
 
   // An aggregate is per entity for the whole range; it can't be narrowed by
   // the other filters. So a tab only gets its aggregate when the only active
@@ -466,6 +478,7 @@ export default function ReportsPage() {
         liveNow={liveNow}
         showLive={liveVisible}
         latestDay={latestDay}
+        updatedAt={confirmedAt}
       />
 
       <ReportsPinGate
