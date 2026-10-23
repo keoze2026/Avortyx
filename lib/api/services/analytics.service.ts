@@ -683,8 +683,9 @@ export const analyticsService = {
   ): Promise<Call[]> {
     const PAGE_SIZE = 500;
     const MAX_PAGES = 40;
-    /** Pages fetched at the same time once the total is known. */
-    const PARALLEL = 4;
+    /** Pages fetched at the same time once the total is known. 6, not 4
+     *  (CH-232): a month is ~22 pages, so 4 rounds instead of 6. */
+    const PARALLEL = 6;
     const all: Call[] = [];
     // Ask the backend for the same day boundaries the page shows.
     const fetchPage = (page: number) =>

@@ -147,6 +147,49 @@ function putCachedReport(key: string, data: ReportData): void {
   }
 }
 
+/**
+ * The past days of a range that reaches today, kept for the session (CH-232).
+ *
+ * A month opened on the 23rd took over 10 seconds (Sir, 23 Oct). A range that
+ * includes today has live calls in it, and the backend then reads every row up
+ * to the page asked for, page after page - page 22 of a month re-read about
+ * 11,000 calls. A range that ended yesterday takes the backend's fast path and
+ * its finished-days cache. So the call list of such a range is loaded as two:
+ * the past days (fast, cached by the backend, and kept here so a refresh or the
+ * automatic update never downloads them again) and today (small, live).
+ */
+const PAST_CALLS_KEEP = 6;
+const pastCalls = new Map<string, Promise<Call[]>>();
+
+/** "2026-10-23" -> "2026-10-22", whatever the time zone. */
+function dayBefore(dayKey: string): string {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
+function callsForView(view: ReportView): Promise<Call[]> {
+  const load = (dateFrom: string, dateTo: string) =>
+    analyticsService.allCalls({ dateFrom, dateTo }, { timeZone: view.timeZone });
+  const today = zonedDayKey(Date.now(), view.timeZone);
+  if (!(view.dateFrom < today && view.dateTo >= today)) return load(view.dateFrom, view.dateTo);
+
+  const pastTo = dayBefore(today);
+  const key = [useAuthStore.getState().user?.id ?? "", view.dateFrom, pastTo, view.timeZone].join("|");
+  let past = pastCalls.get(key);
+  if (!past) {
+    past = load(view.dateFrom, pastTo);
+    pastCalls.set(key, past);
+    past.catch(() => pastCalls.delete(key));
+    while (pastCalls.size > PAST_CALLS_KEEP) {
+      const oldest = pastCalls.keys().next().value;
+      if (oldest === undefined) break;
+      pastCalls.delete(oldest);
+    }
+  }
+  // Newest first, as the backend returns them: today, then the earlier days.
+  return Promise.all([load(today, view.dateTo), past]).then(([now, earlier]) => [...now, ...earlier]);
+}
+
 /** Download a view (calls + the four aggregates), sharing an identical request in flight. */
 export function loadReportShared(view: ReportView): Promise<ReportData> {
   const key = reportKey(view);
@@ -154,7 +197,7 @@ export function loadReportShared(view: ReportView): Promise<ReportData> {
   if (shared) return shared;
   const range = { dateFrom: view.dateFrom, dateTo: view.dateTo, timezone: view.timeZone };
   const request = Promise.all([
-    analyticsService.allCalls({ dateFrom: view.dateFrom, dateTo: view.dateTo }, { timeZone: view.timeZone }),
+    callsForView(view),
     // Each aggregate is independent - a failing one just leaves its tab on the
     // call-log derivation instead of blanking the others.
     Promise.all(
@@ -234,6 +277,8 @@ export function dropHistoricalReports(): void {
     return !!from && !!tz && from < zonedDayKey(Date.now(), tz);
   };
   for (const k of [...memory.keys()]) if (historical(k)) memory.delete(k);
+  // The kept past days of month-to-date views go too (CH-232).
+  pastCalls.clear();
   const ss = storage();
   if (!ss) return;
   const doomed: string[] = [];
