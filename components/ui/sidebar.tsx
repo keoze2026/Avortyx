@@ -258,7 +258,7 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar()
 
   return (
     <Button
@@ -266,10 +266,18 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
-      className={cn('size-7', className)}
+      // touch-manipulation: no double-tap-to-zoom wait on phones, so a tap is
+      // a click straight away.
+      className={cn('size-7 touch-manipulation', className)}
       onClick={(event) => {
         onClick?.(event)
-        toggleSidebar()
+        // On a phone the button only OPENS the menu (CH-231). It used to
+        // toggle, so a tap delivered twice - or a second tap while the menu
+        // was still sliding in - opened and closed it in the same moment, and
+        // it took several taps to get it to stay (Sir, 23 Oct). The menu
+        // closes from its backdrop, Esc, or choosing a page.
+        if (isMobile) setOpenMobile(true)
+        else toggleSidebar()
       }}
       {...props}
     >

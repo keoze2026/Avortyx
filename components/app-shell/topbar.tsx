@@ -99,9 +99,10 @@ export function Topbar() {
       <div className="@container/topbar relative flex h-16 items-center gap-4 px-4 sm:px-6">
         {/* LEFT — sidebar trigger only */}
         <div className="flex items-center">
-          <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/70 bg-secondary/40">
-            <SidebarTrigger className="!h-8 !w-8 text-muted-foreground hover:text-foreground" />
-          </div>
+          {/* The whole square is the button (CH-231): on a phone the 32px icon
+              inside a 36px box left a ring that was not tappable, and the box
+              is 40px on touch screens - the size a thumb hits first time. */}
+          <SidebarTrigger className="!h-10 !w-10 rounded-lg border border-border/70 bg-secondary/40 text-muted-foreground transition-transform hover:text-foreground active:scale-95 md:!h-9 md:!w-9" />
         </div>
 
         {/* CENTER — command search. On wide screens it sits in the exact

@@ -66,7 +66,12 @@ export function AppSidebar() {
       router.replace(ROUTES.dashboard);
     }
   }, [pathname, canSeePath, router]);
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  // On a phone the menu closes once a page is chosen (CH-231): the button
+  // only opens it now, so it must not stay open over the new page.
+  React.useEffect(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [pathname, isMobile, setOpenMobile]);
   const collapsed = state === "collapsed";
   const { t } = useTranslation();
 
