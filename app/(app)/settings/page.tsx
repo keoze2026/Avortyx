@@ -13,6 +13,7 @@ import {
   SETTINGS_SECTIONS,
   SettingsRail,
   useCanSeeAdvancedRouting,
+  useCanSeeApiKeys,
   type SettingsSection,
 } from "@/components/settings/settings-rail";
 import { AdvancedRoutingSection } from "@/components/routing/advanced-routing-section";
@@ -24,6 +25,7 @@ export default function SettingsPage() {
   const { t } = useTranslation();
   const [section, setSection] = useState<SettingsSection>("profile");
   const canSeeAdvanced = useCanSeeAdvancedRouting();
+  const canSeeApiKeys = useCanSeeApiKeys();
 
   // Open the section named in the link, e.g. /settings?section=advanced-routing
   // (the Routing page and a routing plan's "All plans" button link there).
@@ -64,7 +66,7 @@ export default function SettingsPage() {
             >
               {section === "profile" && <ProfileSection />}
               {section === "security" && <SecuritySection />}
-              {section === "api-keys" && <ApiKeysSection />}
+              {section === "api-keys" && canSeeApiKeys && <ApiKeysSection />}
               {section === "notifications" && <NotificationsSection />}
               {section === "sessions" && <SessionsSection />}
               {section === "scheduled-reports" && (

@@ -15,6 +15,9 @@ export interface User {
    *  to a customer org's admin. Gates platform-only screens such as the
    *  access-request queue. */
   isStaff?: boolean;
+  /** The workspace's main account (backend CH-243): the only login shown API
+   *  keys - not other admins, managers, publishers or buyers. */
+  isMainUser?: boolean;
   /** Whether the user has TOTP-based MFA enrolled on the backend. Drives
    *  the Settings → Security 2FA card and the login challenge gating. */
   mfaEnabled?: boolean;

@@ -57,6 +57,13 @@ export function useCanSeeAdvancedRouting(): boolean {
   return role === "admin" && canSeePath(ROUTES.routing);
 }
 
+/** API keys are for the workspace's main account only (Sir, 24 Oct, CH-243):
+ *  not other admins, managers, publishers or buyers. The backend refuses
+ *  everyone else too; this keeps the section out of their menu. */
+export function useCanSeeApiKeys(): boolean {
+  return useAuthStore((s) => s.user?.isMainUser === true || s.user?.isSuperuser === true);
+}
+
 interface Props {
   active: SettingsSection;
   onSelect: (id: SettingsSection) => void;
@@ -65,7 +72,10 @@ interface Props {
 export function SettingsRail({ active, onSelect }: Props) {
   const { t } = useTranslation();
   const showAdvanced = useCanSeeAdvancedRouting();
-  const items = ITEMS.filter((i) => i.id !== "advanced-routing" || showAdvanced);
+  const showApiKeys = useCanSeeApiKeys();
+  const items = ITEMS.filter(
+    (i) => (i.id !== "advanced-routing" || showAdvanced) && (i.id !== "api-keys" || showApiKeys),
+  );
   return (
     <aside className="space-y-1.5">
       <h2 className="px-1 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">

@@ -52,6 +52,7 @@ interface UserOutWire {
   isEmailVerified?: boolean;
   isSuperuser?: boolean;
   isStaff?: boolean;
+  isMainUser?: boolean;
   organizationId?: string | null;
   /** Some deployments expose an avatar URL on /me — optional. */
   avatarUrl?: string;
@@ -107,6 +108,7 @@ function wireToUser(wire: UserOutWire): User {
     phone: wire.phoneNumber,
     isSuperuser: wire.isSuperuser === true,
     isStaff: wire.isStaff === true,
+    isMainUser: wire.isMainUser === true,
     mfaEnabled: wire.mfaEnabled === true,
     telegram:
       wire.telegramChatId || wire.telegramUsername
