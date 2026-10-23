@@ -1630,7 +1630,7 @@ export function CallSummaryTable({
                   {visible.dupe && (
                     <TotalsFilterCell
                       count={totals.dupe}
-                      tone="neutral"
+                      tone="repeated"
                       active={activeStatusFilter === "repeated"}
                       onClick={
                         onStatusFilterChange &&
@@ -1768,6 +1768,9 @@ const HOVER_TONE = {
   neutral: "hover:text-accent",
   success: "hover:text-[color:var(--success)]",
   destructive: "hover:text-destructive",
+  // Repeated (Sir, 24 Oct: yellow, not blue). Darker yellow on the light
+  // theme so the figure stays readable on white.
+  repeated: "hover:text-yellow-600 dark:hover:text-yellow-400",
 } as const;
 
 function TotalsFilterCell({
@@ -1779,7 +1782,7 @@ function TotalsFilterCell({
   count: number;
   /** Colour the count takes when active/hovered — matches this status's
    *  meaning elsewhere in the app (green = good, red = bad, neutral = plain). */
-  tone: "neutral" | "success" | "destructive";
+  tone: "neutral" | "success" | "destructive" | "repeated";
   active: boolean;
   onClick?: () => void;
 }) {
@@ -1788,7 +1791,9 @@ function TotalsFilterCell({
       ? "text-[color:var(--success)]"
       : tone === "destructive"
         ? "text-destructive"
-        : "text-accent";
+        : tone === "repeated"
+          ? "text-yellow-600 dark:text-yellow-400"
+          : "text-accent";
 
   if (!onClick) {
     return (
