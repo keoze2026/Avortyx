@@ -62,6 +62,7 @@ const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
   qualified: "toolsUI.reports.summary.columns.qualified",
   notConnected: "toolsUI.reports.summary.columns.noConnect",
   live: "toolsUI.reports.summary.columns.live",
+  repeated: "toolsUI.reports.summary.columns.dupe",
 };
 
 /** Shown while the data on hand belongs to a different range (stable references). */
@@ -437,7 +438,12 @@ export default function ReportsPage() {
     }
     if (filters.statuses.length > 0) return null;
     // Built in the browser: the backend query has no converted or missed filter.
-    if (statusFilter === "notConnected" || statusFilter === "live" || statusFilter === "converted") return null;
+    if (
+      statusFilter === "notConnected" ||
+      statusFilter === "live" ||
+      statusFilter === "converted" ||
+      statusFilter === "repeated"
+    ) return null;
     return {
       dateFrom: fromKey,
       dateTo: toKey,

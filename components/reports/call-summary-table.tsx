@@ -1625,8 +1625,21 @@ export function CallSummaryTable({
                       }
                     />
                   )}
+                  {/* Repeated lists its calls too (CH-236): it was plain text,
+                      so clicking 251 did nothing. */}
                   {visible.dupe && (
-                    <TableCell className="text-center tabular-nums">{formatNumber(totals.dupe)}</TableCell>
+                    <TotalsFilterCell
+                      count={totals.dupe}
+                      tone="neutral"
+                      active={activeStatusFilter === "repeated"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() =>
+                          onStatusFilterChange(
+                            activeStatusFilter === "repeated" ? null : "repeated",
+                          ))
+                      }
+                    />
                   )}
                   {visible.conversionRate && (
                     <TableCell className="text-center tabular-nums">

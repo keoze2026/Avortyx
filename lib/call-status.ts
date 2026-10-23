@@ -8,7 +8,8 @@ export type CallStatusFilter =
   | "qualified"
   | "converted"
   | "notConnected"
-  | "live";
+  | "live"
+  | "repeated";
 
 /**
  * Single source of truth for what "Connected", "Qualified" and "Not
@@ -30,6 +31,13 @@ export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): b
     // Same rule the Call Summary counts Converted with: the backend's own
     // verdict when the record carries it, else a paid completed call.
     return call.isConverted ?? (call.status === "completed" && call.payout > 0);
+  }
+  if (filter === "repeated") {
+    // The caller rang this campaign before (CH-230) - the same is_duplicate
+    // flag the Repeated count is summed from, on screen and on the server.
+    // It fell through to the Not Connected rule below, so clicking Repeated
+    // could list nothing.
+    return call.isDuplicate === true;
   }
   if (filter === "live") {
     // Calls still going on right now: ringing or talking.
