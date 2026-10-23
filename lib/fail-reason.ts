@@ -37,9 +37,10 @@ export function failReasonLabel(reason: string | null | undefined): string {
   // Missed" (with or without a reason in brackets); new ones say it already.
   if (DESTINATION_MISSED.test(raw) || NO_DESTINATION.test(raw)) return "No Destination";
   // Internal codes for a call whose end the switch never reported, closed by
-  // the platform's clean-up (backend CH-178). Shown as words, not as
-  // "Stale_timeout" / "Asterisk_gone".
-  if (/^(stale_timeout|asterisk_gone)$/i.test(raw)) return "No Hangup Report";
+  // the platform's clean-up (backend CH-178). The call rang and nobody answered
+  // it, so it reads "Not Connected" like any other unanswered call (Sir,
+  // 23 Oct: not "No Hangup Report", which is a word for us, not for him).
+  if (/^(stale_timeout|asterisk_gone)$/i.test(raw)) return "Not Connected";
   const words = raw.replace(/\s*blocked\s*$/i, "").trim() || raw;
   return words.replace(/\b([a-z])/g, (m) => m.toUpperCase());
 }
@@ -75,7 +76,9 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   if (/no\s*number\s*configured/i.test(raw)) return { key: `${k}noNumber` };
   if (/^no[\s_]*(destination|decision)$/i.test(raw)) return { key: `${k}noDestination` };
   if (/manual[\s_]*hang[\s_-]*up/i.test(raw)) return { key: `${k}manualHangup` };
-  if (/asterisk[\s_]*gone/i.test(raw)) return { key: `${k}callDropped` };
+  // Closed by the clean-up (stale_timeout / asterisk_gone): shown as the
+  // plain "Not Connected" above in every language, not as "Call dropped".
+  if (/^(stale_timeout|asterisk_gone)$/i.test(raw)) return null;
   if (/blacklist/i.test(raw)) return { key: `${k}blacklisted` };
   if (/do[\s-]*not[\s-]*call/i.test(raw)) return { key: `${k}doNotCall` };
   if (/tcpa|litigator/i.test(raw)) return { key: `${k}litigator` };
