@@ -4,17 +4,27 @@
  * The TFN Check panel (CH-214), shared by the portal page and the public
  * link page: paste numbers, press Check, see each number's status.
  *
- * The portal can also queue a real test call per live number; while those
- * run the panel checks again by itself so their results appear without a
- * click. The public page never places calls.
+ * On the portal each number has a Test call button (CH-239): the call starts
+ * inside our own phone system and the row shows each step as it happens -
+ * placed, reached our phone system, number live, campaign active, routing
+ * ready - then passed or failed. Nothing goes to the carrier. The public page
+ * never places calls.
  */
 import * as React from "react";
-import { CheckCircle2, ClipboardCopy, Loader2, RotateCw, Search, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardCopy,
+  Loader2,
+  PhoneCall,
+  RotateCw,
+  Search,
+  X,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +34,8 @@ import {
   TFN_STATUS_ORDER,
   type TfnCheckResponse,
   type TfnStatus,
+  type TfnTestCall,
+  type TfnTestStep,
 } from "@/lib/api/services/tfn-check.service";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -39,8 +51,28 @@ export const TFN_STATUS_TONE: Record<TfnStatus, string> = {
   not_found: "border-border bg-muted/30 text-muted-foreground",
 };
 
-/** How long after queuing test calls the panel checks again by itself. */
-const RECHECK_AFTER_MS = [40_000, 80_000];
+/** A running test call is read again this often, for this long at most. */
+const TEST_POLL_MS = 1_000;
+const TEST_GIVE_UP_MS = 45_000;
+/** Steps in the order the call goes through them; the backend may record two
+ *  at the same instant in either order. */
+const STEP_ORDER = ["placed", "reached", "number", "campaign", "routing"];
+/** Statuses a test call cannot help with: the number is not ours any more. */
+const UNTESTABLE = new Set<TfnStatus>(["not_found", "expired"]);
+
+type TestState = TfnTestCall & { gaveUp?: boolean };
+
+function orderedSteps(steps: TfnTestStep[]): TfnTestStep[] {
+  const rank = (k: string) => {
+    const i = STEP_ORDER.indexOf(k);
+    return i < 0 ? STEP_ORDER.length : i;
+  };
+  return [...steps].sort((a, b) => rank(a.key) - rank(b.key));
+}
+
+function clock(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "";
+}
 
 export function TfnStatusChip({ status, label }: { status: TfnStatus; label?: string }) {
   const { t } = useTranslation();
@@ -58,57 +90,81 @@ export function TfnStatusChip({ status, label }: { status: TfnStatus; label?: st
 
 export function TfnCheckPanel({
   onCheck,
-  allowTests = false,
+  onStartTest,
+  onGetTest,
   disabled = false,
 }: {
   onCheck: (numbers: string, test: boolean) => Promise<TfnCheckResponse>;
-  /** Portal only: offer "also place a test call". */
-  allowTests?: boolean;
+  /** Portal only: start a test call for one number (CH-239). */
+  onStartTest?: (number: string) => Promise<TfnTestCall>;
+  onGetTest?: (id: string) => Promise<TfnTestCall>;
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const [text, setText] = React.useState("");
-  const [withTests, setWithTests] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<TfnCheckResponse | null>(null);
   const [filter, setFilter] = React.useState<TfnStatus | null>(null);
-  const [testsRunning, setTestsRunning] = React.useState(0);
+  const [tests, setTests] = React.useState<Record<string, TestState>>({});
+  const [starting, setStarting] = React.useState<Record<string, boolean>>({});
   const lastChecked = React.useRef("");
-  const timers = React.useRef<number[]>([]);
+  const timers = React.useRef<Record<string, number>>({});
+  const canTest = Boolean(onStartTest && onGetTest);
 
-  React.useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
+  React.useEffect(
+    () => () => Object.values(timers.current).forEach((id) => window.clearTimeout(id)),
+    [],
+  );
+
+  /** Read a running test again every second until it passes or fails. */
+  const follow = React.useCallback(
+    (number: string, id: string, since: number) => {
+      if (!onGetTest) return;
+      timers.current[number] = window.setTimeout(async () => {
+        try {
+          const next = await onGetTest(id);
+          setTests((m) => ({ ...m, [number]: next }));
+          if (next.status === "passed" || next.status === "failed") return;
+        } catch {
+          // A missed read is retried on the next tick.
+        }
+        if (Date.now() - since > TEST_GIVE_UP_MS) {
+          setTests((m) => (m[number] ? { ...m, [number]: { ...m[number], gaveUp: true } } : m));
+          return;
+        }
+        follow(number, id, since);
+      }, TEST_POLL_MS);
+    },
+    [onGetTest],
+  );
+
+  const startTest = async (number: string) => {
+    if (!onStartTest) return;
+    window.clearTimeout(timers.current[number]);
+    setStarting((m) => ({ ...m, [number]: true }));
+    try {
+      const test = await onStartTest(number);
+      setTests((m) => ({ ...m, [number]: test }));
+      follow(number, test.id, Date.now());
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.friendlyMessage : t("tfnCheck.test.failed"));
+    } finally {
+      setStarting((m) => ({ ...m, [number]: false }));
+    }
+  };
 
   const run = React.useCallback(
-    async (numbers: string, test: boolean, quiet = false) => {
+    async (numbers: string, quiet = false) => {
       if (!numbers.trim()) {
         if (!quiet) toast.error(t("tfnCheck.errors.empty"));
         return;
       }
       setBusy(true);
       try {
-        const res = await onCheck(numbers, test);
+        const res = await onCheck(numbers, false);
         lastChecked.current = numbers;
         setResult(res);
         setFilter(null);
-        if (test) {
-          const queued = res.testsQueued ?? 0;
-          setTestsRunning(queued);
-          timers.current.forEach((id) => window.clearTimeout(id));
-          timers.current = [];
-          if (queued > 0) {
-            toast.success(t("tfnCheck.testsQueued").replace("{count}", String(queued)));
-            RECHECK_AFTER_MS.forEach((ms, i) => {
-              timers.current.push(
-                window.setTimeout(() => {
-                  void run(numbers, false, true);
-                  if (i === RECHECK_AFTER_MS.length - 1) setTestsRunning(0);
-                }, ms),
-              );
-            });
-          } else {
-            toast.message(t("tfnCheck.noTestsQueued"));
-          }
-        }
       } catch (e) {
         if (!quiet) {
           toast.error(e instanceof ApiError ? e.friendlyMessage : t("tfnCheck.errors.failed"));
@@ -154,23 +210,11 @@ export function TfnCheckPanel({
           className="font-mono text-xs"
           disabled={disabled}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void run(text, allowTests && withTests);
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void run(text);
           }}
         />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {allowTests ? (
-            <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-              <Checkbox
-                checked={withTests}
-                onCheckedChange={(v) => setWithTests(v === true)}
-                disabled={disabled}
-                className="mt-0.5"
-              />
-              <span>{t("tfnCheck.withTests")}</span>
-            </label>
-          ) : (
-            <span className="text-xs text-muted-foreground">{t("tfnCheck.hint")}</span>
-          )}
+          <span className="text-xs text-muted-foreground">{t("tfnCheck.hint")}</span>
           <div className="flex shrink-0 gap-2">
             {text && (
               <Button
@@ -185,7 +229,7 @@ export function TfnCheckPanel({
                 <X className="h-4 w-4" /> {t("tfnCheck.clear")}
               </Button>
             )}
-            <Button size="sm" onClick={() => void run(text, allowTests && withTests)} disabled={busy || disabled}>
+            <Button size="sm" onClick={() => void run(text)} disabled={busy || disabled}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               {t("tfnCheck.check")}
             </Button>
@@ -215,16 +259,10 @@ export function TfnCheckPanel({
               ))}
             </div>
             <div className="flex items-center gap-2">
-              {testsRunning > 0 && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {t("tfnCheck.testsRunning")}
-                </span>
-              )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => void run(lastChecked.current, false)}
+                onClick={() => void run(lastChecked.current)}
                 disabled={busy}
                 title={t("tfnCheck.refresh")}
               >
@@ -261,12 +299,20 @@ export function TfnCheckPanel({
                     <TableHead className="pl-5 text-[10px] uppercase tracking-wider">{t("tfnCheck.table.number")}</TableHead>
                     <TableHead className="text-[10px] uppercase tracking-wider">{t("tfnCheck.table.status")}</TableHead>
                     <TableHead className="text-[10px] uppercase tracking-wider">{t("tfnCheck.table.detail")}</TableHead>
-                    <TableHead className="pr-5 text-right text-[10px] uppercase tracking-wider">{t("tfnCheck.table.lastCall")}</TableHead>
+                    <TableHead className={cn("text-right text-[10px] uppercase tracking-wider", !canTest && "pr-5")}>{t("tfnCheck.table.lastCall")}</TableHead>
+                    {canTest && (
+                      <TableHead className="pr-5 text-right text-[10px] uppercase tracking-wider">{t("tfnCheck.table.test")}</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {shown.map((r) => (
-                    <TableRow key={r.number}>
+                  {shown.map((r) => {
+                    const test = tests[r.number];
+                    const running = Boolean(starting[r.number])
+                      || (test && (test.status === "queued" || test.status === "running") && !test.gaveUp);
+                    return (
+                    <React.Fragment key={r.number}>
+                    <TableRow className={cn(test && "border-b-0")}>
                       <TableCell className="whitespace-nowrap pl-5 font-mono text-xs">{r.number}</TableCell>
                       <TableCell>
                         <TfnStatusChip status={r.status} />
@@ -277,11 +323,44 @@ export function TfnCheckPanel({
                           <CheckCircle2 className="ml-1 inline h-3 w-3 text-[color:var(--success)]" />
                         )}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap pr-5 text-right text-xs tabular-nums text-muted-foreground">
+                      <TableCell className={cn("whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground", !canTest && "pr-5")}>
                         {r.lastCallAt ? formatRelativeTime(new Date(r.lastCallAt).getTime()) : "—"}
                       </TableCell>
+                      {canTest && (
+                        <TableCell className="whitespace-nowrap pr-5 text-right">
+                          {!UNTESTABLE.has(r.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 px-2.5 text-[11px]"
+                              onClick={() => void startTest(r.number)}
+                              disabled={running || disabled}
+                            >
+                              {running ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <PhoneCall className="h-3.5 w-3.5" />
+                              )}
+                              {running
+                                ? t("tfnCheck.test.calling")
+                                : test
+                                  ? t("tfnCheck.test.again")
+                                  : t("tfnCheck.test.button")}
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
-                  ))}
+                    {test && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={canTest ? 5 : 4} className="bg-muted/20 px-5 pb-3 pt-1">
+                          <TestSteps test={test} running={Boolean(running)} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </React.Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -291,6 +370,52 @@ export function TfnCheckPanel({
           </div>
         </Card>
       )}
+    </div>
+  );
+}
+
+/** The steps of one test call, ticked off as they happen (CH-239). */
+function TestSteps({ test, running }: { test: TestState; running: boolean }) {
+  const { t } = useTranslation();
+  const steps = orderedSteps(test.steps);
+  const done = test.status === "passed" || test.status === "failed";
+  return (
+    <div className="space-y-1 text-[11px]" aria-live="polite">
+      {steps.map((s, i) => (
+        <div key={`${s.key}-${i}`} className="flex items-center gap-2">
+          {s.ok ? (
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[color:var(--success)]" />
+          ) : (
+            <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+          )}
+          <span className={cn(s.ok ? "text-foreground" : "text-destructive")}>{s.text}</span>
+          <span className="ml-auto tabular-nums text-muted-foreground">{clock(s.at)}</span>
+        </div>
+      ))}
+      {running && (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          {t("tfnCheck.test.calling")}
+        </div>
+      )}
+      {done && (
+        <div
+          className={cn(
+            "flex items-center gap-2 pt-0.5 font-semibold",
+            test.status === "passed" ? "text-[color:var(--success)]" : "text-destructive",
+          )}
+        >
+          {test.status === "passed" ? (
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <XCircle className="h-3.5 w-3.5 shrink-0" />
+          )}
+          {test.status === "passed" ? t("tfnCheck.test.passed") : t("tfnCheck.test.failed")}
+          <span className="ml-auto font-normal tabular-nums text-muted-foreground">{clock(test.finishedAt)}</span>
+        </div>
+      )}
+      {!done && test.gaveUp && <div className="text-muted-foreground">{t("tfnCheck.test.timeout")}</div>}
+      <div className="pt-1 text-[10px] text-muted-foreground">{t("tfnCheck.test.note")}</div>
     </div>
   );
 }

@@ -2,6 +2,8 @@
  * TFN Check (backend CH-213): is each of these numbers working, right now.
  *
  *   POST   /api/numbers/check/              portal check (optionally queues test calls)
+ *   POST   /api/numbers/check/test          one test call for one number (CH-239)
+ *   GET    /api/numbers/check/test/{id}     that test call, step by step
  *   GET    /api/numbers/check/links         share links
  *   POST   /api/numbers/check/links         make a share link
  *   DELETE /api/numbers/check/links/{id}    cancel a share link
@@ -49,6 +51,48 @@ export interface TfnCheckResponse {
   maxNumbers: number;
   /** Portal only: test calls queued by this check. */
   testsQueued?: number;
+}
+
+/** One step of a test call, as it happened (CH-239). */
+export interface TfnTestStep {
+  key: "placed" | "reached" | "number" | "campaign" | "routing" | string;
+  ok: boolean;
+  text: string;
+  at: string;
+}
+
+/** A test call started inside our own phone system: nothing goes to the
+ *  carrier, no buyer is rung, nothing is billed (CH-239). */
+export interface TfnTestCall {
+  id: string;
+  number: string;
+  status: "queued" | "running" | "passed" | "failed";
+  mode: string;
+  steps: TfnTestStep[];
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+interface TestWire {
+  id: string;
+  number: string;
+  status: TfnTestCall["status"];
+  mode: string;
+  steps?: TfnTestStep[];
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+function testFromWire(w: TestWire): TfnTestCall {
+  return {
+    id: w.id,
+    number: w.number,
+    status: w.status,
+    mode: w.mode,
+    steps: w.steps ?? [],
+    startedAt: w.started_at,
+    finishedAt: w.finished_at,
+  };
 }
 
 export interface TfnCheckLink {
@@ -111,6 +155,21 @@ export const tfnCheckService = {
       rawResponse: true,
     });
     return fromWire(w);
+  },
+
+  async startTestCall(number: string): Promise<TfnTestCall> {
+    const w = await http.post<TestWire>("/api/numbers/check/test", {
+      body: { number },
+      rawResponse: true,
+    });
+    return testFromWire(w);
+  },
+
+  async getTestCall(id: string): Promise<TfnTestCall> {
+    const w = await http.get<TestWire>(`/api/numbers/check/test/${encodeURIComponent(id)}`, {
+      rawResponse: true,
+    });
+    return testFromWire(w);
   },
 
   async listLinks(): Promise<TfnCheckLink[]> {

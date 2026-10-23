@@ -2,8 +2,9 @@
 
 /**
  * TFN Check (Sir, 22 Oct, CH-214): our own version of XOLO's number lookup.
- * Paste numbers and see whether each is working; optionally place a real
- * test call to each live one. Share links let partners check without a login.
+ * Paste numbers and see whether each is working; press Test call on a number
+ * to watch a test call go through our own phone system step by step (CH-239).
+ * Share links let partners check without a login.
  */
 import * as React from "react";
 
@@ -13,12 +14,10 @@ import { TfnCheckPanel } from "@/components/tfn-check/tfn-check-panel";
 import { useTranslation } from "@/hooks/use-translation";
 import { tfnCheckService } from "@/lib/api/services/tfn-check.service";
 import { usePermissions } from "@/lib/my-permissions";
-import { useAuthStore } from "@/lib/store/auth-store";
 
 export default function TfnCheckPage() {
   const { t } = useTranslation();
   const { can } = usePermissions();
-  const role = useAuthStore((s) => s.user?.role);
   const onCheck = React.useCallback(
     (numbers: string, test: boolean) => tfnCheckService.check(numbers, test),
     [],
@@ -27,7 +26,13 @@ export default function TfnCheckPage() {
   return (
     <div className="space-y-8">
       <PageHeader title={t("tfnCheck.title")} description={t("tfnCheck.portalDescription")} />
-      <TfnCheckPanel onCheck={onCheck} allowTests={role !== "publisher"} />
+      {/* Every portal login may test its own numbers; a publisher's are
+          limited to theirs by the backend. */}
+      <TfnCheckPanel
+        onCheck={onCheck}
+        onStartTest={tfnCheckService.startTestCall}
+        onGetTest={tfnCheckService.getTestCall}
+      />
       <CheckLinksCard
         canEdit={can("tracking-numbers", "edit")}
         canDelete={can("tracking-numbers", "delete")}
