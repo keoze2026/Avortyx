@@ -109,7 +109,11 @@ export function Topbar() {
             middle of the bar (boss request), whatever is on the left and the
             right; on smaller screens it keeps to the free space between them
             so it never covers the stats. */}
-        <div className="relative mx-auto hidden w-full max-w-lg @5xl/topbar:block 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:mx-0 2xl:max-w-md 2xl:-translate-x-1/2 2xl:-translate-y-1/2 min-[1700px]:max-w-lg">
+        {/* CH-233: shown only from @6xl, where it fits beside the full stats,
+            and min-w-0 so it is the search box that gives way, never the
+            figures. At @5xl it took its full width first and the stats were
+            cut to "Total: 1" (Sir, 23 Oct, phone zoomed out). */}
+        <div className="relative mx-auto hidden w-full min-w-0 max-w-lg @6xl/topbar:block 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:mx-0 2xl:max-w-md 2xl:-translate-x-1/2 2xl:-translate-y-1/2 min-[1700px]:max-w-lg">
           <CommandSearch placeholder={t("topbar.searchPlaceholder")} />
         </div>
 
@@ -141,7 +145,10 @@ export function Topbar() {
               by the bar's width (container query), so an open sidebar counts.
               overflow-hidden, not a scroll box: Safari smeared the figures in
               a scrolling box when it was squeezed. */}
-          <div className="flex min-w-0 flex-col items-end gap-1 overflow-hidden @3xl/topbar:flex-row @3xl/topbar:items-center @3xl/topbar:gap-6">
+          {/* CH-233: shrink-0 and no clipping - the balance, Live and Total
+              always show in full ("Total: 1342", never "Total: 1"). The two-line
+              layout below @3xl is what keeps them inside a phone's width. */}
+          <div className="flex shrink-0 flex-col items-end gap-1 @3xl/topbar:flex-row @3xl/topbar:items-center @3xl/topbar:gap-6">
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
             <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
