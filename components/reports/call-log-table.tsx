@@ -258,12 +258,20 @@ function getHangUpSide(c: Call): HangUpSide {
  * as a missed call, so no "blocked" wording. "" = no reason.
  */
 function failReasonText(c: Call): string {
-  return failReasonLabel(c.failReason);
+  const label = failReasonLabel(c.failReason);
+  return label && convertedUnanswered(c) ? `${label} - With Conversion` : label;
 }
 
 /** The fail reason as shown on screen, in the chosen language (lib/fail-reason.ts). */
 function failReasonOnScreen(c: Call, locale: string, t: (key: string) => string): string {
-  return localizeFailReason(c.failReason, locale, t);
+  const label = localizeFailReason(c.failReason, locale, t);
+  return label && convertedUnanswered(c) ? `${label} - ${t("fail.withConversion")}` : label;
+}
+
+/** Not answered, yet converted: its destination bills on "Incoming Call"
+ *  (backend CH-247). Revo writes these "Call Not Connected - With Conversion". */
+function convertedUnanswered(c: Call): boolean {
+  return c.isConverted === true && c.status !== "completed" && c.status !== "in-progress";
 }
 
 /** The server's export file uses the backend's own wording; give it the same labels as the screen. */

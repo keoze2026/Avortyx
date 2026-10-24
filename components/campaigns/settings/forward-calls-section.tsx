@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ExternalLink, Loader2, Pencil, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Pagination } from "@/components/shared/pagination";
 import {
@@ -55,41 +54,36 @@ const ROUTING_OPTIONS: RoutingOption[] = ["Standard", "Menu", "Call Flow", "Reve
 const DUPLICATE_OPTIONS: DuplicateHandling[] = ["Normal", "Original", "Different"];
 const DIRECTION_OPTIONS: DirectionScope[] = ["Destination", "Buyer"];
 
-/* ─── Per-destination conversion settings (Edit pencil modal) ───────── */
+/* ─── Per-destination billing (Edit pencil modal), backend CH-247 ────────
+ * Each destination bills its buyer by its own rule, as on Revo: a Rate and
+ * "Convert ON" - Incoming Call (every call forwarded to it, answered or not),
+ * Call Connected (answered) or Call Length (answered and at least N seconds).
+ * "Campaign default" keeps the campaign's revenue and rule. The Webhook and
+ * duplicate-revenue options were never saved anywhere and are gone. */
 
-type ConvertEvent = "Call Connected" | "Call Length" | "Incoming Call" | "Webhook";
-type DupeRevenue = "Disabled" | "Enabled" | "Time Limit";
+type ConvertEvent = "Campaign default" | "Incoming Call" | "Call Connected" | "Call Length";
+type ConvertKey = "" | "incoming" | "connected" | "length";
 
-const CONVERT_EVENTS: ConvertEvent[] = [
-  "Call Connected",
-  "Call Length",
-  "Incoming Call",
-  "Webhook",
-];
-const DUPE_REVENUE_OPTIONS: DupeRevenue[] = ["Disabled", "Enabled", "Time Limit"];
-
-/**
- * Webhooks the operator has already configured at the workspace level.
- * In the real system this would come from a webhooks store / API; for the
- * demo we surface a stable hand-rolled list so the dropdown isn't empty.
- */
-const WORKSPACE_WEBHOOKS: Array<{ id: string; name: string }> = [
-  { id: "wh_lead_qualified", name: "Lead Qualified — CRM ingest" },
-  { id: "wh_billing_event", name: "Billing event — Stripe" },
-  { id: "wh_pubsub_main", name: "PubSub — main topic" },
-  { id: "wh_slack_ops", name: "Slack — #ops-routing" },
-];
+const CONVERT_EVENTS: ConvertEvent[] = ["Campaign default", "Incoming Call", "Call Connected", "Call Length"];
+const EVENT_KEY: Record<ConvertEvent, ConvertKey> = {
+  "Campaign default": "",
+  "Incoming Call": "incoming",
+  "Call Connected": "connected",
+  "Call Length": "length",
+};
+const KEY_EVENT: Record<ConvertKey, ConvertEvent> = {
+  "": "Campaign default",
+  incoming: "Incoming Call",
+  connected: "Call Connected",
+  length: "Call Length",
+};
 
 interface ConversionSettings {
+  /** This destination's rate; ignored for "Campaign default". */
   rate: number;
   convertOn: ConvertEvent;
   /** Minimum call duration (seconds) — only meaningful when convertOn = Call Length. */
   lengthSec: number;
-  /** Selected webhook id — only meaningful when convertOn = Webhook. */
-  webhookId: string;
-  dupeRevenue: DupeRevenue;
-  /** Days window — only meaningful when dupeRevenue = Time Limit. */
-  dupeRevenueDays: number;
   priority: number;
   weight: number;
 }
@@ -111,6 +105,10 @@ interface RoutedRow {
   enabled: boolean;
   /** The destination's concurrency cap (0 = no cap), for the LIVE column. */
   concurrencyCap: number;
+  /** Its own billing (CH-247): null rate / "" = the campaign's. */
+  revenue: number | null;
+  convertOn: ConvertKey;
+  convertSeconds: number;
 }
 
 /** Longest duplicate window offered: five years, in hours (5 × 8,760). */
@@ -125,6 +123,8 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   // When on, the backend drops any call from a caller ID that already called
   // this campaign within the window ("Duplicate call blocked").
   const [dupBlock, setDupBlock] = useState(false);
+  const [campaignRate, setCampaignRate] = useState(0);
+  const [campaignMinSec, setCampaignMinSec] = useState(0);
   const [dupHours, setDupHours] = useState("24");
   const [dupSavedHours, setDupSavedHours] = useState(24); // last value saved
   const [dupLoaded, setDupLoaded] = useState(false);
@@ -137,6 +137,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       .get(campaignId)
       .then((c) => {
         if (cancelled) return;
+        // The campaign's own billing, shown on rows that follow it (CH-247).
+        setCampaignRate(Number(c.revenue ?? 0));
+        setCampaignMinSec(Number(c.qualifyDurationSec ?? 0));
         setDupBlock(Boolean(c.duplicateCallBlock));
         setDupHours(String(c.duplicateCallBlockHours ?? 24));
         setDupSavedHours(c.duplicateCallBlockHours ?? 24);
@@ -275,6 +278,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         destId: dest?.id,
         enabled: dest ? dest.enabled : true,
         concurrencyCap: dest?.concurrencyCap ?? 0,
+        revenue: r.revenue != null && r.revenue !== "" ? Number(r.revenue) : null,
+        convertOn: ((r.convertOn as ConvertKey) || "") as ConvertKey,
+        convertSeconds: r.convertSeconds ?? 0,
       };
     });
   }, [routed, allDestinations]);
@@ -321,7 +327,6 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   };
   // Per-destination conversion settings entered via the pencil-icon modal.
   // Survives until the user reploads — sufficient for the demo surface.
-  const [conversions, setConversions] = useState<Record<string, ConversionSettings>>({});
 
   // Pagination for the routed-destinations table — defaults to 100 so the
   // operator sees a full block at a glance instead of paging through tiny 8-row
@@ -346,23 +351,43 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   const editingDest = editingId
     ? destinations.find((d) => d.id === editingId) ?? null
     : null;
-  const editingBuyer = editingDest ? buyerById.get(editingDest.buyerId) : undefined;
 
   const openEdit = (id: string) => setEditingId(id);
   const closeEdit = () => setEditingId(null);
 
-  const onConfirmConversion = (id: string, next: ConversionSettings) => {
-    setConversions((prev) => ({ ...prev, [id]: next }));
+  /** Saved on the server (CH-247) - it bills every call from now on. */
+  const onConfirmConversion = async (id: string, next: ConversionSettings) => {
+    if (!ruleId) return;
+    const key = EVENT_KEY[next.convertOn];
     setPriorities((prev) => ({ ...prev, [id]: next.priority }));
     setWeights((prev) => ({ ...prev, [id]: next.weight }));
-    if (ruleId) {
-      void routingService
-        .updateDestination(ruleId, id, { priority: next.priority, weight: next.weight })
-        .then(() => loadRouted())
-        .catch(() => toast.error(t("y.fwd.priorityFailed")));
+    try {
+      await routingService.updateDestination(ruleId, id, {
+        priority: next.priority,
+        weight: next.weight,
+        convertOn: key,
+        convertSeconds: key === "length" ? next.lengthSec : 0,
+        // "Campaign default" follows the campaign's rate too.
+        revenue: key === "" ? null : next.rate,
+      });
+      await loadRouted();
+      closeEdit();
+      toast.success(t("trafficUI.campaigns.settings.forward.toast.convSaved"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("y.fwd.priorityFailed"));
     }
-    closeEdit();
-    toast.success(t("trafficUI.campaigns.settings.forward.toast.convSaved"));
+  };
+
+  /** TYPE column: the event this destination bills on. */
+  const typeLabel = (d: RoutedRow): string => {
+    if (d.convertOn === "incoming") return t("trafficUI.campaigns.settings.forward.conversion.events.incomingCall");
+    if (d.convertOn === "connected") return t("trafficUI.campaigns.settings.forward.conversion.events.callConnected");
+    if (d.convertOn === "length")
+      return `${t("trafficUI.campaigns.settings.forward.conversion.events.callLength")} ${d.convertSeconds}s`;
+    // The campaign's rule: answered, and at least its minimum duration.
+    return campaignMinSec > 0
+      ? `${t("trafficUI.campaigns.settings.forward.conversion.events.callLength")} ${campaignMinSec}s`
+      : t("trafficUI.campaigns.settings.forward.conversion.events.callConnected");
   };
 
   const onDetach = async (id: string, name: string) => {
@@ -581,15 +606,14 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                           "inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider",
                         )}
                       >
-                        {conversions[d.id]?.convertOn ?? "Call Connected"}
+                        {typeLabel(d)}
                       </span>
                     </TableCell>
                     {/* Centred under REVENUE like the other columns (it was right-aligned). */}
                     <TableCell className="text-center font-mono text-[11px] tabular-nums">
-                      {formatCurrency(
-                        conversions[d.id]?.rate ?? buyer?.bidAmount ?? 0,
-                        true,
-                      )}
+                      {/* Its own rate, else the campaign's (CH-247). It showed the
+                          buyer's bid, which bills nothing. */}
+                      {formatCurrency(d.revenue ?? campaignRate, true)}
                     </TableCell>
                     {/* LIVE: calls up now / the destination's concurrency cap,
                         as on the Destinations page and in Revo. */}
@@ -676,19 +700,17 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           open={!!editingDest}
           onOpenChange={(o) => !o && closeEdit()}
           destinationName={editingDest.name}
+          campaignRate={campaignRate}
           initial={
-            conversions[editingDest.id] ?? {
-              rate: editingBuyer?.bidAmount ?? 1,
-              convertOn: "Call Connected",
-              lengthSec: 10,
-              webhookId: "",
-              dupeRevenue: "Disabled",
-              dupeRevenueDays: 10,
+            {
+              rate: editingDest.revenue ?? campaignRate,
+              convertOn: KEY_EVENT[editingDest.convertOn],
+              lengthSec: editingDest.convertSeconds || 60,
               priority: priorities[editingDest.id] ?? 1,
               weight: weights[editingDest.id] ?? 100,
             }
           }
-          onConfirm={(next) => onConfirmConversion(editingDest.id, next)}
+          onConfirm={(next) => void onConfirmConversion(editingDest.id, next)}
         />
       )}
     </section>
@@ -784,6 +806,8 @@ interface ConversionSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   destinationName: string;
+  /** Shown when the row follows the campaign. */
+  campaignRate: number;
   initial: ConversionSettings;
   onConfirm: (next: ConversionSettings) => void;
 }
@@ -792,55 +816,40 @@ function ConversionSettingsDialog({
   open,
   onOpenChange,
   destinationName,
+  campaignRate,
   initial,
   onConfirm,
 }: ConversionSettingsDialogProps) {
   const { t } = useTranslation();
-  // Buffered form state — discarded on cancel, written on confirm.
-  const [name, setName] = useState(destinationName);
   const convertEventLabel: Record<ConvertEvent, string> = {
+    "Campaign default": t("y.fwd.conv.campaignDefault"),
     "Call Connected": t("trafficUI.campaigns.settings.forward.conversion.events.callConnected"),
     "Call Length": t("trafficUI.campaigns.settings.forward.conversion.events.callLength"),
     "Incoming Call": t("trafficUI.campaigns.settings.forward.conversion.events.incomingCall"),
-    Webhook: t("trafficUI.campaigns.settings.forward.conversion.events.webhook"),
   };
-  const dupeLabel: Record<DupeRevenue, string> = {
-    Disabled: t("trafficUI.campaigns.settings.forward.conversion.dupe.disabled"),
-    Enabled: t("trafficUI.campaigns.settings.forward.conversion.dupe.enabled"),
-    "Time Limit": t("trafficUI.campaigns.settings.forward.conversion.dupe.timeLimit"),
+  const convertHint: Record<ConvertEvent, string> = {
+    "Campaign default": t("y.fwd.conv.hint.campaign"),
+    "Incoming Call": t("y.fwd.conv.hint.incoming"),
+    "Call Connected": t("y.fwd.conv.hint.connected"),
+    "Call Length": t("y.fwd.conv.hint.length"),
   };
+  // Buffered form state — discarded on cancel, written on confirm.
   const [rate, setRate] = useState<number>(initial.rate);
   const [convertOn, setConvertOn] = useState<ConvertEvent>(initial.convertOn);
   const [lengthSec, setLengthSec] = useState<number>(initial.lengthSec);
-  const [webhookId, setWebhookId] = useState<string>(initial.webhookId);
-  const [dupeRevenue, setDupeRevenue] = useState<DupeRevenue>(initial.dupeRevenue);
-  const [dupeRevenueDays, setDupeRevenueDays] = useState<number>(initial.dupeRevenueDays);
   const [priority, setPriority] = useState<number>(initial.priority);
   const [weight, setWeight] = useState<number>(initial.weight);
+  const followsCampaign = convertOn === "Campaign default";
 
-  // Reseed when a different row's pencil opens the dialog.
-  // (initial / destinationName change because the parent passes new values
-  // — checking destinationName keeps this cheap and avoids stale captures.)
-  if (open && name === "" && destinationName !== "") setName(destinationName);
-
-  // Webhook conversions can't be saved without a webhook picked — Call Length
-  // needs a positive duration — and Time Limit needs a positive day window.
-  // Gate Confirm on the active sub-field.
-  const canSubmit =
-    rate >= 0 &&
-    (convertOn !== "Webhook" || webhookId !== "") &&
-    (convertOn !== "Call Length" || lengthSec > 0) &&
-    (dupeRevenue !== "Time Limit" || dupeRevenueDays > 0);
+  // Call Length needs a positive duration.
+  const canSubmit = rate >= 0 && (convertOn !== "Call Length" || lengthSec > 0);
 
   const submit = () => {
     if (!canSubmit) return;
     onConfirm({
-      rate,
+      rate: followsCampaign ? campaignRate : rate,
       convertOn,
       lengthSec: Math.max(1, lengthSec || 1),
-      webhookId,
-      dupeRevenue,
-      dupeRevenueDays: Math.max(1, dupeRevenueDays || 1),
       priority: Math.max(1, priority || 1),
       weight: Math.max(0, Math.min(100, weight || 0)),
     });
@@ -853,21 +862,10 @@ function ConversionSettingsDialog({
           <DialogTitle className="text-[13px] font-semibold uppercase tracking-wider">
             {t("trafficUI.campaigns.settings.forward.conversion.title")}
           </DialogTitle>
+          <p className="text-xs text-muted-foreground">{destinationName}</p>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Destination name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cs-name" className="text-xs font-medium">
-              {t("trafficUI.campaigns.settings.forward.conversion.destName")}
-            </Label>
-            <Input
-              id="cs-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
           {/* Rate */}
           <div className="space-y-1.5">
             <div className="flex items-end justify-between gap-3">
@@ -876,7 +874,7 @@ function ConversionSettingsDialog({
                   {t("trafficUI.campaigns.settings.forward.conversion.rate")}
                 </Label>
                 <p className="text-[11px] text-muted-foreground">
-                  {t("trafficUI.campaigns.settings.forward.conversion.rateHint")}
+                  {followsCampaign ? t("y.fwd.conv.rateCampaign") : t("y.fwd.conv.rateHint")}
                 </p>
               </div>
               <div className="relative w-28">
@@ -888,7 +886,8 @@ function ConversionSettingsDialog({
                   type="number"
                   min={0}
                   step="0.01"
-                  value={rate}
+                  value={followsCampaign ? campaignRate : rate}
+                  disabled={followsCampaign}
                   onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
                   className="pl-6 text-right font-mono tabular-nums"
                 />
@@ -906,25 +905,15 @@ function ConversionSettingsDialog({
               <SelectContent>
                 {CONVERT_EVENTS.map((e) => (
                   <SelectItem key={e} value={e}>
-                    <span className="inline-flex items-center gap-2">
-                      {convertEventLabel[e]}
-                      {e === "Webhook" && (
-                        <Badge variant="outline" className="px-1.5 py-0 text-[9px]">
-                          {t("trafficUI.campaigns.settings.forward.conversion.beta")}
-                        </Badge>
-                      )}
-                    </span>
+                    {convertEventLabel[e]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">{convertHint[convertOn]}</p>
           </div>
 
-          {/* Conditional sub-field driven by the Convert ON choice:
-              - Call Length → minimum-duration input (seconds)
-              - Webhook    → pick one of the workspace webhooks
-              The other two events (Call Connected, Incoming Call) need no
-              extra config, so nothing renders. */}
+          {/* Call Length → minimum duration (seconds). */}
           {convertOn === "Call Length" && (
             <div className="space-y-1.5">
               <div className="flex items-end justify-between gap-3">
@@ -949,75 +938,6 @@ function ConversionSettingsDialog({
                     className="pr-10 text-right font-mono tabular-nums"
                   />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {convertOn === "Webhook" && (
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">{t("trafficUI.campaigns.settings.forward.conversion.webhook")}</Label>
-              <Select value={webhookId} onValueChange={setWebhookId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("trafficUI.campaigns.settings.forward.conversion.selectPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORKSPACE_WEBHOOKS.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {webhookId === "" && (
-                <p className="text-[11px] text-destructive">
-                  {t("trafficUI.campaigns.settings.forward.conversion.webhookRequired")}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Duplicate revenue options */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{t("trafficUI.campaigns.settings.forward.conversion.dupeRevenue")}</Label>
-            <div className="inline-flex w-full rounded-md border border-border bg-muted p-0.5">
-              {DUPE_REVENUE_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setDupeRevenue(opt)}
-                  className={cn(
-                    "flex-1 rounded px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    dupeRevenue === opt
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {dupeLabel[opt]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Time-Limit sub-field — only relevant when Time Limit is picked. */}
-          {dupeRevenue === "Time Limit" && (
-            <div className="space-y-1.5">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <Label htmlFor="cs-days" className="text-xs font-medium">
-                    {t("trafficUI.campaigns.settings.forward.conversion.days")}
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("trafficUI.campaigns.settings.forward.conversion.daysHint")}
-                  </p>
-                </div>
-                <Input
-                  id="cs-days"
-                  type="number"
-                  min={1}
-                  value={dupeRevenueDays}
-                  onChange={(e) => setDupeRevenueDays(Number(e.target.value) || 0)}
-                  className="w-24 text-center font-mono tabular-nums"
-                />
               </div>
             </div>
           )}

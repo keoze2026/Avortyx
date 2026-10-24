@@ -238,6 +238,9 @@ async function copyRouting(sourceCampaignId: string, targetCampaignId: string): 
         buyerId: d.buyerId,
         weight: d.weight,
         priority: d.priority,
+        revenue: d.revenue != null ? Number(d.revenue) : null,
+        convertOn: d.convertOn || "",
+        convertSeconds: d.convertSeconds ?? 0,
       });
     }
     // New rules start active; keep a paused one paused.

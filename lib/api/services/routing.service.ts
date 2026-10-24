@@ -29,6 +29,19 @@ export interface RoutingDestination {
   buyerName?: string;
   weight?: number;
   priority?: number;
+  /** This destination's own billing (backend CH-247). null / "" = the
+   *  campaign's revenue and rule. */
+  revenue?: string | null;
+  convertOn?: "" | "incoming" | "connected" | "length";
+  convertSeconds?: number;
+}
+
+/** What a destination's Edit box saves (CH-247). `revenue: null` = the
+ *  campaign's rate. */
+export interface DestinationBilling {
+  revenue?: number | null;
+  convertOn?: "" | "incoming" | "connected" | "length";
+  convertSeconds?: number;
 }
 
 export interface RoutingRule {
@@ -174,7 +187,7 @@ export const routingService = {
       destinationType?: string;
       weight?: number;
       priority?: number;
-    },
+    } & DestinationBilling,
   ): Promise<RoutingDestination> {
     return http.post<RoutingDestination>(`/api/routing/rules/${ruleId}/destinations`, {
       body: {
@@ -183,6 +196,10 @@ export const routingService = {
         buyerId: destination.buyerId,
         weight: destination.weight ?? 100,
         priority: destination.priority ?? 1,
+        // A copied row keeps its billing (CH-247).
+        ...(destination.revenue != null ? { revenue: destination.revenue } : {}),
+        ...(destination.convertOn ? { convertOn: destination.convertOn } : {}),
+        ...(destination.convertSeconds ? { convertSeconds: destination.convertSeconds } : {}),
       },
     });
   },
@@ -197,7 +214,7 @@ export const routingService = {
   async updateDestination(
     ruleId: string,
     destinationId: string,
-    patch: { priority?: number; weight?: number },
+    patch: { priority?: number; weight?: number } & DestinationBilling,
   ): Promise<RoutingDestination> {
     return http.patch<RoutingDestination>(`/api/routing/rules/${ruleId}/destinations/${destinationId}`, {
       body: patch,
