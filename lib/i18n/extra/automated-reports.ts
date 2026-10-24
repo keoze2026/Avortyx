@@ -8,7 +8,7 @@ export const automatedReports: ExtraTranslations = {
   en: {
     "nav.automatedReports": "Automated Report",
     "autoReports.headline": "Automated Report",
-    "autoReports.subline": "Each buyer receives their call report on Telegram at their chosen time.",
+    "autoReports.subline": "Automate your reporting with Avortyx. Get timely reports delivered straight to you, without the manual effort.",
     "autoReports.feature.excel": "One Excel per destination",
     "autoReports.feature.options": "Buyer's own time and options",
     "autoReports.feature.approval": "Sent only with buyer approval",

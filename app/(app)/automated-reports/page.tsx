@@ -5,7 +5,8 @@
  * itself, in one place, after Reports in the menu.
  *
  *   Automated Report
- *   Each buyer receives their call report on Telegram at their chosen time.
+ *   Automate your reporting with Avortyx. Get timely reports delivered
+ *   straight to you, without the manual effort.  (Sir's own line, 25 Oct)
  *
  * Feature cards, then the live list of buyers and their Telegram report
  * status (Active / Waiting for approval / Off / Not set up), each with a link
