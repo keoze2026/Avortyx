@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Pencil, ShieldX } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Pencil, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
@@ -44,6 +44,7 @@ interface NumberRow {
   calls: number;
   connected: number;
   tclSeconds: number;
+  billedSeconds: number;
   ahtSeconds: number;
   numberFee: string;
   minuteCost: string;
@@ -57,6 +58,7 @@ interface Totals {
   calls: number;
   connected: number;
   tclSeconds: number;
+  billedSeconds: number;
   ahtSeconds: number;
   numberFees: string;
   portalFee: string;
@@ -75,8 +77,30 @@ interface CarrierGroup {
   numberMonthlyCost: string;
   portalMonthlyFee: string;
   perMinuteCost: string;
+  /** How the carrier rounds each call: 1, 6, 30 or 60 seconds (CH-254). */
+  billingIncrement: number;
   numbers: NumberRow[];
   totals: Totals;
+}
+
+/** The whole month's bill: TFN carriers plus routing on to buyers (CH-254). */
+interface Summary {
+  numberFees: string;
+  portalFees: string;
+  minuteCharges: string;
+  carriersTotal: string;
+  routingMinutes: string;
+  routingMonthlyFee: string;
+  routingTotal: string;
+  grandTotal: string;
+}
+
+interface Warning {
+  kind: "no_minute_rate" | "no_number_fee" | "no_carrier";
+  carrier?: string;
+  code?: string;
+  calls?: number;
+  numbers?: number;
 }
 
 interface CostsResponse {
@@ -84,13 +108,18 @@ interface CostsResponse {
   carriers: CarrierGroup[];
   grandTotal: string;
   unassigned: { numbers: NumberRow[]; totals: Totals };
+  routing?: { name: string };
+  summary?: Summary;
+  warnings?: Warning[];
 }
+
+const INCREMENTS = [1, 6, 30, 60] as const;
 
 /** Quick fills for the carriers Sir named; the owner can still type any value. */
 const PRESETS: { key: string; label: string; labelKey: string; numberMonthlyCost: string; portalMonthlyFee: string; perMinuteCost: string }[] = [
   { key: "xolo-high", label: "Xolo IP high risk", labelKey: "x1.carrierCosts.preset.xoloHigh", numberMonthlyCost: "15", portalMonthlyFee: "350", perMinuteCost: "0.40" },
   { key: "xolo-fwd", label: "Xolo IP forwarding TFN", labelKey: "x1.carrierCosts.preset.xoloForwarding", numberMonthlyCost: "5", portalMonthlyFee: "0", perMinuteCost: "0.15" },
-  { key: "freedom", label: "Freedom high risk", labelKey: "x1.carrierCosts.preset.freedomHigh", numberMonthlyCost: "6", portalMonthlyFee: "0", perMinuteCost: "0.04" },
+  { key: "freedom", label: "Freedom high risk", labelKey: "x1.carrierCosts.preset.freedomHigh", numberMonthlyCost: "5", portalMonthlyFee: "0", perMinuteCost: "0.04" },
 ];
 
 function money(v: string | number | null | undefined): string {
@@ -103,9 +132,17 @@ function shortDate(iso: string | null): string {
   return formatLocalDate(iso, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** This month in Eastern time, as the backend counts it (CH-254). */
 function thisMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit" })
+    .format(new Date())
+    .slice(0, 7);
+}
+
+function monthLabel(m: string): string {
+  const [y, mo] = m.split("-").map(Number);
+  if (!y || !mo) return m;
+  return new Date(Date.UTC(y, mo - 1, 15)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function errText(e: unknown): string {
@@ -192,6 +229,7 @@ export default function CarrierCostsPage() {
 
   const [editing, setEditing] = useState<CarrierGroup | null>(null);
   const [form, setForm] = useState({ numberMonthlyCost: "", portalMonthlyFee: "", perMinuteCost: "" });
+  const [increment, setIncrement] = useState(1);
   const [busy, setBusy] = useState(false);
 
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -241,6 +279,7 @@ export default function CarrierCostsPage() {
       portalMonthlyFee: c.portalMonthlyFee,
       perMinuteCost: c.perMinuteCost,
     });
+    setIncrement(c.billingIncrement ?? 1);
   };
 
   async function saveRates() {
@@ -252,6 +291,7 @@ export default function CarrierCostsPage() {
           number_monthly_cost: form.numberMonthlyCost || "0",
           portal_monthly_fee: form.portalMonthlyFee || "0",
           per_minute_cost: form.perMinuteCost || "0",
+          billing_increment: increment,
         },
       });
       toast.success(t("owner.costs.saved"));
@@ -314,9 +354,59 @@ export default function CarrierCostsPage() {
         </div>
         <div className="text-right">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("owner.costs.grandTotal")}</div>
-          <div className="text-2xl font-semibold tabular-nums">{money(data?.grandTotal)}</div>
+          <div className="text-2xl font-semibold tabular-nums">{money(data?.summary?.grandTotal ?? data?.grandTotal)}</div>
         </div>
       </div>
+
+      {/* The month's whole bill in one place (CH-254): TFN carriers and routing. */}
+      {data?.summary && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="px-5 py-4 text-base font-semibold">{t("owner.costs.sum.title")}</div>
+            <div className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                [t("owner.costs.sum.tfnFees"), data.summary.numberFees],
+                [t("owner.costs.sum.monthlyCharges"), data.summary.portalFees],
+                [t("owner.costs.sum.inboundMinutes"), data.summary.minuteCharges],
+                [t("owner.costs.sum.routingMinutes"), data.summary.routingMinutes],
+                [t("owner.costs.sum.routingFee"), data.summary.routingMonthlyFee],
+                [t("owner.costs.sum.total"), data.summary.grandTotal],
+              ].map(([label, value], i) => (
+                <div key={label} className="bg-card px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+                  <div className={i === 5 ? "text-base font-semibold tabular-nums" : "tabular-nums"}>{money(value)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-border px-5 py-2 text-xs text-muted-foreground">
+              {t("owner.costs.sum.note")
+                .replace("{routing}", data.routing?.name ?? "")
+                .replace("{month}", monthLabel(data.month))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* What would make the bill read low: missing rates, TFNs with no carrier. */}
+      {(data?.warnings ?? []).length > 0 && (
+        <div className="space-y-1.5 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
+          {(data?.warnings ?? []).map((w, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <span>
+                {(w.kind === "no_minute_rate"
+                  ? t("owner.costs.warn.noMinuteRate")
+                  : w.kind === "no_number_fee"
+                    ? t("owner.costs.warn.noNumberFee")
+                    : t("owner.costs.warn.noCarrier"))
+                  .replace("{carrier}", w.carrier ?? "")
+                  .replace("{calls}", String(w.calls ?? 0))
+                  .replace("{numbers}", String(w.numbers ?? 0))}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* What it costs to route calls on to buyers (XOLO termination), by day (CH-186). */}
       <RoutingCostCard />
@@ -373,7 +463,8 @@ export default function CarrierCostsPage() {
                 {t("owner.costs.rateLine")
                   .replace("{fee}", money(c.numberMonthlyCost))
                   .replace("{portal}", money(c.portalMonthlyFee))
-                  .replace("{perMin}", `$${Number(c.perMinuteCost).toFixed(4)}`)}
+                  .replace("{perMin}", `$${Number(c.perMinuteCost).toFixed(4)}`)
+                  .replace("{rounding}", t(`owner.costs.rounding.${c.billingIncrement ?? 1}`))}
               </div>
 
               {isOpen && (
@@ -465,6 +556,22 @@ export default function CarrierCostsPage() {
             {field("numberMonthlyCost", t("owner.costs.form.numberFee"), t("owner.costs.form.numberFeeHint"))}
             {field("portalMonthlyFee", t("owner.costs.form.portal"), t("owner.costs.form.portalHint"))}
             {field("perMinuteCost", t("owner.costs.form.perMinute"), t("owner.costs.form.perMinuteHint"))}
+            <div className="space-y-1.5">
+              <Label htmlFor="rate-increment">{t("owner.costs.form.rounding")}</Label>
+              <select
+                id="rate-increment"
+                value={increment}
+                onChange={(e) => setIncrement(Number(e.target.value))}
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+              >
+                {INCREMENTS.map((i) => (
+                  <option key={i} value={i}>
+                    {t(`owner.costs.form.rounding.${i}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">{t("owner.costs.form.roundingHint")}</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditing(null)}>
