@@ -85,8 +85,9 @@ function dayLabel(iso: string): string {
 
 export function RoutingCostCard() {
   const { t } = useTranslation();
-  const [preset, setPreset] = useState<Preset>("yesterday");
-  const [range, setRange] = useState(() => rangeFor("yesterday"));
+  // Opens on Today (Eastern), also after a refresh (Sir, 24 Oct).
+  const [preset, setPreset] = useState<Preset>("today");
+  const [range, setRange] = useState(() => rangeFor("today"));
   const [data, setData] = useState<RoutingCost | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
