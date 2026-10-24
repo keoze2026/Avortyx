@@ -95,6 +95,21 @@ interface Summary {
   grandTotal: string;
 }
 
+/** Company profit before tax (CH-257): customer charges - carrier costs. */
+interface Profit {
+  calls: string;
+  rejected: string;
+  voip: string;
+  portal: string;
+  tfn: string;
+  other: string;
+  refunds: string;
+  income: string;
+  customers: number;
+  carrierCosts: string;
+  profit: string;
+}
+
 interface Warning {
   kind: "no_minute_rate" | "no_number_fee" | "no_carrier";
   carrier?: string;
@@ -111,6 +126,7 @@ interface CostsResponse {
   routing?: { name: string };
   summary?: Summary;
   warnings?: Warning[];
+  profit?: Profit;
 }
 
 const INCREMENTS = [1, 6, 30, 60] as const;
@@ -357,6 +373,56 @@ export default function CarrierCostsPage() {
           <div className="text-2xl font-semibold tabular-nums">{money(data?.summary?.grandTotal ?? data?.grandTotal)}</div>
         </div>
       </div>
+
+      {/* Company profit before tax (CH-257, Sir 24 Oct): what customers were
+          charged, minus what the carriers charge us. */}
+      {data?.profit && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+              <span className="text-base font-semibold">{t("owner.profit.title")}</span>
+              <span className="text-xs text-muted-foreground">
+                {t("owner.profit.customers").replace("{count}", String(data.profit.customers))}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                [t("owner.profit.calls"), data.profit.calls],
+                [t("owner.profit.voip"), data.profit.voip],
+                [t("owner.profit.rejected"), data.profit.rejected],
+                [t("owner.profit.tfn"), data.profit.tfn],
+                [t("owner.profit.portal"), data.profit.portal],
+                ...(Number(data.profit.other) ? [[t("owner.profit.other"), data.profit.other]] : []),
+                ...(Number(data.profit.refunds) ? [[t("owner.profit.refunds"), data.profit.refunds]] : []),
+              ].map(([label, value]) => (
+                <div key={label} className="bg-card px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+                  <div className="tabular-nums">{money(value)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-px border-t border-border bg-border text-sm sm:grid-cols-3">
+              {[
+                [t("owner.profit.income"), money(data.profit.income), ""],
+                [t("owner.profit.carrierCosts"), `-${money(data.profit.carrierCosts)}`, ""],
+                [
+                  t("owner.profit.profit"),
+                  money(data.profit.profit),
+                  Number(data.profit.profit) < 0 ? "text-destructive" : "text-success",
+                ],
+              ].map(([label, value, tone], i) => (
+                <div key={label} className="bg-card px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+                  <div className={`${i === 2 ? "text-lg font-semibold" : "font-medium"} tabular-nums ${tone}`}>{value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-border px-5 py-2 text-xs text-muted-foreground">
+              {t("owner.profit.note")}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* The month's whole bill in one place (CH-254): TFN carriers and routing. */}
       {data?.summary && (
