@@ -318,8 +318,12 @@ function DeletedTfnsCard() {
           <p className="text-xs font-semibold text-foreground">
             {count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count))}
           </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{t("deletedTfns.body")}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{t("deletedTfns.until")}</p>
+          {/* Sir's wording (24 Oct). The notice still goes by itself at 12 PM
+              Eastern (the server stops listing the numbers); the page no
+              longer says so. */}
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {count === 1 ? t("deletedTfnsOne.body") : t("deletedTfns.body")}
+          </p>
           <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
             {shown.map((n) => (
               <li key={n.id} className={cn("flex items-baseline justify-between gap-2 text-[11px]", n.seen && "opacity-60")}>
@@ -333,6 +337,9 @@ function DeletedTfnsCard() {
               {t("deletedTfns.more").replace("{count}", String(more))}
             </p>
           )}
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {count === 1 ? t("deletedTfnsOne.replace") : t("deletedTfns.replace")}
+          </p>
           <div className="mt-2 flex items-center gap-2">
             {unseen > 0 && (
               <Button
@@ -364,9 +371,9 @@ function DeletedTfnsCard() {
   );
 }
 
-/** +18774893790 -> +1 877-489-3790, as in the TFNs Expired alert (CH-199). */
+/** +18888910358 -> 18888910358, as Sir writes it in the TFN Expired notice. */
 function prettyTfn(number: string): string {
   const d = (number || "").replace(/\D/g, "");
-  if (d.length === 11 && d.startsWith("1")) return `+1 ${d.slice(1, 4)}-${d.slice(4, 7)}-${d.slice(7)}`;
+  if (d.length === 11 && d.startsWith("1")) return d;
   return number;
 }

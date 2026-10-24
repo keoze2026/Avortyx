@@ -51,14 +51,11 @@ export function useDeletedTfnsRuntime() {
     // One banner per batch: a new retirement raises it again.
     if (bannerFor.current === newestAt) return;
     bannerFor.current = newestAt;
-    // Numbers only, written +1 877-489-3790 like the alert (CH-199).
+    // Numbers only, written 18888910358 as in Sir's wording.
     const shown = numbers
       .filter((n) => !n.seen)
       .slice(0, 5)
-      .map((n) => {
-        const d = n.number.replace(/\D/g, "");
-        return d.length === 11 && d.startsWith("1") ? `+1 ${d.slice(1, 4)}-${d.slice(4, 7)}-${d.slice(7)}` : n.number;
-      })
+      .map((n) => n.number.replace(/\D/g, "") || n.number)
       .join(", ");
     const more = count > 5 ? " " + t("deletedTfns.more").replace("{count}", String(count - 5)) : "";
     toast.warning(
@@ -66,7 +63,9 @@ export function useDeletedTfnsRuntime() {
       {
         id: TOAST_ID,
         duration: Infinity,
-        description: `${t("deletedTfns.body")} ${shown}${more}`,
+        description: `${count === 1 ? t("deletedTfnsOne.body") : t("deletedTfns.body")} ${shown}${more}. ${
+          count === 1 ? t("deletedTfnsOne.replace") : t("deletedTfns.replace")
+        }`,
         action: {
           label: t("deletedTfns.seen"),
           onClick: () => {
