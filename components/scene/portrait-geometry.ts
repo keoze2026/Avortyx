@@ -59,7 +59,8 @@ let seed = 1;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
 // eyes: her right and left eye's centres (x, y), in her space; far off when the picture marks none
-type PortraitGeometry = { points: THREE.BufferGeometry; lines: THREE.BufferGeometry; eyes: THREE.Vector4 };
+// headY: the middle of her head, top to chin, in her space (what sits at the centre of her ring)
+type PortraitGeometry = { points: THREE.BufferGeometry; lines: THREE.BufferGeometry; eyes: THREE.Vector4; headY: number };
 
 // one unit of her space per `step` pixels of the picture (so the points' spacing, for their size)
 export const portraitSpacing = (h: number, step: number) => (HEIGHT / h) * step;
@@ -83,7 +84,27 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
   const inEye = (x: number, y: number) =>
     eyes.reduce((k, [ex, ey]) => Math.max(k, Math.exp(-(((x - ex) / EYE.w) ** 2) - ((y - ey) / EYE.h) ** 2)), 0);
 
-  const pos: number[] = [], rand: number[] = [], size: number[] = [], bright: number[] = [];
+  // her head: all of her in front of halfway
+  let top = h, bottom = -1;
+  for (let i = 0; i < w * h; i++)
+    if (px[i * 4 + 1] > 128) {
+      const y = Math.floor(i / w);
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  const headY = bottom >= top ? at(0, (top + bottom + 1) / 2, 0)[1] : 0;
+
+  // her head's outline (for its rim light): 1 where her head ends within 3px, half within 6
+  const g = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : px[(y * w + x) * 4 + 1]);
+  const edgeAt = (x: number, y: number) => {
+    if (g(x, y) <= 128) return 0;
+    for (const [d, v] of [[3, 1], [6, 0.5]])
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]])
+        if (g(x + dx * d, y + dy * d) < 110) return v;
+    return 0;
+  };
+
+  const pos: number[] = [], rand: number[] = [], size: number[] = [], bright: number[] = [], edge: number[] = [];
   for (let y = 0; y < h; y += step)
     for (let x = 0; x < w; x += step) {
       const i = y * w + x;
@@ -101,6 +122,7 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
         rand.push(rnd());
         size.push((0.8 + rnd() * 0.4) * (face ? 0.85 : 1));
         bright.push(Math.min(1, b * (face ? 0.8 : 1) * (1 + eye * 0.6)));
+        edge.push(edgeAt(x, y));
       }
     }
   const count = rand.length, total = count + nodes.length;
@@ -111,12 +133,23 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
     rand.push(rnd());
     size.push(2.6 + rnd() * 1.2);
     bright.push(1);
+    edge.push(0);
+  }
+  // a catchlight in each eye, up and to the left of its centre (after the nodes, so no lines join them)
+  for (const [ex, ey] of eyes) {
+    const x = Math.round(ex / unit + w / 2), y = Math.round(h / 2 - ey / unit);
+    pos.push(...at(x - 1.5, y - 1.5, depthOf(Math.max(0, Math.min(w * h - 1, y * w + x))) + 0.05));
+    rand.push(rnd());
+    size.push(1.7);
+    bright.push(1);
+    edge.push(0);
   }
   const points = new THREE.BufferGeometry();
   points.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
   points.setAttribute("aRandom", new THREE.BufferAttribute(new Float32Array(rand), 1));
   points.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(size), 1));
   points.setAttribute("aBright", new THREE.BufferAttribute(new Float32Array(bright), 1));
+  points.setAttribute("aEdge", new THREE.BufferAttribute(new Float32Array(edge), 1));
 
   // the constellation: each node to its nearest two (a hundred or so nodes, so simply compared)
   const lp: number[] = [], lr: number[] = [], seen = new Set<number>();
@@ -140,5 +173,5 @@ export function buildPortrait({ w, h, px }: PortraitData, step: number): Portrai
   lines.setAttribute("position", new THREE.BufferAttribute(new Float32Array(lp), 3));
   lines.setAttribute("aRandom", new THREE.BufferAttribute(new Float32Array(lr), 1));
   const [r, l] = eyes.length === 2 ? eyes : [[99, 99], [99, 99]];
-  return { points, lines, eyes: new THREE.Vector4(r[0], r[1], l[0], l[1]) };
+  return { points, lines, eyes: new THREE.Vector4(r[0], r[1], l[0], l[1]), headY };
 }

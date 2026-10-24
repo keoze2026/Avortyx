@@ -51,6 +51,8 @@ uniform float uShapeA;
 uniform float uShapeB;
 uniform float uMorph;
 uniform float uFaceX;
+uniform float uFaceY;
+uniform float uSmile;
 attribute float aRandom;
 attribute float aSize;
 ${FLOW}
@@ -69,7 +71,8 @@ vec3 hash3(vec3 p){
 vec3 galaxy(vec3 p0){
   vec3 h=hash3(p0);
   float arm=floor(fract(aRandom*7.13)*3.0)*2.0944;
-  float rad=0.3+1.4*pow(h.x,0.75);
+  // sized to stay inside her HUD's inner ring
+  float rad=0.2+1.0*pow(h.x,0.75);
   float a=arm+rad*2.2+(h.y-0.5)*(0.3+0.45*rad)+uTime*0.6/(0.4+rad);
   vec3 g=vec3(cos(a)*rad*1.1,(h.z-0.5)*0.2*(1.6-rad*0.5),sin(a)*rad);
   return vec3(g.x,g.y*0.42-g.z*0.91,g.y*0.91+g.z*0.42);
@@ -182,14 +185,15 @@ vec3 displace(vec3 p0,out float e,out float scan,out float lid,out float sh,out 
   p.xy+=uGaze*vec2(0.035,0.02)*exp(-dot(ed,ed)/0.0025);
   p.y-=ed.y*0.85*uBlink*eye;
   lid=uBlink*eye;
-  // a breath, a keystroke's ripple out from her nose, a scan of light down her every 12 seconds
+  // a breath, a keystroke's ripple out from her nose
   p.z+=0.015*sin(uTime*1.4+p0.y*2.0)+uRipple*0.07*sin(length(p0.xy-vec2(0.03,-0.14))*9.0-uTime*10.0);
-  float sy=1.9-mod(uTime*0.4,4.8);
-  scan=exp(-pow((p0.y-sy)*7.0,2.0));
-  p.z+=scan*0.04;
-  // her face centred where she is placed (the midpoint between her eyes, which in her picture sits a
-  // little right of its middle); the forms are centred on their own
-  p.x-=uFaceX;
+  scan=0.0;
+  // a smile: the corners of her mouth lift (her mouth sits this far under her eyes in her picture)
+  vec2 mq=p0.xy-vec2((uEyes.x+uEyes.z)*0.5,(uEyes.y+uEyes.w)*0.5-0.65);
+  p.y+=uSmile*0.035*exp(-pow((abs(mq.x)-0.16)/0.07,2.0)-pow(mq.y/0.05,2.0));
+  // her face centred where she is placed (across, the midpoint between her eyes; up and down, the
+  // middle of her head, so it sits at the centre of her ring); the forms are centred on their own
+  p.xy-=vec2(uFaceX,uFaceY);
   // from one form to the next (uShapeA -> uShapeB as uMorph runs 0 -> 1), from her crown down,
   // each point swirling on its way
   float m=clamp((uMorph-(clamp(0.5-p0.y*0.3,0.0,1.0)*0.6+aRandom*0.4)*0.45)/0.55,0.0,1.0);
@@ -215,7 +219,7 @@ vec3 displace(vec3 p0,out float e,out float scan,out float lid,out float sh,out 
     float arc=sin(3.14159*e);
     // lifting away like embers (coming apart) or falling in from below (coming back)
     vec3 drift=mix(vec3(-0.35,0.6,-0.15),vec3(0.15,-0.55,0.3),uBack)*(0.4+aRandom);
-    p=mix(p,galaxy(p0),e)+(flow(p0*1.4,uTime)*0.45+drift)*arc;
+    p=mix(p,galaxy(p0),e)+(flow(p0*1.4,uTime)*0.3+drift*0.55)*arc;
   }
   vec3 d=p-uMouse;
   p+=d/max(length(d),0.001)*0.16*exp(-dot(d,d)*3.0);
@@ -235,7 +239,9 @@ uniform float uSize;
 uniform float uGain;
 uniform float uFocus;
 uniform float uFlash;
+uniform float uGlint;
 attribute float aBright;
+attribute float aEdge;
 varying float vB;
 varying float vSoft;
 varying vec2 vTone;
@@ -252,13 +258,21 @@ void main(){
   float node=step(2.0,aSize);
   // out of focus behind her face (while she is whole): larger, its light spread over the larger disc
   float blur=smoothstep(0.15,0.7,uFocus-position.z)*(1.0-e)*(1.0-sh),grow=1.0+blur*1.3;
-  gl_PointSize=max(1.0,uSize*aSize*grow*(1.0+front*1.4+e*0.25)*(6.0/max(-mv.z,0.1)));
+  // a glint in her eyes when she recognises you: their points swell and brighten
+  vec2 gd;
+  float glint=uGlint*pow(eyeOf(position.xy,gd),6.0)*(1.0-sh);
+  gl_PointSize=max(1.0,uSize*aSize*grow*(1.0+front*1.4+e*0.25+glint*0.5)*(6.0/max(-mv.z,0.1)));
   // in a form every point is lit about alike (her picture's dark parts would leave holes in it)
-  float b=3.4*pow(mix(aBright,(0.42+0.3*aRandom)*pDim,sh),1.5)*(1.0+scan*1.3)*(1.0-0.6*lid)*(1.0+blur*0.6)/(grow*grow);
+  float b=3.8*pow(mix(aBright,(0.42+0.3*aRandom)*pDim,sh),1.5)*(1.0+scan*1.3)*(1.0-0.6*lid)*(1.0+blur*0.6)/(grow*grow);
   b+=node*(0.35+0.35*sin(uTime*(1.5+aRandom*2.0)+aRandom*40.0));
+  b*=1.0+glint*1.5;
   // a form's far side dimmer, its lit points (calls, the voice's peaks, the mark's ends) brighter
   b*=mix(1.0,0.4+0.6*near,sh);
   b+=pGlow*sh*1.6;
+  // her face shaded by depth (her sides darker, her front brighter) and lit along its outline
+  float whole=(1.0-sh)*(1.0-e);
+  b*=mix(1.0,0.45+0.8*near,whole);
+  b+=aEdge*1.3*whole;
   b=b*mix(1.0,0.5+0.7*aRandom,e)+front*1.4;
   vB=b*uGain*(1.0+uFlash*1.6);
   vSoft=blur;
@@ -276,7 +290,8 @@ void main(){
   if(d>0.5)discard;
   // in focus a bright core; out of focus a flatter disc
   float a=smoothstep(0.5,0.0,d);
-  a=mix(a*a,a*0.7,vSoft)*vB*(0.85+0.3*uEnergy);
+  // in focus a small, sharp core
+  a=mix(a*a*a*1.4,a*0.7,vSoft)*vB*(0.85+0.3*uEnergy);
   // coloured by depth: a deep blue at her back, the blue through her, near-white blue nearest you (and
   // where a form is lit)
   vec3 c=mix(vec3(0.118,0.251,0.686),vec3(0.231,0.51,0.965),smoothstep(0.0,0.45,vTone.x));
@@ -473,5 +488,122 @@ void main(){
   float a=smoothstep(0.5,0.0,d);
   a=a*a*vA*0.75;
   gl_FragColor=vec4(vec3(0.231,0.51,0.965)*a,a);
+}
+`;
+
+// HUD rings round the AI (ai-portrait.tsx): ticks, counter-turning segments and a sweep that runs
+// faster while a field has focus (uEnergy) or a sign-in is checked (uBusy); gone while she is apart or in a form (uShow).
+// Typing raises a voice waveform under her (uVoice)
+export const HUD_VS = /* glsl */ `
+varying vec2 vP;
+void main(){
+  vP=position.xy;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+}
+`;
+
+export const HUD_FS = /* glsl */ `
+uniform float uTime;
+uniform float uEnergy;
+uniform float uShow;
+uniform float uBusy;
+uniform float uVoice;
+uniform float uReveal;
+uniform float uWin;
+uniform float uCall;
+uniform float uCallFrom;
+uniform float uDegraded;
+uniform float uThink;
+uniform float uFail;
+uniform float uDial;
+uniform float uDialing;
+varying vec2 vP;
+float hash(float n){return fract(sin(n*127.1)*43758.5453);}
+float ease3(float k){return 1.0-pow(1.0-k,3.0);}
+// never thinner than about a pixel, so her rings hold up at any size
+float band(float r,float at,float w,float aa){w=max(w,aa*0.6);return 1.0-smoothstep(w,w+aa,abs(r-at));}
+// n ticks round the circle, each w turns wide either side
+float ticks(float t,float n,float w,float px){float f=fract(t*n);return 1.0-smoothstep(w,w+px,min(f,1.0-f)/n);}
+void main(){
+  float r=length(vP),turn=atan(vP.y,vP.x)/6.2831853+0.5;
+  float aa=fwidth(r),px=aa/(r*6.2831853);
+  float spin=uTime*(0.02+0.07*uBusy);
+  // her tick ring turns a notch, like a safe's dial, with each keystroke of a password (uDial), lit as it turns
+  float t=fract(turn+spin+uDial);
+  float a=(0.35*ticks(t,144.0,0.0004,px)*band(r,1.35,0.02,aa)
+    +0.7*ticks(t,12.0,0.0009,px)*band(r,1.335,0.035,aa))*(1.0+1.5*uDialing)
+    +0.3*band(r,1.375,0.002,aa);
+  float s=fract((turn-spin*1.6)*6.0),si=floor(mod((turn-spin*1.6)*6.0,6.0));
+  // thinking: the segments light one by one clockwise from the top; a wrong password sends them
+  // back, stuttering; a degraded platform leaves one faltering
+  float q=floor(fract(0.75-turn)*6.0);
+  float lock=step(q+0.5,uThink*6.0);
+  lock=max(lock,step(0.001,uFail)*step(q+0.5,6.0*(1.0-uFail))*step(0.4,hash(floor(uTime*24.0)+q)));
+  float falter=1.0-uDegraded*step(2.5,si)*step(si,3.5)*(0.5+0.5*sin(uTime*23.0)*sin(uTime*7.0));
+  a+=0.45*(1.0+2.5*lock)*falter*smoothstep(0.0,px*6.0,s)*smoothstep(0.72,0.72-px*6.0,s)*band(r,1.47,0.008,aa);
+  float head=fract(uTime*(0.12+0.45*max(uEnergy,uBusy))-turn);
+  a+=0.25*band(r,1.56,0.0015,aa)+(0.4+0.6*max(uEnergy,uBusy))*pow(1.0-head,10.0)*band(r,1.56,0.006,aa);
+  // listening: a voice waveform all round her inner ring, breathing in slow waves while a field has
+  // focus (uEnergy) and leaping with each keystroke (uVoice); each bar its own height, many times a second
+  float bars=96.0,bi=floor(turn*bars),bf=fract(turn*bars),k=fract(uTime*14.0);
+  float wave=0.5+0.5*sin(bi*0.55-uTime*3.0)*sin(bi*0.21+uTime*1.7);
+  float jump=mix(hash(bi+floor(uTime*14.0)),hash(bi+floor(uTime*14.0)+1.0),k);
+  float h=clamp(uEnergy*(0.12+0.38*wave)+uVoice*(0.25+0.75*jump),0.0,1.0);
+  float bar=smoothstep(0.0,px*bars,bf-0.3)*smoothstep(0.0,px*bars,0.7-bf);
+  float top=1.385+0.085*h;
+  a+=(0.5+0.8*h)*bar*smoothstep(1.385-aa,1.385,r)*(1.0-smoothstep(top,top+aa,r))*step(0.03,h);
+  // a call: a light lands on the outer ring and slides round to the wire on her right (turn 0.5)
+  if(uCall>0.0){
+    float k=uCall,pos=0.5+(uCallFrom-0.5)*(1.0-k*k*(3.0-2.0*k));
+    float h=turn-pos,arc=h*r*6.2831853;
+    float fade=smoothstep(0.0,0.1,k)*(1.0-smoothstep(0.92,1.0,k));
+    a+=fade*band(r,1.56,0.007,aa)*(1.8*exp(-pow(arc/0.02,2.0))+0.7*step(0.0,h)*exp(-arc*5.0));
+  }
+  // her heartbeat: a soft double beat through the rings, slower when the platform is degraded
+  float bp=fract(uTime/mix(1.3,2.2,uDegraded));
+  a*=1.0+0.35*(exp(-pow((bp-0.08)*18.0,2.0))+0.6*exp(-pow((bp-0.22)*18.0,2.0)));
+  // lights orbiting on the rings, each trailing a fading tail
+  const vec3 ORBIT[5]=vec3[5](vec3(1.375,0.05,0.1),vec3(1.47,-0.035,0.45),vec3(1.56,0.025,0.7),vec3(1.375,-0.07,0.85),vec3(1.56,-0.045,0.3));
+  for(int k=0;k<5;k++){
+    vec3 o=ORBIT[k];
+    float h=fract((uTime*o.y+o.z-turn)*sign(o.y));
+    float arc=h*r*6.2831853;
+    a+=band(r,o.x,0.006,aa)*(1.2*exp(-pow(arc/0.018,2.0))+0.5*exp(-arc*6.0))*(1.0+uBusy);
+  }
+  // a right password: the rings flare and a ring of light closes in on her
+  a*=1.0+1.5*sin(3.14159*uWin);
+  a+=step(0.001,uWin)*(1.0-uWin)*1.4*band(r,1.52-0.32*ease3(uWin),0.012,aa);
+  // drawn on clockwise from the top as she first appears
+  a*=1.0-smoothstep(uReveal*1.05-0.04,uReveal*1.05,fract(0.75-turn));
+  a*=uShow*1.6;
+  gl_FragColor=vec4(vec3(0.231,0.51,0.965)*a,a);
+}
+`;
+
+// large, faint, out-of-focus lights drifting close to the camera (bokeh-field.tsx), for depth
+export const BOKEH_VS = /* glsl */ `
+uniform float uTime;
+uniform float uPixelRatio;
+attribute float aRandom;
+varying float vA;
+void main(){
+  vec3 p=position;
+  p.x+=sin(uTime*0.05+aRandom*20.0)*0.6;
+  p.y+=cos(uTime*0.04+aRandom*13.0)*0.4;
+  vec4 mv=modelViewMatrix*vec4(p,1.0);
+  gl_Position=projectionMatrix*mv;
+  gl_PointSize=uPixelRatio*(40.0+60.0*aRandom)*(4.0/max(-mv.z,0.5));
+  vA=0.09+0.06*sin(uTime*0.3+aRandom*30.0);
+}
+`;
+
+export const BOKEH_FS = /* glsl */ `
+varying float vA;
+void main(){
+  float d=length(gl_PointCoord-0.5);
+  if(d>0.5)discard;
+  // a soft disc, a little brighter at its rim, as a lens draws a light out of focus
+  float a=(smoothstep(0.5,0.42,d)*(0.6+0.4*smoothstep(0.2,0.45,d)))*vA;
+  gl_FragColor=vec4(vec3(0.376,0.647,0.98)*a,a);
 }
 `;

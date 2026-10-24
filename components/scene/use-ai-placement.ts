@@ -25,17 +25,14 @@ function measure(): Placement | null {
   const card = document.querySelector("[data-card]")?.getBoundingClientRect();
   const intro = document.querySelector("[data-intro]")?.getBoundingClientRect();
   if (card && intro && W >= 1024 && intro.left < card.left) {
-    // she spans ~1.2 radii across (1.35 as she turns) and ~1.4 up and down
+    // her HUD rings span ~1.6 radii each way from her centre
     const cy = card.top + card.height / 2, most = W >= 2000 ? Math.min(H * 0.28, W * 0.12) : Math.min(H * 0.25, W * 0.12);
-    // room for the circuit's wires to the card
-    const gap = card.left - textRight(cy - most * 1.5, cy + most * 1.5, intro.left);
-    const wires = Math.max(48, Math.min(120, gap * 0.22));
     const centred = window.matchMedia("(min-width: 125rem)").matches;
-    for (let r = most; r >= 40; r *= 0.97) {
-      const start = textRight(cy - r * 1.5, cy + r * 1.5, intro.left) + 24, end = card.left - wires;
+    for (let r = most; r >= 28; r *= 0.97) {
+      const start = textRight(cy - r * 1.65, cy + r * 1.65, intro.left) + 24, end = card.left - 72;
       if (centred) {
-        if (W / 2 - r * 1.225 >= start && W / 2 + r * 1.225 <= end) return { x: W / 2, y: H / 2, r, tag: true };
-      } else if (end - start >= r * 2.45) return { x: (start + end) / 2, y: cy - r * 0.1, r, tag: true };
+        if (W / 2 - r * 1.62 >= start && W / 2 + r * 1.62 <= end) return { x: W / 2, y: H / 2, r, tag: true };
+      } else if (end - start >= r * 3.24) return { x: (start + end) / 2, y: cy - r * 0.1, r, tag: true };
     }
   }
   // she is 2.8 units tall, ~2.4 wide

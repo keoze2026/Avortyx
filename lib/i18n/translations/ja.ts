@@ -192,37 +192,19 @@ export const ja: TranslationShape = {
   },
 
   login: {
-    welcomeBack: "おかえりなさい",
     description: "Avortyx ワークスペースにサインインしてください。",
     email: "メール",
-    password: "パスワード",
     forgot: "忘れた?",
-    signIn: "サインイン",
     continue: "続行",
-    signingIn: "サインイン中…",
     newHere: "初めての方ですか?",
     createAccount: "アカウントを作成",
     inviteHint:
       "バイヤーとパブリッシャーは、メールで届く専用招待リンクからサインインします — このフォームではありません。",
     twoFactor: {
-      title: "二要素認証が必要です",
-      description: "Google Authenticator を開き、現在の 6 桁コードを入力してください — ",
-      label: "認証コード",
-      hint: "コードは 30 秒ごとに更新されます。デバイスを紛失した場合は管理者にお問い合わせください。",
-      verify: "確認して続行",
-      back: "← サインインに戻る",
       enabled: "このアカウントでは二要素認証が有効です",
-    },
-    intro: {
-      lead: "ペイパーコール",
-      middle: "のルーティングとライブマーケットを、",
-      accent: "ひとつのワークスペースで。",
-      sub: "通話のルーティング、キャンペーンの管理、マーケットの把握を、ひとつのサインインで。",
     },
     footer: {
       tagline: "ペイパーコール・ルーティングを再定義",
-      terms: "利用規約",
-      privacy: "プライバシー",
     },
   },
 

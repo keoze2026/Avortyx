@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTranslation } from "@/hooks/use-translation";
+import { useSignInTranslation } from "@/hooks/use-sign-in-translation";
 import { cn } from "@/lib/utils";
 import { chipMask, insetShape, type ChipShape } from "@/components/auth/chip-shape";
 import { signalBackdrop } from "@/components/backdrop/backdrop-signal";
@@ -44,7 +44,7 @@ function Segment({ label, children, className }: { label: string; children: Reac
 }
 
 export function LiveTicker({ compact = false, className }: { compact?: boolean; className?: string }) {
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   const btc = useBtcPrice();
   const status = useSystemStatus();
   const up = (btc.change24h ?? 0) >= 0;
@@ -55,6 +55,12 @@ export function LiveTicker({ compact = false, className }: { compact?: boolean; 
   useEffect(() => {
     if (!compact && btc.ticks > 0) signalBackdrop({ kind: "tick", up: btc.direction === "up" });
   }, [btc.ticks, btc.direction, compact]);
+  // the platform's health for the AI's heartbeat, kept on the page too for a scene that loads later
+  useEffect(() => {
+    if (compact || status === "checking") return;
+    document.documentElement.dataset.systemStatus = status;
+    signalBackdrop({ kind: "status", degraded: status === "degraded" });
+  }, [status, compact]);
   const spark = points.length > 1 ? sparkPath(points, W, H) : null;
 
   return (

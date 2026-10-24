@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowBigUp, Eye, EyeOff, KeyRound, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { signalBackdrop } from "@/components/backdrop/backdrop-signal";
-import { useTranslation } from "@/hooks/use-translation";
+import { useSignInTranslation } from "@/hooks/use-sign-in-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
@@ -22,7 +22,7 @@ import { TAP } from "./tap";
 //     sent with `completeMfa` (POST /api/accounts/verify-mfa).
 // Signed in, it drops any earlier PIN state and goes on to ?from= or the dashboard; if not, what the
 // server said shows in the note under the form. Success and the code step are also toasted.
-// It checks its own fields first (no browser bubbles): an empty or malformed field gets a soft red rim and a
+// It checks its own fields first (no browser bubbles): an empty or malformed field gets a brighter blue rim and a
 // line under it, read out, and takes the focus. It tells the backdrop when a field has focus, when
 // a valid sign-in is sent and how it went (backdrop-signal.ts), and warns when Caps Lock is on in the password.
 // "Forgot password?" carries the email typed so far over to the reset screen.
@@ -34,7 +34,7 @@ function check(email: string, password: string) {
 
 export function LoginForm() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   const login = useAuthStore((s) => s.login);
   const completeMfa = useAuthStore((s) => s.completeMfa);
   const cancelMfa = useAuthStore((s) => s.cancelMfa);
@@ -52,11 +52,15 @@ export function LoginForm() {
   const readCaps = (e: React.KeyboardEvent) => setCapsLock(e.getModifierState("CapsLock"));
 
   // signed in: a new login always starts locked (any previous PIN state goes; the server is asked
-  // again once the session is up), then on to where the user was headed
+  // again once the session is up), then on to where the user was headed, once the AI has smiled and
+  // the card has faded out
   function finishLogin() {
     signalBackdrop({ kind: "result", ok: true });
     resetSecurity();
-    router.push(new URLSearchParams(window.location.search).get("from") || ROUTES.dashboard);
+    const go = () => router.push(new URLSearchParams(window.location.search).get("from") || ROUTES.dashboard);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return go();
+    document.querySelector("[data-card]")?.classList.add("card-out");
+    window.setTimeout(go, 1100);
   }
 
   function failed(e: unknown, fallback: string) {
@@ -267,7 +271,7 @@ export function LoginForm() {
                 transition={{ duration: 0.18 }}
                 className="overflow-hidden"
               >
-                <span className="flex items-center gap-[6px] pb-[2px] pl-[4px] text-xs text-[#f5cf8a]">
+                <span className="flex items-center gap-[6px] pb-[2px] pl-[4px] text-xs text-ice-300">
                   <ArrowBigUp aria-hidden="true" className="h-[14px] w-[14px]" />
                   {t("signIn.capsLock")}
                 </span>

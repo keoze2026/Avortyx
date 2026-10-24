@@ -8,7 +8,7 @@
 
 import * as React from "react";
 
-import { findLocale } from "@/lib/i18n";
+import { findLocale } from "@/lib/i18n/locales";
 import { useLocaleStore } from "@/lib/store/locale-store";
 
 export function LocaleProvider() {

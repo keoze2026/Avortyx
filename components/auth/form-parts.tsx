@@ -37,8 +37,8 @@ export function FloatingField({
             // (16px on touch screens: iOS zooms the page into a field whose text is any smaller as it takes focus)
             "peer relative h-[54px] w-full rounded-2xl border bg-[#0b1222] bg-clip-padding pb-[4px] pl-[44px] pt-[19px] text-[14px] leading-[20px] text-foreground outline-none pointer-coarse:text-[16px]",
             "shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_-12px_24px_-18px_rgba(0,0,0,0.6)] transition-[border-color,background-color] duration-200",
-            // a soft red rim while the field has a problem
-            error ? "border-[#f0a0a8]/45 hover:border-[#f0a0a8]/60" : "border-white/10 hover:border-white/20",
+            // a brighter blue rim while the field has a problem
+            error ? "border-[#60a5fa]/45 hover:border-[#60a5fa]/60" : "border-white/10 hover:border-white/20",
             "focus:border-transparent focus:bg-[#0d1528]",
             trailing ? "pr-12" : "pr-4",
             inputProps?.className,
@@ -53,7 +53,7 @@ export function FloatingField({
           className={cn(
             // placed in whole pixels, never shifted by half its height, so the text stays sharp
             "pointer-events-none absolute left-[44px] top-[20px] origin-left text-[14px] leading-[14px] transition-all duration-200",
-            error ? "text-[#f3b2b8]" : "text-muted-foreground peer-focus:text-signal-300",
+            error ? "text-[#93c5fd]" : "text-muted-foreground peer-focus:text-signal-300",
             // floated: small, near the top edge
             "peer-focus:top-[10px] peer-focus:text-[11px] peer-focus:font-medium peer-focus:tracking-[0.04em]",
             "peer-[:not(:placeholder-shown)]:top-[10px] peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:font-medium peer-[:not(:placeholder-shown)]:tracking-[0.04em]",
@@ -75,7 +75,7 @@ export function FloatingField({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <span className="block pl-[4px] pt-[6px] text-xs text-[#f3b2b8]">{error}</span>
+            <span className="block pl-[4px] pt-[6px] text-xs text-[#93c5fd]">{error}</span>
           </motion.p>
         )}
       </AnimatePresence>

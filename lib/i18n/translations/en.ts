@@ -265,39 +265,19 @@ export const en = {
 
   /* ─── Login ──────────────────────────────────────────────── */
   login: {
-    welcomeBack: "Welcome back",
     description: "Sign in to your Avortyx workspace.",
     email: "Email",
-    password: "Password",
     forgot: "Forgot?",
-    signIn: "Sign in",
     continue: "Continue",
-    signingIn: "Signing in…",
     newHere: "New here?",
     createAccount: "Create an account",
     inviteHint:
       "Buyers and publishers sign in via the role-scoped invite link emailed to them, not this form.",
     twoFactor: {
-      title: "Two-factor required",
-      description: "Open Google Authenticator and enter the current 6-digit code for",
-      label: "Authenticator code",
-      hint: "Codes refresh every 30 seconds. Lost your device? Contact your admin.",
-      verify: "Verify and continue",
-      back: "← Back to sign-in",
       enabled: "Two-factor authentication is on for this account",
-    },
-    intro: {
-      // Rendered as: <lead, kept on one line><middle><accent, in the brand gradient>.
-      // `middle` carries its own spacing so languages without spaces read right.
-      lead: "Pay-per-call",
-      middle: " routing and live markets, in ",
-      accent: "one workspace.",
-      sub: "Route calls, track campaigns and follow the markets, all from one sign-in.",
     },
     footer: {
       tagline: "Pay-per-call routing reimagined",
-      terms: "Terms",
-      privacy: "Privacy",
     },
   },
 

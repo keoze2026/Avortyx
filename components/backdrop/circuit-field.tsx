@@ -9,7 +9,8 @@ import { textRight, useAiPlacement, type Placement } from "@/components/scene/us
 // yet) and on Sign in.
 
 const BLUE = "59,130,246", ICE = "219,234,254";
-const DRAW = { after: 1.5, each: 0.9, stagger: 0.12 }; // the traces' draw-in timing
+// the traces' draw-in: once the AI is printed and her rings drawn (her "ai" signal), or `fallback` seconds after the page opens
+const DRAW = { rings: 1.3, fallback: 6, each: 0.9, stagger: 0.12 };
 
 type Trace = { pts: [number, number][]; len: number; side: -1 | 1; order: number };
 type Pulse = { trace: Trace; at: number; dur: number; inward: boolean; then?: boolean };
@@ -31,12 +32,13 @@ function sprite(rgb: string, size: number, glow: number, dpr: number) {
 
 function layout(card: DOMRect, her: Placement | null, words: number, W: number, dpr: number): Layout | null {
   const cy = card.top + card.height / 2, h = card.height;
-  // the left side stops at the AI, and never runs into the intro's words
-  const leftEnd = Math.max(her?.tag ? her.x + her.r * 1.15 : card.left - 220, words + 32);
+  // the left side stops at the AI (on her outer ring), and never runs into the intro's words
+  const ring = her?.tag ? her.r * 1.56 : 0;
+  const leftEnd = Math.max(her?.tag ? her.x + ring : card.left - 220, words + 32);
   const rightEnd = Math.min(W - 18, card.right + 260);
   const rBand = rightEnd - (card.right + 18), lBand = card.left - 18 - leftEnd;
   if (rBand < 40) return null;
-  const sides = lBand >= 60 ? ([-1, 1] as const) : ([1] as const);
+  const sides = lBand >= 24 ? ([-1, 1] as const) : ([1] as const);
 
   const traces: Trace[] = [];
   const trace = (side: -1 | 1, y0: number, dy: number, end: number) => {
@@ -47,6 +49,14 @@ function layout(card: DOMRect, her: Placement | null, words: number, W: number, 
     traces.push({ pts, len, side, order: traces.length });
   };
   for (const side of sides) {
+    // to her: three wires from the card, each ending with its node on her outer ring
+    if (side < 0 && her?.tag) {
+      for (const k of [-1, 0, 1]) {
+        const y1 = her.y + k * ring * 0.5;
+        trace(-1, cy + k * h * 0.22, y1 - (cy + k * h * 0.22), Math.max(her.x + Math.sqrt(ring * ring - (y1 - her.y) ** 2), words + 32));
+      }
+      continue;
+    }
     const end = side < 0 ? leftEnd : rightEnd - 6;
     trace(side, card.top + h * 0.1, -h * 0.07, end);
     trace(side, cy, 0, side < 0 ? end : card.right + rBand * 0.55);
@@ -69,7 +79,7 @@ function layout(card: DOMRect, her: Placement | null, words: number, W: number, 
 function strokeTrace(c: CanvasRenderingContext2D, t: Trace, k: number, glow: number) {
   c.lineJoin = "round";
   c.lineCap = "round";
-  for (const [width, alpha, blur] of [[3, 0.1, 10], [1, 0.5, 4]] as const) {
+  for (const [width, alpha, blur] of [[3, 0.1, 10], [1, 0.5, 4], [0.75, 0.3, 0]] as const) {
     c.lineWidth = width;
     c.strokeStyle = `rgba(${BLUE},${alpha * glow})`;
     c.shadowColor = `rgba(${BLUE},1)`;
@@ -109,10 +119,17 @@ function along(t: Trace, s: number): [number, number] {
 
 const ease = (k: number) => 1 - Math.pow(1 - k, 3);
 
+// the middle of the wires to her, which carries her pulses to the card and your keystrokes to her
+const midLeft = (lay: Layout | null) => {
+  const left = lay?.traces.filter((t) => t.side < 0).sort((a, b) => a.pts[0][1] - b.pts[0][1]) ?? [];
+  return left[Math.floor(left.length / 2)];
+};
+
 export function CircuitField() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const her = useAiPlacement();
   const opened = useRef(0);
+  const start = useRef(0);
 
   useEffect(() => {
     const cv = canvas.current, card = document.querySelector("[data-card]"), intro = document.querySelector("[data-intro]");
@@ -120,6 +137,7 @@ export function CircuitField() {
     const ctx = cv.getContext("2d")!;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const born = (opened.current ||= performance.now() / 1000);
+    start.current ||= born + DRAW.fallback;
     let dpr = 1, lay: Layout | null = null, head: HTMLCanvasElement;
     let pulses: Pulse[] = [];
     const energy = { focus: 0, focused: false };
@@ -150,7 +168,7 @@ export function CircuitField() {
       ctx.globalCompositeOperation = "lighter";
       energy.focus += ((energy.focused ? 1 : 0) - energy.focus) * 0.06;
 
-      const since = t - born - DRAW.after, total = DRAW.each + DRAW.stagger * (lay.traces.length - 1);
+      const since = t - start.current, total = DRAW.each + DRAW.stagger * (lay.traces.length - 1);
       if (since < total) {
         for (const tr of lay.traces) {
           const k = ease(Math.min(1, Math.max(0, (since - tr.order * DRAW.stagger) / DRAW.each)));
@@ -190,15 +208,32 @@ export function CircuitField() {
 
     const onSignal = (e: Event) => {
       const s = (e as CustomEvent<BackdropSignal>).detail, now = performance.now() / 1000;
-      if (s.kind === "focus") energy.focused = true;
+      if (s.kind === "ai") start.current = Math.min(start.current, now + DRAW.rings);
+      else if (s.kind === "focus") {
+        energy.focused = true;
+        // she heard: a pulse from her ring along the middle wire into the card
+        const mid = midLeft(lay);
+        if (mid && !reduced && now >= start.current + 1) pulses.push({ trace: mid, at: now, dur: 0.45, inward: true });
+      }
       else if (s.kind === "blur") energy.focused = false;
-      else if (reduced || !lay || now - born < DRAW.after + 1) return;
+      else if (reduced || !lay || now < start.current + 1) return;
       else if (s.kind === "call") {
         if (pulses.length > 4) return;
         if (lay.traces.some((t) => t.side < 0)) send(-1, true, now, 0, true);
         else send(1, false, now);
       } else if (s.kind === "submit") for (const tr of lay.traces) pulses.push({ trace: tr, at: now + tr.order * 0.04, dur: 0.7, inward: tr.side < 0 });
     };
+
+    // each keystroke in the card sends a spark along the middle wire out to her
+    let typed = 0;
+    const onInput = (e: Event) => {
+      const now = performance.now() / 1000, mid = midLeft(lay);
+      if (!mid || reduced || now < start.current + 1 || now - typed < 0.09 || pulses.length > 8) return;
+      if (!(e.target as Element | null)?.closest?.("[data-card]")) return;
+      typed = now;
+      pulses.push({ trace: mid, at: now, dur: 0.35, inward: false });
+    };
+    document.addEventListener("input", onInput, true);
 
     measure();
     const ro = new ResizeObserver(measure);
@@ -217,6 +252,7 @@ export function CircuitField() {
       ro.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener(BACKDROP_EVENT, onSignal);
+      document.removeEventListener("input", onInput, true);
     };
   }, [her]);
 

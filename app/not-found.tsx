@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { NotFoundContent } from "./not-found-content";
+import { NotFoundContent } from "./not-found-lazy";
 
 /**
  * Is this request on the public site (avortyx.com) rather than the portal?

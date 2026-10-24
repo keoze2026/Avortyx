@@ -61,11 +61,21 @@ export function GlassCard({
     ry.set(0);
   }
 
-  // while a sign-in is on its way, the mark spins
+  // while a sign-in is on its way, the mark spins; a field taking focus sends a light round the rim
+  // as the AI's pulse arrives along the wire (circuit-field.tsx)
   useEffect(() => {
-    let timer = 0;
+    let timer = 0, heard = 0;
     const onSignal = (e: Event) => {
-      if ((e as CustomEvent<BackdropSignal>).detail.kind !== "submit" || !ref.current) return;
+      const kind = (e as CustomEvent<BackdropSignal>).detail.kind, el = ref.current;
+      if (kind === "focus" && el) {
+        window.clearTimeout(heard);
+        heard = window.setTimeout(() => {
+          delete el.dataset.heard;
+          void el.offsetWidth;
+          el.dataset.heard = "";
+        }, 450);
+      }
+      if (kind !== "submit" || !ref.current) return;
       ref.current.dataset.busy = "";
       window.clearTimeout(timer);
       timer = window.setTimeout(() => delete ref.current?.dataset.busy, 1100);
@@ -74,6 +84,7 @@ export function GlassCard({
     return () => {
       window.removeEventListener(BACKDROP_EVENT, onSignal);
       window.clearTimeout(timer);
+      window.clearTimeout(heard);
     };
   }, []);
 
@@ -91,11 +102,12 @@ export function GlassCard({
       className="card-in group/card relative w-full max-w-[27rem] lg:max-w-[348px]"
     >
       {/* 1. the glow beneath */}
-      <div aria-hidden="true" className="absolute -inset-12 -z-10 rounded-[3rem] forced-colors:hidden bg-[radial-gradient(closest-side,rgba(59,130,246,0.16),rgba(96,165,250,0.04)_60%,transparent)] blur-2xl" />
+      <div aria-hidden="true" className="absolute -inset-12 -z-10 rounded-[3rem] forced-colors:hidden bg-[radial-gradient(closest-side,rgba(59,130,246,0.3),rgba(96,165,250,0.09)_60%,transparent)] blur-2xl" />
 
       {/* 2. the rim */}
-      <div className={cn("relative rounded-[21px] p-px", fixed && "lg:flex lg:min-h-[min(582px,calc(100dvh-196px))] lg:flex-col", "bg-[linear-gradient(150deg,rgba(147,197,253,0.42),rgba(255,255,255,0.08)_28%,rgba(255,255,255,0.04)_60%,rgba(96,165,250,0.3))] shadow-[0_50px_120px_-40px_rgba(0,0,0,0.95),0_0_0_1px_rgba(2,4,10,0.6),0_0_80px_-30px_rgba(59,130,246,0.45)]")}>
+      <div className={cn("relative rounded-[21px] p-px", fixed && "lg:flex lg:min-h-[min(582px,calc(100dvh-196px))] lg:flex-col", "bg-[linear-gradient(150deg,rgba(147,197,253,0.42),rgba(255,255,255,0.08)_28%,rgba(255,255,255,0.04)_60%,rgba(96,165,250,0.3))] shadow-[0_50px_120px_-40px_rgba(0,0,0,0.95),0_0_0_1px_rgba(2,4,10,0.6),0_0_90px_-18px_rgba(59,130,246,0.6),0_0_24px_-8px_rgba(96,165,250,0.35)]")}>
         <span aria-hidden="true" className="edge-light" />
+        <span aria-hidden="true" className="edge-orbit" />
         <span aria-hidden="true" className="rim-light" />
 
         {/* 3. the glass */}

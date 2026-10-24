@@ -192,37 +192,19 @@ export const zh: TranslationShape = {
   },
 
   login: {
-    welcomeBack: "欢迎回来",
     description: "登录到您的 Avortyx 工作区。",
     email: "邮箱",
-    password: "密码",
     forgot: "忘记密码?",
-    signIn: "登录",
     continue: "继续",
-    signingIn: "登录中…",
     newHere: "新用户?",
     createAccount: "创建账户",
     inviteHint:
       "买家和发布商通过专属角色邀请链接登录,而不是通过此表单。",
     twoFactor: {
-      title: "需要双重验证",
-      description: "打开 Google Authenticator,输入当前的 6 位数字验证码:",
-      label: "验证器代码",
-      hint: "验证码每 30 秒刷新。设备丢失?请联系您的管理员。",
-      verify: "验证并继续",
-      back: "← 返回登录",
       enabled: "此账户已启用双重验证",
-    },
-    intro: {
-      lead: "按通话付费",
-      middle: "的路由与实时行情，尽在",
-      accent: "同一个工作区。",
-      sub: "通话路由、广告系列追踪与行情关注，一次登录即可完成。",
     },
     footer: {
       tagline: "重新定义按通话付费路由",
-      terms: "条款",
-      privacy: "隐私",
     },
   },
 

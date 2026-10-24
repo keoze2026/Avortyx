@@ -7,7 +7,7 @@ export const signIn: ExtraTranslations = {
     "signIn.workEmail": "Work email",
     "signIn.forgotPassword": "Forgot password?",
     "signIn.keepSignedIn": "Keep me signed in",
-    "signIn.inviteLead": "Publisher or buyer?",
+    "signIn.inviteLead": "Publisher or Buyer?",
     "signIn.inviteBody": "Use the role-scoped invite link we emailed you, not this form.",
     "signIn.newTo": "New to Avortyx?",
     "signIn.resetTitle": "Reset your password",

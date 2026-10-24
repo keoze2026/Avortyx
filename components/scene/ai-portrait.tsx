@@ -4,70 +4,39 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { buildPortrait, portraitSpacing, type PortraitData } from "./portrait-geometry";
+import { signalBackdrop } from "@/components/backdrop/backdrop-signal";
 import { frameStep, input, setMode, type AiMode } from "./scene-input";
-import { PORTRAIT_LINES_FS, PORTRAIT_LINES_VS, PORTRAIT_POINTS_FS, PORTRAIT_POINTS_VS } from "./shaders";
+import { HUD_FS, HUD_VS, PORTRAIT_LINES_FS, PORTRAIT_LINES_VS, PORTRAIT_POINTS_FS, PORTRAIT_POINTS_VS } from "./shaders";
 import type { Placement } from "./use-ai-placement";
 
 // The AI's portrait in 3D points (two draw calls: her points and the constellation on her face),
 // placed over the page where use-ai-placement.ts says, facing the card, swaying a little and
-// turning towards the pointer (only a little: she is a relief from one picture, so seen from far
-// round she would flatten). She opens as a galaxy of points and is printed out of it; then she
-// holds together a moment (breathing, a scan of light passing down her, her eyes following the
-// pointer, or the field being typed in, and blinking now and then; midway her points travel through
-// other forms, a globe with calls arcing between its cities, a speaking voice and the Avortyx mark,
-// and come back as her face),
-// burns away into the galaxy,
-// which turns a moment, and is printed back (uProgress 0 -> 1 -> 0; shaders.ts moves the points).
-// While a sign-in field has focus she holds together and listens (as her face: from a form, she
-// comes back to it first). Sign in sends her apart at once,
-// and she holds as the galaxy until the sign-in's answer (backdrop-signal.ts "result"; a few
-// seconds at most): a right password prints her back lit up, a wrong one prints her back quickly
-// and jolts her.
+// turning towards the pointer. She is printed out of a galaxy of points as the page opens, her HUD
+// rings draw on round her, and from then on she stays: breathing, blinking, her eyes on the pointer or
+// the field being typed in. All else she does answers the visitor: she listens while a field has
+// focus, nods when the email is valid, thinks while a sign-in is checked (her rings spin up), then
+// smiles with a pulse of her rings (a right password) or jolts (a wrong one).
 
-const CYCLE = { whole: 21.5, apart: 2.6, cloud: 2.4, back: 3.4 };
-// her forms while whole (shaders.ts form(); 0 her face): from FORMS.from into each in turn, a new one every
-// FORMS.each seconds, FORMS.morph to change, and back to her face. Her face shows only briefly, about
-// three seconds at a time (once printed, and once back from the forms before she burns away), so
-// she is always on her way to another pattern
-const FORMS = { from: 3, each: 4.5, morph: 1.8, seq: [0, 1, 2, 3, 0] };
-const FORMS_LAST = FORMS.from + (FORMS.seq.length - 2) * FORMS.each;
-const APART = CYCLE.whole, CLOUD = APART + CYCLE.apart, BACK = CLOUD + CYCLE.cloud, LENGTH = BACK + CYCLE.back;
-const WAIT = 8; // the longest she holds as the galaxy for a sign-in's answer
+const PRINT = { cloud: 0.3, back: 2.6, speed: 1.3 }; // the opening: a moment as the galaxy, then printed (uProgress 1 -> 0)
+const WAIT = 8; // the longest she thinks before giving up on a sign-in's answer
 const FOV = 40, DIST = 6; // the camera's (ai-scene.tsx)
 const ease = (k: number) => k * k * (3 - 2 * k);
-type Forms = { a: number; b: number; m: number };
-const FACE: Forms = { a: 0, b: 0, m: 0 };
 
-// where she is in her cycle, kept outside the component so a switch to the lighter scene (which
-// remounts it) carries on where it was. She opens as the galaxy, a moment before she is printed
-// (once the canvas has faded in), printed a little quicker than in her cycle
+// kept outside the component so a switch to the lighter scene (which remounts it) carries on where it was
 const cycle = {
-  at: BACK - 0.8,
-  speed: 1.5,
+  at: 0, // through the opening print
+  printed: false,
   seenSubmit: -1,
   seenResult: -1,
   verifying: false,
-  outcome: null as boolean | null, // the sign-in's answer, once the page has it
   waited: 0,
-  flash: -99, // when, on her clock, her last flash (a right password) and jolt (a wrong one) began
+  // when, on her clock, her last flash and smile (a right password) and jolt (a wrong one) began
+  flash: -99,
   glitch: -99,
   said: { mode: "Ready" as AiMode, until: 0 }, // what her tag says for a while after an answer
-  home: null as { from: number; at: number; dur: number } | null, // back to her face from a form, out of turn
 };
 
-// which forms she is between at c on her cycle (a -> b, m of the way)
-function formsAt(c: number): Forms {
-  if (c < FORMS.from || c >= APART) return FACE;
-  const i = Math.min(FORMS.seq.length - 2, Math.floor((c - FORMS.from) / FORMS.each));
-  return { a: FORMS.seq[i], b: FORMS.seq[i + 1], m: ease(Math.min(1, (c - FORMS.from - i * FORMS.each) / FORMS.morph)) };
-}
-
-function progressAt(c: number) {
-  if (c < APART) return 0;
-  if (c < CLOUD) return ease((c - APART) / CYCLE.apart);
-  if (c < BACK) return 1;
-  return 1 - ease((c - BACK) / CYCLE.back);
-}
+const progressAt = (c: number) => (c < PRINT.cloud ? 1 : 1 - ease(Math.min(1, (c - PRINT.cloud) / PRINT.back)));
 
 export function AiPortrait({ data, place, step, reduced }: { data: PortraitData; place: Placement; step: number; reduced: boolean }) {
   const group = useRef<THREE.Group>(null);
@@ -91,10 +60,13 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
       uFocus: { value: 0.4 }, // her face's depth, in her units (portrait-geometry.ts)
       uGlitch: { value: 0 },
       uFlash: { value: 0 },
+      uGlint: { value: 0 },
+      uSmile: { value: 0 },
       uShapeA: { value: 0 },
       uShapeB: { value: 0 },
       uMorph: { value: 0 },
       uFaceX: { value: 0 },
+      uFaceY: { value: 0 },
     }),
     [],
   );
@@ -102,6 +74,7 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     uniforms.uEyes.value.copy(geo.eyes);
     // the midpoint between her eyes, so her face is centred where she's placed (none if her picture marks no eyes)
     uniforms.uFaceX.value = Math.abs(geo.eyes.x) < 50 ? (geo.eyes.x + geo.eyes.z) / 2 : 0;
+    uniforms.uFaceY.value = geo.headY;
   }, [uniforms, geo]);
   const pointsMat = useMemo(
     () => new THREE.ShaderMaterial({ vertexShader: PORTRAIT_POINTS_VS, fragmentShader: PORTRAIT_POINTS_FS, uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -112,11 +85,25 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     [uniforms],
   );
   useEffect(() => () => (pointsMat.dispose(), linesMat.dispose()), [pointsMat, linesMat]);
+  const hud = useMemo(() => {
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: HUD_VS,
+      fragmentShader: HUD_FS,
+      uniforms: { uTime: uniforms.uTime, uEnergy: uniforms.uEnergy, uShow: { value: 0 }, uBusy: { value: 0 }, uVoice: { value: 0 }, uReveal: { value: 0 }, uWin: { value: 0 }, uCall: { value: 0 }, uCallFrom: { value: 0.8 }, uDegraded: { value: 0 }, uThink: { value: 0 }, uFail: { value: 0 }, uDial: { value: 0 }, uDialing: { value: 0 } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    return { mat, plane: new THREE.PlaneGeometry(3.4, 3.4) };
+  }, [uniforms]);
+  useEffect(() => () => (hud.mat.dispose(), hud.plane.dispose()), [hud]);
+  // always round her in her place between the intro and the card (place.tag); only too small to read in the header's corner
+  const showHud = place.tag || place.r >= 60;
 
   // a still frame for reduced motion, drawn again whenever she moves
   useEffect(() => invalidate(), [place, invalidate]);
 
-  const state = useRef({ energy: 0, scale: 0, mouse: new THREE.Vector3(), blinkAt: 2.5, gaze: new THREE.Vector2() });
+  const state = useRef({ energy: 0, scale: 0, mouse: new THREE.Vector3(), blinkAt: 2.5, gaze: new THREE.Vector2(), seenRecog: -1, nodAt: -99, revealAt: 0, nextCall: 0, callAt: -99, callSent: true, thinkAt: 0, shut: 0, tilt: 0, dial: 0 });
 
   useFrame(({ gl }, delta) => {
     const g = group.current;
@@ -124,67 +111,82 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     const s = state.current, dt = reduced ? 0 : frameStep(gl.info.render.frame, delta);
     const t = (uniforms.uTime.value += dt);
 
-    // the form she is in, if she is in one now (not on her way between two)
-    const now = formsAt(cycle.at), held = now.m >= 1 ? now.b : now.m <= 0 ? now.a : -1;
-    // back to her face out of turn, from the form she is in (or the nearer, on the way between two)
-    const goHome = (dur: number) => {
-      const from = held >= 0 ? held : now.m < 0.5 ? now.a : now.b;
-      if (from) cycle.home = { from, at: t, dur };
-      cycle.at = Math.max(cycle.at, FORMS_LAST + FORMS.morph);
-    };
-
-    // Sign in: she comes apart now (a little quicker), and holds as the galaxy for the answer
+    // Sign in: she thinks (her rings spin up) until the answer
     if (input.submittedAt > 0 && input.submittedAt !== cycle.seenSubmit) {
       cycle.seenSubmit = input.submittedAt;
-      if (cycle.at < APART) {
-        if (cycle.at > FORMS.from) goHome(0.9);
-        cycle.at = APART;
-        cycle.speed = 1.4;
-      }
       cycle.verifying = true;
-      cycle.outcome = null;
       cycle.waited = 0;
+      s.thinkAt = t;
     }
     if (input.result.at > 0 && input.result.at !== cycle.seenResult) {
       cycle.seenResult = input.result.at;
-      if (cycle.verifying) cycle.outcome = input.result.ok;
-    }
-    // once the answer is in, the rest of her time as the galaxy goes quickly
-    if (cycle.verifying && cycle.outcome !== null && cycle.at >= CLOUD && cycle.at < BACK) cycle.speed = 3;
-    // a field has focus while she is in a form: she comes back to her face, and listens
-    const listen = input.focused && !cycle.verifying && cycle.at < APART;
-    if (listen && held > 0) goHome(1.6);
-    const holdWhole = listen && held >= 0;
-    const holdCloud = cycle.verifying && cycle.outcome === null && cycle.at >= BACK - 0.05 && (cycle.waited += dt) < WAIT;
-    if (!holdWhole && !holdCloud) {
-      const was = cycle.at;
-      cycle.at += dt * cycle.speed;
-      // printed back after a sign-in: lit up (a right password) or quickly (a wrong one)
-      if (was < BACK && cycle.at >= BACK && cycle.verifying) {
-        cycle.speed = cycle.outcome === false ? 1.8 : 1.3;
-        if (cycle.outcome) cycle.flash = t;
+      if (cycle.verifying) {
+        cycle.verifying = false;
+        if (input.result.ok) cycle.flash = t;
+        else cycle.glitch = t;
+        cycle.said = { mode: input.result.ok ? "Welcome" : "Try again", until: t + 3 };
       }
     }
-    if (cycle.at >= LENGTH) {
-      cycle.at -= LENGTH;
-      cycle.speed = 1;
-      if (cycle.verifying && cycle.outcome !== null) {
-        if (!cycle.outcome) cycle.glitch = t;
-        cycle.said = { mode: cycle.outcome ? "Welcome" : "Try again", until: t + 3 };
+    if (cycle.verifying && (cycle.waited += dt) > WAIT) cycle.verifying = false;
+    // a valid email typed: she recognises you (a nod, a glint in her eyes)
+    if (input.recognizedAt > 0 && input.recognizedAt !== s.seenRecog) {
+      s.seenRecog = input.recognizedAt;
+      if (!cycle.verifying && cycle.printed) {
+        s.nodAt = t;
+        cycle.said = { mode: "Recognized", until: t + 2.2 };
       }
-      cycle.verifying = false;
-      cycle.outcome = null;
     }
-    setMode(cycle.verifying ? "Verifying" : t < cycle.said.until ? cycle.said.mode : input.focused ? "Listening" : "Ready");
+    if (!cycle.printed) {
+      cycle.at += dt * PRINT.speed;
+      if (cycle.at >= PRINT.cloud + PRINT.back) {
+        cycle.printed = true;
+        s.revealAt = t;
+        s.nextCall = t + 3;
+        signalBackdrop({ kind: "ai" });
+      }
+    }
+    // the password: she looks away while it's typed, and shuts her eyes while it's shown
+    const pw = document.getElementById("password") as HTMLInputElement | null;
+    const pwFocused = !!pw && document.activeElement === pw, pwShown = !!pw && pw.type === "text" && pw.value.length > 0;
+    s.shut += ((pwShown && cycle.printed ? 1 : 0) - s.shut) * Math.min(1, dt * 8);
+    setMode(cycle.verifying ? "Verifying" : t < cycle.said.until ? cycle.said.mode : pwShown ? "Not looking" : input.focused ? "Listening" : "Ready");
     uniforms.uProgress.value = reduced ? 0 : progressAt(cycle.at);
-    const home = cycle.home, h = home ? (t - home.at) / home.dur : 1;
-    if (home && h >= 1) cycle.home = null;
-    const forms = reduced ? FACE : home && h < 1 ? { a: home.from, b: 0, m: ease(h) } : formsAt(cycle.at);
-    uniforms.uShapeA.value = forms.a;
-    uniforms.uShapeB.value = forms.b;
-    uniforms.uMorph.value = forms.m;
-    // coming back once she is all in the galaxy (where the switch can't be seen); coming apart once whole
-    uniforms.uBack.value = cycle.at >= BACK ? 1 : 0;
+    const hu = hud.mat.uniforms;
+    hu.uShow.value = 1 - uniforms.uProgress.value;
+    // her rings draw on clockwise from the top once she is printed
+    hu.uReveal.value = reduced ? 1 : cycle.printed ? Math.min(1, (t - s.revealAt) / 1.4) : 0;
+    // her rings spin up while a sign-in is checked, and a little in anticipation over the Sign in button
+    hu.uBusy.value += ((cycle.verifying ? 1 : input.hover === "submit" ? 0.4 : 0) - hu.uBusy.value) * Math.min(1, dt * 3);
+    s.dial += (input.dial - s.dial) * Math.min(1, dt * 12);
+    hu.uDial.value = s.dial / 48;
+    hu.uDialing.value = Math.min(1, input.dial - s.dial);
+    hu.uVoice.value = input.ripple;
+    // calls come in now and then: a light slides round her outer ring to the wire, which carries it to the card
+    if (cycle.printed && s.nextCall && !cycle.verifying && !reduced && t > s.nextCall) {
+      s.callAt = t;
+      s.callSent = false;
+      hu.uCallFrom.value = 0.62 + Math.random() * 0.33;
+      s.nextCall = t + 6 + Math.random() * 5;
+    }
+    const cp = (t - s.callAt) / 1.3;
+    hu.uCall.value = cp >= 0 && cp < 1 ? cp : 0;
+    if (cp >= 1 && !s.callSent) {
+      s.callSent = true;
+      signalBackdrop({ kind: "call" });
+    }
+    hu.uDegraded.value += ((input.degraded ? 1 : 0) - hu.uDegraded.value) * Math.min(1, dt * 2);
+    // thinking: her ring's segments light one by one; a wrong password sends them back
+    hu.uThink.value = cycle.verifying ? Math.min(1, (t - s.thinkAt) / 1.6) : 0;
+    const fl = (t - cycle.glitch) / 0.9;
+    hu.uFail.value = fl >= 0 && fl < 1 ? fl : 0;
+    // a right password: a ring of light closes in on her
+    const w = (t - cycle.flash) / 1.1;
+    hu.uWin.value = w >= 0 && w < 1 ? w : 0;
+    const n = t - s.nodAt;
+    uniforms.uGlint.value = n < 0 || n > 1.2 ? 0 : Math.sin((Math.PI * n) / 1.2);
+    // and she smiles a while
+    const sm = t - cycle.flash;
+    uniforms.uSmile.value = sm < 0 || sm > 2.8 ? 0 : ease(Math.min(1, sm / 0.4, (2.8 - sm) / 0.6));
     s.energy += ((input.focused ? 1 : 0) - s.energy) * Math.min(1, dt * 3);
     uniforms.uEnergy.value = s.energy;
     input.ripple *= Math.exp(-dt * 2.5);
@@ -197,7 +199,7 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     // her eyes: a blink every 3 to 6 seconds (now and then two), only while she is whole
     if (t > s.blinkAt + 0.2) s.blinkAt = t + 3 + Math.random() * 3 - (Math.random() < 0.15 ? 2.6 : 0);
     const b = (t - s.blinkAt) / 0.2;
-    uniforms.uBlink.value = b > 0 && b < 1 && cycle.at < APART && !reduced ? Math.sin(b * Math.PI) : 0;
+    uniforms.uBlink.value = Math.max(b > 0 && b < 1 && cycle.printed && !reduced ? Math.sin(b * Math.PI) : 0, s.shut);
 
     // her place on screen, in the world at z = 0 (seen from the camera's distance)
     const perPx = (2 * Math.tan(((FOV / 2) * Math.PI) / 180) * DIST) / size.height;
@@ -207,13 +209,18 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     g.position.y += (wy - g.position.y) * k;
     s.scale += (scale - s.scale) * k;
     g.scale.setScalar(s.scale);
-    g.rotation.set(0.04 * Math.sin(t * 0.3) + input.mouse.y * 0.1, 0.2 * Math.sin(t * 0.21) + input.mouse.x * 0.25, 0);
+    const nod = n >= 0 && n < 0.9 && !reduced ? 0.11 * Math.sin((Math.PI * n) / 0.9) : 0;
+    // over "Forgot password?" she tilts her head, curious
+    s.tilt += ((input.hover === "forgot" ? 1 : 0) - s.tilt) * Math.min(1, dt * 4);
+    g.rotation.set(0.04 * Math.sin(t * 0.3) + input.mouse.y * 0.1 + nod, 0.2 * Math.sin(t * 0.21) + input.mouse.x * 0.25, 0.1 * s.tilt);
 
     // where she looks: at the field being typed in, else at the pointer, else drifting a little;
     // her eyes move quickly to it, as eyes do
     const look = input.focused ? input.field : input.mouse.px > -1e3 ? { x: input.mouse.px, y: input.mouse.py } : null;
-    const gx = look ? (look.x - place.x) / Math.max(200, size.width * 0.35) : 0.3 * Math.sin(t * 0.17);
-    const gy = look ? -(look.y - place.y) / Math.max(200, size.height * 0.4) : 0.2 * Math.sin(t * 0.11);
+    let gx = look ? (look.x - place.x) / Math.max(200, size.width * 0.35) : 0.3 * Math.sin(t * 0.17);
+    let gy = look ? -(look.y - place.y) / Math.max(200, size.height * 0.4) : 0.2 * Math.sin(t * 0.11);
+    // a password being typed: she politely looks away, up and off from the card
+    if (pwFocused || pwShown) [gx, gy] = [-0.8, 0.6];
     s.gaze.set(Math.max(-1, Math.min(1, gx)), Math.max(-1, Math.min(1, gy)));
     uniforms.uGaze.value.lerp(s.gaze, Math.min(1, dt * 10));
 
@@ -221,7 +228,7 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
     // pixels; where that is under a pixel (she is small, in the header's corner) they're drawn at a
     // pixel and dimmed to match. Small (on phones and tablets) she is lit up to a quarter as much again,
     // or her few points would leave her faint
-    const px = place.r * portraitSpacing(data.h, step) * 1.5 * viewport.dpr;
+    const px = place.r * portraitSpacing(data.h, step) * 1.3 * viewport.dpr;
     uniforms.uSize.value = px;
     uniforms.uGain.value = Math.min(1, px * px) * (1 + 0.25 * Math.min(1, Math.max(0, (90 - place.r) / 40)));
 
@@ -235,6 +242,7 @@ export function AiPortrait({ data, place, step, reduced }: { data: PortraitData;
 
   return (
     <group ref={group}>
+      {showHud && <mesh geometry={hud.plane} material={hud.mat} position-z={0.35} frustumCulled={false} />}
       <lineSegments geometry={geo.lines} material={linesMat} frustumCulled={false} />
       <points geometry={geo.points} material={pointsMat} frustumCulled={false} />
     </group>

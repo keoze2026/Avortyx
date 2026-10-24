@@ -2,7 +2,7 @@
 
 import { LockKeyhole } from "lucide-react";
 import { MotionConfig } from "framer-motion";
-import { useTranslation } from "@/hooks/use-translation";
+import { useSignInTranslation } from "@/hooks/use-sign-in-translation";
 import { cn } from "@/lib/utils";
 import { AvortyxLogo } from "@/components/brand/avortyx-logo";
 import { Scene } from "@/components/backdrop/scene";
@@ -27,7 +27,7 @@ import { TAP } from "@/components/auth/tap";
 // `fontClass`: Inter with its optical sizes (app/(login)/font.ts); `.login-screen` (globals.css) tunes
 // the dark surface for these screens and switches to that font.
 export function AuthShell({ children, intro = true, fontClass }: { children: React.ReactNode; intro?: boolean; fontClass?: string }) {
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   return (
     // entrances and hovers keep still for people who ask for reduced motion
     <MotionConfig reducedMotion="user">

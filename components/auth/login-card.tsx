@@ -1,13 +1,13 @@
 "use client";
 
 import { Link2 } from "lucide-react";
-import { useTranslation } from "@/hooks/use-translation";
+import { useSignInTranslation } from "@/hooks/use-sign-in-translation";
 import { GlassCard } from "./glass-card";
 import { LoginForm } from "./login-form";
 
 // the sign-in card
 export function LoginCard() {
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   return (
     <GlassCard
       fixed

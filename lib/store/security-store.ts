@@ -1,5 +1,4 @@
 "use client";
-import { tFor } from "@/lib/i18n";
 import { useLocaleStore } from "@/lib/store/locale-store";
 
 /**
@@ -184,6 +183,8 @@ export const useSecurityStore = create<SecurityState>()((set, get) => {
           set({ lockedOutUntil: until });
           return { ok: false, reason: "lockedOut", until };
         }
+        // the dictionary is fetched only here, so screens that use this store (sign-in) don't load it
+        const { tFor } = await import("@/lib/i18n");
         return { ok: false, reason: "error", message: friendlyErrorMessage(e, tFor(useLocaleStore.getState().locale, "y.err.pinCheck")) };
       }
     },

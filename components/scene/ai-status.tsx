@@ -1,7 +1,7 @@
 "use client";
 
 import { chipMask, insetShape, type ChipShape } from "@/components/auth/chip-shape";
-import { useTranslation } from "@/hooks/use-translation";
+import { useSignInTranslation } from "@/hooks/use-sign-in-translation";
 import { useAiMode, type AiMode } from "./scene-input";
 
 // The AI's status chip under her portrait. Decorative: the form itself announces what matters.
@@ -13,13 +13,15 @@ const TAG_MASK = chipMask(TAG), TAG_FILL = chipMask(insetShape(TAG, 1));
 const LABEL: Record<AiMode, string> = {
   Ready: "loginScreen.ai.ready",
   Listening: "loginScreen.ai.listening",
+  Recognized: "loginScreen.ai.recognized",
+  "Not looking": "loginScreen.ai.notLooking",
   Verifying: "loginScreen.ai.verifying",
   Welcome: "loginScreen.ai.welcome",
   "Try again": "loginScreen.ai.tryAgain",
 };
 
 export function AiStatus({ x, y }: { x: number; y: number }) {
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   const mode = useAiMode();
   return (
     <div

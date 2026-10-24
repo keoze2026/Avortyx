@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslation } from "@/hooks/use-translation";
+import { useSignInTranslation } from "@/hooks/use-sign-in-translation";
 import { LiveTicker } from "./live-ticker";
 
 // The intro beside the card: the live strip, the headline and one line. Its parts rise in one after
@@ -14,12 +14,12 @@ const turn = (i: number) => ({ animationDelay: `${0.03 + i * 0.07}s` });
 
 // in the app's languages: <lead, kept on one line><middle><accent, in the gradient> (lib/i18n, login.intro)
 function Headline({ className }: { className: string }) {
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   return (
     <h2 className={className}>
       <span className="whitespace-nowrap">{t("login.intro.lead")}</span>
       {t("login.intro.middle")}
-      <span className="bg-[linear-gradient(135deg,#ffffff,#93c5fd_45%,#60a5fa_85%,#3b82f6)] bg-clip-text text-transparent">
+      <span className="text-sheen">
         {t("login.intro.accent")}
       </span>
     </h2>
@@ -27,7 +27,7 @@ function Headline({ className }: { className: string }) {
 }
 
 export function HeroPanel() {
-  const { t } = useTranslation();
+  const { t } = useSignInTranslation();
   return (
     <aside data-intro="" className="relative w-full max-w-[27rem] lg:max-w-[38rem]">
       {/* a dark shade behind the words, so the backdrop's lines never cross the text at full strength */}
