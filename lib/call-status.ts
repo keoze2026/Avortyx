@@ -59,17 +59,22 @@ export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): b
   }
   return call.status === "missed" || call.status === "rejected" || call.status === "failed";
 }
-/** The two colours of the Reports chart and the Total Calls ring (Sir,
- *  24 Oct: "candles in just two colours, blue and red"):
- *    "converted" - blue: the call converted, or the buyer answered. Under a
- *                  destination paid on Incoming a missed call converts too,
- *                  so it is blue.
- *    "noAnswer"  - red: not answered AND did not convert - missed, overflow
- *                  missed, campaign out of concurrency, or a buyer who missed
- *                  under a Connected rule. */
-export type ConversionBucket = "converted" | "noAnswer";
+/** The three outcomes the Reports chart and the Total Calls ring show:
+ *    "converted"    - the call converted (blue). Under a destination paid on
+ *                     Incoming a missed call converts too, so it is blue.
+ *    "notConverted" - answered, but did not convert. Blue as well (Sir, 24
+ *                     Oct: candles in two colours only), listed on its own.
+ *    "noAnswer"     - not answered AND did not convert (red): missed,
+ *                     overflow missed, campaign out of concurrency, a buyer
+ *                     who missed under a Connected rule.
+ *  A record that does not carry the converted verdict (a partner login with
+ *  the Converted column switched off) falls back to connected = blue, so the
+ *  chart never invents a split it was not told. */
+export type ConversionBucket = "converted" | "notConverted" | "noAnswer";
 
 export function conversionBucket(call: Call): ConversionBucket {
-  if (call.isConverted === true) return "converted";
-  return matchesCallStatusFilter(call, "connected") ? "converted" : "noAnswer";
+  const connected = matchesCallStatusFilter(call, "connected");
+  if (call.isConverted == null) return connected ? "converted" : "noAnswer";
+  if (call.isConverted) return "converted";
+  return connected ? "notConverted" : "noAnswer";
 }

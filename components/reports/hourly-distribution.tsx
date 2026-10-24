@@ -36,9 +36,10 @@ const GRAIN_NOUN_KEYS: Record<Grain, string> = {
   M: "dashboard.chart.grainMonth",
 };
 
-// Two colours (Sir, 24 Oct): blue converted or answered, red missed and not
-// converted.
+// Two colours (Sir, 24 Oct): blue for converted and for answered but not
+// converted, red for missed and not converted.
 const COLOR_CONVERTED = "var(--accent)";
+const COLOR_NOTCONV = "var(--accent)";
 const COLOR_NOANS = "var(--destructive)";
 // Revenue is money, not calls — it gets the app's money-green, NOT the
 // accent. Sharing the accent with the Connected bars put two identical
@@ -89,12 +90,10 @@ interface Bucket {
   revenue: number;
 }
 
-/** Two colours - see conversionBucket in lib/call-status: blue for a call
- *  that converted or was answered, red for one missed that did not convert
- *  (missed, overflow missed, campaign out of concurrency, a buyer who missed
- *  under a Connected rule). A missed call that still converted (destination
- *  paid on Incoming) is blue. The Bucket type keeps a notConverted field at
- *  0 so its shape does not change. */
+/** Three buckets - see conversionBucket in lib/call-status: converted and
+ *  notConverted (answered, did not convert) are both blue, noAnswer (missed
+ *  AND did not convert) is red - two colours only (Sir, 24 Oct). A missed call that still
+ *  converted (destination paid on Incoming) is blue, not red. */
 const classify = conversionBucket;
 
 /** Format an hour 0-23 as zero-padded 12-hour with lowercase am/pm —
@@ -436,8 +435,8 @@ function bucketizeSeries(
 
   const add = (slot: Bucket, e: (typeof entries)[number]) => {
     if (e.split) {
-      // Answered but not converted is blue too.
-      slot.converted += e.split.converted + e.split.notConverted;
+      slot.converted += e.split.converted;
+      slot.notConverted += e.split.notConverted;
       slot.noAnswer += e.split.lost;
     } else {
       slot.converted += e.connected;
@@ -727,13 +726,21 @@ export function HourlyDistribution({
                 />
                 <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
                 {/* Stack order — bottom to top:
-                     1. noAnswer    (red: missed, not converted)
-                     2. converted   (accent: converted or answered) */}
+                     1. noAnswer      (red: missed, not converted)
+                     2. notConverted  (blue: answered, not converted)
+                     3. converted     (accent, top of stack) */}
                 <Bar
                   yAxisId="count"
                   dataKey="noAnswer"
                   stackId="calls"
                   fill={COLOR_NOANS}
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  yAxisId="count"
+                  dataKey="notConverted"
+                  stackId="calls"
+                  fill={COLOR_NOTCONV}
                   radius={[0, 0, 0, 0]}
                 />
                 <Bar
@@ -783,6 +790,7 @@ export function HourlyDistribution({
 
           <div className="flex items-center justify-center gap-5 pt-2">
             <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
+            <LegendKey color={COLOR_NOTCONV} label={t("toolsUI.reports.hourly.legend.notConverted")} />
             <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
             <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
           </div>
@@ -855,6 +863,7 @@ function HourlyTooltipInner({
   const rows: Array<{ color: string; label: string; value: string }> = [
     { color: "var(--muted-foreground)", label: t("toolsUI.reports.hourly.tooltip.totalCalls"), value: formatNumber(total) },
     { color: COLOR_CONVERTED, label: t("toolsUI.reports.hourly.tooltip.converted"), value: formatNumber(b.converted) },
+    { color: COLOR_NOTCONV, label: t("toolsUI.reports.hourly.tooltip.notConverted"), value: formatNumber(b.notConverted) },
     { color: COLOR_NOANS, label: t("toolsUI.reports.hourly.tooltip.noAnswer"), value: formatNumber(b.noAnswer) },
     { color: COLOR_REVENUE, label: t("toolsUI.reports.hourly.tooltip.revenue"), value: formatCurrency(b.revenue, true) },
   ];
