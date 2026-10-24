@@ -7,8 +7,8 @@ import type { ExtraTranslations } from "./types";
 export const automatedReports: ExtraTranslations = {
   en: {
     "nav.automatedReports": "Automated Reports",
-    "autoReports.headline": "Reports that send themselves.",
-    "autoReports.subline": "Daily buyer reports on Telegram, set once.",
+    "autoReports.headline": "Daily Reports, Delivered Automatically",
+    "autoReports.subline": "Each buyer receives their call report on Telegram at their chosen time.",
     "autoReports.feature.excel": "One Excel per destination",
     "autoReports.feature.options": "Buyer's own time and options",
     "autoReports.feature.approval": "Sent only with buyer approval",

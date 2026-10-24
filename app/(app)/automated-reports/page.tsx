@@ -4,8 +4,8 @@
  * Automated Reports (CH-261, Sir 25 Oct): every report the platform sends by
  * itself, in one place, after Reports in the menu.
  *
- *   Reports that send themselves.
- *   Daily buyer reports on Telegram, set once.
+ *   Daily Reports, Delivered Automatically
+ *   Each buyer receives their call report on Telegram at their chosen time.
  *
  * Feature cards, then the live list of buyers and their Telegram report
  * status (Active / Waiting for approval / Off / Not set up), each with a link
