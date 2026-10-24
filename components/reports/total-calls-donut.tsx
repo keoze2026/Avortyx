@@ -24,32 +24,26 @@ interface Slice {
   swatch: string;
 }
 
-/** Three slices, as on Revo (see conversionBucket in lib/call-status):
- *  Converted (blue), Not Converted (yellow: answered, did not convert) and
- *  No Answer (red: missed and did not convert). A missed call that still
- *  converted - a destination paid on Incoming - is counted as Converted. */
+/** Two slices (see conversionBucket in lib/call-status): blue for a call
+ *  that converted or was answered, red for one missed that did not convert.
+ *  A missed call that still converted - a destination paid on Incoming - is
+ *  blue. */
 export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
   const { t } = useTranslation();
   // A buyer / publisher login does not see the slices the admin unticked
   // under its Reporting visibility (Connected / Not Connected), nor the
   // total when Incoming is unticked. Admin / staff: nothing is hidden.
   const partnerHidden = usePartnerHiddenColumns().summary;
-  const counts: Record<SliceKey, number> = { converted: 0, notConverted: 0, noAnswer: 0 };
+  const counts: Record<SliceKey, number> = { converted: 0, noAnswer: 0 };
   for (const c of calls) counts[conversionBucket(c)] += 1;
 
-  // Blue converted, yellow answered-not-converted, red missed-not-converted.
+  // Blue: converted or answered. Red: missed and not converted.
   const allSlices: Slice[] = [
-    { key: "converted",    label: t("toolsUI.reports.totalDonut.converted"),    count: counts.converted,    color: "var(--accent)",      swatch: "var(--accent)" },
-    { key: "notConverted", label: t("toolsUI.reports.totalDonut.notConverted"), count: counts.notConverted, color: "var(--warning)",     swatch: "var(--warning)" },
-    { key: "noAnswer",     label: t("toolsUI.reports.totalDonut.noAnswer"),     count: counts.noAnswer,     color: "var(--destructive)", swatch: "var(--destructive)" },
+    { key: "converted", label: t("toolsUI.reports.totalDonut.converted"), count: counts.converted, color: "var(--accent)", swatch: "var(--accent)" },
+    { key: "noAnswer",  label: t("toolsUI.reports.totalDonut.noAnswer"),  count: counts.noAnswer,  color: "var(--destructive)", swatch: "var(--destructive)" },
   ];
-  // A partner login does not see a slice whose column the admin switched off.
   const slices = allSlices.filter((s) =>
-    s.key === "noAnswer"
-      ? !partnerHidden.has("noConnect")
-      : s.key === "notConverted"
-        ? !partnerHidden.has("connected")
-        : !(partnerHidden.has("connected") && partnerHidden.has("converted")),
+    s.key === "converted" ? !partnerHidden.has("connected") : !partnerHidden.has("noConnect"),
   );
   // The ring only draws slices that have calls. A slice with none still took
   // its 2 degree gap and its separator line, so a ring that was all one
@@ -61,7 +55,7 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
     ? ringSlices
     : [{ key: "none", label: "", count: 1, color: "var(--muted)", swatch: "var(--muted)" }];
   // Every call, not just the visible slices: "Total calls" is Incoming.
-  const total = counts.converted + counts.notConverted + counts.noAnswer;
+  const total = counts.converted + counts.noAnswer;
   const showTotal = !partnerHidden.has("incoming");
 
   // Track which slice is currently focused. `null` is the default — the
