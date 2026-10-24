@@ -7,6 +7,7 @@ import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { ProfileSection } from "@/components/settings/profile-section";
 import { ScheduledReportsSection } from "@/components/settings/scheduled-reports-section";
+import { MyTelegramReport } from "@/components/settings/my-telegram-report";
 import { SecuritySection } from "@/components/settings/security-section";
 import { SessionsSection } from "@/components/settings/sessions-section";
 import {
@@ -20,12 +21,14 @@ import { AdvancedRoutingSection } from "@/components/routing/advanced-routing-se
 import { PageHeader } from "@/components/shared/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import { Locked } from "@/components/shared/can";
+import { useAuthStore } from "@/lib/store/auth-store";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
   const [section, setSection] = useState<SettingsSection>("profile");
   const canSeeAdvanced = useCanSeeAdvancedRouting();
   const canSeeApiKeys = useCanSeeApiKeys();
+  const isBuyer = useAuthStore((s) => s.user?.role === "buyer");
 
   // Open the section named in the link, e.g. /settings?section=advanced-routing
   // (the Routing page and a routing plan's "All plans" button link there).
@@ -70,9 +73,15 @@ export default function SettingsPage() {
               {section === "notifications" && <NotificationsSection />}
               {section === "sessions" && <SessionsSection />}
               {section === "scheduled-reports" && (
-                <Locked area="reporting" action="edit">
-                  <ScheduledReportsSection />
-                </Locked>
+                isBuyer ? (
+                  // A buyer login: its own switch for the daily Telegram
+                  // report (CH-259), nothing goes out until it is on.
+                  <MyTelegramReport />
+                ) : (
+                  <Locked area="reporting" action="edit">
+                    <ScheduledReportsSection />
+                  </Locked>
+                )
               )}
               {section === "advanced-routing" && canSeeAdvanced && <AdvancedRoutingSection />}
             </motion.div>

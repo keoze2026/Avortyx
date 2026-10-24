@@ -46,6 +46,10 @@ interface Settings {
   columns: { key: string; label: string }[];
   lastSentAt: string | null;
   lastResult: string;
+  /** The buyer's own approval (CH-259): nothing is sent until it is given. */
+  buyerApproved: boolean;
+  buyerApprovedAt: string | null;
+  buyerApprovedBy: string;
 }
 
 /** The comments a call can carry, offered as the "from" side of a rewrite. */
@@ -129,7 +133,7 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
     setSending(true);
     try {
       const r = await http.post<Settings>(`${url}/send`, {});
-      setS((prev) => (prev ? { ...prev, lastSentAt: r.lastSentAt, lastResult: r.lastResult } : r));
+      setS(r);
       toast.success(t("buyerReport.sent"));
     } catch (e) {
       toast.error(errText(e, t("buyerReport.sendFailed")));
@@ -164,6 +168,20 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
         </CardContent>
       ) : (
         <CardContent className="space-y-5">
+          {/* Sir, 25 Oct: reports go out only to a buyer whose own account
+              approved them; the buyer turns it on or off in its Settings. */}
+          <div
+            className={`rounded-md border px-3 py-2 text-xs ${
+              s.buyerApproved ? "border-success/40 bg-success/10" : "border-warning/40 bg-warning/10"
+            }`}
+          >
+            {s.buyerApproved
+              ? t("buyerReport.approvedBy")
+                  .replace("{who}", s.buyerApprovedBy || t("buyerReport.theBuyer"))
+                  .replace("{when}", s.buyerApprovedAt ? new Date(s.buyerApprovedAt).toLocaleDateString() : "")
+              : t("buyerReport.waitingApproval")}
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="br-chat">{t("buyerReport.chatId")}</Label>
@@ -291,7 +309,7 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
                 : t("buyerReport.neverSent")}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={sendNow} disabled={sending || dirty || !s.chatId}>
+              <Button variant="outline" size="sm" onClick={sendNow} disabled={sending || dirty || !s.chatId || !s.buyerApproved}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 {t("buyerReport.sendNow")}
               </Button>
