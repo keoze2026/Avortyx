@@ -71,7 +71,7 @@ export function PublisherSettingsTab({ publisher }: Props) {
   React.useEffect(() => {
     void fetchPartnerSettings("publisher", publisher.id);
   }, [publisher.id, fetchPartnerSettings]);
-  const timezone = serverTimezone ?? access?.timezone ?? "UTC";
+  const timezone = serverTimezone ?? access?.timezone ?? "America/New_York";
   const onTimezoneChange = (tz: string) => {
     setTimezone(publisher.id, tz); // browser copy (fallback)
     void savePartnerTimezone("publisher", publisher.id, tz).catch((e: unknown) => {

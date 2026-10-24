@@ -52,7 +52,8 @@ export interface PublisherAccessState {
   cap: PublisherCapSettings;
 }
 
-const DEFAULT_TZ = "UTC";
+// The portal's zone (CH-260): a publisher follows it until it picks its own.
+const DEFAULT_TZ = "America/New_York";
 
 const DEFAULT_PERMISSIONS: PublisherPermissions = {
   manageTraffic: false,

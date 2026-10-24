@@ -43,7 +43,8 @@ export const BUYER_PERMISSIONS: Array<{ key: BuyerPermissionKey; labelKey: strin
 ];
 
 export function emptyBuyerAccess(): BuyerAccessState {
-  return { timezone: "UTC", permissions: { blockNumbers: false, downloadReports: false } };
+  // The portal's zone (CH-260): a buyer follows it until it picks its own.
+  return { timezone: "America/New_York", permissions: { blockNumbers: false, downloadReports: false } };
 }
 
 type AccessWire = {
