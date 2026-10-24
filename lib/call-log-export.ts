@@ -29,6 +29,9 @@ export const CALL_LOG_LINK_HEADERS = ["RECORDING", "RECORDING URL", "RECORD"];
 /** "completed" -> "Completed", "no_answer" -> "No answer", "in-progress" -> "In progress". */
 export function statusLabel(raw: string | null | undefined): string {
   const words = (raw ?? "").trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ").toLowerCase();
+  // A missed call that converted (destination paid on Incoming) - written as
+  // on screen (CH-250).
+  if (words === "missed with conversion") return "Missed With Conversion";
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : "";
 }
 

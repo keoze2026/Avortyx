@@ -174,7 +174,9 @@ interface SnapshotPointWire {
   calls?: number;
   connected?: number;
   noAnswer?: number;
-  converted?: number;
+  converted?: number | null;
+  notConverted?: number | null;
+  lost?: number | null;
   revenue?: string | number;
   payout?: string | number;
   profit?: string | number;
@@ -269,6 +271,10 @@ export interface SnapshotPoint {
   connected: number;
   noAnswer: number;
   converted: number;
+  /** Answered but not converted / missed and not converted (CH-250). Null
+   *  when not sent (older backend, or the Converted column is hidden). */
+  notConverted: number | null;
+  lost: number | null;
   revenue: number;
   payout: number;
   profit: number;
@@ -555,6 +561,8 @@ function snapshotPointToPoint(w: SnapshotPointWire): SnapshotPoint {
     connected: firstNum(w.connected),
     noAnswer: firstNum(w.noAnswer),
     converted: firstNum(w.converted),
+    notConverted: w.converted == null || w.notConverted == null ? null : firstNum(w.notConverted),
+    lost: w.converted == null || w.lost == null ? null : firstNum(w.lost),
     revenue: toNum(w.revenue),
     payout: toNum(w.payout),
     profit: toNum(w.profit),

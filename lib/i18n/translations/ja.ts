@@ -3885,14 +3885,14 @@ export const ja: TranslationShape = {
       },
       hourly: {
         legend: {
-          converted: "接続済み",
+          converted: "コンバージョン",
           notConverted: "未コンバージョン",
           noAnswer: "応答なし",
           revenue: "収益",
         },
         tooltip: {
           totalCalls: "総通話数",
-          converted: "接続済み",
+          converted: "コンバージョン",
           notConverted: "未コンバージョン",
           noAnswer: "応答なし",
           revenue: "収益",
@@ -3958,7 +3958,7 @@ export const ja: TranslationShape = {
       },
       totalDonut: {
         total: "合計",
-        converted: "接続済み",
+        converted: "コンバージョン",
         notConverted: "未コンバージョン",
         noAnswer: "応答なし",
         callsSuffix: "コール",

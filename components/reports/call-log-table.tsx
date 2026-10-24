@@ -256,22 +256,53 @@ function getHangUpSide(c: Call): HangUpSide {
  * Why a call didn't go through, as the backend recorded it (`block_reason`):
  * "Duplicate call", "Campaign cap reached", ... A dropped duplicate is shown
  * as a missed call, so no "blocked" wording. "" = no reason.
+ *
+ * Only a call that did NOT convert has a fail reason (CH-250). A call that
+ * converted shows none: a missed call that converted (destination paid on
+ * Incoming) is told by its Status, "Missed With Conversion".
  */
 function failReasonText(c: Call): string {
-  const label = failReasonLabel(c.failReason);
-  return label && convertedUnanswered(c) ? `${label} - With Conversion` : label;
+  return c.isConverted === true ? "" : failReasonLabel(c.failReason);
 }
 
 /** The fail reason as shown on screen, in the chosen language (lib/fail-reason.ts). */
 function failReasonOnScreen(c: Call, locale: string, t: (key: string) => string): string {
-  const label = localizeFailReason(c.failReason, locale, t);
-  return label && convertedUnanswered(c) ? `${label} - ${t("fail.withConversion")}` : label;
+  return c.isConverted === true ? "" : localizeFailReason(c.failReason, locale, t);
 }
 
 /** Not answered, yet converted: its destination bills on "Incoming Call"
- *  (backend CH-247). Revo writes these "Call Not Connected - With Conversion". */
+ *  (backend CH-247). Its Status reads "Missed With Conversion". */
 function convertedUnanswered(c: Call): boolean {
   return c.isConverted === true && c.status !== "completed" && c.status !== "in-progress";
+}
+
+/** Status wording in the exported file (English, as the rest of the file). */
+const MISSED_WITH_CONVERSION = "Missed With Conversion";
+
+function statusExportText(c: Call): string {
+  if (convertedUnanswered(c)) return MISSED_WITH_CONVERSION;
+  return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
+}
+
+/** For every call this page holds, the server file's Status and Fail Reason
+ *  match the screen: "Missed With Conversion", and no fail reason on a call
+ *  that converted. An older backend wrote the plain status there. */
+function withScreenStatus(table: string[][], callsById: Map<string, Call>): string[][] {
+  if (table.length < 2) return table;
+  const header = table[0].map((h) => h.trim().toUpperCase());
+  const statusCol = header.indexOf("STATUS");
+  const reasonCol = header.indexOf("FAIL REASON");
+  const idCol = ["CALL ID", "UUID", "ID"].map((h) => header.indexOf(h)).find((i) => i >= 0) ?? -1;
+  if (idCol < 0 || (statusCol < 0 && reasonCol < 0)) return table;
+  return table.map((row, i) => {
+    if (i === 0) return row;
+    const call = callsById.get((row[idCol] ?? "").trim());
+    if (!call || call.isConverted !== true) return row;
+    const next = [...row];
+    if (statusCol >= 0 && convertedUnanswered(call)) next[statusCol] = MISSED_WITH_CONVERSION;
+    if (reasonCol >= 0) next[reasonCol] = "";
+    return next;
+  });
 }
 
 /** The server's export file uses the backend's own wording; give it the same labels as the screen. */
@@ -456,7 +487,7 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "hangUp":
       return HANG_UP_LABEL[getHangUpSide(c)];
     case "status":
-      return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
+      return statusExportText(c);
     case "failReason":
       // The backend's own reason (block_reason) - never a guessed one.
       return failReasonText(c);
@@ -702,12 +733,12 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = withFailReasonLabels(withScreenTtc(
+      const table = withScreenStatus(withFailReasonLabels(withScreenTtc(
         formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
           destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
         }),
         callsById,
-      ));
+      )), callsById);
       const count = Math.max(table.length - 1, 0);
       const stem = dateStamped("call-log");
       if (format === "csv") {
@@ -968,10 +999,19 @@ export function CallLogTable({
                       {columns.status && (
                         <TableCell>
                           {/* Fixed width so Live / Completed / No Answer are
-                              identical pills rather than sized to their text. */}
-                          <Badge variant={statusVariant(c.status)} className="w-24 justify-center">
-                            {isBusy(c) ? t("toolsUI.reports.callLog.statusLabel.busy") : t(STATUS_LABEL_KEYS[c.status])}
-                          </Badge>
+                              identical pills rather than sized to their text.
+                              A missed call that converted (destination paid on
+                              Incoming) reads "Missed With Conversion" in blue;
+                              that pill grows to fit its longer text. */}
+                          {convertedUnanswered(c) ? (
+                            <Badge variant="default" className="min-w-24 justify-center whitespace-nowrap bg-accent text-accent-foreground">
+                              {t("status.missedWithConversion")}
+                            </Badge>
+                          ) : (
+                            <Badge variant={statusVariant(c.status)} className="w-24 justify-center">
+                              {isBusy(c) ? t("toolsUI.reports.callLog.statusLabel.busy") : t(STATUS_LABEL_KEYS[c.status])}
+                            </Badge>
+                          )}
                         </TableCell>
                       )}
                       {columns.failReason && (

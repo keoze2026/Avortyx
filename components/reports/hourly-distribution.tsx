@@ -15,7 +15,7 @@ import {
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
-import { matchesCallStatusFilter } from "@/lib/call-status";
+import { conversionBucket } from "@/lib/call-status";
 import type { Call } from "@/lib/types";
 import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -36,12 +36,10 @@ const GRAIN_NOUN_KEYS: Record<Grain, string> = {
   M: "dashboard.chart.grainMonth",
 };
 
-// Strict two-color binary: indigo for the positive outcome, red for the rest.
-// "Not converted" and "No answer" both ride the destructive red so the chart
-// reads as good-vs-bad at a glance; "No answer" sits at full strength while
-// "Not converted" steps down in opacity to keep them distinguishable.
+// Revo's three colours: blue converted, yellow answered but not converted,
+// red missed and not converted.
 const COLOR_CONVERTED = "var(--accent)";
-const COLOR_NOTCONV = "var(--destructive)";
+const COLOR_NOTCONV = "var(--warning)";
 const COLOR_NOANS = "var(--destructive)";
 // Revenue is money, not calls — it gets the app's money-green, NOT the
 // accent. Sharing the accent with the Connected bars put two identical
@@ -74,6 +72,12 @@ export interface ChartSeriesPoint {
   connected: number;
   noAnswer: number;
   revenue: number;
+  /** The three conversion buckets (CH-250). Null when the backend did not
+   *  send them (an older backend, or a partner without the Converted
+   *  column): the chart then falls back to connected / no answer. */
+  converted?: number | null;
+  notConverted?: number | null;
+  lost?: number | null;
 }
 
 interface Bucket {
@@ -86,24 +90,11 @@ interface Bucket {
   revenue: number;
 }
 
-/** Binary classification — collapsed from three categories to two so the
- *  chart and donut tell the same story:
- *    "converted" — completed OR still in-progress (connected)
- *    "noAnswer"  — everything else (missed/no-answer, rejected, failed)
- *
- *  Reuses the same `matchesCallStatusFilter("connected")` the Call Summary
- *  totals and click-filters use — this used to be its own local check
- *  (`status === "completed" && payout > 0`), which routed every in-progress
- *  call, and every completed call with no payout yet recorded, into the red
- *  bucket. That's also why this chart's blue count could disagree with the
- *  Connected total sitting right above it on the same page.
- *
- *  The legacy `notConverted` bucket is kept in the Bucket type with a
- *  permanent 0 so the chart's data shape doesn't break, but no calls are
- *  routed to it at runtime. */
-function classify(c: Call): "converted" | "noAnswer" {
-  return matchesCallStatusFilter(c, "connected") ? "converted" : "noAnswer";
-}
+/** Three buckets, as on Revo - see conversionBucket in lib/call-status:
+ *  converted (blue), notConverted (yellow: answered, did not convert) and
+ *  noAnswer (red: missed AND did not convert). A missed call that still
+ *  converted (destination paid on Incoming) is blue, not red. */
+const classify = conversionBucket;
 
 /** Format an hour 0-23 as zero-padded 12-hour with lowercase am/pm —
  *  e.g. 0 → "12:00 am", 13 → "01:00 pm". Matches the advertising
@@ -435,13 +426,22 @@ function bucketizeSeries(
       hour: Number(p.period.slice(11, 13)),
       connected: p.connected,
       noAnswer: p.noAnswer,
+      split: p.lost != null && p.notConverted != null && p.converted != null
+        ? { converted: p.converted, notConverted: p.notConverted, lost: p.lost }
+        : null,
       revenue: p.revenue,
     }))
     .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.dayKey));
 
   const add = (slot: Bucket, e: (typeof entries)[number]) => {
-    slot.converted += e.connected;
-    slot.noAnswer += e.noAnswer;
+    if (e.split) {
+      slot.converted += e.split.converted;
+      slot.notConverted += e.split.notConverted;
+      slot.noAnswer += e.split.lost;
+    } else {
+      slot.converted += e.connected;
+      slot.noAnswer += e.noAnswer;
+    }
     slot.revenue += e.revenue;
   };
 
@@ -726,13 +726,21 @@ export function HourlyDistribution({
                 />
                 <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
                 {/* Stack order — bottom to top:
-                     1. noAnswer    (red sliver at bottom)
-                     2. converted   (accent, dominant, top of stack) */}
+                     1. noAnswer      (red: missed, not converted)
+                     2. notConverted  (yellow: answered, not converted)
+                     3. converted     (accent, top of stack) */}
                 <Bar
                   yAxisId="count"
                   dataKey="noAnswer"
                   stackId="calls"
                   fill={COLOR_NOANS}
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  yAxisId="count"
+                  dataKey="notConverted"
+                  stackId="calls"
+                  fill={COLOR_NOTCONV}
                   radius={[0, 0, 0, 0]}
                 />
                 <Bar
@@ -782,6 +790,7 @@ export function HourlyDistribution({
 
           <div className="flex items-center justify-center gap-5 pt-2">
             <LegendKey color={COLOR_CONVERTED} label={t("toolsUI.reports.hourly.legend.converted")} />
+            <LegendKey color={COLOR_NOTCONV} label={t("toolsUI.reports.hourly.legend.notConverted")} />
             <LegendKey color={COLOR_NOANS} label={t("toolsUI.reports.hourly.legend.noAnswer")} />
             <LegendKey color={COLOR_REVENUE} label={t("toolsUI.reports.hourly.tooltip.totalCalls")} />
           </div>

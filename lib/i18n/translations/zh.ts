@@ -3886,14 +3886,14 @@ export const zh: TranslationShape = {
       },
       hourly: {
         legend: {
-          converted: "已接通",
+          converted: "已转化",
           notConverted: "未转化",
           noAnswer: "无人接听",
           revenue: "收入",
         },
         tooltip: {
           totalCalls: "通话总数",
-          converted: "已接通",
+          converted: "已转化",
           notConverted: "未转化",
           noAnswer: "无人接听",
           revenue: "收入",
@@ -3959,7 +3959,7 @@ export const zh: TranslationShape = {
       },
       totalDonut: {
         total: "总计",
-        converted: "已接通",
+        converted: "已转化",
         notConverted: "未转化",
         noAnswer: "无人接听",
         callsSuffix: "通",

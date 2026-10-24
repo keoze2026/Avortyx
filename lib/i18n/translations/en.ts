@@ -4008,14 +4008,14 @@ export const en = {
       },
       hourly: {
         legend: {
-          converted: "Connected",
-          notConverted: "Not converted",
-          noAnswer: "No answer",
+          converted: "Converted",
+          notConverted: "Not Converted",
+          noAnswer: "No Answer",
           revenue: "Revenue",
         },
         tooltip: {
           totalCalls: "Total Calls",
-          converted: "Connected",
+          converted: "Converted",
           notConverted: "Not Converted",
           noAnswer: "No Answer",
           revenue: "Revenue",
@@ -4082,9 +4082,9 @@ export const en = {
       },
       totalDonut: {
         total: "Total",
-        converted: "Connected",
-        notConverted: "Not converted",
-        noAnswer: "No answer",
+        converted: "Converted",
+        notConverted: "Not Converted",
+        noAnswer: "No Answer",
         callsSuffix: "calls",
       },
     },

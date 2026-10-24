@@ -59,3 +59,21 @@ export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): b
   }
   return call.status === "missed" || call.status === "rejected" || call.status === "failed";
 }
+/** The three outcomes the Reports chart and the Total Calls ring show, the
+ *  same three Revo shows:
+ *    "converted"    - the call converted (blue). Under a destination paid on
+ *                     Incoming a missed call converts too, so it is blue.
+ *    "notConverted" - answered, but did not convert (yellow).
+ *    "noAnswer"     - not answered AND did not convert (red). A missed call
+ *                     only turns red when it did not convert.
+ *  A record that does not carry the converted verdict (a partner login with
+ *  the Converted column switched off) falls back to connected = blue, so the
+ *  chart never invents a split it was not told. */
+export type ConversionBucket = "converted" | "notConverted" | "noAnswer";
+
+export function conversionBucket(call: Call): ConversionBucket {
+  const connected = matchesCallStatusFilter(call, "connected");
+  if (call.isConverted == null) return connected ? "converted" : "noAnswer";
+  if (call.isConverted) return "converted";
+  return connected ? "notConverted" : "noAnswer";
+}
