@@ -5,6 +5,7 @@ import { Building2, DollarSign, Gauge, Mail, UserSquare } from "lucide-react";
 import { toast } from "sonner";
 
 import { BuyerAccessSettings } from "@/components/buyers/buyer-access-settings";
+import { BuyerTelegramReport } from "@/components/buyers/buyer-telegram-report";
 import { ErrorLine, SaveBar } from "@/components/campaigns/campaign-settings-tab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,6 +120,9 @@ export function BuyerSettingsTab({ buyer }: { buyer: Buyer }) {
           zone, Members (Invited / Registered), Permissions (Block Numbers,
           Download Reports) and Reporting visibility. Saves on each change. */}
       <BuyerAccessSettings buyer={buyer} />
+
+      {/* The buyer's own daily report on Telegram (CH-258). Saves on its own. */}
+      <BuyerTelegramReport buyer={buyer} />
 
       {/* Identity */}
       <Card>
