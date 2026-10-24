@@ -9,7 +9,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { Crown, Landmark,
+import { Crown, Landmark, Send,
   LayoutDashboard,
   Radio,
   Megaphone,
@@ -84,6 +84,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Dashboard",    nameKey: "nav.dashboard",   href: ROUTES.dashboard, icon: LayoutDashboard, roles: ALL_ROLES },
       { label: "Live Monitor", nameKey: "nav.liveMonitor", href: ROUTES.live,      icon: Radio,           roles: ALL_ROLES, badge: "Live" },
       { label: "Reports",      nameKey: "nav.reports",     href: ROUTES.reports,   icon: BarChart3,       roles: ALL_ROLES },
+      // CH-261 (Sir, 25 Oct): every automated report in one place.
+      { label: "Automated Reports", nameKey: "nav.automatedReports", href: ROUTES.automatedReports, icon: Send, roles: ["admin"] },
     ],
   },
   {

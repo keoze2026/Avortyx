@@ -27,6 +27,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 /** Which Roles-screen area each portal page belongs to. */
 const PAGE_AREA: Array<[prefix: string, area: string]> = [
   [ROUTES.reports, "reporting"],
+  [ROUTES.automatedReports, "reporting"],
   [ROUTES.calls, "reporting"],
   [ROUTES.campaigns, "campaigns"],
   [ROUTES.numbers, "tracking-numbers"],

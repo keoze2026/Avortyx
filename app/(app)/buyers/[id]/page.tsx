@@ -40,6 +40,13 @@ export default function BuyerDetailPage() {
   const fetchBuyers = useBuyersStore((s) => s.fetch);
   const fetchStats = useBuyersStore((s) => s.fetchStats);
   const [tab, setTab] = useState<TabId>("overview");
+  // Open the tab named in the link, e.g. ?tab=settings from Automated Reports.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("tab");
+    if (wanted && ["overview", "campaigns", "destinations", "caps", "settings"].includes(wanted)) {
+      setTab(wanted as TabId);
+    }
+  }, []);
 
   // The list payload doesn't carry usage counters; pull this buyer's from
   // its /stats endpoint on open and keep them fresh while the page is up,

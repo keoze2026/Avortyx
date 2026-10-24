@@ -25,6 +25,7 @@ import { risk } from "./risk";
 import { publisherBlocks } from "./publisher-blocks";
 import { ownerCosts } from "./owner-costs";
 import { buyerReport } from "./buyer-report";
+import { automatedReports } from "./automated-reports";
 import { campaignNumbers } from "./campaign-numbers";
 import { deletedTfns } from "./deleted-tfns";
 import { blockedBy } from "./blocked-by";
@@ -46,7 +47,7 @@ import { repeatedAndMonth } from "./repeated-month";
 import { reportWatch } from "./report-watch";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {

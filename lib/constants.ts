@@ -36,6 +36,7 @@ export const ROUTES = {
   publishers: "/publishers",
   calls: "/calls",
   reports: "/reports",
+  automatedReports: "/automated-reports",
   marketplace: "/marketplace",
   insights: "/insights",
   integrations: "/integrations",
