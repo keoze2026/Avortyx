@@ -4,6 +4,9 @@ Running record of portal changes, newest at the bottom. Each change has an ID;
 the backend half of a change, when there is one, has the same ID in the backend
 repository's CHANGES.md.
 
+The rules Sir has set (rates, report colours, routing, access) are kept in
+the backend repository's BUSINESS-RULES.md.
+
 Entries from CH-147 (19 Oct 2026) are written from each change's own commit
 message. "Commit: see git log --grep CH-xxx" means the change was applied from a
 patch; search the log for its ID.
@@ -330,3 +333,228 @@ internal code (stale_timeout / asterisk_gone), shown since CH-178 as
 export, in every language (Sir, 23 Oct).
 
 Commit: see `git log --grep CH-229`.
+
+## CH-231 - Phone: the menu button opens the menu on the first tap
+**2026-10-23 · Portal**
+
+On a phone it took 5-6 taps to open the side menu (Sir, 23 Oct). The button
+toggled the menu, so a tap delivered twice - or a second tap while it was
+still sliding in - opened and closed it at once; and only the 32px icon inside
+a 36px box was tappable.
+
+- On a phone the button only opens the menu; it closes from its backdrop, Esc,
+  or choosing a page (the menu now closes itself after a page is chosen).
+- The whole square is the button, 40px on touch screens, no double-tap-zoom
+  wait (touch-manipulation), and it presses in when tapped.
+Desktop is unchanged.
+
+Commit: see `git log --grep CH-231`.
+
+## CH-232 - Month reports load fast: past days and today fetched apart
+**2026-10-23 · Portal**
+
+Opening this month took over 10 seconds (Sir, 23 Oct). For a range that
+includes today the backend reads every row up to the page asked for, page
+after page, because live calls have to be merged in: page 22 of a month
+re-read about 11,000 calls. The call list of a range that reaches today is now
+loaded as the past days (the backend's fast path and finished-days cache,
+kept in the browser for the session) plus today (small, live), and joined.
+A refresh or the automatic update downloads only today. Pages are fetched 6
+at a time instead of 4.
+
+Commit: see `git log --grep CH-232`.
+
+## CH-233 - Top bar: Total is never cut off ("Total: 1" on a zoomed-out phone)
+**2026-10-23 · Portal**
+
+On a phone zoomed out the bar was wide enough for the search box, which took
+its full width first; the stats block clipped what did not fit and Total read
+"Total: 1" (Sir, 23 Oct). The stats now never shrink or clip, the search box
+gives way instead (min-w-0), and it only appears from @6xl, where it fits
+beside the full figures.
+
+Commit: see `git log --grep CH-233`.
+
+## CH-235 - New destination: 0 on concurrency cap means no limit, and it saves
+**2026-10-23 · Portal**
+
+Creating a destination with 0 / 0 / 0 (concurrency, daily, monthly) left the
+Create button greyed out: the form required a concurrency cap above 0. 0 on
+every cap means no limit - routing already skips a cap of 0, and the table
+already shows it as ∞ - so a line with no limits could not be created at all
+(MTG, 23 Oct). The form no longer requires it, the field accepts 0, the hint
+names all three caps, and the buyer card, dashboard and stats row show ∞
+instead of "/ 0".
+
+Commit: see `git log --grep CH-235`.
+
+## CH-236 - Reports: clicking the Repeated total lists the repeated calls
+**2026-10-24 · Portal**
+
+Connected, Qualified, Converted and Not Connected totals each list their calls
+when clicked; Repeated was plain text, so clicking 251 did nothing (Sir,
+23 Oct). It is now a filter like the others: the Call Log, chart and donut
+show exactly the calls the total counted - the same is_duplicate flag the
+server sums Repeated from - and the strip above the log names it, with a
+reset. Export of that list is built in the browser, like Not Connected.
+
+Commit: see `git log --grep CH-236`.
+
+## CH-237 - Reports: the Repeated total turns yellow when clicked
+**2026-10-24 · Portal**
+
+Clicked, the Repeated total turned blue like Connected (Sir, 24 Oct: yellow
+instead). It now turns yellow when clicked and on hover - a darker yellow on
+the light theme so it stays readable on white. The other totals keep their
+colours.
+
+Commit: see `git log --grep CH-237`.
+
+## CH-239 - TFN Check: a Test call button per number, with each step shown live
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: a user should see a test call with their own eyes. The "also
+place a test call" checkbox is gone - it went to the carrier, which refuses
+those calls, so nothing ever changed on the page. Each number now has a Test
+call button; the row opens underneath and ticks off each step as it happens
+(placed, reached our phone system, number live, on an active campaign, routing
+ready), then Test call passed or failed with the time. A failing step is red.
+Read every second, given up after 45 seconds with a note. Placed inside our
+own phone system: nothing goes to the carrier, no buyer is rung, nothing is
+billed - the page says so. Every portal login can test (a publisher only its
+own numbers); the public link page never places calls. Needs backend CH-239.
+
+Commit: see `git log --grep CH-239`.
+
+## CH-240 - TFN Check for publishers; a new Check clears old test results
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: publishers should test the TFNs allotted to them. TFN Check now
+shows in a publisher's menu when TFN Test Calls is on in their Publisher Access
+(the switch is listed there, publishers only). They see and test only their
+own numbers - the backend enforces it - and not the Share Links card.
+
+Sir also tested a number before it was on a campaign: the test failed, the
+number was added, and the old Failed result still showed. Pressing Check now
+starts clean; Test again gives the current result.
+
+Needs backend CH-240.
+
+Commit: see `git log --grep CH-240`.
+
+## CH-243 - Settings: API keys shown to the workspace's main account only
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: API keys are visible and editable only by the main login of the
+account - not publishers, buyers, other admins or managers. Publisher and buyer
+logins saw the whole list under Settings -> API keys. The section now shows
+only when the backend says this login is the main account (is_main_user) or
+the platform owner; the backend refuses everyone else as well. Needs backend
+CH-243.
+
+Commit: see `git log --grep CH-243`.
+
+## CH-246 - TFN Expired notice in Sir's wording, without the 12 PM line
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: the notice in the bell and the pop-up now read
+
+  1 TFN Expired
+  The following number has expired and is no longer receiving calls:
+  18888910358
+  Add a replacement TFN to keep calls routing without interruption.
+
+(plural for several numbers). "Shown here until 12 PM EST." is no longer
+shown, as Sir asked; the notice still goes by itself at 12 PM Eastern, since
+the server stops listing the numbers then. Numbers are written 18888910358.
+The Seen and Add TFNs buttons stay.
+
+Commit: see `git log --grep CH-246`.
+
+## CH-247 - Campaign destinations: Rate and Convert ON saved and used, as on Revo
+**2026-10-24 · Portal**
+
+The Edit (pencil) box on a routed destination now saves for real: Rate and
+Convert ON - Campaign default, Incoming Call, Call Connected, or Call Length
+with its seconds - plus priority and weight. TYPE shows the event each
+destination bills on, REVENUE its rate (or the campaign's; it showed the
+buyer's bid, which bills nothing). The Webhook option, the duplicate-revenue
+options and the name field never saved anything and are removed. Cloning a
+campaign copies each destination's billing. In the Call Log an unanswered call
+that still converted reads "Not Connected - With Conversion", as on Revo.
+
+Needs backend CH-247.
+
+Commit: see `git log --grep CH-247`.
+
+## CH-248 - Adding destinations to a campaign requires Rate and Convert ON
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: "give mandate while adding destination in campaign". Like Revo,
+"+ Add" under Routed Destinations is now two steps: pick the destinations,
+then Conversion Settings - Rate and Convert ON (Incoming Call, Call
+Connected, or Call Length with its seconds), all required. Nothing is added
+until both are filled in. The settings apply to every destination picked and
+are saved with it (backend CH-247); each can be changed later with its pencil.
+
+Commit: see `git log --grep CH-248`.
+
+## CH-250 - Reports: Converted / Not Converted / No Answer, Missed With Conversion
+**2026-10-24 · Portal**
+
+- Chart and Total Calls ring: blue Converted, yellow Not Converted (answered,
+  not converted), red No Answer (missed and not converted). A missed call
+  that converted (destination paid on Incoming) is blue.
+- Call Log: such a call reads "Missed With Conversion" in Status (screen and
+  export); Fail Reason only for calls that did not convert.
+
+Commit: see `git log --grep CH-250`.
+
+## CH-251 - Reports chart and Total Calls: two colours, blue and red
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: candles in just two colours. Blue: converted or answered (a
+call answered but not converted is blue too; a missed call that converted,
+destination paid on Incoming, is blue). Red: missed and not converted -
+missed, overflow missed, campaign out of concurrency, a buyer who missed
+under a Connected rule. The yellow slice and candle are removed.
+
+Commit: see `git log --grep CH-251`.
+
+## CH-252 - Reports: Not Converted back on the chart and ring, in blue
+**2026-10-24 · Portal**
+
+Sir, 24 Oct: "Not converted - keep it same blue". CH-251 folded those calls
+into Converted; they are listed on their own again (candle, tooltip, legend,
+ring slice) but drawn in the same blue. Red stays missed and not converted.
+
+Commit: see `git log --grep CH-252`.
+
+## CH-253 - Carrier Costs: Routing cost opens on Today
+**2026-10-24 · Portal**
+
+It opened on Yesterday, also after every refresh. Today is the Eastern day,
+as the backend counts it.
+
+Commit: see `git log --grep CH-253`.
+
+## CH-254 - Carrier Costs: one bill - summary, routing in the total, rounding, warnings
+**2026-10-24 · Portal**
+
+- "This month's bill": TFN fees, TFN carrier monthly charges, TFN minutes,
+  routing minutes, routing monthly charge, total.
+- Warnings when rates are missing or TFNs have no carrier.
+- Edit rates: "Minutes billed" - exact seconds, or up to 6 / 30 / 60 s.
+- "Portal" is now "Monthly charge"; Freedom quick-fill TFN fee $5.
+- Month defaults to the Eastern month.
+
+Commit: see `git log --grep CH-254`.
+
+## CH-255 - Billing shows cents; "Insufficient Funds" comment
+**2026-10-24 · Portal**
+
+- Billing cards show cents: the $49.99 portal fee read "$50", expenses
+  totals were whole dollars.
+- Fail reason "Insufficient Funds" (new backend wording and the old one).
+
+Commit: see `git log --grep CH-255`.
