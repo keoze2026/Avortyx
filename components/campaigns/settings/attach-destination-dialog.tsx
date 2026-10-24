@@ -18,6 +18,12 @@
  * be switched on from the table afterwards), numbers already routed to the
  * campaign are left out, and "Select all" picks everything in the list, so
  * the team can route all their destinations in one go.
+ *
+ * Billing is mandatory, as on Revo (Sir, 24 Oct: "give mandate while adding
+ * destination in campaign"): after picking, a Conversion Settings step asks
+ * for the Rate and Convert ON (Incoming Call / Call Connected / Call Length
+ * with its seconds). Nothing is added until both are filled in; they apply to
+ * every destination picked, and each can be changed later with its pencil.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -35,6 +41,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { routingService } from "@/lib/api/services/routing.service";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { toE164 } from "@/lib/format";
@@ -69,13 +83,28 @@ export function AttachDestinationDialog({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  // Step 2: Conversion Settings - required before anything is added (CH-248).
+  const [step, setStep] = useState<"pick" | "billing">("pick");
+  const [rate, setRate] = useState("");
+  const [convertOn, setConvertOn] = useState<"" | "incoming" | "connected" | "length">("");
+  const [seconds, setSeconds] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setSelected(new Set());
+    setStep("pick");
+    setRate("");
+    setConvertOn("");
+    setSeconds("");
     void fetchDestinations();
   }, [open, fetchDestinations]);
+
+  const rateValue = rate.trim() === "" ? NaN : Number(rate);
+  const secondsValue = Math.floor(Number(seconds) || 0);
+  const billingReady =
+    Number.isFinite(rateValue) && rateValue >= 0 && convertOn !== "" &&
+    (convertOn !== "length" || secondsValue > 0);
 
   // Every destination not already routed here, switched-on ones first. A
   // switched-off one can be routed too; it takes calls once it is switched on.
@@ -116,7 +145,7 @@ export function AttachDestinationDialog({
     });
 
   const onSubmit = async () => {
-    if (selected.size === 0) return;
+    if (selected.size === 0 || !billingReady) return;
     setSubmitting(true);
     try {
       // Reuse the campaign's rule when it has one; a second rule would add a
@@ -146,6 +175,9 @@ export function AttachDestinationDialog({
             destination: toE164(d.tfn),
             buyerId: d.buyerId || undefined,
             priority: priority++,
+            revenue: rateValue,
+            convertOn: convertOn || undefined,
+            convertSeconds: convertOn === "length" ? secondsValue : 0,
           });
           attached.push(d.tfn);
         }
@@ -192,6 +224,84 @@ export function AttachDestinationDialog({
           </div>
         </DialogHeader>
 
+        {step === "billing" ? (
+          <div className="mx-auto w-full max-w-md space-y-5 py-2">
+            <div>
+              <p className="text-[13px] font-semibold uppercase tracking-wider">{t("y.attDest.billing.title")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("y.attDest.billing.desc").replace("{count}", String(selected.size))}
+              </p>
+            </div>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <Label htmlFor="att-rate" className="text-xs font-medium">
+                  {t("trafficUI.campaigns.settings.forward.conversion.rate")} <span className="text-destructive">*</span>
+                </Label>
+                <p className="text-[11px] text-muted-foreground">{t("y.fwd.conv.rateHint")}</p>
+              </div>
+              <div className="relative w-28">
+                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <Input
+                  id="att-rate"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-6 text-right font-mono tabular-nums"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">
+                {t("trafficUI.campaigns.settings.forward.conversion.convertOn")} <span className="text-destructive">*</span>
+              </Label>
+              <Select value={convertOn || undefined} onValueChange={(v) => setConvertOn(v as typeof convertOn)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("y.attDest.billing.pick")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="incoming">{t("trafficUI.campaigns.settings.forward.conversion.events.incomingCall")}</SelectItem>
+                  <SelectItem value="connected">{t("trafficUI.campaigns.settings.forward.conversion.events.callConnected")}</SelectItem>
+                  <SelectItem value="length">{t("trafficUI.campaigns.settings.forward.conversion.events.callLength")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {convertOn && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t(`y.fwd.conv.hint.${convertOn}`)}
+                </p>
+              )}
+            </div>
+            {convertOn === "length" && (
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <Label htmlFor="att-sec" className="text-xs font-medium">
+                    {t("trafficUI.campaigns.settings.forward.conversion.length")} <span className="text-destructive">*</span>
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("trafficUI.campaigns.settings.forward.conversion.lengthHint")}
+                  </p>
+                </div>
+                <div className="relative w-28">
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("trafficUI.common.sec")}
+                  </span>
+                  <Input
+                    id="att-sec"
+                    type="number"
+                    min={1}
+                    value={seconds}
+                    onChange={(e) => setSeconds(e.target.value)}
+                    placeholder="60"
+                    className="pr-10 text-right font-mono tabular-nums"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         <div className="flex items-center gap-3">
           <Input
             value={query}
@@ -246,19 +356,33 @@ export function AttachDestinationDialog({
             ))
           )}
         </div>
+        </>
+        )}
 
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            {t("y.common.cancel")}
-          </Button>
-          <Button size="sm" onClick={onSubmit} disabled={submitting || selected.size === 0}>
-            {submitting && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-            {selected.size === 0
-              ? t("y.attDest.routeNone")
-              : selected.size === 1
-                ? t("y.attDest.routeOne")
-                : t("y.attDest.routeMany").replace("{count}", String(selected.size))}
-          </Button>
+          {step === "billing" ? (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setStep("pick")} disabled={submitting}>
+                {t("y.attDest.billing.back")}
+              </Button>
+              <Button size="sm" onClick={onSubmit} disabled={submitting || !billingReady}>
+                {submitting && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                {selected.size === 1
+                  ? t("y.attDest.routeOne")
+                  : t("y.attDest.routeMany").replace("{count}", String(selected.size))}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+                {t("y.common.cancel")}
+              </Button>
+              {/* Billing comes next and is required (CH-248). */}
+              <Button size="sm" onClick={() => setStep("billing")} disabled={selected.size === 0}>
+                {selected.size === 0 ? t("y.attDest.routeNone") : t("y.attDest.billing.next")}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
