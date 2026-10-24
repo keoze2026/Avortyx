@@ -85,7 +85,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Live Monitor", nameKey: "nav.liveMonitor", href: ROUTES.live,      icon: Radio,           roles: ALL_ROLES, badge: "Live" },
       { label: "Reports",      nameKey: "nav.reports",     href: ROUTES.reports,   icon: BarChart3,       roles: ALL_ROLES },
       // CH-261 (Sir, 25 Oct): every automated report in one place.
-      { label: "Automated Reports", nameKey: "nav.automatedReports", href: ROUTES.automatedReports, icon: Send, roles: ["admin"] },
+      { label: "Automated Report", nameKey: "nav.automatedReports", href: ROUTES.automatedReports, icon: Send, roles: ["admin"] },
     ],
   },
   {

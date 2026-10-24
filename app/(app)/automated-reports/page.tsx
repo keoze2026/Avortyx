@@ -4,7 +4,7 @@
  * Automated Reports (CH-261, Sir 25 Oct): every report the platform sends by
  * itself, in one place, after Reports in the menu.
  *
- *   Daily Reports, Delivered Automatically
+ *   Automated Report
  *   Each buyer receives their call report on Telegram at their chosen time.
  *
  * Feature cards, then the live list of buyers and their Telegram report
@@ -20,10 +20,10 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Mail,
-  Send,
   SlidersHorizontal,
 } from "lucide-react";
 
+import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -86,15 +86,10 @@ export default function AutomatedReportsPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[1100px] space-y-6">
-      {/* Headline (Sir, 25 Oct): brief. */}
-      <div className="space-y-1.5 pt-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <Send className="h-6 w-6 text-accent" />
-          {t("autoReports.headline")}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t("autoReports.subline")}</p>
-      </div>
+    <div className="space-y-6">
+      {/* The same header as Reports and the other pages (Sir, 25 Oct): title
+          and one line, no icon. */}
+      <PageHeader title={t("autoReports.headline")} description={t("autoReports.subline")} className="pb-0" />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {FEATURES.map((f) => {
