@@ -36,12 +36,11 @@ import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { PORTAL_TIMEZONES } from "@/lib/store/auto-schedule-store";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { scheduledReportsService } from "@/lib/api/services/scheduled-reports.service";
 import {
-  REPORT_SECTIONS,
   WEEKDAYS,
   useScheduledReportsStore,
   type ReportFormat,
-  type ReportSection,
   type Weekday,
 } from "@/lib/store/scheduled-reports-store";
 import { cn } from "@/lib/utils";
@@ -74,7 +73,16 @@ export function ScheduledReportsSection() {
   const setTimezone = useScheduledReportsStore((s) => s.setTimezone);
   const toggleDay = useScheduledReportsStore((s) => s.toggleDay);
   const setFormat = useScheduledReportsStore((s) => s.setFormat);
-  const toggleSection = useScheduledReportsStore((s) => s.toggleSection);
+  const toggleColumn = useScheduledReportsStore((s) => s.toggleColumn);
+  const setColumns = useScheduledReportsStore((s) => s.setColumns);
+  // Every export column this login may include (CH-266, Sir 25 Oct): staff
+  // get them all; a publisher or buyer never gets our money columns.
+  const [columns, setColumnList] = React.useState<{ key: string; label: string }[]>([]);
+  React.useEffect(() => {
+    scheduledReportsService.columns().then(setColumnList).catch(() => setColumnList([]));
+  }, []);
+  const allKeys = columns.map((c) => c.key);
+  const chosen = report.columns.length ? report.columns.filter((c) => allKeys.includes(c)) : allKeys;
   const runNow = useScheduledReportsStore((s) => s.runNow);
   const [sending, setSending] = React.useState(false);
 
@@ -97,7 +105,7 @@ export function ScheduledReportsSection() {
 
   const emailValid = /^\S+@\S+\.\S+$/.test(recipient);
   const dayValid = report.days.length > 0;
-  const sectionValid = report.sections.length > 0;
+  const sectionValid = columns.length === 0 || chosen.length > 0;
 
   const onSendNow = async () => {
     if (!emailValid) {
@@ -106,9 +114,10 @@ export function ScheduledReportsSection() {
     }
     setSending(true);
     try {
-      await runNow();
+      const detail = await runNow();
       toast.success(
         t("settings.scheduledReports.testSent").replace("{email}", recipient),
+        detail ? { description: detail } : undefined,
       );
     } catch (e) {
       toast.error(
@@ -296,7 +305,7 @@ export function ScheduledReportsSection() {
                 {t("settings.scheduledReports.format")}
               </Label>
               <div className="inline-flex w-full rounded-md border border-border bg-muted p-0.5 sm:w-auto">
-                {(["pdf", "csv", "both"] as ReportFormat[]).map((opt) => (
+                {(["xlsx", "csv", "both"] as ReportFormat[]).map((opt) => (
                   <button
                     key={opt}
                     type="button"
@@ -309,9 +318,11 @@ export function ScheduledReportsSection() {
                     )}
                   >
                     {t(
-                      `settings.scheduledReports.format${
-                        opt === "pdf" ? "Pdf" : opt === "csv" ? "Csv" : "Both"
-                      }`,
+                      opt === "xlsx"
+                        ? "x6.scheduledReports.formatExcel"
+                        : opt === "csv"
+                          ? "settings.scheduledReports.formatCsv"
+                          : "x6.scheduledReports.formatExcelCsv",
                     )}
                   </button>
                 ))}
@@ -323,24 +334,30 @@ export function ScheduledReportsSection() {
               <Label className="text-xs font-medium">
                 {t("settings.scheduledReports.sections")}
               </Label>
-              <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                {REPORT_SECTIONS.map((sec) => {
-                  const id = `sr-section-${sec}`;
-                  const checked = report.sections.includes(sec);
+              {/* Every export column, ticked by default (CH-266). */}
+              <div className="flex gap-3 text-[11px]">
+                <button type="button" className="text-accent hover:underline" onClick={() => void setColumns([])}>
+                  {t("x6.scheduledReports.selectAll")}
+                </button>
+                <button type="button" className="text-muted-foreground hover:underline" onClick={() => void setColumns(allKeys.slice(0, 1))}>
+                  {t("x6.scheduledReports.clear")}
+                </button>
+              </div>
+              <ul className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                {columns.map((col) => {
+                  const id = `sr-col-${col.key.replace(/\W+/g, "-")}`;
                   return (
-                    <li key={sec}>
+                    <li key={col.key}>
                       <label
                         htmlFor={id}
                         className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary/40"
                       >
                         <Checkbox
                           id={id}
-                          checked={checked}
-                          onCheckedChange={() => toggleSection(sec)}
+                          checked={chosen.includes(col.key)}
+                          onCheckedChange={() => void toggleColumn(col.key, allKeys)}
                         />
-                        <span className="text-sm">
-                          {t(`settings.scheduledReports.section.${sec}`)}
-                        </span>
+                        <span className="text-sm">{col.label}</span>
                       </label>
                     </li>
                   );
@@ -403,4 +420,4 @@ export function ScheduledReportsSection() {
 }
 
 // Re-export the Weekday type for downstream typing.
-export type { Weekday, ReportFormat, ReportSection };
+export type { Weekday, ReportFormat };

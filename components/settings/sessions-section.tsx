@@ -10,12 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatRelativeTime } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useWorkspaceMetaStore } from "@/lib/store/workspace-meta-store";
 
 export function SessionsSection() {
   const { t } = useTranslation();
   const sessions = useWorkspaceMetaStore((s) => s.sessions);
   const revokeSession = useWorkspaceMetaStore((s) => s.revokeSession);
+  const myId = useAuthStore((s) => s.user?.id);
+  // The server only marks the current sign-in when it can tell which one it
+  // is. Without that, "revoke all others" would end every listed sign-in -
+  // for the workspace admin, everybody's, including their own (CH-266).
+  const knowsCurrent = sessions.some((s) => s.current);
 
   const revoke = async (id: string) => {
     try {
@@ -27,7 +33,7 @@ export function SessionsSection() {
   };
 
   const revokeAllOthers = async () => {
-    const others = sessions.filter((s) => !s.current);
+    const others = sessions.filter((s) => !s.current && (!s.userId || !myId || s.userId === myId));
     if (others.length === 0) return;
     try {
       await Promise.all(others.map((s) => revokeSession(s.id)));
@@ -66,6 +72,10 @@ export function SessionsSection() {
                     {s.current && (
                       <Badge variant="success">{t("workspaceUI.sessions.thisDevice")}</Badge>
                     )}
+                    {/* The workspace admin sees everyone's sign-ins: say whose. */}
+                    {s.userName && s.userId && myId && s.userId !== myId && (
+                      <span className="truncate text-xs text-muted-foreground">{s.userName}</span>
+                    )}
                   </div>
                   <div className="mt-0.5 text-[11px] text-muted-foreground font-mono">
                     {s.browser} · {s.ip}
@@ -91,6 +101,7 @@ export function SessionsSection() {
         </CardContent>
       </Card>
 
+      {knowsCurrent && (
       <div className="flex justify-end">
         <Button
           variant="outline"
@@ -101,6 +112,7 @@ export function SessionsSection() {
           {t("settings.sessionsSection.revokeAllOthers")}
         </Button>
       </div>
+      )}
     </SectionShell>
   );
 }

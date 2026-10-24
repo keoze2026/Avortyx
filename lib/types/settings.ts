@@ -52,6 +52,9 @@ export interface DeviceSession {
   city?: string;
   current: boolean;
   lastActiveAt: number;
+  /** Whose sign-in it is - the workspace admin sees everyone's (CH-266). */
+  userId?: string;
+  userName?: string;
 }
 
 export interface NotificationPref {

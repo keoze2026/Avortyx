@@ -527,8 +527,8 @@ export const en = {
       formatPdf: "PDF",
       formatCsv: "CSV",
       formatBoth: "Both PDF + CSV",
-      sections: "Include sections",
-      sectionsHint: "Pick what goes into the digest body and attachments.",
+      sections: "Include details",
+      sectionsHint: "Tick the details to include in the attached file. A short summary is always in the email.",
       section: {
         summary: "Daily summary",
         topCampaigns: "Top campaigns",
@@ -544,7 +544,7 @@ export const en = {
       neverSent: "Never sent",
       validationEmail: "Enter a valid email address",
       validationDays: "Pick at least one day",
-      validationSections: "Pick at least one section",
+      validationSections: "Tick at least one detail",
     },
   },
 

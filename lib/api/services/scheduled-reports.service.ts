@@ -131,9 +131,15 @@ export const scheduledReportsService = {
   /** Trigger an immediate run of the scheduled report against the saved
    *  recipients. Rate-limited server-side to once per minute per report;
    *  the dev confirms a 429 if the user spams the button. */
-  async runNow(id: string): Promise<{ ok: boolean; queuedAt?: string }> {
-    return http.post<{ ok: boolean; queuedAt?: string }>(
+  async runNow(id: string): Promise<{ ok: boolean; detail?: string; sentAt?: string }> {
+    return http.post<{ ok: boolean; detail?: string; sentAt?: string }>(
       `/api/analytics/reports/${id}/run-now/`,
     );
+  },
+
+  /** The export columns this login may put in its digest (CH-266). */
+  async columns(): Promise<{ key: string; label: string }[]> {
+    const res = await http.get<{ columns?: { key: string; label: string }[] }>("/api/analytics/reports/columns/");
+    return res.columns ?? [];
   },
 };

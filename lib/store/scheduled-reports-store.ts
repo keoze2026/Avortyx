@@ -39,7 +39,10 @@ export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 export const WEEKDAYS: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
-export type ReportFormat = "pdf" | "csv" | "both";
+/** CH-266 (Sir, 25 Oct): Excel as well as CSV. "both" = Excel + CSV. PDF is
+ *  not made by the server yet, so it is no longer offered; an old PDF choice
+ *  reads as Excel. */
+export type ReportFormat = "xlsx" | "csv" | "both";
 
 export type ReportSection =
   | "summary"
@@ -65,6 +68,9 @@ export interface ScheduledReport {
   timezone: string;
   format: ReportFormat;
   sections: ReportSection[];
+  /** The export columns to include (CH-266). Empty = every column this
+   *  login may have. */
+  columns: string[];
   lastSentAt?: number;
 }
 
@@ -74,9 +80,11 @@ export const DEFAULT_REPORT: ScheduledReport = {
   days: ["mon", "tue", "wed", "thu", "fri"],
   hour: 18,
   minute: 0,
-  timezone: "UTC",
-  format: "pdf",
-  sections: ["summary", "topCampaigns", "revenue"],
+  // The portal's zone (CH-260); "UTC" was not in the list, so the box showed empty.
+  timezone: "America/New_York",
+  format: "xlsx",
+  sections: ["summary"],
+  columns: [],
 };
 
 interface Store {
@@ -96,10 +104,14 @@ interface Store {
   toggleDay: (day: Weekday) => Promise<void>;
   setFormat: (format: ReportFormat) => Promise<void>;
   toggleSection: (section: ReportSection) => Promise<void>;
+  /** Tick or untick one column; `all` is every column offered, used when
+   *  nothing was chosen yet (= all ticked). */
+  toggleColumn: (column: string, all: string[]) => Promise<void>;
+  setColumns: (columns: string[]) => Promise<void>;
   /** Trigger an immediate run against the saved recipients via
    *  POST /api/analytics/reports/{id}/run-now/. Backend rate-limits to once
    *  per minute per report — the 429 surfaces back to the caller. */
-  runNow: () => Promise<void>;
+  runNow: () => Promise<string | undefined>;
 }
 
 /* ─── Wire ↔ FE mapping ─────────────────────────────────────────────────── */
@@ -109,7 +121,7 @@ const REPORT_NAME = "User scheduled digest";
 function feFormatToWire(fe: ReportFormat): WireFormat {
   // Backend enum is single-format; "both" is preserved in filters.
   if (fe === "csv") return "csv";
-  return "pdf";
+  return "xlsx";
 }
 
 function wireToReport(w: WireReport): ScheduledReport {
@@ -136,8 +148,9 @@ function wireToReport(w: WireReport): ScheduledReport {
     hour: typeof f.hour === "number" ? f.hour : DEFAULT_REPORT.hour,
     minute: typeof f.minute === "number" ? f.minute : DEFAULT_REPORT.minute,
     timezone: typeof f.timezone === "string" ? f.timezone : DEFAULT_REPORT.timezone,
-    format: formatChoice === "csv" || formatChoice === "both" ? formatChoice : "pdf",
+    format: formatChoice === "csv" || formatChoice === "both" ? formatChoice : "xlsx",
     sections,
+    columns: Array.isArray(f.columns) ? f.columns.filter((c): c is string => typeof c === "string") : [],
     lastSentAt: w.lastRunAt,
   };
 }
@@ -159,6 +172,7 @@ function buildCreateInput(r: ScheduledReport) {
       minute: r.minute,
       timezone: r.timezone,
       sections: r.sections,
+      columns: r.columns,
       formatChoice: r.format,
     },
   };
@@ -271,12 +285,29 @@ export const useScheduledReportsStore = create<Store>()((set, get) => {
       patch({ sections: next });
     },
 
+    toggleColumn: async (column, all) => {
+      const current = get().report.columns.length ? get().report.columns : all;
+      const next = current.includes(column) ? current.filter((c) => c !== column) : [...current, column];
+      patch({ columns: all.filter((c) => next.includes(c)) });
+    },
+    setColumns: async (columns) => {
+      patch({ columns });
+    },
+
     runNow: async () => {
       const { reportId } = get();
       if (!reportId) {
         throw new Error(
           "Save your schedule first — there's no report on the backend to run yet.",
         );
+      }
+      // Sent for real by the server now (CH-266); a refusal comes back as an
+      // error with the reason, and the caller shows it.
+      if (pendingSync) {
+        clearTimeout(pendingSync);
+        pendingSync = null;
+        const { report } = get();
+        await scheduledReportsService.update(reportId, buildUpdateInput(report));
       }
       const res = await scheduledReportsService.runNow(reportId);
       // The backend's response is best-effort confirmation; the actual send
@@ -286,9 +317,7 @@ export const useScheduledReportsStore = create<Store>()((set, get) => {
       set((s) => ({
         report: { ...s.report, lastSentAt: Date.now() },
       }));
-      // Surface the queued-at timestamp via the return value so the caller
-      // can show a richer toast description if it wants.
-      void res;
+      return (res as { detail?: string } | undefined)?.detail;
     },
   };
 });

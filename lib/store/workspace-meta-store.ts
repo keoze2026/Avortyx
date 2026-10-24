@@ -211,6 +211,8 @@ function wireToSession(w: WorkspaceSessionWire): DeviceSession {
     city: w.location,
     current: w.current,
     lastActiveAt: toTs(w.lastActiveAt),
+    userId: w.userId,
+    userName: w.userName,
   };
 }
 
