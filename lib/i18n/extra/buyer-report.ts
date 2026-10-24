@@ -18,7 +18,7 @@ export const buyerReport: ExtraTranslations = {
     "buyerReport.noRecordingLink": "No Recording Link - leave recordings out of the report",
     "buyerReport.connectedOnly": "Connected calls only",
     "buyerReport.hideFailReason": "Leave out the Fail Reason column",
-    "buyerReport.headings": "Column headings (blank = default)",
+    "buyerReport.headings": "Columns in the report (tick to include, rename if wanted)",
     "buyerReport.wording": "Comment wording",
     "buyerReport.wordingHint": "Change how a Fail Reason comment is worded in this buyer's report. The wording can change, not what happened: a missed call cannot be worded as connected.",
     "buyerReport.pickComment": "Choose a comment",

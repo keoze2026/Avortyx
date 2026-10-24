@@ -44,6 +44,8 @@ interface Settings {
   columnNames: { key: string; label: string }[];
   commentRewrites: Pair[];
   columns: { key: string; label: string }[];
+  /** The columns in the files (CH-267): every column a buyer's client may see. */
+  includedColumns: string[];
   lastSentAt: string | null;
   lastResult: string;
   /** The buyer's own approval (CH-259): nothing is sent until it is given. */
@@ -116,6 +118,7 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
           connectedOnly: s.connectedOnly,
           hideFailReason: s.hideFailReason,
           columnNames: s.columnNames,
+          includedColumns: s.includedColumns,
           commentRewrites: s.commentRewrites.filter((p) => p.from.trim()),
         },
       });
@@ -229,20 +232,38 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
               {t("buyerReport.headings")}
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {/* Every column a buyer's client may see (CH-267): tick it in,
+                  and rename it if wanted. */}
               {s.columns
                 .filter((c) => !(c.key === "recording" && s.noRecordingLink))
                 .filter((c) => !(c.key === "failReason" || c.key === "fail_reason") || !s.hideFailReason)
-                .map((c) => (
-                  <div key={c.key} className="flex items-center gap-2">
-                    <span className="w-28 shrink-0 text-xs text-muted-foreground">{c.label}</span>
-                    <Input
-                      className="h-8"
-                      placeholder={c.label}
-                      value={heading(c.key)}
-                      onChange={(e) => setHeading(c.key, e.target.value)}
-                    />
-                  </div>
-                ))}
+                .map((c) => {
+                  const on = s.includedColumns.includes(c.key);
+                  return (
+                    <div key={c.key} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={on}
+                        onCheckedChange={() =>
+                          set(
+                            "includedColumns",
+                            on
+                              ? s.includedColumns.filter((k) => k !== c.key)
+                              : s.columns.map((x) => x.key).filter((k) => k === c.key || s.includedColumns.includes(k)),
+                          )
+                        }
+                        aria-label={c.label}
+                      />
+                      <span className="w-28 shrink-0 text-xs text-muted-foreground">{c.label}</span>
+                      <Input
+                        className="h-8"
+                        placeholder={c.label}
+                        disabled={!on}
+                        value={heading(c.key)}
+                        onChange={(e) => setHeading(c.key, e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
             </div>
           </div>
 

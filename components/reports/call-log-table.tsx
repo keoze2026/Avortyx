@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 import { CallActivityPanel } from "@/components/reports/call-activity-panel";
 import { ExportMenu } from "@/components/shared/export-menu";
+import { ExportColumnsDialog, applyColumnChoice } from "@/components/reports/export-columns-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -725,6 +726,30 @@ export function CallLogTable({
     [playingId, resolveRecordingUrl, t],
   );
 
+  // CH-267: the export opens "choose the details" before it downloads.
+  const [pendingExport, setPendingExport] = React.useState<{ format: ExportFormat; table: string[][] } | null>(null);
+
+  const downloadTable = (format: ExportFormat, full: string[][], keep: string[], names: Record<string, string>) => {
+    const table = applyColumnChoice(full, keep, names);
+    // Number and link formatting follow the headings, renamed or not.
+    const renamed = (list: readonly string[]) =>
+      list.flatMap((h) => [h, (names[h] || "").trim()]).filter(Boolean);
+    const count = Math.max(table.length - 1, 0);
+    const stem = dateStamped("call-log");
+    if (format === "csv") {
+      triggerDownload(new Blob([rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
+    } else {
+      triggerDownload(
+        csvRowsToXLSX(table, "Call log", renamed(SERVER_EXPORT_NUMERIC_HEADERS), {
+          boldHeader: true,
+          linkColumns: renamed(CALL_LOG_LINK_HEADERS),
+        }),
+        `${stem}.xlsx`,
+      );
+    }
+    toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
+  };
+
   const exportFromServer = async (format: ExportFormat, serverQuery: Omit<CallLogQuery, "page" | "pageSize">) => {
     if (exporting) return;
     setExporting(true);
@@ -739,20 +764,7 @@ export function CallLogTable({
         }),
         callsById,
       )), callsById);
-      const count = Math.max(table.length - 1, 0);
-      const stem = dateStamped("call-log");
-      if (format === "csv") {
-        triggerDownload(new Blob([rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
-      } else {
-        triggerDownload(
-          csvRowsToXLSX(table, "Call log", SERVER_EXPORT_NUMERIC_HEADERS, {
-            boldHeader: true,
-            linkColumns: CALL_LOG_LINK_HEADERS,
-          }),
-          `${stem}.xlsx`,
-        );
-      }
-      toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(count)).replace("{format}", format.toUpperCase()));
+      setPendingExport({ format, table });
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.exportError")));
     } finally {
@@ -791,6 +803,16 @@ export function CallLogTable({
   };
 
   return (
+    <>
+    <ExportColumnsDialog
+      header={pendingExport ? pendingExport.table[0] ?? [] : null}
+      format={pendingExport?.format === "csv" ? "csv" : "xlsx"}
+      onCancel={() => setPendingExport(null)}
+      onConfirm={(keep, names) => {
+        if (pendingExport) downloadTable(pendingExport.format, pendingExport.table, keep, names);
+        setPendingExport(null);
+      }}
+    />
     <Card className="overflow-hidden p-0">
       {/* Section title */}
       <div className="flex items-center justify-between gap-2 border-b border-border px-6 py-4">
@@ -1076,6 +1098,7 @@ export function CallLogTable({
       </CardContent>
       <CallActivityPanel call={activityCall} onOpenChange={(open) => !open && setActivityCall(null)} />
     </Card>
+    </>
   );
 }
 

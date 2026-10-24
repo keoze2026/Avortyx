@@ -71,6 +71,10 @@ export interface ScheduledReport {
   /** The export columns to include (CH-266). Empty = every column this
    *  login may have. */
   columns: string[];
+  /** Manual edit (CH-267): own headings and own comment wording. Lists of
+   *  pairs - a map's keys would be renamed by the http client. */
+  columnNames: { key: string; label: string }[];
+  commentRewrites: { from: string; to: string }[];
   lastSentAt?: number;
 }
 
@@ -85,6 +89,8 @@ export const DEFAULT_REPORT: ScheduledReport = {
   format: "xlsx",
   sections: ["summary"],
   columns: [],
+  columnNames: [],
+  commentRewrites: [],
 };
 
 interface Store {
@@ -108,6 +114,8 @@ interface Store {
    *  nothing was chosen yet (= all ticked). */
   toggleColumn: (column: string, all: string[]) => Promise<void>;
   setColumns: (columns: string[]) => Promise<void>;
+  setColumnName: (key: string, label: string) => Promise<void>;
+  setCommentRewrites: (pairs: { from: string; to: string }[]) => Promise<void>;
   /** Trigger an immediate run against the saved recipients via
    *  POST /api/analytics/reports/{id}/run-now/. Backend rate-limits to once
    *  per minute per report — the 429 surfaces back to the caller. */
@@ -151,6 +159,18 @@ function wireToReport(w: WireReport): ScheduledReport {
     format: formatChoice === "csv" || formatChoice === "both" ? formatChoice : "xlsx",
     sections,
     columns: Array.isArray(f.columns) ? f.columns.filter((c): c is string => typeof c === "string") : [],
+    columnNames: Array.isArray(f.columnNames)
+      ? (f.columnNames as unknown[]).filter(
+          (p): p is { key: string; label: string } =>
+            !!p && typeof p === "object" && typeof (p as { key?: unknown }).key === "string",
+        )
+      : [],
+    commentRewrites: Array.isArray(f.commentRewrites)
+      ? (f.commentRewrites as unknown[]).filter(
+          (p): p is { from: string; to: string } =>
+            !!p && typeof p === "object" && typeof (p as { from?: unknown }).from === "string",
+        )
+      : [],
     lastSentAt: w.lastRunAt,
   };
 }
@@ -173,6 +193,8 @@ function buildCreateInput(r: ScheduledReport) {
       timezone: r.timezone,
       sections: r.sections,
       columns: r.columns,
+      columnNames: r.columnNames.filter((p) => p.label.trim()),
+      commentRewrites: r.commentRewrites.filter((p) => p.from.trim()),
       formatChoice: r.format,
     },
   };
@@ -217,9 +239,11 @@ export const useScheduledReportsStore = create<Store>()((set, get) => {
           }
           set({ reportId: created.id });
         }
-      } catch {
-        // Best-effort — the local copy is still correct; the user can retry
-        // by toggling something else.
+      } catch (e) {
+        // The local copy stays as typed; say why the server refused it
+        // (e.g. comment wording that would say a call connected, CH-267).
+        const { toast } = await import("sonner");
+        toast.error(messageFromError(e));
       }
     }, SYNC_DELAY_MS);
   }
@@ -292,6 +316,13 @@ export const useScheduledReportsStore = create<Store>()((set, get) => {
     },
     setColumns: async (columns) => {
       patch({ columns });
+    },
+    setColumnName: async (key, label) => {
+      const rest = get().report.columnNames.filter((p) => p.key !== key);
+      patch({ columnNames: label ? [...rest, { key, label }] : rest });
+    },
+    setCommentRewrites: async (pairs) => {
+      patch({ commentRewrites: pairs });
     },
 
     runNow: async () => {

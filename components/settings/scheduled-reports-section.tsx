@@ -75,6 +75,8 @@ export function ScheduledReportsSection() {
   const setFormat = useScheduledReportsStore((s) => s.setFormat);
   const toggleColumn = useScheduledReportsStore((s) => s.toggleColumn);
   const setColumns = useScheduledReportsStore((s) => s.setColumns);
+  const setColumnName = useScheduledReportsStore((s) => s.setColumnName);
+  const setCommentRewrites = useScheduledReportsStore((s) => s.setCommentRewrites);
   // Every export column this login may include (CH-266, Sir 25 Oct): staff
   // get them all; a publisher or buyer never gets our money columns.
   const [columns, setColumnList] = React.useState<{ key: string; label: string }[]>([]);
@@ -372,6 +374,84 @@ export function ScheduledReportsSection() {
                 </p>
               )}
             </div>
+
+            {/* Manual edit (CH-267): own headings, own comment wording. */}
+            <details className="rounded-md border border-border px-3 py-2">
+              <summary className="cursor-pointer text-xs font-medium">{t("digestEdit.title")}</summary>
+              <div className="mt-3 space-y-4">
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("digestEdit.headings")}
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                    {columns.filter((c) => chosen.includes(c.key)).map((c) => (
+                      <div key={c.key} className="flex items-center gap-2">
+                        <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">{c.label}</span>
+                        <Input
+                          className="h-7 text-xs"
+                          placeholder={c.label}
+                          value={report.columnNames.find((p) => p.key === c.key)?.label ?? ""}
+                          onChange={(e) => void setColumnName(c.key, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {chosen.includes("Fail Reason") && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t("digestEdit.wording")}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{t("buyerReport.wordingHint")}</p>
+                    {report.commentRewrites.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <select
+                          value={p.from}
+                          onChange={(e) =>
+                            void setCommentRewrites(
+                              report.commentRewrites.map((q, j) => (j === i ? { ...q, from: e.target.value } : q)),
+                            )
+                          }
+                          className="h-7 w-44 rounded-md border border-border bg-background px-2 text-xs"
+                        >
+                          <option value="">{t("buyerReport.pickComment")}</option>
+                          {["No Destination", "Not Connected", "Overflow Missed", "Duplicate Call", "Callerid Blocked", "Insufficient Funds"].map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-muted-foreground">→</span>
+                        <Input
+                          className="h-7 text-xs"
+                          placeholder={t("buyerReport.newWording")}
+                          value={p.to}
+                          onChange={(e) =>
+                            void setCommentRewrites(
+                              report.commentRewrites.map((q, j) => (j === i ? { ...q, to: e.target.value } : q)),
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-destructive"
+                          onClick={() => void setCommentRewrites(report.commentRewrites.filter((_, j) => j !== i))}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="text-xs text-accent hover:underline"
+                      onClick={() => void setCommentRewrites([...report.commentRewrites, { from: "", to: "" }])}
+                    >
+                      + {t("buyerReport.addWording")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </details>
 
             {/* Footer — last-sent meta + Send-now button (POST .../run-now).
                 Disabled until the schedule has been saved to the backend
