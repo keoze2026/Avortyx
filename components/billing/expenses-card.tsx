@@ -148,7 +148,7 @@ export function ExpensesCard() {
               {t("x1.billing.portalFee.title")}
             </div>
             <div className="font-mono text-base font-semibold tabular-nums">
-              {rates ? formatCurrency(rates.monthlyPortalFee) : unavailable}
+              {rates ? formatCurrency(rates.monthlyPortalFee, true) : unavailable}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
                 {t("toolsUI.billing.subscription.perMonth")}
               </span>
@@ -173,7 +173,7 @@ export function ExpensesCard() {
           <div className="border-b border-border pb-3">
             <div className="text-xs text-muted-foreground">{t("billing.total")}</div>
             <div className="mt-0.5 font-mono text-2xl font-semibold tabular-nums">
-              {formatCurrency(total)}
+              {formatCurrency(total, true)}
             </div>
           </div>
           <ul className="mt-2 divide-y divide-border">
@@ -190,7 +190,7 @@ export function ExpensesCard() {
                     )}
                   </div>
                   <div className="mt-0.5 font-mono text-base font-semibold tabular-nums">
-                    {formatCurrency(r.amount)}
+                    {formatCurrency(r.amount, true)}
                   </div>
                 </div>
                 <span
@@ -254,7 +254,7 @@ export function ExpensesCard() {
                   <Tooltip
                     cursor={false}
                     formatter={(value: number, name) => [
-                      formatCurrency(Number(value)),
+                      formatCurrency(Number(value), true),
                       name as string,
                     ]}
                     contentStyle={{
@@ -272,7 +272,7 @@ export function ExpensesCard() {
                 {t("billing.total")}
               </span>
               <span className="mt-0.5 font-mono text-xl font-semibold tabular-nums">
-                {formatCurrency(total)}
+                {formatCurrency(total, true)}
               </span>
             </div>
           </div>

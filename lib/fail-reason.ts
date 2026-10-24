@@ -70,7 +70,8 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   if (/total\s*limit/i.test(raw)) return { key: `${k}campTotalLimit` };
   if (/cap\s*reached|overflow/i.test(raw)) return { key: `${k}overflowMissed` };
   if (/no\s*matching\s*rule/i.test(raw)) return { key: `${k}noMatchingRule` };
-  if (/insufficient[\s_]*balance/i.test(raw)) return { key: `${k}insufficientBalance` };
+  // "Insufficient Funds" (CH-255), and the older "insufficient_balance".
+  if (/insufficient[\s_]*(balance|funds)/i.test(raw)) return { key: `${k}insufficientBalance` };
   if (/rtb\s*no\s*winner|no\s*bids/i.test(raw)) return { key: `${k}noBidWinner` };
   if (/campaign\s*not\s*found/i.test(raw)) return { key: `${k}campaignNotFound` };
   if (/no\s*number\s*configured/i.test(raw)) return { key: `${k}noNumber` };

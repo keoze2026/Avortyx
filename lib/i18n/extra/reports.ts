@@ -26,7 +26,7 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.callLog.failReason.overflowMissed": "Overflow Missed",
     "toolsUI.reports.callLog.failReason.destinationFull": "Destination Missed (CC Full)",
     "toolsUI.reports.callLog.failReason.noMatchingRule": "No Matching Rule Found",
-    "toolsUI.reports.callLog.failReason.insufficientBalance": "Insufficient Balance",
+    "toolsUI.reports.callLog.failReason.insufficientBalance": "Insufficient Funds",
     "toolsUI.reports.callLog.failReason.noBidWinner": "RTB No Winner",
     "toolsUI.reports.callLog.failReason.campaignNotFound": "Campaign Not Found",
     "toolsUI.reports.callLog.failReason.noDestination": "No Destination",

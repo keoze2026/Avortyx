@@ -81,7 +81,7 @@ export function SubscriptionHero() {
     {
       key: "number",
       label: tr("toolsUI.billing.subscription.charges.perNumber", "Per tracking number"),
-      value: rates ? formatCurrency(rates.tfnPurchaseFee) : unavailable,
+      value: rates ? formatCurrency(rates.tfnPurchaseFee, true) : unavailable,
     },
     {
       key: "lastCharged",
@@ -131,7 +131,7 @@ export function SubscriptionHero() {
           </div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="font-mono text-3xl font-semibold tracking-tight sm:text-4xl">
-              {rates ? formatCurrency(rates.monthlyPortalFee) : unavailable}
+              {rates ? formatCurrency(rates.monthlyPortalFee, true) : unavailable}
             </span>
             <span className="text-[13px] text-muted-foreground">{t("toolsUI.billing.subscription.perMonth")}</span>
           </div>
@@ -163,7 +163,7 @@ export function SubscriptionHero() {
               {currency !== "USD" && <span className="ml-auto">{currency}</span>}
             </div>
             <div className="mt-1 font-mono text-3xl font-semibold tabular-nums tracking-tight">
-              {balance != null ? formatCurrency(balance) : unavailable}
+              {balance != null ? formatCurrency(balance, true) : unavailable}
             </div>
           </div>
           <dl className="grid grid-cols-2 gap-3 text-xs">
@@ -172,7 +172,7 @@ export function SubscriptionHero() {
                 {t("toolsUI.billing.subscription.balance.creditLimit")}
               </dt>
               <dd className="mt-0.5 font-mono tabular-nums">
-                {creditLimit != null ? formatCurrency(creditLimit) : unavailable}
+                {creditLimit != null ? formatCurrency(creditLimit, true) : unavailable}
               </dd>
             </div>
             <div>
