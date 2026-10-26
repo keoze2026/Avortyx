@@ -45,7 +45,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               {/* @container/main lets children respond to the actual content-area
                   width (which depends on whether the sidebar is open) instead of
                   the viewport width. Use `@<bp>/main:` utilities on children. */}
-              <div className="@container/main mx-auto w-full space-y-8 p-4 sm:p-6 lg:p-8">
+              {/* Room at the bottom for the "Need help?" chat button, which floats
+                  over the bottom-right corner: it sat on the last row's arrow
+                  (Campaign > Advanced settings > Concurrency, Sir 24 Oct: "I can't
+                  even open concurrency setting"), so that row could not be
+                  opened (CH-272). */}
+              <div className="@container/main mx-auto w-full space-y-8 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pb-24">
                 {children}
               </div>
             </div>
