@@ -12,6 +12,7 @@ import { create } from "zustand";
 
 import { buyersService } from "@/lib/api/services/buyers.service";
 import { forgetPartner, markInvited } from "@/lib/partner-access";
+import { createLocalSwitches, inBatches, type ManyResult } from "@/lib/store/local-switches";
 import type { Buyer, BuyerStatus } from "@/lib/types";
 
 /**
@@ -67,6 +68,9 @@ interface BuyersState {
   ) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setStatus: (id: string, status: BuyerStatus) => Promise<void>;
+  /** Play / pause many at once: the switches move together and stay put
+   *  while the server catches up; anything it refuses is put back (CH-268). */
+  setStatusMany: (ids: string[], status: BuyerStatus) => Promise<ManyResult>;
   /** Save the buyer's CC limit (0 = unlimited) where routing reads it.
    *  Only that field changes locally - the row keeps its counters. */
   setConcurrency: (id: string, maxConcurrency: number) => Promise<void>;
@@ -83,8 +87,14 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
     try {
       // Pull the first 200 — Phase 2 will add proper pagination plumbing
       // for tables that need to page past this.
+      const startedAt = Date.now();
       const page = await buyersService.list({ page: 1, pageSize: 200 });
-      set({ buyers: page.items, loading: false, hydrated: true });
+      // Keep play / pause clicked here while this load was on its way (CH-268).
+      const onScreen = new Map(get().buyers.map((b) => [b.id, b.status] as const));
+      const buyers = page.items.map((b) =>
+        switches.changedSince(b.id, startedAt) && onScreen.has(b.id) ? { ...b, status: onScreen.get(b.id)! } : b,
+      );
+      set({ buyers, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
     }
@@ -206,18 +216,48 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
   },
 
   setStatus: async (id, status) => {
-    const prev = get().buyers;
+    const { failed } = await get().setStatusMany([id], status);
+    if (failed.length) throw new Error(failed[0].message);
+  },
+
+  setStatusMany: async (ids, status) => {
+    // Each row's own status, so one refusal puts back only that row.
+    const before = new Map(
+      get().buyers.filter((b) => ids.includes(b.id)).map((b) => [b.id, b.status] as const),
+    );
+    const send = [...before.keys()].filter((id) => before.get(id) !== status);
+    const ok = [...before.keys()].filter((id) => before.get(id) === status);
+    const failed: ManyResult["failed"] = [];
+    if (send.length === 0) return { ok, failed };
+
+    switches.start(send);
     set((s) => ({
-      buyers: s.buyers.map((b) => (b.id === id ? { ...b, status } : b)),
+      buyers: s.buyers.map((b) => (send.includes(b.id) ? { ...b, status } : b)),
     }));
     try {
-      await buyersService.setStatus(id, status);
-    } catch (e) {
-      set({ buyers: prev, error: messageFromError(e) });
-      throw e;
+      await inBatches(send, 4, async (id) => {
+        try {
+          await buyersService.setStatus(id, status);
+          ok.push(id);
+        } catch (e) {
+          failed.push({ id, message: messageFromError(e) });
+        }
+      });
+    } finally {
+      switches.end(send);
     }
+    if (failed.length) {
+      const back = new Set(failed.map((f) => f.id));
+      set((s) => ({
+        buyers: s.buyers.map((b) => (back.has(b.id) ? { ...b, status: before.get(b.id)! } : b)),
+        error: failed[0].message,
+      }));
+    }
+    return { ok, failed };
   },
 }));
+
+const switches = createLocalSwitches();
 
 function messageFromError(e: unknown): string {
   if (e instanceof Error) return e.message;

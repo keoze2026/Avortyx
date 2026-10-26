@@ -11,6 +11,7 @@ import { campaignsService } from "@/lib/api/services/campaigns.service";
 import { routingService } from "@/lib/api/services/routing.service";
 import { allowedCampaignIds } from "@/lib/partner-campaign-scope";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { createLocalSwitches, inBatches, type ManyResult } from "@/lib/store/local-switches";
 import type { Campaign, CampaignStatus } from "@/lib/types";
 import { cloneName } from "../api/services/clone";
 
@@ -26,6 +27,9 @@ interface CampaignsState {
   update: (id: string, patch: Partial<Campaign>) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setStatus: (id: string, status: CampaignStatus) => Promise<void>;
+  /** Play / pause many at once: the switches move together and stay put
+   *  while the server catches up; anything it refuses is put back (CH-268). */
+  setStatusMany: (ids: string[], status: CampaignStatus) => Promise<ManyResult>;
   /** Set the concurrent-call (CC) limit; 0 = unlimited. Other caps are kept. */
   setConcurrency: (id: string, maxConcurrency: number) => Promise<void>;
   /** Save the campaign's daily call cap (0 = unlimited). The other caps are
@@ -57,13 +61,20 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
   fetch: async () => {
     set({ loading: true, error: null });
     try {
+      const startedAt = Date.now();
       const page = await campaignsService.list({ page: 1, pageSize: 200 });
       // A publisher / buyer login sees only the campaigns assigned to it. The
       // server still sends every campaign (backend fix pending), so the
       // others are dropped here, before any screen, filter or dropdown sees them.
       const user = useAuthStore.getState().user;
       const allowed = await allowedCampaignIds(user?.role, user?.id);
-      const campaigns = allowed ? page.items.filter((c) => allowed.has(c.id)) : page.items;
+      const listed = allowed ? page.items.filter((c) => allowed.has(c.id)) : page.items;
+      // Keep play / pause clicked here while this load was on its way: the
+      // list can be older than the click (CH-268).
+      const onScreen = new Map(get().campaigns.map((c) => [c.id, c.status] as const));
+      const campaigns = listed.map((c) =>
+        switches.changedSince(c.id, startedAt) && onScreen.has(c.id) ? { ...c, status: onScreen.get(c.id)! } : c,
+      );
       set({ campaigns, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
@@ -198,18 +209,49 @@ export const useCampaignsStore = create<CampaignsState>()((set, get) => ({
   },
 
   setStatus: async (id, status) => {
-    const prev = get().campaigns;
+    const { failed } = await get().setStatusMany([id], status);
+    if (failed.length) throw new Error(failed[0].message);
+  },
+
+  setStatusMany: async (ids, status) => {
+    // Remember each row's own status: putting the whole list back on one
+    // refusal used to undo every other row switched in the same click.
+    const before = new Map(
+      get().campaigns.filter((c) => ids.includes(c.id)).map((c) => [c.id, c.status] as const),
+    );
+    const send = [...before.keys()].filter((id) => before.get(id) !== status);
+    const ok = [...before.keys()].filter((id) => before.get(id) === status);
+    const failed: ManyResult["failed"] = [];
+    if (send.length === 0) return { ok, failed };
+
+    switches.start(send);
     set((s) => ({
-      campaigns: s.campaigns.map((c) => (c.id === id ? { ...c, status } : c)),
+      campaigns: s.campaigns.map((c) => (send.includes(c.id) ? { ...c, status } : c)),
     }));
     try {
-      await campaignsService.setStatus(id, status);
-    } catch (e) {
-      set({ campaigns: prev, error: messageFromError(e) });
-      throw e;
+      await inBatches(send, 4, async (id) => {
+        try {
+          await campaignsService.setStatus(id, status);
+          ok.push(id);
+        } catch (e) {
+          failed.push({ id, message: messageFromError(e) });
+        }
+      });
+    } finally {
+      switches.end(send);
     }
+    if (failed.length) {
+      const back = new Set(failed.map((f) => f.id));
+      set((s) => ({
+        campaigns: s.campaigns.map((c) => (back.has(c.id) ? { ...c, status: before.get(c.id)! } : c)),
+        error: failed[0].message,
+      }));
+    }
+    return { ok, failed };
   },
 }));
+
+const switches = createLocalSwitches();
 
 /**
  * Copy a campaign's routing to another campaign: each rule with its conditions

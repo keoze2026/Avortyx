@@ -37,6 +37,7 @@ export default function BuyersPage() {
   const refetch = useBuyersStore((s) => s.fetch);
   const waiting = !hydrated && buyers.length === 0;
   const setBuyerStatus = useBuyersStore((s) => s.setStatus);
+  const setStatusMany = useBuyersStore((s) => s.setStatusMany);
   const remove = useBuyersStore((s) => s.remove);
   const fetchStats = useBuyersStore((s) => s.fetchStats);
 
@@ -133,27 +134,49 @@ export default function BuyersPage() {
     [buyers, selectedIds],
   );
 
-  const onBulkPlay = () => {
+  /**
+   * Play / pause the selected rows together (CH-268). Before, each row was
+   * sent on its own and one refusal put the whole list back, so 2-3 rows
+   * showed live again for 5-10 seconds after Pause all.
+   */
+  const runBulk = async (status: "active" | "paused") => {
     if (selectedBuyers.length === 0) return;
-    for (const b of selectedBuyers) setBuyerStatus(b.id, "active");
-    toast.success(
-      t("common.bulk.toast.activated")
-        .replace("{count}", String(selectedBuyers.length))
-        .replace("{entity}", t("common.bulk.entities.buyers")),
+    const targets = selectedBuyers;
+    const { ok, failed } = await setStatusMany(
+      targets.map((b) => b.id),
+      status,
     );
-    setSelectedIds(new Set());
+    const entity = t("common.bulk.entities.buyers");
+    if (failed.length === 0) {
+      toast.success(
+        t(status === "active" ? "common.bulk.toast.activated" : "common.bulk.toast.paused")
+          .replace("{count}", String(ok.length))
+          .replace("{entity}", entity),
+      );
+      setSelectedIds(new Set());
+      return;
+    }
+    const nameOf = (id: string) => targets.find((b) => b.id === id)?.name ?? id;
+    toast.error(
+      t(status === "active" ? "bulk.destinations.playPartial" : "bulk.destinations.pausePartial")
+        .replace("{ok}", String(ok.length))
+        .replace("{total}", String(targets.length))
+        .replace("{failed}", String(failed.length)),
+      {
+        description: failed
+          .slice(0, 3)
+          .map((f) => `${nameOf(f.id)}: ${f.message}`)
+          .join("\n"),
+        duration: 10000,
+      },
+    );
+    // Keep the ones that could not be changed selected, so they are easy to find.
+    setSelectedIds(new Set(failed.map((f) => f.id)));
   };
 
-  const onBulkPause = () => {
-    if (selectedBuyers.length === 0) return;
-    for (const b of selectedBuyers) setBuyerStatus(b.id, "paused");
-    toast.success(
-      t("common.bulk.toast.paused")
-        .replace("{count}", String(selectedBuyers.length))
-        .replace("{entity}", t("common.bulk.entities.buyers")),
-    );
-    setSelectedIds(new Set());
-  };
+  const onBulkPlay = () => void runBulk("active");
+
+  const onBulkPause = () => void runBulk("paused");
 
   const onBulkDelete = () => {
     if (selectedBuyers.length === 0) return;
