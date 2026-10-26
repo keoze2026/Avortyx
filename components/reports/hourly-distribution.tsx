@@ -7,6 +7,8 @@ import {
   ComposedChart,
   LabelList,
   Line,
+  Rectangle,
+  type RectangleProps,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,6 +22,26 @@ import type { Call } from "@/lib/types";
 import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
+
+/** How far a stacked block reaches down into the block beneath it (CH-288). */
+const STACK_OVERLAP_PX = 1;
+
+/**
+ * One block of a stacked column, drawn `overlap` px taller at the bottom so
+ * it covers the seam with the block below (that block is drawn first, so the
+ * upper one paints over it). Empty blocks draw nothing, never a 1px line.
+ */
+function stackBlock(overlap: number) {
+  // Recharts types the shape's props as `unknown`; they are the block's
+  // rectangle (x, y, width, height, fill, radius).
+  function StackBlock(raw: unknown) {
+    const props = raw as RectangleProps;
+    const { height = 0, width = 0 } = props;
+    if (!(height > 0) || !(width > 0)) return <g />;
+    return <Rectangle {...props} height={height + overlap} />;
+  }
+  return StackBlock;
+}
 
 type Grain = "H" | "D" | "M";
 
@@ -730,12 +752,14 @@ export function HourlyDistribution({
                      2. notConverted  (blue: answered, not converted)
                      3. converted     (accent, top of stack) */}
                 {/* Every block is drawn on whole pixels (crispEdges), with no
-                    outline (CH-277). Blocks of the stack met on a fraction of
-                    a pixel: the dark background showed through as a thin line
-                    across the column (Sir, 26 Oct), and the 1px outline used
-                    to hide it (CH-275/276) left soft edges that made the blue
-                    look shifted against the red. Whole-pixel edges give one
-                    straight column with no seam and no halo. */}
+                    outline (CH-277), and each block above the bottom one
+                    reaches 1px down into the block beneath it (CH-288). The
+                    blocks met edge to edge, and on a phone (3 screen pixels
+                    to each page pixel) each edge was rounded on its own, so
+                    one pixel row between two blocks could stay unpainted: a
+                    dark line across the blue column on Sir's phone, 26 Oct,
+                    while a computer showed none. Drawn over each other, there
+                    is no row left to miss on any screen. */}
                 <Bar
                   yAxisId="count"
                   dataKey="noAnswer"
@@ -743,6 +767,7 @@ export function HourlyDistribution({
                   fill={COLOR_NOANS}
                   shapeRendering="crispEdges"
                   radius={[0, 0, 0, 0]}
+                  shape={stackBlock(0)}
                 />
                 <Bar
                   yAxisId="count"
@@ -751,6 +776,7 @@ export function HourlyDistribution({
                   fill={COLOR_NOTCONV}
                   shapeRendering="crispEdges"
                   radius={[0, 0, 0, 0]}
+                  shape={stackBlock(STACK_OVERLAP_PX)}
                 />
                 <Bar
                   yAxisId="count"
@@ -759,6 +785,7 @@ export function HourlyDistribution({
                   fill={COLOR_CONVERTED}
                   shapeRendering="crispEdges"
                   radius={[3, 3, 0, 0]}
+                  shape={stackBlock(STACK_OVERLAP_PX)}
                 />
                 {/* Calls line: follows the call totals on the columns'
                     scale, riding just above each column so the count sits
