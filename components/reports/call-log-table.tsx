@@ -204,15 +204,6 @@ function customerPayout(c: Call): number {
   return Math.max(0, c.revenue - c.payout);
 }
 
-/** Stable hash so derived fields (TTC, fail reason) don't reshuffle on render. */
-function callHash(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
-
 /** Seconds the caller waited before pickup — the backend's figure, measured
  *  from the call records. This used to be `hash(id) % 6` per status: numbers
  *  that never moved and were never real, the same disease as the old Live
@@ -236,21 +227,29 @@ function LiveDuration({ call }: { call: Call }) {
 }
 
 /**
- * Hang-up side per call. Derived deterministically from the call id so the
- * same row always shows the same direction across renders/refresh.
+ * Hang-up per call, from what the phone system reported (CH-278).
  *
- *   caller   — the caller hung up
- *   callee   — the buyer / agent hung up
- *   carrier  — the call dropped (network)
- *   open     — never connected (no hang-up to attribute)
+ * It used to be made up: finished calls were split 60/40 "Caller hung up" /
+ * "Buyer hung up" by a hash of the call id, so calls the buyer never answered
+ * read "Buyer hung up" (Sir, 26 Oct: "Buyer Hungup - is wrong comment under
+ * excel"). Now only what the switch reported for the dial is shown:
+ *
+ *   caller    – the caller hung up before anyone answered ("Not Connected")
+ *   noAnswer  – the buyer's line rang out or refused the call ("No Answer")
+ *   busy      – the buyer's line was busy
+ *   open      – live, answered (the switch does not report which side ended
+ *               a call after talking yet), or never dialled: shown as a dash
  */
-type HangUpSide = "caller" | "callee" | "carrier" | "open";
+type HangUpSide = "caller" | "noAnswer" | "busy" | "open";
 
 function getHangUpSide(c: Call): HangUpSide {
-  if (c.status === "ringing" || c.status === "in-progress") return "open";
-  if (c.status === "failed") return "carrier";
-  // For completed / missed / rejected: split 60/40 caller-vs-callee by hash.
-  return callHash(c.id) % 10 < 6 ? "caller" : "callee";
+  if (c.status === "ringing" || c.status === "in-progress" || c.status === "completed") return "open";
+  if (isBusy(c)) return "busy";
+  const raw = (c.failReason ?? "").trim();
+  if (/destination\s*busy/i.test(raw)) return "busy";
+  if (/^not[\s_]*connected$/i.test(raw) || /caller\s*hung\s*up/i.test(raw)) return "caller";
+  if (/^no[\s_]*answer$/i.test(raw) || /destination\s*no\s*answer/i.test(raw)) return "noAnswer";
+  return "open";
 }
 
 /**
@@ -339,8 +338,8 @@ function withScreenTtc(table: string[][], callsById: Map<string, Call>): string[
 
 const HANG_UP_LABEL: Record<HangUpSide, string> = {
   caller: "Caller hung up",
-  callee: "Buyer hung up",
-  carrier: "Carrier drop",
+  noAnswer: "No answer",
+  busy: "Buyer busy",
   open: "—",
 };
 
@@ -1171,8 +1170,8 @@ function RecordingCell({
 /** Tooltip text per hang-up side, in the chosen language. */
 const HANG_UP_KEYS: Record<Exclude<HangUpSide, "open">, string> = {
   caller: "toolsUI.reports.callLog.hangUp.caller",
-  callee: "toolsUI.reports.callLog.hangUp.callee",
-  carrier: "toolsUI.reports.callLog.hangUp.carrier",
+  noAnswer: "hangUp.noAnswer",
+  busy: "hangUp.busy",
 };
 
 function HangUpCell({ call }: { call: Call }) {
