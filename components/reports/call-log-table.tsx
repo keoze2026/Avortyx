@@ -375,8 +375,8 @@ function withHangUp(table: string[][], callsById: Map<string, Call>): string[][]
 
 const HANG_UP_LABEL: Record<HangUpSide, string> = {
   caller: "Caller hung up",
-  noAnswer: "No answer",
-  busy: "Buyer busy",
+  noAnswer: "No Answer",
+  busy: "Destination Busy",
   open: "—",
 };
 

@@ -3,19 +3,19 @@ import type { ExtraTranslations } from "./types";
 
 export const hangUp: ExtraTranslations = {
   en: {
-    "hangUp.noAnswer": "No answer",
-    "hangUp.busy": "Buyer busy",
+    "hangUp.noAnswer": "No Answer",
+    "hangUp.busy": "Destination Busy",
   },
   ru: {
     "hangUp.noAnswer": "Без ответа",
-    "hangUp.busy": "Покупатель занят",
+    "hangUp.busy": "Направление занято",
   },
   ja: {
     "hangUp.noAnswer": "応答なし",
-    "hangUp.busy": "バイヤー話し中",
+    "hangUp.busy": "転送先が話し中",
   },
   zh: {
     "hangUp.noAnswer": "无人接听",
-    "hangUp.busy": "买家忙线",
+    "hangUp.busy": "目的地忙线",
   },
 };
