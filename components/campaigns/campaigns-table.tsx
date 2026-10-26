@@ -161,6 +161,12 @@ export function CampaignsTable({
     setSelected(next);
   };
 
+  // The longest names, measured by the browser in the real font: invisible
+  // copies in every name cell give all of them the same width (CH-269).
+  const widestNames = Array.from(new Set(campaigns.map((c) => localizeName(c.name, locale))))
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 3);
+
   return (
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
@@ -175,7 +181,7 @@ export function CampaignsTable({
                 />
               </TableHead>
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
-              <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
+              <TableHead>{t("trafficUI.campaigns.columns.campaign")}</TableHead>
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
@@ -222,15 +228,25 @@ export function CampaignsTable({
                       <ProgressPill state={progressState} />
                     </TableCell>
                   )}
-                  <TableCell className="text-left font-medium text-foreground">
-                    {/* Push the Active pill to the cell's right edge so the
-                        badge column reads as a clean vertical band, regardless
-                        of campaign-name length. */}
-                    <div className="flex w-full items-center justify-between gap-2">
-                      <span className="truncate" title={locale === "en" ? undefined : c.name}>
-                        {localizeName(c.name, locale)}
+                  <TableCell className="font-medium text-foreground">
+                    {/* Centred under the heading (Sir, 24 Oct: "Under Campaign -
+                        names are not in center"), as one block: every name
+                        starts at the same place and the Active pills form one
+                        straight band, whatever the name's length (CH-269). */}
+                    <div className="mx-auto flex w-fit items-center gap-3">
+                      <div className="grid max-w-[260px] text-left">
+                        <span className="truncate [grid-area:1/1]" title={locale === "en" ? undefined : c.name}>
+                          {localizeName(c.name, locale)}
+                        </span>
+                        {widestNames.map((n) => (
+                          <span key={n} aria-hidden className="invisible h-0 truncate [grid-area:1/1]">
+                            {n}
+                          </span>
+                        ))}
+                      </div>
+                      <span className={isActive ? undefined : "invisible"} aria-hidden={!isActive}>
+                        <ActiveBadge />
                       </span>
-                      {isActive && <ActiveBadge />}
                     </div>
                   </TableCell>
                   {columns.access && (
