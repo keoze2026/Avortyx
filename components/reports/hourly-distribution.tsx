@@ -729,11 +729,13 @@ export function HourlyDistribution({
                      1. noAnswer      (red: missed, not converted)
                      2. notConverted  (blue: answered, not converted)
                      3. converted     (accent, top of stack) */}
-                {/* The lower blocks carry a 1px outline in their own colour
-                    (CH-275, Sir 26 Oct: "very thin cut in the candle"). Two
-                    blocks of the stack meet on a fraction of a pixel, and the
-                    dark background showed through as a thin line across the
-                    blue column; the outline closes that seam. */}
+                {/* Every block carries a 1px outline in its own colour (CH-275,
+                    Sir 26 Oct: "very thin cut in the candle"). Two blocks of the
+                    stack meet on a fraction of a pixel, and the dark background
+                    showed through as a thin line across the blue column; the
+                    outline closes that seam. All three have it, so the column
+                    keeps one width (CH-276: only the lower two had it, and the
+                    bottom of the column looked thicker). */}
                 <Bar
                   yAxisId="count"
                   dataKey="noAnswer"
@@ -757,6 +759,10 @@ export function HourlyDistribution({
                   dataKey="converted"
                   stackId="calls"
                   fill={COLOR_CONVERTED}
+                  // Same outline as the blocks below it, so the whole column
+                  // is one width from bottom to top (CH-276).
+                  stroke={COLOR_CONVERTED}
+                  strokeWidth={1}
                   radius={[3, 3, 0, 0]}
                 />
                 {/* Calls line: follows the call totals on the columns'
