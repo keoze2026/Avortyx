@@ -79,23 +79,19 @@ export function Topbar() {
   const totalCalls = kpis?.callsToday ?? 0;
 
   return (
-    // Solid on phones and tablets, glassy from lg up. The 85%-opaque + blur
-    // treatment lets whatever is behind the bar show through the stats text
-    // (which, unlike the icon pill and avatar, has no backing of its own):
-    // table rows and chart gridlines while scrolling, and on a phone the
-    // login screen's fine ring lines for a moment after signing in. Both read
-    // as strike-through lines across "$8,790 / Live: 0 / Total: 1710". Phones
-    // held sideways are wider than the old sm cut-off, so it is lg now.
-    // Glass only on computers with a mouse (pointer-fine). On iPhone and iPad
-    // Safari the blur under the stats smeared them into streaks across
-    // "$7,367 Live: 0 Total: 1433" (Sir, 23 Oct), so touch screens get the
-    // solid bar at every width.
+    // Solid on every screen (CH-271). The glass bar (85% opaque + blur) let
+    // whatever was behind it show through the stats text, and the browser
+    // smeared the figures into streaks each time they updated: on phones
+    // first (Sir, 23 Oct), then on a computer too - "$6,510 Live: 0 Total: 10"
+    // with ghost lines after each figure (Sir, 26 Oct: "this blur issue is not
+    // going away"). Touch-only and lg-only cut-offs did not end it, so the
+    // blur is gone everywhere.
     //
     // The bar is a size container (@container/topbar): what fits is decided by
     // the bar's own width, not the screen's. With the sidebar open a tablet is
     // wide enough to count as a desktop while the bar itself is narrow, and
     // the stats were squeezed - fine again the moment the sidebar closed.
-    <header className="sticky top-0 z-30 border-b border-border/50 bg-background lg:pointer-fine:bg-background/85 lg:pointer-fine:backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-border/50 bg-background">
       <div className="@container/topbar relative flex h-16 items-center gap-4 px-4 sm:px-6">
         {/* LEFT — sidebar trigger only */}
         <div className="flex items-center">
