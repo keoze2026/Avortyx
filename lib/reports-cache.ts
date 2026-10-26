@@ -13,7 +13,9 @@
  *   - only ever the data OF THAT VIEW - never another day's figures;
  *   - when the reports PIN locks again, saved copies of earlier days are dropped;
  *   - a view that ends before today never changes, so once loaded it is kept
- *     for the whole session (no 6-hour expiry) and opens with no download;
+ *     for the whole session (no 6-hour expiry) and opens with no download -
+ *     but only a copy downloaded after that day was over (CH-286, see
+ *     `isFinalReport`);
  *   - the last 7 days are loaded in advance, one at a time, so opening any of
  *     them is instant too.
  */
@@ -40,7 +42,15 @@ export interface ReportData {
   takenAt: number;
 }
 
-const STORAGE_PREFIX = "vortyx.reports-view.v1:";
+/* v2 (CH-286): copies saved by v1 may be a day's report taken while that day
+ * was still running, kept as if final. They are never read again. */
+const STORAGE_PREFIX = "vortyx.reports-view.v2:";
+/**
+ * A day is final this long after it ends. A call is recorded when it ENDS but
+ * belongs to the day it started, so a call still running at midnight joins
+ * that day's report after midnight.
+ */
+const DAY_SETTLE_MS = 2 * 60 * 60 * 1000;
 /** Views kept in memory: today, yesterday, the 7 days loaded in advance, and a few more. */
 const MAX_ENTRIES = 14;
 /** Past days loaded in advance (yesterday back to this many days ago). */
@@ -99,9 +109,35 @@ function keyIsPast(key: string): boolean {
   }
 }
 
-/** Saved data still good to show: a past view always, today's for MAX_AGE_MS. */
+/**
+ * Was this copy downloaded after the view's last day was over? Only then is
+ * it the whole report.
+ *
+ * Sir, 26 Oct: Friday 23 Oct showed 11 calls on one admin's screen, 40 on
+ * another's and 1,591 on a third. Each had looked at "today" on the 23rd in a
+ * tab still open (11 calls at about 7 am, 40 at 8 am). From the 24th that
+ * copy counted as a past day - "never changes" - so it was shown with no
+ * download, the timer never reloads a past day, and the export took its
+ * statuses from it.
+ */
+function takenAfterEnd(dateTo: string, timeZone: string, takenAt: number): boolean {
+  try {
+    return dateTo < zonedDayKey(takenAt - DAY_SETTLE_MS, timeZone);
+  } catch {
+    return false;
+  }
+}
+
+/** Is this saved copy the finished report of a past view, safe to show with no download? */
+export function isFinalReport(view: ReportView, data: ReportData): boolean {
+  return isPastView(view) && takenAfterEnd(view.dateTo, view.timeZone, data.takenAt);
+}
+
+/** Saved data still good to show: a past view's finished copy always, any other for MAX_AGE_MS. */
 function stillGood(key: string, data: ReportData): boolean {
-  return keyIsPast(key) || Date.now() - data.takenAt <= MAX_AGE_MS;
+  const [, , to, tz] = key.split("|");
+  const final = keyIsPast(key) && !!to && !!tz && takenAfterEnd(to, tz, data.takenAt);
+  return final || Date.now() - data.takenAt <= MAX_AGE_MS;
 }
 
 /** The saved data of exactly this view, or null. */
@@ -159,7 +195,8 @@ function putCachedReport(key: string, data: ReportData): void {
  * automatic update never downloads them again) and today (small, live).
  */
 const PAST_CALLS_KEEP = 6;
-const pastCalls = new Map<string, Promise<Call[]>>();
+const PAST_CALLS_RECHECK_MS = 10 * 60 * 1000;
+const pastCalls = new Map<string, { calls: Promise<Call[]>; takenAt: number }>();
 
 /** "2026-10-23" -> "2026-10-22", whatever the time zone. */
 function dayBefore(dayKey: string): string {
@@ -175,11 +212,22 @@ function callsForView(view: ReportView): Promise<Call[]> {
 
   const pastTo = dayBefore(today);
   const key = [useAuthStore.getState().user?.id ?? "", view.dateFrom, pastTo, view.timeZone].join("|");
-  let past = pastCalls.get(key);
+  // Kept for the session only once yesterday was over when it was downloaded
+  // (CH-286); a copy taken just after midnight lacks the calls that were still
+  // running, so it is downloaded again every 10 minutes until then.
+  const kept = pastCalls.get(key);
+  const keep =
+    !!kept &&
+    (takenAfterEnd(pastTo, view.timeZone, kept.takenAt) || Date.now() - kept.takenAt < PAST_CALLS_RECHECK_MS);
+  let past = keep ? kept.calls : undefined;
   if (!past) {
-    past = load(view.dateFrom, pastTo);
-    pastCalls.set(key, past);
-    past.catch(() => pastCalls.delete(key));
+    const loading = load(view.dateFrom, pastTo);
+    past = loading;
+    pastCalls.delete(key);
+    pastCalls.set(key, { calls: loading, takenAt: Date.now() });
+    loading.catch(() => {
+      if (pastCalls.get(key)?.calls === loading) pastCalls.delete(key);
+    });
     while (pastCalls.size > PAST_CALLS_KEEP) {
       const oldest = pastCalls.keys().next().value;
       if (oldest === undefined) break;
@@ -251,7 +299,8 @@ export function prefetchRecentDays(timeZone: string): void {
         if (!historyOpen()) return;
         const day = zonedDayKey(Date.now() - back * 24 * 60 * 60 * 1000, timeZone);
         const view = { dateFrom: day, dateTo: day, timeZone };
-        if (getCachedReport(reportKey(view))) continue;
+        const saved = getCachedReport(reportKey(view));
+        if (saved && isFinalReport(view, saved)) continue;
         await loadReportShared(view).catch(() => undefined);
       }
     } finally {

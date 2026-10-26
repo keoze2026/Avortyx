@@ -37,7 +37,7 @@ import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
 import {
   getCachedReport,
-  isPastView,
+  isFinalReport,
   loadReportShared,
   prefetchRecentDays,
   prefetchReport,
@@ -201,7 +201,9 @@ export default function ReportsPage() {
     // Today's saved copy is only worth showing while it is fresh: an old one is
     // a half report (hours old) that jumps when the real data arrives, so the
     // loading panel is shown instead until the full report is in.
-    if (saved && !isPastView(view) && Date.now() - saved.takenAt > TODAY_SHOW_MAX_AGE_MS) return null;
+    // A past day's copy taken before that day was over is the same half
+    // report (CH-286), so it gets the same rule.
+    if (saved && !isFinalReport(view, saved) && Date.now() - saved.takenAt > TODAY_SHOW_MAX_AGE_MS) return null;
     return saved;
   },
     // loadedKey: re-read after every load, so the saved copy is the newest one.
@@ -223,9 +225,11 @@ export default function ReportsPage() {
     const current = view!;
     // A range that ended before today never changes: if it is already saved
     // (opened before, or loaded in advance), show it straight away with no
-    // download at all. Refresh still re-downloads it.
+    // download at all. Refresh still re-downloads it. Only a copy downloaded
+    // after the day was over (CH-286): one taken while it was still "today"
+    // is part of the day, and is downloaded again.
     const saved = getCachedReport(reportKey(current));
-    if (saved && isPastView(current) && !manualRefresh.current) {
+    if (saved && isFinalReport(current, saved) && !manualRefresh.current) {
       setRangeCalls(saved.calls);
       setSummaries(saved.summaries);
       setLoadedKey(viewKey);
