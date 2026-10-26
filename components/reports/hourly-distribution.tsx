@@ -729,20 +729,19 @@ export function HourlyDistribution({
                      1. noAnswer      (red: missed, not converted)
                      2. notConverted  (blue: answered, not converted)
                      3. converted     (accent, top of stack) */}
-                {/* Every block carries a 1px outline in its own colour (CH-275,
-                    Sir 26 Oct: "very thin cut in the candle"). Two blocks of the
-                    stack meet on a fraction of a pixel, and the dark background
-                    showed through as a thin line across the blue column; the
-                    outline closes that seam. All three have it, so the column
-                    keeps one width (CH-276: only the lower two had it, and the
-                    bottom of the column looked thicker). */}
+                {/* Every block is drawn on whole pixels (crispEdges), with no
+                    outline (CH-277). Blocks of the stack met on a fraction of
+                    a pixel: the dark background showed through as a thin line
+                    across the column (Sir, 26 Oct), and the 1px outline used
+                    to hide it (CH-275/276) left soft edges that made the blue
+                    look shifted against the red. Whole-pixel edges give one
+                    straight column with no seam and no halo. */}
                 <Bar
                   yAxisId="count"
                   dataKey="noAnswer"
                   stackId="calls"
                   fill={COLOR_NOANS}
-                  stroke={COLOR_NOANS}
-                  strokeWidth={1}
+                  shapeRendering="crispEdges"
                   radius={[0, 0, 0, 0]}
                 />
                 <Bar
@@ -750,8 +749,7 @@ export function HourlyDistribution({
                   dataKey="notConverted"
                   stackId="calls"
                   fill={COLOR_NOTCONV}
-                  stroke={COLOR_NOTCONV}
-                  strokeWidth={1}
+                  shapeRendering="crispEdges"
                   radius={[0, 0, 0, 0]}
                 />
                 <Bar
@@ -759,10 +757,7 @@ export function HourlyDistribution({
                   dataKey="converted"
                   stackId="calls"
                   fill={COLOR_CONVERTED}
-                  // Same outline as the blocks below it, so the whole column
-                  // is one width from bottom to top (CH-276).
-                  stroke={COLOR_CONVERTED}
-                  strokeWidth={1}
+                  shapeRendering="crispEdges"
                   radius={[3, 3, 0, 0]}
                 />
                 {/* Calls line: follows the call totals on the columns'
