@@ -77,6 +77,9 @@ export function Topbar() {
   const balance = kpis?.balance ?? accountBalance;
   const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? 0);
   const totalCalls = kpis?.callsToday ?? 0;
+  const balanceText = formatCurrency(balance ?? 0);
+  const liveText = formatNumber(liveCalls);
+  const totalText = formatNumber(totalCalls);
 
   return (
     // Solid on every screen (CH-271). The glass bar (85% opaque + blur) let
@@ -144,7 +147,18 @@ export function Topbar() {
           {/* CH-233: shrink-0 and no clipping - the balance, Live and Total
               always show in full ("Total: 1342", never "Total: 1"). The two-line
               layout below @3xl is what keeps them inside a phone's width. */}
-          <div className="flex shrink-0 flex-col items-end gap-1 @3xl/topbar:flex-row @3xl/topbar:items-center @3xl/topbar:gap-6">
+          {/* CH-285: the figures are drawn on a layer of their own, and a new
+              one each time a figure changes. Safari (Sir's iPad, 26 Oct, the
+              7th report) kept pieces of the old figures on screen as dashed
+              lines through and beside "$6,182 Live: 40 Total: 739": the bar
+              redrew the new text but not every pixel the old text had used.
+              The solid bar (CH-271) did not end it. On its own layer the
+              header never paints these figures, and swapping the layer on
+              every change leaves no old pixels to keep. */}
+          <div
+            key={`${balanceText}|${liveText}|${totalText}`}
+            className="flex shrink-0 flex-col items-end gap-1 [backface-visibility:hidden] [transform:translateZ(0)] @3xl/topbar:flex-row @3xl/topbar:items-center @3xl/topbar:gap-6"
+          >
             {/* Balance. A wallet rather than a "$" glyph — the figure already
                 carries its own currency symbol, so a "$" badge read as "$ $0". */}
             <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -157,7 +171,7 @@ export function Topbar() {
                   GREEN_TEXT,
                 )}
               >
-                {formatCurrency(balance ?? 0)}
+                {balanceText}
               </span>
             </span>
 
@@ -167,12 +181,12 @@ export function Topbar() {
             <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-4">
               <TopStat
                 label={t("topbar.live")}
-                value={formatNumber(liveCalls)}
+                value={liveText}
                 tone="green"
               />
               <TopStat
                 label={t("topbar.total")}
-                value={formatNumber(totalCalls)}
+                value={totalText}
                 tone="blue"
               />
             </span>

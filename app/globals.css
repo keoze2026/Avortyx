@@ -1472,7 +1472,10 @@
 .app-canvas {
   background-image:
     radial-gradient(ellipse 60% 50% at 20% 0%, rgba(82, 102, 224, 0.05), transparent 70%);
-  background-attachment: fixed;
+  /* No `background-attachment: fixed` (CH-285). This box never scrolls (the
+     page scrolls inside it), so it looked the same, but "fixed" makes the
+     browser repaint the whole box - the top bar included - on every change,
+     and Safari is where those repaints left lines through the figures. */
 }
 .dark .app-canvas {
   background-image:
