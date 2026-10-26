@@ -57,7 +57,6 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
   // colour had a notch cut out of it. With nothing drawn at all (no calls) a
   // faint full ring stands in so the chart is never empty.
   const ringSlices = slices.filter((s) => s.count > 0);
-  const single = ringSlices.length <= 1;
   const ringData = ringSlices.length > 0
     ? ringSlices
     : [{ key: "none", label: "", count: 1, color: "var(--muted)", swatch: "var(--muted)" }];
@@ -102,9 +101,11 @@ export function TotalCallsDonut({ calls }: TotalCallsDonutProps) {
                 cy="50%"
                 innerRadius="76%"
                 outerRadius="92%"
-                paddingAngle={single ? 0 : 2}
-                stroke={single ? "none" : "var(--card)"}
-                strokeWidth={single ? 0 : 3}
+                // A closed ring with no gaps between colours, as on Revo
+                // (CH-274, Sir 26 Oct: "full circle, no cut on the circle").
+                paddingAngle={0}
+                stroke="none"
+                strokeWidth={0}
                 isAnimationActive
                 animationDuration={500}
                 activeShape={undefined}

@@ -96,11 +96,11 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
                 cy="50%"
                 innerRadius="76%"
                 outerRadius="92%"
-                // One colour only (all calls connected, or none): no gap and no
-                // separator line, so the ring is closed all the way round.
-                paddingAngle={slices.length > 1 ? 2 : 0}
-                stroke={slices.length > 1 ? "var(--card)" : "none"}
-                strokeWidth={slices.length > 1 ? 3 : 0}
+                // A closed ring with no gaps between colours, as on Revo
+                // (CH-274, Sir 26 Oct: "full circle, no cut on the circle").
+                paddingAngle={0}
+                stroke="none"
+                strokeWidth={0}
                 isAnimationActive
                 animationDuration={500}
                 activeShape={undefined}
