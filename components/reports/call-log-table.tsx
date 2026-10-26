@@ -336,6 +336,43 @@ function withScreenTtc(table: string[][], callsById: Map<string, Call>): string[
   });
 }
 
+/**
+ * HANG UP in the exported file, right after DURATION (CH-279, Sir 26 Oct: the
+ * server's Excel and CSV had no Hang Up column). The same value as the Call
+ * Log: from the call this page holds, or else from the row's own Status and
+ * Fail Reason, which is what the phone system reported.
+ */
+function withHangUp(table: string[][], callsById: Map<string, Call>): string[][] {
+  if (table.length < 1) return table;
+  const header = table[0].map((h) => h.trim().toUpperCase());
+  if (header.includes("HANG UP")) return table;
+  const durationCol = header.findIndex((h) => h.startsWith("DURATION"));
+  const statusCol = header.indexOf("STATUS");
+  const reasonCol = header.indexOf("FAIL REASON");
+  const idCol = ["CALL ID", "UUID", "ID"].map((h) => header.indexOf(h)).find((i) => i >= 0) ?? -1;
+  const at = durationCol >= 0 ? durationCol + 1 : table[0].length;
+  const valueFor = (row: string[]): string => {
+    const call = idCol >= 0 ? callsById.get((row[idCol] ?? "").trim()) : undefined;
+    if (call) return HANG_UP_LABEL[getHangUpSide(call)];
+    const status = (statusCol >= 0 ? row[statusCol] ?? "" : "").trim().toLowerCase();
+    const fromRow = {
+      status: status.startsWith("complet")
+        ? "completed"
+        : status.includes("live") || status.includes("progress")
+          ? "in-progress"
+          : "missed",
+      statusRaw: status === "busy" ? "busy" : "no_answer",
+      failReason: reasonCol >= 0 ? row[reasonCol] ?? "" : "",
+    } as unknown as Call;
+    return HANG_UP_LABEL[getHangUpSide(fromRow)];
+  };
+  return table.map((row, i) => {
+    const next = [...row];
+    next.splice(at, 0, i === 0 ? "HANG UP" : valueFor(row));
+    return next;
+  });
+}
+
 const HANG_UP_LABEL: Record<HangUpSide, string> = {
   caller: "Caller hung up",
   noAnswer: "No answer",
@@ -757,12 +794,12 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = withScreenStatus(withFailReasonLabels(withScreenTtc(
+      const table = withHangUp(withScreenStatus(withFailReasonLabels(withScreenTtc(
         formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
           destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
         }),
         callsById,
-      )), callsById);
+      )), callsById), callsById);
       setPendingExport({ format, table });
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.exportError")));
