@@ -6,6 +6,8 @@ import { ExternalLink, Loader2, Pencil, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { Pagination } from "@/components/shared/pagination";
 import {
   Dialog,
@@ -222,6 +224,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   // Calls up right now on each destination, for the LIVE column (Sir, CH-212).
   const live = useLiveCounts();
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
+  const setEnabledMany = useDestinationsStore((s) => s.setEnabledMany);
   const buyers = useBuyersStore((s) => s.buyers);
   const buyerById = useMemo(() => new Map(buyers.map((b) => [b.id, b])), [buyers]);
 
@@ -403,6 +406,88 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     }
   };
 
+  /* ── Bulk select (CH-273, Sir 24 Oct: "give check box if anyone wants to
+     check all boxes and remove destination in bulk") - the same tick boxes and
+     Play / Pause / Detach bar as the campaign's Tracking Numbers. ── */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  // Only rows still in the list count (one may have been detached meanwhile).
+  const selectedRows = destinations.filter((d) => selected.has(d.id));
+  const pageIds = pagedDestinations.map((d) => d.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const someOnPage = !allOnPage && pageIds.some((id) => selected.has(id));
+  const toggleAll = (on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of pageIds) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  const toggleOne = (id: string, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  /** Take the selected destinations off THIS campaign (they stay in Destinations). */
+  const bulkDetach = async () => {
+    if (!ruleId || bulkBusy || selectedRows.length === 0) return;
+    setBulkBusy(true);
+    const failed: string[] = [];
+    for (const d of selectedRows) {
+      try {
+        await routingService.removeDestination(ruleId, d.id);
+        setRouted((rows) => rows.filter((r) => r.id !== d.id));
+      } catch {
+        failed.push(d.id);
+      }
+    }
+    setBulkBusy(false);
+    const ok = selectedRows.length - failed.length;
+    if (failed.length === 0) toast.success(t("routedBulk.detached").replace("{count}", String(ok)));
+    else
+      toast.error(
+        t("campaignNumbers.bulk.partial")
+          .replace("{ok}", String(ok))
+          .replace("{total}", String(selectedRows.length))
+          .replace("{failed}", String(failed.length)),
+      );
+    // The ones that could not be removed stay selected, so they are easy to find.
+    setSelected(new Set(failed));
+  };
+
+  /** Switch the selected destinations on or off - the same as each row's switch. */
+  const bulkSwitch = async (on: boolean) => {
+    if (bulkBusy || selectedRows.length === 0) return;
+    const withDest = selectedRows.filter((d) => d.destId);
+    if (withDest.length === 0) return;
+    setBulkBusy(true);
+    const { ok, failed } = await setEnabledMany(
+      withDest.map((d) => d.destId!),
+      on,
+    );
+    setBulkBusy(false);
+    if (failed.length === 0) {
+      toast.success(
+        t(on ? "routedBulk.activated" : "routedBulk.paused").replace("{count}", String(ok.length)),
+      );
+      setSelected(new Set());
+      return;
+    }
+    toast.error(
+      t("campaignNumbers.bulk.partial")
+        .replace("{ok}", String(ok.length))
+        .replace("{total}", String(withDest.length))
+        .replace("{failed}", String(failed.length)),
+    );
+    const bad = new Set(failed.map((f) => f.id));
+    setSelected(new Set(withDest.filter((d) => bad.has(d.destId!)).map((d) => d.id)));
+  };
+
   return (
     <section className="space-y-4">
       <div>
@@ -498,10 +583,22 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
             {t("trafficUI.campaigns.settings.forward.routedDestinations")}
           </div>
-          <Button size="sm" disabled={!routedLoaded} onClick={() => setAttachOpen(true)}>
-            {routedLoaded ? <Plus className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}{" "}
-            {t("trafficUI.common.add")}
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedRows.length > 0 && (
+              <BulkActionsBar
+                count={bulkBusy ? 0 : selectedRows.length}
+                onPlay={() => void bulkSwitch(true)}
+                onPause={() => void bulkSwitch(false)}
+                onDetach={() => void bulkDetach()}
+                onClear={() => setSelected(new Set())}
+                entity={t("routedBulk.entity")}
+              />
+            )}
+            <Button size="sm" disabled={!routedLoaded} onClick={() => setAttachOpen(true)}>
+              {routedLoaded ? <Plus className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}{" "}
+              {t("trafficUI.common.add")}
+            </Button>
+          </div>
         </div>
         {/* Why calls would drop "No matching rule found", said where it can be fixed. */}
         {routedLoaded && ruleId && ruleStatus !== "active" && (
@@ -531,7 +628,15 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         <Table className="[&_td]:py-1.5 [&_th]:py-2">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-6 uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.priority")}</TableHead>
+              <TableHead className="w-10 pl-6">
+                <Checkbox
+                  checked={allOnPage ? true : someOnPage ? "indeterminate" : false}
+                  onCheckedChange={(v) => toggleAll(v === true)}
+                  disabled={pageIds.length === 0}
+                  aria-label={t("routedBulk.selectAll")}
+                />
+              </TableHead>
+              <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.priority")}</TableHead>
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.weight")}</TableHead>
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.name")}</TableHead>
               <TableHead className="uppercase tracking-wider text-[10px]">{t("trafficUI.campaigns.settings.forward.headers.number")}</TableHead>
@@ -545,7 +650,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           <TableBody>
             {destinations.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={9} className="pl-6 py-6 text-xs text-muted-foreground">
+                <TableCell colSpan={10} className="pl-6 py-6 text-xs text-muted-foreground">
                   {routedLoaded ? t("trafficUI.campaigns.settings.forward.empty") : t("y.fwd.loading")}
                 </TableCell>
               </TableRow>
@@ -556,8 +661,15 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                 const i = pageStart + localIndex;
                 const buyer = buyerById.get(d.buyerId);
                 return (
-                  <TableRow key={d.id}>
-                    <TableCell className="pl-6">
+                  <TableRow key={d.id} data-state={selected.has(d.id) ? "selected" : undefined}>
+                    <TableCell className="w-10 pl-6">
+                      <Checkbox
+                        checked={selected.has(d.id)}
+                        onCheckedChange={(v) => toggleOne(d.id, v === true)}
+                        aria-label={t("routedBulk.selectRow").replace("{name}", d.name)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <Input
                         type="number"
                         min={1}
