@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
+import { formatLocalDateTime } from "@/lib/format";
 
 interface Mine {
   approved: boolean;
@@ -83,7 +84,7 @@ export function MyTelegramReport() {
             {mine.bot && <li>{t("myReport.bot").replace("{bot}", mine.bot)}</li>}
             {mine.noRecordingLink && <li>{t("myReport.noRecordings")}</li>}
             {mine.lastSentAt && (
-              <li>{t("myReport.last").replace("{when}", new Date(mine.lastSentAt).toLocaleString())}</li>
+              <li>{t("myReport.last").replace("{when}", formatLocalDateTime(mine.lastSentAt))}</li>
             )}
           </ul>
         )}

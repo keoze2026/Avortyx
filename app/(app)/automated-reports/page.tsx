@@ -33,6 +33,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
 import { ApiError } from "@/lib/api/errors";
 import { ROUTES } from "@/lib/constants";
+import { formatLocalDateTime, uiLocaleTag } from "@/lib/format";
+import { reportResultText } from "@/lib/i18n/server-text";
 
 type State = "active" | "waiting_approval" | "off" | "not_set_up";
 
@@ -65,15 +67,17 @@ const STATE_VARIANT: Record<State, React.ComponentProps<typeof Badge>["variant"]
   not_set_up: "outline",
 };
 
+/** "9:00 AM EST" / "9:00 EST" / "午前9:00 EST", in the chosen language (CH-302). */
 function time12(hhmm: string | null): string {
   if (!hhmm) return "—";
   const [h, m] = hhmm.split(":").map(Number);
   if (!Number.isFinite(h)) return hhmm;
-  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"} EST`;
+  const at = new Date(Date.UTC(2000, 0, 1, h, Number.isFinite(m) ? m : 0));
+  return `${at.toLocaleTimeString(uiLocaleTag(), { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} EST`;
 }
 
 export default function AutomatedReportsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [data, setData] = React.useState<Payload | null>(null);
   const [denied, setDenied] = React.useState(false);
 
@@ -159,8 +163,8 @@ export default function AutomatedReportsPage() {
                       <TableCell className="text-center tabular-nums">
                         {i.state === "not_set_up" ? "—" : time12(i.sendTime)}
                       </TableCell>
-                      <TableCell className="text-center text-xs text-muted-foreground" title={i.lastResult}>
-                        {i.lastSentAt ? new Date(i.lastSentAt).toLocaleString() : "—"}
+                      <TableCell className="text-center text-xs text-muted-foreground" title={reportResultText(t, locale, i.lastResult)}>
+                        {i.lastSentAt ? formatLocalDateTime(i.lastSentAt) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Link

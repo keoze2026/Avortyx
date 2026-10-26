@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/hooks/use-translation";
+import { reportColumnLabel } from "@/lib/i18n/server-text";
 
 const STORE_KEY = "avortyx.exportColumns.v1";
 
@@ -118,13 +119,13 @@ export function ExportColumnsDialog({ header, format, onCancel, onConfirm }: Pro
                   onCheckedChange={() =>
                     setHidden((prev) => (on ? [...prev, h] : prev.filter((x) => x !== h)))
                   }
-                  aria-label={h}
+                  aria-label={reportColumnLabel(t, h)}
                 />
-                <span className="w-32 shrink-0 truncate text-xs font-medium">{h}</span>
+                <span className="w-32 shrink-0 truncate text-xs font-medium">{reportColumnLabel(t, h)}</span>
                 <Input
                   className="h-7 text-xs"
                   disabled={!on}
-                  placeholder={h}
+                  placeholder={reportColumnLabel(t, h)}
                   value={names[h] ?? ""}
                   onChange={(e) => setNames((prev) => ({ ...prev, [h]: e.target.value }))}
                 />

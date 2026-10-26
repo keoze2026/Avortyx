@@ -558,3 +558,15 @@ Commit: see `git log --grep CH-254`.
 - Fail reason "Insufficient Funds" (new backend wording and the old one).
 
 Commit: see `git log --grep CH-255`.
+
+## CH-302 - Every screen in the chosen language: Automated Report, TFN Check and the rest
+**2026-10-27 · Portal**
+
+Automated Report, the buyer Telegram report, my Telegram report, the export
+column picker and Owner > Carrier Costs now have Russian, Japanese and Chinese.
+TFN Check details and test-call steps, report results, report column and
+comment names (sent by the server in English) are shown in the chosen
+language; the public TFN Check link has a language picker. The last English
+copies in the language dictionaries were translated.
+
+Commit: see git log --grep CH-302.

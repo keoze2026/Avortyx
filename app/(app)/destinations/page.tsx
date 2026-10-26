@@ -400,7 +400,7 @@ export default function DestinationsPage() {
         onOpenChange={setCloneOpen}
         entity="destination"
         sourceName={cloneTarget?.name ?? ""}
-        note="The copy starts switched off, because two live destinations can't share a number. Change its number, or switch the original off, before turning it on."
+        note={t("x302.destinations.cloneNote")}
         onConfirm={handleConfirmClone}
       />
     </>

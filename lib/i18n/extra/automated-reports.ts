@@ -1,6 +1,6 @@
 /**
- * Automated Reports page (CH-261). English only for now; the other languages
- * fall back to it.
+ * Automated Reports page (CH-261). Russian, Japanese and Chinese: CH-302
+ * (translate-all.ts).
  */
 import type { ExtraTranslations } from "./types";
 

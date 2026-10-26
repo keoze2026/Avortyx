@@ -27,6 +27,8 @@ import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
 import { ApiError } from "@/lib/api/errors";
+import { formatLocalDate, formatLocalDateTime } from "@/lib/format";
+import { reportColumnLabel, reportCommentLabel, reportResultText } from "@/lib/i18n/server-text";
 import type { Buyer } from "@/lib/types";
 
 interface Pair {
@@ -69,7 +71,7 @@ function errText(e: unknown, fallback: string): string {
 }
 
 export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const url = `/api/buyers/${buyer.id}/telegram-report`;
   const [s, setS] = React.useState<Settings | null>(null);
   const [hidden, setHidden] = React.useState(false);
@@ -181,7 +183,7 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
             {s.buyerApproved
               ? t("buyerReport.approvedBy")
                   .replace("{who}", s.buyerApprovedBy || t("buyerReport.theBuyer"))
-                  .replace("{when}", s.buyerApprovedAt ? new Date(s.buyerApprovedAt).toLocaleDateString() : "")
+                  .replace("{when}", s.buyerApprovedAt ? formatLocalDate(s.buyerApprovedAt) : "")
               : t("buyerReport.waitingApproval")}
           </div>
 
@@ -251,12 +253,12 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
                               : s.columns.map((x) => x.key).filter((k) => k === c.key || s.includedColumns.includes(k)),
                           )
                         }
-                        aria-label={c.label}
+                        aria-label={reportColumnLabel(t, c.label)}
                       />
-                      <span className="w-28 shrink-0 text-xs text-muted-foreground">{c.label}</span>
+                      <span className="w-28 shrink-0 text-xs text-muted-foreground">{reportColumnLabel(t, c.label)}</span>
                       <Input
                         className="h-8"
-                        placeholder={c.label}
+                        placeholder={reportColumnLabel(t, c.label)}
                         disabled={!on}
                         value={heading(c.key)}
                         onChange={(e) => setHeading(c.key, e.target.value)}
@@ -285,7 +287,7 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
                     <option value="">{t("buyerReport.pickComment")}</option>
                     {COMMENTS.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {reportCommentLabel(t, c)}
                       </option>
                     ))}
                   </select>
@@ -326,7 +328,7 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <p className="text-xs text-muted-foreground">
               {s.lastResult
-                ? `${t("buyerReport.last")}: ${s.lastResult}${s.lastSentAt ? ` · ${new Date(s.lastSentAt).toLocaleString()}` : ""}`
+                ? `${t("buyerReport.last")}: ${reportResultText(t, locale, s.lastResult)}${s.lastSentAt ? ` · ${formatLocalDateTime(s.lastSentAt)}` : ""}`
                 : t("buyerReport.neverSent")}
             </p>
             <div className="flex gap-2">

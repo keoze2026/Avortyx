@@ -45,6 +45,7 @@ import {
 } from "@/lib/store/scheduled-reports-store";
 import { cn } from "@/lib/utils";
 import { formatLocalDateTime } from "@/lib/format";
+import { reportColumnLabel, reportCommentLabel } from "@/lib/i18n/server-text";
 
 const HOURS_12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const MINUTES = [0, 15, 30, 45];
@@ -359,7 +360,7 @@ export function ScheduledReportsSection() {
                           checked={chosen.includes(col.key)}
                           onCheckedChange={() => void toggleColumn(col.key, allKeys)}
                         />
-                        <span className="text-sm">{col.label}</span>
+                        <span className="text-sm">{reportColumnLabel(t, col.label)}</span>
                       </label>
                     </li>
                   );
@@ -386,10 +387,10 @@ export function ScheduledReportsSection() {
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {columns.filter((c) => chosen.includes(c.key)).map((c) => (
                       <div key={c.key} className="flex items-center gap-2">
-                        <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">{c.label}</span>
+                        <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">{reportColumnLabel(t, c.label)}</span>
                         <Input
                           className="h-7 text-xs"
-                          placeholder={c.label}
+                          placeholder={reportColumnLabel(t, c.label)}
                           value={report.columnNames.find((p) => p.key === c.key)?.label ?? ""}
                           onChange={(e) => void setColumnName(c.key, e.target.value)}
                         />
@@ -417,7 +418,7 @@ export function ScheduledReportsSection() {
                           <option value="">{t("buyerReport.pickComment")}</option>
                           {["No Destination", "Not Connected", "Overflow Missed", "Duplicate Call", "Callerid Blocked", "Insufficient Funds"].map((c) => (
                             <option key={c} value={c}>
-                              {c}
+                              {reportCommentLabel(t, c)}
                             </option>
                           ))}
                         </select>

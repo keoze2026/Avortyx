@@ -11,6 +11,7 @@ import { useParams } from "next/navigation";
 import { Link2Off, Loader2, ShieldCheck } from "lucide-react";
 
 import { Wordmark } from "@/components/brand/wordmark";
+import { LanguageToggle } from "@/components/shared/language-toggle";
 import { TfnCheckPanel } from "@/components/tfn-check/tfn-check-panel";
 import { useTranslation } from "@/hooks/use-translation";
 import { tfnCheckService } from "@/lib/api/services/tfn-check.service";
@@ -21,6 +22,11 @@ export default function PublicTfnCheckPage() {
   const token = String(params?.token ?? "");
   const [state, setState] = React.useState<"loading" | "ready" | "invalid">("loading");
   const [name, setName] = React.useState("");
+
+  // The browser tab in the chosen language too (CH-302).
+  React.useEffect(() => {
+    document.title = t("tfnCheck.title");
+  }, [t]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -49,9 +55,13 @@ export default function PublicTfnCheckPage() {
       <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:py-12">
         <header className="mb-8 flex items-center justify-between gap-4">
           <Wordmark size="md" uid="tfn-check-mark" href={null} />
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5" /> {t("tfnCheck.public.private")}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" /> {t("tfnCheck.public.private")}
+            </span>
+            {/* Partners open this without a login: let them pick their language (CH-302). */}
+            <LanguageToggle />
+          </div>
         </header>
 
         <div className="mb-6">

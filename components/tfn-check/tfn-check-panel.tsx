@@ -37,7 +37,8 @@ import {
   type TfnTestCall,
   type TfnTestStep,
 } from "@/lib/api/services/tfn-check.service";
-import { formatRelativeTime } from "@/lib/format";
+import { formatLocalDateTime, formatRelativeTime, uiLocaleTag } from "@/lib/format";
+import { tfnDetail, tfnStepText } from "@/lib/i18n/server-text";
 import { cn } from "@/lib/utils";
 
 /** Colour per status: green works, red does not, amber needs attention. */
@@ -71,7 +72,7 @@ function orderedSteps(steps: TfnTestStep[]): TfnTestStep[] {
 }
 
 function clock(iso: string | null | undefined): string {
-  return iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "";
+  return iso ? new Date(iso).toLocaleTimeString(uiLocaleTag(), { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "";
 }
 
 export function TfnStatusChip({ status, label }: { status: TfnStatus; label?: string }) {
@@ -100,7 +101,7 @@ export function TfnCheckPanel({
   onGetTest?: (id: string) => Promise<TfnTestCall>;
   disabled?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [text, setText] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<TfnCheckResponse | null>(null);
@@ -193,7 +194,7 @@ export function TfnCheckPanel({
     if (!result) return;
     const lines = [
       [t("tfnCheck.table.number"), t("tfnCheck.table.status"), t("tfnCheck.table.detail")].join("\t"),
-      ...shown.map((r) => [r.number, t(`tfnCheck.status.${r.status}`), r.detail].join("\t")),
+      ...shown.map((r) => [r.number, t(`tfnCheck.status.${r.status}`), tfnDetail(t, locale, r)].join("\t")),
     ];
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -326,7 +327,7 @@ export function TfnCheckPanel({
                         <TfnStatusChip status={r.status} />
                       </TableCell>
                       <TableCell className="min-w-[220px] text-xs text-muted-foreground">
-                        {r.detail}
+                        {tfnDetail(t, locale, r)}
                         {r.lastTestPassed === true && (
                           <CheckCircle2 className="ml-1 inline h-3 w-3 text-[color:var(--success)]" />
                         )}
@@ -374,7 +375,7 @@ export function TfnCheckPanel({
             </div>
           )}
           <div className="border-t border-border px-4 py-2 text-[10px] text-muted-foreground sm:px-5">
-            {t("tfnCheck.checkedAt").replace("{time}", new Date(result.checkedAt).toLocaleString())}
+            {t("tfnCheck.checkedAt").replace("{time}", formatLocalDateTime(result.checkedAt))}
           </div>
         </Card>
       )}
@@ -384,7 +385,7 @@ export function TfnCheckPanel({
 
 /** The steps of one test call, ticked off as they happen (CH-239). */
 function TestSteps({ test, running }: { test: TestState; running: boolean }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const steps = orderedSteps(test.steps);
   const done = test.status === "passed" || test.status === "failed";
   return (
@@ -396,7 +397,7 @@ function TestSteps({ test, running }: { test: TestState; running: boolean }) {
           ) : (
             <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
           )}
-          <span className={cn(s.ok ? "text-foreground" : "text-destructive")}>{s.text}</span>
+          <span className={cn(s.ok ? "text-foreground" : "text-destructive")}>{tfnStepText(t, locale, s)}</span>
           <span className="ml-auto tabular-nums text-muted-foreground">{clock(s.at)}</span>
         </div>
       ))}
