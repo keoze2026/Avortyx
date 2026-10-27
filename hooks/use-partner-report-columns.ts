@@ -206,11 +206,17 @@ export function usePartnerHiddenColumns(): { summary: ReadonlySet<string>; log: 
 
   return React.useMemo(() => {
     if (!kind) return NONE;
+    // CH-325 (Sir, 27 Oct): a buyer never sees TTC. Some buyers bill missed
+    // calls by TTC, and ours differs from theirs by the 2-5 s a call takes to
+    // connect. The server sends a buyer no TTC either.
+    const always = kind === "buyer" ? ["ttc"] : [];
     const known = new Set<string>([...BACKEND_KEYS, ...(catalogue?.reportColumns ?? []).map((c) => c.key)]);
     // Still looking: keep everything hidden so nothing unticked flashes up first.
     // Couldn't find out at all: fall back to showing them (the old behaviour).
-    if (allowed === null) return NONE;
+    if (allowed === null) return { summary: new Set<string>(), log: new Set<string>(always) };
     const ok = new Set(allowed ?? []);
-    return { summary: hiddenFrom(SUMMARY_KEYS, known, ok), log: hiddenFrom(LOG_KEYS, known, ok) };
+    const log = hiddenFrom(LOG_KEYS, known, ok);
+    for (const c of always) log.add(c);
+    return { summary: hiddenFrom(SUMMARY_KEYS, known, ok), log };
   }, [kind, allowed, catalogue]);
 }
