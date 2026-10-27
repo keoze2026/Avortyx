@@ -11,9 +11,12 @@ interface CallPerfCardProps {
    *  zero would be a claim, absence is the truth. */
   revenue: number | null;
   payout: number | null;
+  /** CH-329: the Call Summary total that is clicked (Not Connected, Qualified...),
+   *  shown under the title so the figures are read as that selection's. */
+  scope?: string;
 }
 
-export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
+export function CallPerfCard({ revenue, payout, scope }: CallPerfCardProps) {
   const { t } = useTranslation();
   const profit = revenue !== null && payout !== null ? revenue - payout : null;
   const profitNegative = (profit ?? 0) < 0;
@@ -25,6 +28,13 @@ export function CallPerfCard({ revenue, payout }: CallPerfCardProps) {
         <CardTitle className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {t("toolsUI.reports.perfCard.title")}
         </CardTitle>
+        {scope && (
+          <div className="flex justify-center pt-1">
+            <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+              {scope}
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {/* Hairline rules separate the three figures so they don't read as

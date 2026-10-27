@@ -393,11 +393,6 @@ export default function ReportsPage() {
   const perfPayout = role === "buyer" || partnerHidden.has("payout") ? null : undefined;
   const showPerf = perfRevenue === undefined || perfPayout === undefined;
 
-  const summary = useMemo(() => {
-    const revenue = filtered.reduce((s, c) => s + c.revenue, 0);
-    const payout = filtered.reduce((s, c) => s + c.payout, 0);
-    return { revenue, payout };
-  }, [filtered]);
 
   // Narrows the Call Log to whichever Call Summary total was clicked. The
   // summary's own totals keep reading from `filtered` unfiltered by this —
@@ -422,16 +417,25 @@ export default function ReportsPage() {
     (scope: ((c: Call) => boolean) | null) => setSummaryScope(() => scope),
     [],
   );
-  // The hourly chart and the donut read from this same set, so clicking
-  // Connected / Qualified / Not Connected / Total / Converted changes the graph
-  // along with the Call Log. The Call Summary and Call Performance keep
-  // reading `filtered`, so a total never shrinks to match its own click.
+  // The hourly chart, the donut and the Call Performance card read from this
+  // same set, so clicking Connected / Qualified / Not Connected / Total /
+  // Converted changes all three along with the Call Log (Sir, 27 Oct: "mid
+  // report should also show what selected", as on Revo). The Call Summary
+  // keeps reading `filtered`, so a total never shrinks to match its own click.
   const logCalls = useMemo(() => {
     if (!statusFilter) return filtered;
     return filtered.filter(
       (c) => (!summaryScope || summaryScope(c)) && matchesCallStatusFilter(c, statusFilter),
     );
   }, [filtered, statusFilter, summaryScope]);
+
+  // CH-329: revenue, payout and profit of the calls on screen - the clicked
+  // total's calls when one is selected (it used to stay on the whole day).
+  const summary = useMemo(() => {
+    const revenue = logCalls.reduce((s, c) => s + c.revenue, 0);
+    const payout = logCalls.reduce((s, c) => s + c.payout, 0);
+    return { revenue, payout };
+  }, [logCalls]);
 
   const exportQuery = useMemo<Omit<CallLogQuery, "page" | "pageSize"> | null>(() => {
     if (!fromKey) return null;
@@ -570,6 +574,7 @@ export default function ReportsPage() {
                   <CallPerfCard
                     revenue={perfRevenue === null ? null : summary.revenue}
                     payout={perfPayout === null ? null : summary.payout}
+                    scope={statusFilter ? t(STATUS_FILTER_LABEL_KEYS[statusFilter]) : undefined}
                   />
                 )}
                 {visibility.donut && (

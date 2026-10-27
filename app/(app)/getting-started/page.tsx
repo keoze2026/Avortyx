@@ -18,7 +18,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
-const VIDEO_SRC = "/videos/avortyx-getting-started.mp4";
+// CH-329: re-encoded for every browser (1920x1080, H.264 High 4.1, a keyframe
+// every 2 s). The 4K file was level 6.0, which some graphics cards will not
+// decode: it stayed black at 0:00 until someone skipped forward. A new name,
+// so no browser plays a cached piece of the old file.
+const VIDEO_SRC = "/videos/avortyx-getting-started-v2.mp4";
 const POSTER_SRC = "/videos/avortyx-getting-started.jpg";
 
 /** Chapter start times in seconds, read from the video's step cards. */
@@ -53,6 +57,26 @@ export default function GettingStartedPage() {
     return idx;
   }, [now]);
 
+  // Safety net: if Play is pressed and nothing has moved at 0:00 after 4
+  // seconds, nudge the position - what people did by hand ("fast forward
+  // before it loads") - so the decoder starts again from the first frame.
+  const stallTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearStall = () => {
+    if (stallTimer.current) clearTimeout(stallTimer.current);
+    stallTimer.current = null;
+  };
+  const onPlay = () => {
+    clearStall();
+    stallTimer.current = setTimeout(() => {
+      const v = video.current;
+      if (v && !v.paused && v.currentTime < 0.05) {
+        v.currentTime = 0.05;
+        void v.play().catch(() => undefined);
+      }
+    }, 4000);
+  };
+  React.useEffect(() => clearStall, []);
+
   const jump = (at: number) => {
     const v = video.current;
     if (!v) return;
@@ -76,7 +100,12 @@ export default function GettingStartedPage() {
               playsInline
               preload="metadata"
               poster={POSTER_SRC}
-              onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
+              onTimeUpdate={(e) => {
+                setNow(e.currentTarget.currentTime);
+                if (e.currentTarget.currentTime > 0.05) clearStall();
+              }}
+              onPlay={onPlay}
+              onPause={clearStall}
               onLoadedMetadata={(e) => {
                 if (Number.isFinite(e.currentTarget.duration)) setLength(e.currentTarget.duration);
               }}
