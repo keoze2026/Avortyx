@@ -54,10 +54,14 @@ export function proxy(req: NextRequest) {
       const url = req.nextUrl.clone();
       url.pathname = "/login";
       url.search = "";
-      return NextResponse.redirect(url);
+      // Permanent, so Google lists the sign-in page for this address.
+      return NextResponse.redirect(url, 308);
     }
     const res = NextResponse.next();
-    res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    // CH-319 (ZDFRS, 27 Oct: "I need this to show on Google"): the sign-in
+    // page is the portal's public face and may be listed; every page behind
+    // it stays out of search.
+    if (pathname !== "/login") res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     return res;
   }
 

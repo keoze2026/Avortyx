@@ -76,6 +76,21 @@ export const metadata: Metadata = {
  * truth. Every registry entry maps to `theme-<id>`, except `default` (blue,
  * the base tokens, no class) and `green`. Any failure falls through to blue.
  */
+/** CH-319: Google's "business card" for Avortyx - the name, site and logo, so a
+ *  search for "avortyx" is read as our brand, not a typo of "vortex". */
+const ORGANIZATION_JSON_LD = JSON.stringify([
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: BRAND.name,
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon-512.png`,
+    email: BRAND.email,
+    description: BRAND.description,
+  },
+  { "@context": "https://schema.org", "@type": "WebSite", name: BRAND.name, url: SITE_URL },
+]);
+
 const themeInitScript = `(function(){try{var r=localStorage.getItem('vortyx.accent');if(!r)return;var id=(JSON.parse(r).state||{}).accent;if(!id||id==='default')return;document.documentElement.classList.add(id==='green'?'theme-green-accent':'theme-'+id);}catch(e){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -87,6 +102,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ORGANIZATION_JSON_LD }} />
       </head>
       <body className="font-sans antialiased">
         <AppProviders>{children}</AppProviders>
