@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AuthGuard } from "@/components/app-shell/auth-guard";
@@ -9,6 +10,9 @@ import { StoreHydrator } from "@/components/app-shell/store-hydrator";
 import { SupportChat } from "@/components/app-shell/support-chat";
 import { Topbar } from "@/components/app-shell/topbar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+
+/** CH-319: the logged-in product never appears in Google. */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /**
  * Authenticated app shell — sidebar + topbar + main outlet.

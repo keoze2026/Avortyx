@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Inter, Inter_Tight, JetBrains_Mono } from "next/font
 import { Analytics } from "@vercel/analytics/next";
 
 import { AppProviders } from "@/components/providers/app-providers";
+import { SITE_URL } from "@/lib/seo";
 import { BRAND } from "@/lib/constants";
 
 import "./globals.css";
@@ -25,13 +26,31 @@ const interTight = Inter_Tight({
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 
+// CH-319: what Google and link previews (WhatsApp, LinkedIn, Telegram) show.
+const SEO_DESCRIPTION = `${BRAND.name} - ${BRAND.description.charAt(0).toLowerCase()}${BRAND.description.slice(1)}`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: `${BRAND.name} — ${BRAND.tagline}`,
     template: `%s — ${BRAND.name}`,
   },
-  description: BRAND.description,
+  description: SEO_DESCRIPTION,
   applicationName: BRAND.name,
+  keywords: [BRAND.name, "pay-per-call", "call tracking", "call routing", "call analytics", "toll-free numbers"],
+  openGraph: {
+    type: "website",
+    siteName: BRAND.name,
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: SEO_DESCRIPTION,
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: BRAND.name }],
+  },
+  twitter: {
+    card: "summary",
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: SEO_DESCRIPTION,
+    images: ["/icon-512.png"],
+  },
   // Browser-tab icon (favicon). The .ico is the fallback every browser
   // understands (Safari, bookmarks, old caches); the SVG is used where
   // supported; the PNGs cover Android / "add to home screen". All show the
