@@ -271,6 +271,11 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 <span className="font-medium text-foreground">{campaign ? localName(campaign.name) : t("x5.attachNumbers.thisCampaign")}</span>
                 {descParts[1]}
               </DialogDescription>
+              {/* CH-332 (Sir, 28 Oct): say what the list is - numbers in a
+                  campaign are left out, one campaign per number. */}
+              {mode === "add" && (
+                <p className="mt-1 text-xs font-medium text-emerald-500">{t("x332.attach.onlyUnassigned")}</p>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -346,7 +351,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                 ))}
               </div>
               <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
-                {t("x5.attachNumbers.countAvailable")
+                {t("x332.attach.countUnassigned")
                   .replace("{shown}", String(filtered.length))
                   .replace("{total}", String(available.length))}
               </span>
