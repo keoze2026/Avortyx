@@ -6,7 +6,7 @@ export const campaignGroups: ExtraTranslations = {
     "cg.link": "Campaign Groups",
     "cg.title": "Campaign Groups",
     "cg.description":
-      "Add, remove or re-prioritise a destination once and it changes in every campaign of the group. For the team only: publishers and buyers never see groups.",
+      "Add, remove or reprioritize a destination once, and the change applies to every campaign in the group. Internal only: Publishers and Buyers cannot see Campaign Groups.",
     "cg.newGroup": "New group",
     "cg.change": "Change a destination",
     "cg.empty.title": "No groups yet",
@@ -103,7 +103,7 @@ export const campaignGroups: ExtraTranslations = {
     "cg.link": "Группы кампаний",
     "cg.title": "Группы кампаний",
     "cg.description":
-      "Добавьте, удалите или измените приоритет направления один раз — и это изменится во всех кампаниях группы. Только для команды: паблишеры и покупатели группы не видят.",
+      "Добавьте, удалите или измените приоритет направления один раз — изменение применится ко всем кампаниям группы. Только для внутреннего использования: паблишеры и покупатели не видят группы кампаний.",
     "cg.newGroup": "Новая группа",
     "cg.change": "Изменить направление",
     "cg.empty.title": "Групп пока нет",
@@ -200,7 +200,7 @@ export const campaignGroups: ExtraTranslations = {
     "cg.link": "キャンペーングループ",
     "cg.title": "キャンペーングループ",
     "cg.description":
-      "宛先の追加・削除・優先度変更を一度行うだけで、グループ内のすべてのキャンペーンに反映されます。チーム専用：パブリッシャーとバイヤーにはグループは表示されません。",
+      "宛先の追加・削除・優先度変更を一度行うと、その変更はグループ内のすべてのキャンペーンに適用されます。社内専用：パブリッシャーとバイヤーにはキャンペーングループは表示されません。",
     "cg.newGroup": "新しいグループ",
     "cg.change": "宛先を変更",
     "cg.empty.title": "グループはまだありません",
@@ -297,7 +297,7 @@ export const campaignGroups: ExtraTranslations = {
     "cg.link": "广告系列组",
     "cg.title": "广告系列组",
     "cg.description":
-      "目的地的添加、移除或优先级调整只需操作一次，组内所有广告系列都会同步更改。仅供团队使用：发布商和买家看不到分组。",
+      "添加、移除或调整目的地优先级只需操作一次，更改将应用到组内的每个广告系列。仅限内部使用：发布商和买家看不到广告系列组。",
     "cg.newGroup": "新建分组",
     "cg.change": "更改目的地",
     "cg.empty.title": "还没有分组",
