@@ -698,3 +698,21 @@ cost?"
   period-picker.tsx) used by both cards.
 
 Backend half: CH-334 in call_platform (needs migrate). Commit: see git log --grep CH-334.
+
+## CH-335 - Pop-up alerts: buyer and publisher logins get only their own
+**2026-10-28 · Notifications**
+
+Sir, 28 Oct: "Buyer and Publisher should only get according to their access
+in pop up alert, not as main account".
+
+- The Pop-up alerts list shows what the backend allows the login (buyer:
+  its calls, missed calls, buyer and destination caps, daily summary;
+  publisher: its calls, missed calls, publisher cap, daily summary, TFN
+  deleted / not working).
+- A buyer or publisher login never gets a banner of the main account's
+  alerts (campaign caps, balance, AHT, insights): lib/store/alert-
+  preferences-store.ts popupAllowed() allows a partner only the types in
+  its own list, and none before that list has loaded. The cached list is
+  kept per login, so another login's list on the same browser is not used.
+
+Backend half: CH-335 in call_platform. Commit: see git log --grep CH-335.

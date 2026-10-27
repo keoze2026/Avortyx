@@ -20,6 +20,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+import { useAuthStore } from "@/lib/store/auth-store";
 import {
   notificationsService,
   type AlertEvent,
@@ -31,6 +32,8 @@ interface AlertPreferencesState {
   popupsEnabled: boolean;
   popupEvents: string[];
   soundEnabled: boolean;
+  /** Whose catalogue and choices these are (CH-335): a cached list of another login is not used. */
+  userId: string | null;
   hydrated: boolean;
   loading: boolean;
   error: string | null;
@@ -71,19 +74,23 @@ export const useAlertPreferencesStore = create<AlertPreferencesState>()(
         popupsEnabled: true,
         popupEvents: [],
         soundEnabled: false,
+        userId: null,
         hydrated: false,
         loading: false,
         error: null,
 
         fetch: async () => {
           if (get().loading) return;
+          const userId = useAuthStore.getState().user?.id ?? null;
+          // Another login's list never shows, not even while this one loads.
+          if (get().userId !== userId) set({ events: [], popupEvents: [], userId, hydrated: false });
           set({ loading: true, error: null });
           try {
             const [events, prefs] = await Promise.all([
               notificationsService.events(),
               notificationsService.preferences(),
             ]);
-            set({ events, ...prefs, hydrated: true, loading: false });
+            set({ events, ...prefs, userId, hydrated: true, loading: false });
           } catch (e) {
             // Keep whatever was cached; the panel shows the error inline.
             set({ loading: false, error: messageFromError(e) });
@@ -115,6 +122,7 @@ export const useAlertPreferencesStore = create<AlertPreferencesState>()(
         popupsEnabled: s.popupsEnabled,
         popupEvents: s.popupEvents,
         soundEnabled: s.soundEnabled,
+        userId: s.userId,
       }),
       migrate: (persisted, version) => {
         // v0 was the local-only store with a different shape; start clean.
@@ -130,11 +138,20 @@ export const useAlertPreferencesStore = create<AlertPreferencesState>()(
  *
  * An event the backend's catalogue doesn't list can't be switched off by
  * the operator, so it follows the master switch only.
+ *
+ * CH-335 (Sir, 28 Oct): a buyer or publisher login gets a pop-up only for
+ * the alert types of its own access - the catalogue the backend gives it -
+ * never the main account's (campaign caps, balance, AHT, Autopilot...).
+ * Until its own catalogue has loaded it gets none, so another login's cached
+ * list on the same browser is never used.
  */
 export function popupAllowed(event: string): boolean {
   const s = useAlertPreferencesStore.getState();
   if (!s.popupsEnabled) return false;
+  const user = useAuthStore.getState().user;
+  const partner = user?.role === "buyer" || user?.role === "publisher";
+  if (partner && (!s.hydrated || s.userId !== (user?.id ?? null))) return false;
   const known = s.events.some((e) => e.event === event);
-  if (!known) return true;
+  if (!known) return !partner;
   return s.popupEvents.includes(event);
 }
