@@ -11,8 +11,9 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const rules = isPortalHost(host)
     ? {
         userAgent: "*",
-        // The sign-in page, plus the files Google needs to draw it.
-        allow: ["/login", "/$", "/_next/", "/*.png$", "/*.svg$", "/*.ico$", "/*.jpg$", "/*.webp$", "/*.woff2$"],
+        // The sign-in page, the sitemap, and the files Google needs to draw the page.
+        // CH-321: "Disallow: /" also covered /sitemap.xml - Search Console could not read it.
+        allow: ["/login", "/$", "/sitemap.xml", "/_next/", "/*.png$", "/*.svg$", "/*.ico$", "/*.jpg$", "/*.webp$", "/*.woff2$"],
         disallow: "/",
       }
     : { userAgent: "*", allow: "/", disallow: PRIVATE_PATHS };
