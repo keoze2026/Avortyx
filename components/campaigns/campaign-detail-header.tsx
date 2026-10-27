@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -100,7 +110,10 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
         : t("trafficUI.campaigns.toast.paused").replace("{name}", localizeName(campaign.name, locale)),
     );
   };
+  // CH-331: asks first (Sir, 28 Oct), as on the Campaigns list.
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const onArchive = () => {
+    setConfirmOpen(false);
     remove(campaign.id);
     toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", localizeName(campaign.name, locale)));
     router.push(ROUTES.campaigns);
@@ -180,7 +193,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onSelect={onArchive}
+                onSelect={() => setConfirmOpen(true)}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="h-4 w-4" /> {t("trafficUI.campaigns.detail.archiveCampaign")}
@@ -192,6 +205,23 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
           )}
         </div>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("cdel.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("cdel.desc").replace("{name}", localizeName(campaign.name, locale))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cdel.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onArchive} className="bg-destructive text-white hover:bg-destructive/90">
+              {t("cdel.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent>

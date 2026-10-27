@@ -20,6 +20,16 @@ import { ListLoading } from "@/components/shared/list-loading";
 import { CloneDialog } from "@/components/shared/clone-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { useLocalName } from "@/lib/i18n/local-name";
@@ -127,11 +137,31 @@ export default function CampaignsPage() {
     );
   };
 
+  // CH-331 (Sir, 28 Oct): deleting a campaign - one, or several from the bulk
+  // bar - asks first. It used to go at the first click on the bin.
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; names: string[] } | null>(null);
+
   const onArchive = (id: string) => {
     const c = campaigns.find((x) => x.id === id);
     if (!c) return;
-    remove(id);
-    toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", localName(c.name)));
+    setConfirmDelete({ ids: [c.id], names: [c.name] });
+  };
+
+  const doDelete = () => {
+    if (!confirmDelete) return;
+    const { ids, names } = confirmDelete;
+    setConfirmDelete(null);
+    for (const id of ids) void remove(id);
+    if (ids.length === 1) {
+      toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", localName(names[0])));
+    } else {
+      toast.success(
+        t("common.bulk.toast.deleted")
+          .replace("{count}", String(ids.length))
+          .replace("{entity}", t("common.bulk.entities.campaigns")),
+      );
+      setSelectedIds(new Set());
+    }
   };
 
   const onClone = (id: string) => {
@@ -210,13 +240,7 @@ export default function CampaignsPage() {
 
   const onBulkDelete = () => {
     if (selectedCampaigns.length === 0) return;
-    for (const c of selectedCampaigns) remove(c.id);
-    toast.success(
-      t("common.bulk.toast.deleted")
-        .replace("{count}", String(selectedCampaigns.length))
-        .replace("{entity}", t("common.bulk.entities.campaigns")),
-    );
-    setSelectedIds(new Set());
+    setConfirmDelete({ ids: selectedCampaigns.map((c) => c.id), names: selectedCampaigns.map((c) => c.name) });
   };
 
   return (
@@ -333,6 +357,36 @@ export default function CampaignsPage() {
         note={t("x5.campaigns.cloneNote")}
         onConfirm={onConfirmClone}
       />
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDelete && confirmDelete.ids.length > 1
+                ? t("cdel.titleMany").replace("{count}", String(confirmDelete.ids.length))
+                : t("cdel.title")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete && confirmDelete.ids.length > 1
+                ? t("cdel.descMany")
+                : t("cdel.desc").replace("{name}", localName(confirmDelete?.names[0] ?? ""))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {confirmDelete && confirmDelete.ids.length > 1 && (
+            <p className="max-h-32 overflow-y-auto text-sm font-medium">
+              {confirmDelete.names.map((n) => localName(n)).join(", ")}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cdel.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {t("cdel.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
