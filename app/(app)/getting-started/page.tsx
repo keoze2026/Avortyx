@@ -29,7 +29,7 @@ const CHAPTERS = [
   { key: "campaign", at: 56 },
   { key: "numbers", at: 74 },
   { key: "routing", at: 89 },
-  { key: "cc", at: 107 },
+  { key: "cc", at: 108 },
   { key: "goLive", at: 123 },
   { key: "tools", at: 137 },
 ] as const;

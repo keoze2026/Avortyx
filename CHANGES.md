@@ -606,3 +606,12 @@ now reads "フリーダイヤル確認" (Japanese) and "Проверка ном�
 page title keeps the full words. Chinese "免费号码检查" already fitted.
 
 Commit: see git log --grep CH-308.
+
+## CH-309 - Getting Started: sharper demo video
+**2026-10-27 · Portal**
+
+The Getting Started video is replaced with the new HD master (same 4K and
+2:38, higher bitrate: 26.5 MB instead of 15.6 MB, sharper text). Poster frame
+taken from the new file; chapter 7 (Set the CC) starts at 1:48 to match it.
+
+Commit: see git log --grep CH-309.
