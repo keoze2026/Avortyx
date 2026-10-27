@@ -615,3 +615,20 @@ The Getting Started video is replaced with the new HD master (same 4K and
 taken from the new file; chapter 7 (Set the CC) starts at 1:48 to match it.
 
 Commit: see git log --grep CH-309.
+
+## CH-311 - Connect Telegram with a link; test report to your own Telegram
+**2026-10-27 · Portal**
+
+Issue 3 (automated reports, trial on our own bot). Backend: CH-310.
+
+- Buyer > Settings > Telegram Report: "Connect Telegram with a link" makes a
+  link to our bot; copy it to the buyer (private chat or group link) or open
+  it. When the buyer opens it, the chat ID fills in by itself (the page
+  checks every 5 seconds). The chat ID box stays for typing one by hand.
+- "Send test to my Telegram": the buyer's report, marked TEST, to your own
+  Telegram - nothing goes to the buyer.
+- Buyer login, Settings > Scheduled Reports: "Connect my Telegram" opens our
+  bot straight away (or "Add to a group"); no chat ID to find.
+- All new texts in English, Russian, Japanese and Chinese.
+
+Commit: see git log --grep CH-311.

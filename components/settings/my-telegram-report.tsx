@@ -18,11 +18,14 @@ import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
 import { formatLocalDateTime } from "@/lib/format";
+import { TelegramConnect } from "@/components/shared/telegram-connect";
 
 interface Mine {
   approved: boolean;
   approvedAt: string | null;
   setUp: boolean;
+  /** CH-310: a Telegram chat is connected (the buyer can connect it here). */
+  chatConnected?: boolean;
   sendTime: string;
   noRecordingLink: boolean;
   bot: string;
@@ -43,6 +46,13 @@ export function MyTelegramReport() {
   React.useEffect(() => {
     http.get<Mine>("/api/buyers/my/telegram-report").then(setMine).catch(() => undefined);
   }, []);
+
+  const checkConnected = React.useCallback(async () => {
+    const r = await http.get<Mine>("/api/buyers/my/telegram-report");
+    if (r.chatConnected) setMine(r);
+    return Boolean(r.chatConnected);
+  }, []);
+  const onConnected = React.useCallback(() => undefined, []);
 
   const toggle = async (approved: boolean) => {
     setBusy(true);
@@ -79,14 +89,25 @@ export function MyTelegramReport() {
             <li>
               {mine.setUp
                 ? t("myReport.time").replace("{time}", time12(mine.sendTime))
-                : t("myReport.notSetUp")}
+                : mine.chatConnected
+                  ? t("tgConnect.mineConnected")
+                  : t("tgConnect.mineNotConnected")}
             </li>
-            {mine.bot && <li>{t("myReport.bot").replace("{bot}", mine.bot)}</li>}
+            {mine.bot && !mine.chatConnected && <li>{t("myReport.bot").replace("{bot}", mine.bot)}</li>}
             {mine.noRecordingLink && <li>{t("myReport.noRecordings")}</li>}
             {mine.lastSentAt && (
               <li>{t("myReport.last").replace("{when}", formatLocalDateTime(mine.lastSentAt))}</li>
             )}
           </ul>
+        )}
+        {/* CH-311: connect your own Telegram chat or group - no chat ID needed. */}
+        {mine && !mine.chatConnected && (
+          <TelegramConnect
+            linkEndpoint="/api/buyers/my/telegram-report/connect-link"
+            checkConnected={checkConnected}
+            onConnected={onConnected}
+            mode="buyer"
+          />
         )}
       </CardContent>
     </Card>

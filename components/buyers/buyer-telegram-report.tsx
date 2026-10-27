@@ -30,6 +30,7 @@ import { ApiError } from "@/lib/api/errors";
 import { formatLocalDate, formatLocalDateTime } from "@/lib/format";
 import { reportColumnLabel, reportCommentLabel, reportResultText } from "@/lib/i18n/server-text";
 import type { Buyer } from "@/lib/types";
+import { TelegramConnect } from "@/components/shared/telegram-connect";
 
 interface Pair {
   from: string;
@@ -134,6 +135,35 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
     }
   };
 
+  // CH-311: the chat connects through our bot's link; pick up just the chat
+  // (not the rest, which may hold unsaved edits) once it has.
+  const connectedChat = React.useRef("");
+  const checkConnected = React.useCallback(async () => {
+    const r = await http.get<Settings>(url);
+    if (r.chatId && r.chatId !== (s?.chatId ?? "")) {
+      connectedChat.current = r.chatId;
+      return true;
+    }
+    return false;
+  }, [url, s?.chatId]);
+  const onConnected = React.useCallback(() => {
+    const chat = connectedChat.current;
+    setS((prev) => (prev ? { ...prev, chatId: chat } : prev));
+  }, []);
+
+  const [testing, setTesting] = React.useState(false);
+  const sendTest = async () => {
+    setTesting(true);
+    try {
+      await http.post(`${url}/send-test`, {});
+      toast.success(t("tgConnect.testSent"));
+    } catch (e) {
+      toast.error(errText(e, t("buyerReport.sendFailed")));
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const sendNow = async () => {
     setSending(true);
     try {
@@ -197,7 +227,13 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
                 value={s.chatId}
                 onChange={(e) => set("chatId", e.target.value)}
               />
-              <p className="text-[11px] text-muted-foreground">{t("buyerReport.chatIdHint")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("tgConnect.chatIdHint")}</p>
+              <TelegramConnect
+                linkEndpoint={`${url}/connect-link`}
+                checkConnected={checkConnected}
+                onConnected={onConnected}
+                mode="admin"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="br-time">{t("buyerReport.sendTime")}</Label>
@@ -331,7 +367,13 @@ export function BuyerTelegramReport({ buyer }: { buyer: Buyer }) {
                 ? `${t("buyerReport.last")}: ${reportResultText(t, locale, s.lastResult)}${s.lastSentAt ? ` · ${formatLocalDateTime(s.lastSentAt)}` : ""}`
                 : t("buyerReport.neverSent")}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {/* CH-311: see the report exactly as the buyer would, in your own
+                  Telegram; nothing goes to the buyer, no approval needed. */}
+              <Button variant="ghost" size="sm" onClick={sendTest} disabled={testing || dirty}>
+                {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {t("tgConnect.sendTest")}
+              </Button>
               <Button variant="outline" size="sm" onClick={sendNow} disabled={sending || dirty || !s.chatId || !s.buyerApproved}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 {t("buyerReport.sendNow")}
