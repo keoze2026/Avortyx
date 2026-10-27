@@ -50,13 +50,26 @@ import { routedBulk } from "./routed-bulk";
 import { hangUp } from "./hang-up";
 import { translateAll } from "./translate-all";
 import { gettingStarted } from "./getting-started";
+import { tfnWords } from "./tfn-words";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
   for (const locale of Object.keys(EXTRA) as LocaleId[]) Object.assign(EXTRA[locale], area[locale]);
+}
+
+/**
+ * Texts that must win over the main dictionaries too (CH-307): the full-word
+ * versions of English acronyms (TFN, CC, AHT...). The main Russian, Japanese
+ * and Chinese dictionaries still carry "TFN" in many texts, and the lookup
+ * reads them first, so these replacements never showed (Sir, 27 Oct: "TFN
+ * isn't changing their language"). English is never overridden.
+ */
+export const OVERRIDE: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
+for (const area of [acronyms, tfnWords]) {
+  for (const locale of ["ru", "ja", "zh"] as LocaleId[]) Object.assign(OVERRIDE[locale], area[locale]);
 }
 
 export type { ExtraTranslations };

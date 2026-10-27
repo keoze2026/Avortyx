@@ -583,3 +583,17 @@ CC, Go live, Your day-to-day tools. Press a chapter to jump there; the
 chapter playing is highlighted. Labels in all four languages.
 
 Commit: see git log --grep CH-306.
+
+## CH-307 - "TFN" in the user's language everywhere
+**2026-10-27 · Portal**
+
+Sir, 27 Oct: "TFN isn't changing their language" - the menu read "Проверка
+TFN", "TFNチェック", "TFN 检查". The full-word translations (acronyms.ts:
+бесплатный номер / フリーダイヤル番号 / 免费号码) existed but never showed,
+because the main dictionaries are read first. They now win over the main
+dictionaries (Russian, Japanese, Chinese only; English keeps "TFN"), and the
+14 texts left with "TFN" in each language are translated: TFN Check (menu,
+page, share link), TFN Test Calls, replacement TFNs, Carrier Costs and
+Owner profit. No text in Russian, Japanese or Chinese contains "TFN" now.
+
+Commit: see git log --grep CH-307.

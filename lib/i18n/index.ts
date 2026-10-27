@@ -10,7 +10,7 @@ import { ja } from "./translations/ja";
 import { ru } from "./translations/ru";
 import { zh } from "./translations/zh";
 import type { LocaleId } from "./locales";
-import { EXTRA } from "./extra";
+import { EXTRA, OVERRIDE } from "./extra";
 
 export { en, ja, ru, zh };
 export type { TranslationShape };
@@ -42,6 +42,9 @@ function walk(obj: unknown, parts: string[]): unknown {
  * resort so missing translations are surfaced rather than blanked out.
  */
 export function tFor(locale: LocaleId, key: string): string {
+  // Full words for English acronyms win over the main dictionary (CH-307).
+  const override = OVERRIDE[locale]?.[key];
+  if (override !== undefined) return override;
   const parts = key.split(".");
   const value = walk(TRANSLATIONS[locale], parts);
   if (typeof value === "string") return value;
