@@ -632,3 +632,20 @@ Issue 3 (automated reports, trial on our own bot). Backend: CH-310.
 - All new texts in English, Russian, Japanese and Chinese.
 
 Commit: see git log --grep CH-311.
+
+## CH-313 - Reports show TFN test calls (caller ID "Test")
+**2026-10-27 · Portal**
+
+Issue 4. Backend: CH-312.
+
+- Caller ID column shows "Test" for a TFN test call (a caller ID that is a
+  word was shown empty).
+- Fail Reason: "TFN Test" / "TFN Test failed: <why>" shown as written in
+  English and translated in Russian, Japanese and Chinese; never turned into
+  "Overflow Missed" or "Duplicate Call" because its reason mentions a cap.
+- "Not Connected" in the Fail Reason column is now translated too (it showed
+  in English in every language).
+- TFN Check: under a test call's steps, "It also shows in Reports, with caller
+  ID Test".
+
+Commit: see git log --grep CH-313.

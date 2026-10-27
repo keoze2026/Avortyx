@@ -425,6 +425,10 @@ function TestSteps({ test, running }: { test: TestState; running: boolean }) {
       )}
       {!done && test.gaveUp && <div className="text-muted-foreground">{t("tfnCheck.test.timeout")}</div>}
       <div className="pt-1 text-[10px] text-muted-foreground">{t("tfnCheck.test.note")}</div>
+      {/* CH-313: the test call is also a row in Reports, caller ID "Test". */}
+      {test.steps.some((st) => st.key === "reached") && (
+        <div className="text-[10px] text-muted-foreground">{t("tfnCheck.test.inReports")}</div>
+      )}
     </div>
   );
 }

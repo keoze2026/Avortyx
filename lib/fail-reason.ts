@@ -25,9 +25,16 @@ const CALLER_ID_BLOCKED = /^caller\s*-?\s*id\s*blocked$/i;
 const DESTINATION_MISSED = /destination\s*missed/i;
 const NO_DESTINATION = /^no[\s_]*destination$/i;
 
+/** A TFN test call (CH-313): "TFN Test", or "TFN Test failed: <why>". */
+const TFN_TEST = /^tfn\s*test\b/i;
+const TFN_TEST_FAILED = /^tfn\s*test\s*failed:?\s*(.*)$/i;
+
 export function failReasonLabel(reason: string | null | undefined): string {
   const raw = (reason ?? "").trim();
   if (!raw || raw === "—") return "";
+  // Shown exactly as written: its own words, and its reason may contain
+  // "cap reached" or "duplicate", which must not turn it into another label.
+  if (TFN_TEST.test(raw)) return raw;
   if (/duplicate/i.test(raw)) return "Duplicate Call";
   // A call from a number on Blocked Numbers (backend CH-136). Kept whole -
   // the "blocked" trim below would leave just "Callerid".
@@ -54,6 +61,9 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   const raw = (reason ?? "").trim();
   if (!raw || raw === "—") return null;
   const k = "toolsUI.reports.callLog.failReason.";
+  const failed = raw.match(TFN_TEST_FAILED);
+  if (failed) return { key: `${k}tfnTestFailed`, score: failed[1] };
+  if (TFN_TEST.test(raw)) return { key: `${k}tfnTest` };
   // Most specific first: every "Destination missed (...)" before the plain one.
   if (/duplicate/i.test(raw)) return { key: `${k}duplicate` };
   if (CALLER_ID_BLOCKED.test(raw)) return { key: `${k}callerIdBlocked` };
@@ -64,6 +74,9 @@ export function failReasonKey(reason: string | null | undefined): { key: string;
   if (/destination\s*no\s*answer/i.test(raw)) return { key: `${k}destNoAnswer` };
   // The call reached the line and did not connect (backend CH-193, Revo's word).
   if (/^no[\s_]*answer$/i.test(raw)) return { key: `${k}noAnswer` };
+  // The caller hung up while the buyer's line rang (CH-193): was shown in
+  // English in every language.
+  if (/^not[\s_]*connected$/i.test(raw)) return { key: `${k}notConnected` };
   if (/caller\s*hung\s*up/i.test(raw)) return { key: `${k}callerHungUp` };
   if (/daily\s*limit/i.test(raw)) return { key: `${k}campDailyLimit` };
   if (/monthly\s*limit/i.test(raw)) return { key: `${k}campMonthlyLimit` };
@@ -103,5 +116,5 @@ export function localizeFailReason(
   if (!english || locale === "en") return english;
   const known = failReasonKey(reason);
   if (!known) return english;
-  return t(known.key).replace("{score}", known.score ?? "");
+  return t(known.key).replace("{score}", known.score ?? "").replace("{why}", known.score ?? "");
 }
