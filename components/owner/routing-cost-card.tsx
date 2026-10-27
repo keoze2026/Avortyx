@@ -8,6 +8,11 @@
  * per-minute rate, per Eastern day. Sir, 21 Oct: "set routing cost so we can
  * see how much cost from yesterday". Exact seconds, so it is an estimate to
  * check the carrier's invoice against. Backend: /api/owner/routing-cost.
+ *
+ * CH-334 (Sir, 28 Oct: "2770 calls just $93 cost?"): calls counted as the
+ * reports count them, each call rounded as the carrier bills (Edit rate >
+ * Minutes billed), and the average call and the cost of one call shown, so
+ * the total can be checked at a glance. The dates are the portal's own picker.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -21,59 +26,45 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PeriodPicker, rangeFor, type Preset } from "@/components/owner/period-picker";
 import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
-import { uiLocaleTag } from "@/lib/format";
+import { formatTimer, uiLocaleTag } from "@/lib/format";
 import { useLocalName } from "@/lib/i18n/local-name";
 import { cn } from "@/lib/utils";
 
-interface Day {
-  date: string;
+interface Figures {
   forwarded: number;
   connected: number;
   seconds: number;
+  /** The seconds the carrier bills: each call rounded to the billing increment (CH-334). */
+  billedSeconds?: number;
+  /** Average talk time of a connected call (CH-334). */
+  ahtSeconds?: number;
   minutes: string;
   cost: string;
   costExact: string;
+  /** What one connected call cost (CH-334). */
+  costPerCall?: string;
+}
+
+interface Day extends Figures {
+  date: string;
 }
 
 interface RoutingCost {
   name: string;
   perMinuteCost: string;
   monthlyFee: string;
+  /** How the carrier rounds each call: 1, 6, 30 or 60 seconds (CH-334). */
+  billingIncrement?: number;
   start: string;
   end: string;
   days: Day[];
-  totals: { forwarded: number; connected: number; seconds: number; minutes: string; cost: string; costExact: string };
+  totals: Figures;
 }
 
-type Preset = "today" | "yesterday" | "week" | "month" | "custom";
-
-/** Today's date in Eastern time, YYYY-MM-DD (the days the backend counts in). */
-function easternToday(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-}
-
-function shiftDay(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function rangeFor(preset: Exclude<Preset, "custom">): { start: string; end: string } {
-  const today = easternToday();
-  if (preset === "today") return { start: today, end: today };
-  if (preset === "yesterday") {
-    const y = shiftDay(today, -1);
-    return { start: y, end: y };
-  }
-  if (preset === "week") {
-    // This week, Monday to today (EST).
-    const weekday = new Date(`${today}T12:00:00Z`).getUTCDay(); // 0 = Sunday
-    return { start: shiftDay(today, -((weekday + 6) % 7)), end: today };
-  }
-  return { start: `${today.slice(0, 8)}01`, end: today };
-}
+const INCREMENTS = [1, 6, 30, 60] as const;
 
 function money(v: string | number | null | undefined): string {
   const n = Number(v ?? 0);
@@ -106,7 +97,7 @@ export function RoutingCostCard() {
   const [data, setData] = useState<RoutingCost | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ perMinuteCost: "", monthlyFee: "" });
+  const [form, setForm] = useState({ perMinuteCost: "", monthlyFee: "", billingIncrement: 1 });
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (start: string, end: string) => {
@@ -124,16 +115,16 @@ export function RoutingCostCard() {
     void load(range.start, range.end);
   }, [range, load]);
 
-  const pick = (p: Exclude<Preset, "custom">) => {
-    setPreset(p);
-    setRange(rangeFor(p));
-  };
 
   async function saveRate() {
     setBusy(true);
     try {
       await http.patch("/api/owner/routing-cost/rate", {
-        body: { perMinuteCost: form.perMinuteCost || "0", monthlyFee: form.monthlyFee || "0" },
+        body: {
+          perMinuteCost: form.perMinuteCost || "0",
+          monthlyFee: form.monthlyFee || "0",
+          billingIncrement: form.billingIncrement,
+        },
       });
       toast.success(t("routingCost.saved"));
       setEditing(false);
@@ -167,46 +158,30 @@ export function RoutingCostCard() {
                 {t("routingCost.rate")
                   .replace("{rate}", `$${Number(data.perMinuteCost).toFixed(4)}`)
                   .replace("{fee}", money(data.monthlyFee))}
+                {" · "}
+                {t(`owner.costs.rounding.${data.billingIncrement ?? 1}`)}
               </span>
             )}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {/* Sir, 23 Oct: Today, then Yesterday, then Week, then Month, then the dates. */}
-            {(["today", "yesterday", "week", "month"] as const).map((p) => (
-              <Button key={p} size="sm" variant={preset === p ? "default" : "outline"} onClick={() => pick(p)}>
-                {t(`routingCost.preset.${p}`)}
-              </Button>
-            ))}
-            <Input
-              type="date"
-              aria-label={t("routingCost.from")}
-              className="h-8 w-[9.5rem]"
-              value={range.start}
-              max={easternToday()}
-              onChange={(e) => {
-                if (!e.target.value) return;
-                setPreset("custom");
-                setRange((r) => ({ start: e.target.value, end: r.end < e.target.value ? e.target.value : r.end }));
-              }}
-            />
-            <Input
-              type="date"
-              aria-label={t("routingCost.to")}
-              className="h-8 w-[9.5rem]"
-              value={range.end}
-              min={range.start}
-              max={easternToday()}
-              onChange={(e) => {
-                if (!e.target.value) return;
-                setPreset("custom");
-                setRange((r) => ({ ...r, end: e.target.value }));
+            <PeriodPicker
+              preset={preset}
+              range={range}
+              onChange={(p, r) => {
+                setPreset(p);
+                setRange(r);
               }}
             />
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                setForm({ perMinuteCost: data?.perMinuteCost ?? "", monthlyFee: data?.monthlyFee ?? "" });
+                setForm({
+                  perMinuteCost: data?.perMinuteCost ?? "",
+                  monthlyFee: data?.monthlyFee ?? "",
+                  billingIncrement: data?.billingIncrement ?? 1,
+                });
                 setEditing(true);
               }}
             >
@@ -215,13 +190,20 @@ export function RoutingCostCard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 border-t border-border sm:grid-cols-4">
-          {tile(t("routingCost.forwarded"), String(totals?.forwarded ?? 0))}
-          {tile(t("routingCost.connected"), String(totals?.connected ?? 0))}
-          {tile(t("routingCost.minutes"), totals?.minutes ?? "0.00")}
+        <div className="grid grid-cols-2 border-t border-border sm:grid-cols-3 lg:grid-cols-6">
+          {tile(t("routingCost.forwarded"), (totals?.forwarded ?? 0).toLocaleString("en-US"))}
+          {tile(t("routingCost.connected"), (totals?.connected ?? 0).toLocaleString("en-US"))}
+          {tile(t("routingCost.minutes"), Number(totals?.minutes ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 }))}
+          {tile(t("routingCost.aht"), formatTimer(totals?.ahtSeconds ?? 0))}
+          {tile(t("routingCost.perCall"), `$${Number(totals?.costPerCall ?? 0).toFixed(4)}`)}
           {tile(t("routingCost.cost"), money(totals?.costExact), true)}
         </div>
-        <p className="border-t border-border px-5 py-2 text-[11px] text-muted-foreground">{t("routingCost.note")}</p>
+        <p className="border-t border-border px-5 py-2 text-[11px] text-muted-foreground">
+          {t("routingCost.howCounted")
+            .replace("{minutes}", Number(totals?.minutes ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 }))
+            .replace("{rate}", `$${Number(data?.perMinuteCost ?? 0).toFixed(4)}`)
+            .replace("{cost}", money(totals?.costExact))}
+        </p>
 
         <Table>
           <TableHeader>
@@ -230,6 +212,8 @@ export function RoutingCostCard() {
               <TableHead className="text-center">{t("routingCost.forwarded")}</TableHead>
               <TableHead className="text-center">{t("routingCost.connected")}</TableHead>
               <TableHead className="text-center">{t("routingCost.minutes")}</TableHead>
+              <TableHead className="text-center">{t("routingCost.aht")}</TableHead>
+              <TableHead className="text-center">{t("routingCost.perCall")}</TableHead>
               <TableHead className="text-center">{t("routingCost.cost")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -240,12 +224,14 @@ export function RoutingCostCard() {
                 <TableCell className="text-center tabular-nums">{d.forwarded}</TableCell>
                 <TableCell className="text-center tabular-nums">{d.connected}</TableCell>
                 <TableCell className="text-center tabular-nums">{d.minutes}</TableCell>
+                <TableCell className="text-center font-mono tabular-nums">{formatTimer(d.ahtSeconds ?? 0)}</TableCell>
+                <TableCell className="text-center tabular-nums">${Number(d.costPerCall ?? 0).toFixed(4)}</TableCell>
                 <TableCell className="text-center font-semibold tabular-nums">{money(d.costExact)}</TableCell>
               </TableRow>
             ))}
             {!loading && (data?.days.length ?? 0) === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
                   {t("routingCost.empty")}
                 </TableCell>
               </TableRow>
@@ -285,6 +271,22 @@ export function RoutingCostCard() {
                   onChange={(e) => setForm((f) => ({ ...f, monthlyFee: e.target.value }))}
                 />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="routing-increment">{t("owner.costs.form.rounding")}</Label>
+              <select
+                id="routing-increment"
+                value={form.billingIncrement}
+                onChange={(e) => setForm((f) => ({ ...f, billingIncrement: Number(e.target.value) }))}
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+              >
+                {INCREMENTS.map((i) => (
+                  <option key={i} value={i}>
+                    {t(`owner.costs.form.rounding.${i}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">{t("owner.costs.form.roundingHint")}</p>
             </div>
           </div>
           <DialogFooter>

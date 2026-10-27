@@ -9,6 +9,9 @@
  * month's bill. TFNs a workspace deleted stay listed here (greyed, with the
  * date) even though the workspace no longer sees them. System owner only.
  * Backend: /api/owner/carrier-costs (phone_numbers/owner_costs.py).
+ *
+ * CH-334: the company profit is its own card (components/owner/
+ * company-profit-card.tsx) with Today / Yesterday / Week / Month / dates.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,6 +20,7 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { MonthPicker } from "@/components/shared/month-picker";
+import { CompanyProfitCard } from "@/components/owner/company-profit-card";
 import { RoutingCostCard, routeNameLabel } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -376,55 +380,10 @@ export default function CarrierCostsPage() {
         </div>
       </div>
 
-      {/* Company profit before tax (CH-257, Sir 24 Oct): what customers were
-          charged, minus what the carriers charge us. */}
-      {data?.profit && (
-        <Card>
-          <CardContent className="p-0">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
-              <span className="text-base font-semibold">{t("owner.profit.title")}</span>
-              <span className="text-xs text-muted-foreground">
-                {t("owner.profit.customers").replace("{count}", String(data.profit.customers))}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm sm:grid-cols-3 lg:grid-cols-6">
-              {[
-                [t("owner.profit.calls"), data.profit.calls],
-                [t("owner.profit.voip"), data.profit.voip],
-                [t("owner.profit.rejected"), data.profit.rejected],
-                [t("owner.profit.tfn"), data.profit.tfn],
-                [t("owner.profit.portal"), data.profit.portal],
-                ...(Number(data.profit.other) ? [[t("owner.profit.other"), data.profit.other]] : []),
-                ...(Number(data.profit.refunds) ? [[t("owner.profit.refunds"), data.profit.refunds]] : []),
-              ].map(([label, value]) => (
-                <div key={label} className="bg-card px-4 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-                  <div className="tabular-nums">{money(value)}</div>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 gap-px border-t border-border bg-border text-sm sm:grid-cols-3">
-              {[
-                [t("owner.profit.income"), money(data.profit.income), ""],
-                [t("owner.profit.carrierCosts"), `-${money(data.profit.carrierCosts)}`, ""],
-                [
-                  t("owner.profit.profit"),
-                  money(data.profit.profit),
-                  Number(data.profit.profit) < 0 ? "text-destructive" : "text-success",
-                ],
-              ].map(([label, value, tone], i) => (
-                <div key={label} className="bg-card px-4 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-                  <div className={`${i === 2 ? "text-lg font-semibold" : "font-medium"} tabular-nums ${tone}`}>{value}</div>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-border px-5 py-2 text-xs text-muted-foreground">
-              {t("owner.profit.note")}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Company profit before tax (CH-257): what customers were charged,
+          minus what the carriers charge us. Today / Yesterday / Week / Month /
+          dates like the routing cost, opening on Today (CH-334). */}
+      <CompanyProfitCard />
 
       {/* The month's whole bill in one place (CH-254): TFN carriers and routing. */}
       {data?.summary && (

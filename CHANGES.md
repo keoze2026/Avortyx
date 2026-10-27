@@ -670,3 +670,31 @@ priority / weight / rate / Convert ON - applied to every campaign of the
 groups ticked, all or nothing. Backend half: CH-328 in call_platform.
 
 Commit: see git log --grep CH-328.
+
+## CH-334 - Carrier Costs: dates in the portal's colours; company profit for Today / any days; routing cost per call
+**2026-10-28 · Owner › Carrier Costs**
+
+Sir, 28 Oct, on Carrier Costs: "fix colors" (the date popup), the company
+profit "the way it's created for month - make same in today's sheet too",
+and on the routing cost "metrics are wrong i think. 2770 calls just $93
+cost?"
+
+- The From / To dates open the portal's own calendar (components/shared/
+  date-picker.tsx), drawn in the theme like the month picker (CH-216), not
+  the browser's grey one. Sunday first, Today button, days after today
+  greyed out.
+- Company profit (before tax) is its own card with Today / Yesterday / This
+  week / This month / dates, opening on Today like the routing cost
+  (components/owner/company-profit-card.tsx, /api/owner/company-profit). For
+  days shorter than a month the monthly fees count by the day, and the note
+  under the card says so. The empty grey cell after "Portal fees" is gone:
+  the tiles fill their row.
+- Routing cost: two more figures, Average call and Cost per call, per day
+  and in total, and the line under the tiles shows the sum
+  ("23,385.80 minutes x $0.0040 a minute = $93.54"). Edit rate has "Minutes
+  billed" (exact / 6 / 30 / 60 seconds a call) like the TFN carriers; the
+  rate line says which is set. Calls are counted as in the reports (backend).
+- The presets and dates are one shared piece (components/owner/
+  period-picker.tsx) used by both cards.
+
+Backend half: CH-334 in call_platform (needs migrate). Commit: see git log --grep CH-334.

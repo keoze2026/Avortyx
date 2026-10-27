@@ -60,9 +60,10 @@ import { everythingUi } from "./everything-ui";
 import { campaignGroups } from "./campaign-groups";
 import { campaignDelete } from "./campaign-delete";
 import { attachUnassigned } from "./attach-unassigned";
+import { profitPeriod } from "./profit-period";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
