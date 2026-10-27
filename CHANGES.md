@@ -649,3 +649,13 @@ Issue 4. Backend: CH-312.
   ID Test".
 
 Commit: see git log --grep CH-313.
+
+## CH-324 - Getting Started: rebuilt demo video
+**2026-10-27 · Portal**
+
+The demo video on Getting Started is replaced with Avortyx_Demo_4K_Rebuilt.mp4
+(3840x2160, 30 fps, 2:38, index at the front so it plays while loading,
+24.4 MB). Same file name, so the page and links do not change. Poster frame
+regenerated from the new file (the title card listing all nine steps).
+Chapter times checked against the new file: all nine still land on their step
+card, so they are unchanged. Commit: see git log --grep CH-324.
