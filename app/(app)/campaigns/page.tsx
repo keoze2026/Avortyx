@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone, Plus } from "lucide-react";
+import { Layers, Megaphone, Plus } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { CampaignBuilder } from "@/components/campaigns/campaign-builder";
@@ -26,6 +27,7 @@ import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
+import { ROUTES } from "@/lib/constants";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 
 export default function CampaignsPage() {
@@ -33,7 +35,7 @@ export default function CampaignsPage() {
   const localName = useLocalName();
   // A publisher login: Manage Traffic switched off = look, don't change.
   // Creating a campaign also needs Number Creation (the server's "create").
-  const partnerCan = usePartnerPermissions().can;
+  const { can: partnerCan, isPartner } = usePartnerPermissions();
   // An employee: the Roles-screen ticks decide (Edit Campaign data / Delete).
   const staffCan = usePermissions().can;
   const canManage = partnerCan("manage_traffic") && staffCan("campaigns", "edit-campaign");
@@ -223,10 +225,22 @@ export default function CampaignsPage() {
         title={t("trafficUI.campaigns.pageTitle")}
         description={t("trafficUI.campaigns.pageDescription")}
         actions={
-          canCreate ? (
-            <Button size="sm" onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.newCampaign")}
-            </Button>
+          canCreate || !isPartner ? (
+            <div className="flex flex-wrap gap-2">
+              {/* CH-328: the team's Campaign Groups - never shown to publishers or buyers. */}
+              {!isPartner && (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`${ROUTES.campaigns}/groups`}>
+                    <Layers className="h-4 w-4" /> {t("cg.link")}
+                  </Link>
+                </Button>
+              )}
+              {canCreate && (
+                <Button size="sm" onClick={() => setOpen(true)}>
+                  <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.newCampaign")}
+                </Button>
+              )}
+            </div>
           ) : undefined
         }
       />

@@ -659,3 +659,14 @@ The demo video on Getting Started is replaced with Avortyx_Demo_4K_Rebuilt.mp4
 regenerated from the new file (the title card listing all nine steps).
 Chapter times checked against the new file: all nine still land on their step
 card, so they are unchanged. Commit: see git log --grep CH-324.
+
+## CH-328 - Campaign Groups: one destination change, every campaign in the group
+**2026-10-28 · Portal**
+
+Campaigns → Campaign Groups (team only; publishers and buyers never see it).
+Groups of campaigns, each group's destinations with their priority and weight
+in every campaign and where they are missing, and one change - add, remove,
+priority / weight / rate / Convert ON - applied to every campaign of the
+groups ticked, all or nothing. Backend half: CH-328 in call_platform.
+
+Commit: see git log --grep CH-328.
