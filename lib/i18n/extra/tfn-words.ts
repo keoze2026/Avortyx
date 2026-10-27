@@ -9,7 +9,8 @@ import type { ExtraTranslations } from "./types";
 export const tfnWords: ExtraTranslations = {
   en: {},
   ru: {
-    "nav.tfnCheck": "Проверка бесплатных номеров",
+    // Menu: short enough to fit (CH-308); the page title keeps the full words.
+    "nav.tfnCheck": "Проверка номеров",
     "tfnCheck.title": "Проверка бесплатных номеров",
     "tfnCheck.links.createBody": "Закрытая ссылка на страницу проверки бесплатных номеров. Вход для неё не нужен.",
     "x2.partnerPerm.tfnTest": "Тестовые звонки на бесплатные номера",
@@ -25,7 +26,7 @@ export const tfnWords: ExtraTranslations = {
     "owner.costs.warn.noCarrier": "Бесплатных номеров без оператора: {numbers}, поэтому их расходы не учитываются. Назначьте их ниже.",
   },
   ja: {
-    "nav.tfnCheck": "フリーダイヤル番号チェック",
+    "nav.tfnCheck": "フリーダイヤル確認",
     "tfnCheck.title": "フリーダイヤル番号チェック",
     "tfnCheck.links.createBody": "フリーダイヤル番号チェックページへの非公開リンクです。利用にログインは不要です。",
     "x2.partnerPerm.tfnTest": "フリーダイヤル番号のテストコール",
