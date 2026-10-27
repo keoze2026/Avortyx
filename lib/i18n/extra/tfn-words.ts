@@ -10,7 +10,9 @@ export const tfnWords: ExtraTranslations = {
   en: {},
   ru: {
     // Menu: short enough to fit (CH-308); the page title keeps the full words.
-    "nav.tfnCheck": "Проверка номеров",
+    // "8-800" is how toll-free numbers are said in Russian; "Проверка номеров"
+    // alone lost the "toll-free" and read like Phone Numbers ("Номера").
+    "nav.tfnCheck": "Проверка 8-800",
     "tfnCheck.title": "Проверка бесплатных номеров",
     "tfnCheck.links.createBody": "Закрытая ссылка на страницу проверки бесплатных номеров. Вход для неё не нужен.",
     "x2.partnerPerm.tfnTest": "Тестовые звонки на бесплатные номера",

@@ -602,7 +602,7 @@ Commit: see git log --grep CH-307.
 **2026-10-27 · Portal**
 
 After CH-307 the Japanese menu read "フリーダイヤル番号チ…" (cut off). The menu
-now reads "フリーダイヤル確認" (Japanese) and "Проверка номеров" (Russian); the
+now reads "フリーダイヤル確認" (Japanese) and "Проверка 8-800" (Russian); the
 page title keeps the full words. Chinese "免费号码检查" already fitted.
 
 Commit: see git log --grep CH-308.
