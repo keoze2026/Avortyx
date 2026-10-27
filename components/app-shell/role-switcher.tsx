@@ -12,19 +12,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Role } from "@/lib/types";
 
-const ROLE_META: Record<Role, { label: string; icon: typeof Building2; description: string }> = {
-  admin: { label: "Admin", icon: Building2, description: "Full platform access" },
-  buyer: { label: "Buyer", icon: Users, description: "Purchase calls, manage bids" },
-  publisher: { label: "Publisher", icon: Users, description: "Send traffic, see payouts" },
+const ROLE_META: Record<Role, { labelKey: string; icon: typeof Building2; descriptionKey: string }> = {
+  admin: { labelKey: "workspaceUI.members.role.admin", icon: Building2, descriptionKey: "x318.app.roleSwitch.adminDesc" },
+  buyer: { labelKey: "workspaceUI.members.role.buyer", icon: Users, descriptionKey: "x318.app.roleSwitch.buyerDesc" },
+  publisher: { labelKey: "workspaceUI.members.role.publisher", icon: Users, descriptionKey: "x318.app.roleSwitch.publisherDesc" },
 };
 
 export function RoleSwitcher() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const setRole = useAuthStore((s) => s.setRole);
+  const { t } = useTranslation();
 
   if (!user) return null;
   const Current = ROLE_META[user.role].icon;
@@ -40,12 +42,12 @@ export function RoleSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2 font-mono">
           <Current className="h-3.5 w-3.5 text-accent" />
-          <span className="hidden sm:inline">{ROLE_META[user.role].label}</span>
+          <span className="hidden sm:inline">{t(ROLE_META[user.role].labelKey)}</span>
           <ChevronsUpDown className="h-3 w-3 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>View as</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("x318.app.roleSwitch.viewAs")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {(Object.keys(ROLE_META) as Role[]).map((r) => {
           const Icon = ROLE_META[r].icon;
@@ -58,8 +60,8 @@ export function RoleSwitcher() {
             >
               <Icon className="mt-0.5 h-4 w-4 text-accent" />
               <div className="flex-1">
-                <div className="font-mono text-sm">{ROLE_META[r].label}</div>
-                <div className="text-[10px] text-muted-foreground">{ROLE_META[r].description}</div>
+                <div className="font-mono text-sm">{t(ROLE_META[r].labelKey)}</div>
+                <div className="text-[10px] text-muted-foreground">{t(ROLE_META[r].descriptionKey)}</div>
               </div>
               {active && <Check className="h-3.5 w-3.5 text-accent" />}
             </DropdownMenuItem>

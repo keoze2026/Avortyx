@@ -53,6 +53,7 @@ import { routingService } from "@/lib/api/services/routing.service";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { toE164 } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   campaignId: string;
@@ -77,6 +78,10 @@ export function AttachDestinationDialog({
   startPriority = 1,
 }: Props) {
   const { t } = useTranslation();
+  const localName = useLocalName();
+  // Shown only: the rule created below keeps the real name. The parent passes
+  // "this campaign" while the campaign is not loaded yet.
+  const shownCampaign = campaignName === "this campaign" ? t("x5.attachNumbers.thisCampaign") : localName(campaignName);
   const destinations = useDestinationsStore((s) => s.destinations);
   const fetchDestinations = useDestinationsStore((s) => s.fetch);
 
@@ -194,7 +199,7 @@ export function AttachDestinationDialog({
         attached.length === 1
           ? t("y.attDest.routedOne")
           : t("y.attDest.routedMany").replace("{count}", String(attached.length)),
-        { description: t("y.attDest.routedHint").replace("{campaign}", campaignName) },
+        { description: t("y.attDest.routedHint").replace("{campaign}", shownCampaign) },
       );
       onAttached?.();
       onOpenChange(false);
@@ -217,7 +222,7 @@ export function AttachDestinationDialog({
               <DialogTitle>{t("y.attDest.title")}</DialogTitle>
               <DialogDescription>
                 {t("y.attDest.description").split("{campaign}")[0]}
-                <span className="font-medium text-foreground">{campaignName}</span>
+                <span className="font-medium text-foreground">{shownCampaign}</span>
                 {t("y.attDest.description").split("{campaign}")[1]}
               </DialogDescription>
             </div>
@@ -343,8 +348,8 @@ export function AttachDestinationDialog({
                   <span className="font-medium">{toE164(d.tfn)}</span>
                   <span className="text-muted-foreground">
                     {" — "}
-                    {d.name}
-                    {d.buyerName ? ` · ${d.buyerName}` : ""}
+                    <LocalName name={d.name} />
+                    {d.buyerName ? <> · <LocalName name={d.buyerName} /></> : ""}
                   </span>
                 </span>
                 {!d.enabled && (

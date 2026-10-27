@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { formatCompact } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -32,6 +33,7 @@ type StatusFilter = "all" | "active" | "disabled";
 
 export default function DestinationsPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const destinations = useDestinationsStore((s) => s.destinations);
   const remoteStats = useDestinationsStore((s) => s.stats);
@@ -142,14 +144,14 @@ export default function DestinationsPage() {
     try {
       if (d.enabled) {
         await setEnabled(id, false);
-        toast.success(t("networkUI.destinations.toast.paused").replace("{name}", d.name));
+        toast.success(t("networkUI.destinations.toast.paused").replace("{name}", localName(d.name)));
       } else {
         // Switching ON: a buyer can have many live TFNs, so only another
         // destination live on this same number is switched off first.
         const off = await enableExclusive(id);
-        toast.success(t("networkUI.destinations.toast.enabled").replace("{name}", d.name), {
+        toast.success(t("networkUI.destinations.toast.enabled").replace("{name}", localName(d.name)), {
           description: off.length
-            ? t("bulk.destinations.switchedOff").replace("{names}", off.map((o) => o.name).join(", "))
+            ? t("bulk.destinations.switchedOff").replace("{names}", off.map((o) => localName(o.name)).join(", "))
             : undefined,
         });
       }
@@ -163,7 +165,7 @@ export default function DestinationsPage() {
     if (!d) return;
     try {
       await remove(id);
-      toast.success(t("networkUI.destinations.toast.removed").replace("{name}", d.name));
+      toast.success(t("networkUI.destinations.toast.removed").replace("{name}", localName(d.name)));
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("y.err.destDelete")));
     }
@@ -180,7 +182,7 @@ export default function DestinationsPage() {
     if (!cloneTarget) return;
     try {
       const copy = await cloneDestination(cloneTarget.id);
-      toast.success(t("x5.campaigns.clonedAs").replace("{name}", copy.name), {
+      toast.success(t("x5.campaigns.clonedAs").replace("{name}", localName(copy.name)), {
         description: t("y.dest.clonedHint"),
       });
     } catch (e) {
@@ -205,7 +207,10 @@ export default function DestinationsPage() {
   const runBulk = async (enabled: boolean) => {
     if (selectedDestinations.length === 0) return;
     const targets = selectedDestinations;
-    const nameOf = (id: string) => targets.find((d) => d.id === id)?.name ?? id;
+    const nameOf = (id: string) => {
+      const n = targets.find((d) => d.id === id)?.name;
+      return n ? localName(n) : id;
+    };
     const { ok, failed, skipped, switchedOff } = await setEnabledMany(
       targets.map((d) => d.id),
       enabled,
@@ -216,7 +221,7 @@ export default function DestinationsPage() {
       // working, not errors - one calm summary.
       const notes = [
         switchedOff.length
-          ? t("bulk.destinations.switchedOff").replace("{names}", switchedOff.map((o) => o.name).join(", "))
+          ? t("bulk.destinations.switchedOff").replace("{names}", switchedOff.map((o) => localName(o.name)).join(", "))
           : "",
         skipped.length
           ? t("bulk.destinations.skipped").replace("{names}", skipped.map(nameOf).join(", "))
@@ -275,7 +280,7 @@ export default function DestinationsPage() {
       const fieldLabel = t(`networkUI.destinations.toast.fields.${field}`);
       toast.success(
         t("networkUI.destinations.toast.capUpdated")
-          .replace("{name}", d.name)
+          .replace("{name}", localName(d.name))
           .replace("{field}", fieldLabel)
           .replace("{value}", value > 0 ? value.toLocaleString("en-US", { useGrouping: false }) : "∞"),
       );
@@ -325,7 +330,7 @@ export default function DestinationsPage() {
             <SelectItem value="all">{t("networkUI.destinations.page.allBuyers")}</SelectItem>
             {buyers.map((b) => (
               <SelectItem key={b.id} value={b.id}>
-                {b.name}
+                <LocalName name={b.name} />
               </SelectItem>
             ))}
           </SelectContent>
@@ -399,7 +404,7 @@ export default function DestinationsPage() {
         open={cloneOpen}
         onOpenChange={setCloneOpen}
         entity="destination"
-        sourceName={cloneTarget?.name ?? ""}
+        sourceName={localName(cloneTarget?.name ?? "")}
         note={t("x302.destinations.cloneNote")}
         onConfirm={handleConfirmClone}
       />

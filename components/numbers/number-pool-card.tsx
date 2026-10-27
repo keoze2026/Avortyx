@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact } from "@/lib/format";
 import type { NumberPool } from "@/lib/types";
@@ -42,12 +43,12 @@ export function NumberPoolCard({ pool }: { pool: NumberPool }) {
 
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">{pool.name}</h3>
+          <h3 className="truncate text-sm font-semibold"><LocalName name={pool.name} /></h3>
           <Link
             href={`${ROUTES.campaigns}/${pool.campaignId}`}
             className="truncate text-[11px] text-muted-foreground transition-colors hover:text-foreground"
           >
-            {pool.campaignName}
+            <LocalName name={pool.campaignName} />
           </Link>
         </div>
         <div className="flex items-center gap-1">

@@ -65,7 +65,7 @@ const SCOPE_HREF = (a: Anomaly): string | undefined => {
 };
 
 export function AnomalyStream() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   // Live anomalies from /api/ai/anomalies, hydrated by <StoreHydrator />.
   const anomalies = useAiInsightsStore((s) => s.anomalies);
   return (
@@ -114,7 +114,10 @@ export function AnomalyStream() {
                       {t(sev.labelKey)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {a.scope.type === "network" ? "Network" : a.scope.type} · {a.scope.name}
+                      {locale === "en"
+                        ? a.scope.type === "network" ? "Network" : a.scope.type
+                        : t(`toolsUI.insights.recommendations.scope.${a.scope.type}`)}{" "}
+                      · {a.scope.name}
                     </span>
                   </div>
                   <div className="mt-1 text-sm font-medium">{a.title}</div>

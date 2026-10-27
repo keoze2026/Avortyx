@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { supportService, type ChatMessage } from "@/lib/api/services/support.service";
+import { uiLocaleTag } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +95,7 @@ function agentCount(messages: ChatMessage[]): number {
 }
 
 function formatTime(ms: number): string {
-  return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString(uiLocaleTag(), { hour: "numeric", minute: "2-digit" });
 }
 
 /* ─── Component ───────────────────────────────────────────────────────── */

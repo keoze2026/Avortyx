@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 import type { Publisher } from "@/lib/types";
@@ -102,7 +103,7 @@ export function PublishersTable({
                     />
                   </TableCell>
                   <TableCell className="text-left font-medium text-foreground">
-                    {p.name}
+                    <LocalName name={p.name} />
                   </TableCell>
                   {columns.hourly && (
                     <TableCell className="!text-left tabular-nums text-muted-foreground">

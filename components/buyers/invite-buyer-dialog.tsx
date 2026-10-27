@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 
 export function InviteBuyerDialog({
   open,
@@ -38,6 +39,7 @@ export function InviteBuyerDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const router = useRouter();
   const add = useBuyersStore((s) => s.add);
 
@@ -101,7 +103,7 @@ export function InviteBuyerDialog({
         conversionRate: 0,
         campaignIds: [],
       });
-      toast.success(t("y.ibd.added").replace("{name}", created.name), {
+      toast.success(t("y.ibd.added").replace("{name}", localName(created.name)), {
         description: t("y.ibd.addedHint"),
       });
       onClose(false);

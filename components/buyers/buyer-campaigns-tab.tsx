@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
+import { VerticalLabel } from "@/components/campaigns/vertical-label";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatCurrency } from "@/lib/format";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -49,9 +51,9 @@ export function BuyerCampaignsTab({ campaignIds }: { campaignIds: string[] }) {
                   href={`${ROUTES.campaigns}/${c.id}`}
                   className="block truncate text-sm font-semibold transition-colors hover:text-accent"
                 >
-                  {c.name}
+                  <LocalName name={c.name} />
                 </Link>
-                <p className="text-[11px] text-muted-foreground font-mono">{c.vertical}</p>
+                <p className="text-[11px] text-muted-foreground font-mono"><VerticalLabel vertical={c.vertical} /></p>
               </div>
               <CampaignStatusBadge status={c.status} />
             </div>

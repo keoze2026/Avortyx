@@ -44,7 +44,7 @@ import {
   type RoutingTrace,
   type TraceDestination,
 } from "@/lib/api/services/calls.service";
-import { formatCallerId, formatCurrency, formatLocalDate } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatLocalDate, uiLocaleTag } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ function timeOf(iso: string | undefined, timeZone: string): string {
   if (!iso) return "";
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return "";
-  return new Date(ms).toLocaleTimeString(undefined, {
+  return new Date(ms).toLocaleTimeString(uiLocaleTag(), {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",

@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
+import { VerticalLabel } from "@/components/campaigns/vertical-label";
 import { VERTICALS } from "@/lib/mock/campaigns";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { Campaign, PayoutModel, Weekday } from "@/lib/types";
@@ -166,7 +167,7 @@ export function CampaignSettingsTab({ campaign }: { campaign: Campaign }) {
               <SelectContent>
                 {VERTICALS.map((v) => (
                   <SelectItem key={v} value={v}>
-                    {v}
+                    <VerticalLabel vertical={v} />
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -23,6 +23,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
+import { uiLocaleTag } from "@/lib/format";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { cn } from "@/lib/utils";
 
 interface Day {
@@ -78,13 +80,26 @@ function money(v: string | number | null | undefined): string {
   return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** The default termination route's name is ours, so it is translated; a name the owner typed is written in the chosen script. */
+export const DEFAULT_ROUTE_NAME = "XOLO TFN termination";
+
+export function routeNameLabel(
+  name: string | null | undefined,
+  t: (key: string) => string,
+  localName: (name: string | null | undefined) => string,
+): string {
+  if (!name || name === DEFAULT_ROUTE_NAME) return t("x318.app.routeDefaultName");
+  return localName(name);
+}
+
 function dayLabel(iso: string): string {
   const d = new Date(`${iso}T12:00:00Z`);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString(uiLocaleTag(), { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export function RoutingCostCard() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   // Opens on Today (Eastern), also after a refresh (Sir, 24 Oct).
   const [preset, setPreset] = useState<Preset>("today");
   const [range, setRange] = useState(() => rangeFor("today"));
@@ -144,7 +159,9 @@ export function RoutingCostCard() {
         <div className="flex flex-wrap items-center gap-3 px-5 py-4">
           <div className="flex items-center gap-2">
             <span className="font-semibold">{t("routingCost.title")}</span>
-            <Badge variant="outline">{data?.name ?? "XOLO TFN termination"}</Badge>
+            <Badge variant="outline" title={data?.name && data.name !== DEFAULT_ROUTE_NAME ? data.name : undefined}>
+              {routeNameLabel(data?.name, t, localName)}
+            </Badge>
             {data && (
               <span className="text-xs text-muted-foreground">
                 {t("routingCost.rate")

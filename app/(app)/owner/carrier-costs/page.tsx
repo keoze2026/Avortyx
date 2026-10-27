@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { MonthPicker } from "@/components/shared/month-picker";
-import { RoutingCostCard } from "@/components/owner/routing-cost-card";
+import { RoutingCostCard, routeNameLabel } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,8 +28,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
-import { formatLocalDate, formatTimer } from "@/lib/format";
+import { formatLocalDate, formatTimer, uiLocaleTag } from "@/lib/format";
 import { tFor } from "@/lib/i18n";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useLocaleStore } from "@/lib/store/locale-store";
 
@@ -158,7 +159,7 @@ function thisMonth(): string {
 function monthLabel(m: string): string {
   const [y, mo] = m.split("-").map(Number);
   if (!y || !mo) return m;
-  return new Date(Date.UTC(y, mo - 1, 15)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  return new Date(Date.UTC(y, mo - 1, 15)).toLocaleString(uiLocaleTag(), { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function errText(e: unknown): string {
@@ -236,6 +237,7 @@ function NumbersTable({
 
 export default function CarrierCostsPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
 
   const [month, setMonth] = useState(thisMonth());
@@ -446,7 +448,7 @@ export default function CarrierCostsPage() {
             </div>
             <div className="border-t border-border px-5 py-2 text-xs text-muted-foreground">
               {t("owner.costs.sum.note")
-                .replace("{routing}", data.routing?.name ?? "")
+                .replace("{routing}", routeNameLabel(data.routing?.name, t, localName))
                 .replace("{month}", monthLabel(data.month))}
             </div>
           </CardContent>
@@ -465,7 +467,7 @@ export default function CarrierCostsPage() {
                   : w.kind === "no_number_fee"
                     ? t("owner.costs.warn.noNumberFee")
                     : t("owner.costs.warn.noCarrier"))
-                  .replace("{carrier}", w.carrier ?? "")
+                  .replace("{carrier}", localName(w.carrier))
                   .replace("{calls}", String(w.calls ?? 0))
                   .replace("{numbers}", String(w.numbers ?? 0))}
               </span>
@@ -492,13 +494,13 @@ export default function CarrierCostsPage() {
                   aria-expanded={isOpen}
                 >
                   {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span className="text-base font-semibold">{c.name}</span>
+                  <LocalName name={c.name} className="text-base font-semibold" />
                   <Badge variant="outline">{c.code}</Badge>
                   <Badge variant="secondary">
                     {c.risk === "high" ? t("owner.costs.riskHigh") : t("owner.costs.riskLow")}
                   </Badge>
                 </button>
-                <span className="text-xs text-muted-foreground">{c.organizationName}</span>
+                <LocalName name={c.organizationName} className="text-xs text-muted-foreground" />
                 <div className="ml-auto flex items-center gap-2">
                   <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => openEdit(c)}>
                     <Pencil className="h-3.5 w-3.5" />
@@ -563,7 +565,7 @@ export default function CarrierCostsPage() {
                   <option value="">{t("owner.costs.assignTo")}</option>
                   {assignable.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.code}) - {c.organizationName}
+                      {localName(c.name)} ({c.code}) - {localName(c.organizationName)}
                     </option>
                   ))}
                 </select>
@@ -595,7 +597,7 @@ export default function CarrierCostsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {t("owner.costs.editRates")}: {editing?.name}
+              {t("owner.costs.editRates")}: {localName(editing?.name)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">

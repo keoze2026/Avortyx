@@ -17,7 +17,7 @@ import { CheckCircle2, DollarSign, PhoneCall, PhoneMissed, Radar } from "lucide-
 import { LiveCallCard } from "@/components/live/live-call-card";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useTranslation } from "@/hooks/use-translation";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber, uiLocaleTag } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -91,10 +91,10 @@ export function LiveRadar({ inFlight, featured, totals }: LiveRadarProps) {
           </div>
 
           {/* Compass marks */}
-          <CompassMark className="left-1/2 top-2 -translate-x-1/2" label="N" />
-          <CompassMark className="right-2 top-1/2 -translate-y-1/2" label="E" />
-          <CompassMark className="left-1/2 bottom-2 -translate-x-1/2" label="S" />
-          <CompassMark className="left-2 top-1/2 -translate-y-1/2" label="W" />
+          <CompassMark className="left-1/2 top-2 -translate-x-1/2" label={t("x318.reports.compass.n")} />
+          <CompassMark className="right-2 top-1/2 -translate-y-1/2" label={t("x318.reports.compass.e")} />
+          <CompassMark className="left-1/2 bottom-2 -translate-x-1/2" label={t("x318.reports.compass.s")} />
+          <CompassMark className="left-2 top-1/2 -translate-y-1/2" label={t("x318.reports.compass.w")} />
         </div>
 
         {/* Right side — session stats + featured */}
@@ -111,7 +111,7 @@ export function LiveRadar({ inFlight, featured, totals }: LiveRadarProps) {
             </div>
             <span className="text-xs text-muted-foreground">
               {t("liveUI.radar.sessionPrefix")}{" "}
-              {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {new Date().toLocaleTimeString(uiLocaleTag(), { hour: "2-digit", minute: "2-digit" })}
             </span>
           </header>
 

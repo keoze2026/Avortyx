@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -117,7 +118,7 @@ export function BuyersTable({
                     />
                   </TableCell>
                   <TableCell className="text-left font-medium text-foreground">
-                    {b.name}
+                    <LocalName name={b.name} />
                   </TableCell>
                   {columns.live && (
                     <TableCell className="!text-center text-muted-foreground" onClick={(e) => e.stopPropagation()}>
@@ -232,6 +233,7 @@ function BuyerCcBox({
   known: boolean;
 }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const setConcurrency = useBuyersStore((s) => s.setConcurrency);
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(String(cap));
@@ -264,7 +266,7 @@ function BuyerCcBox({
       .then(() =>
         toast.success(
           t("buyersRow.ccSaved")
-            .replace("{name}", name)
+            .replace("{name}", localName(name))
             .replace("{cap}", next > 0 ? String(next) : t("buyersRow.ccUnlimited")),
         ),
       )

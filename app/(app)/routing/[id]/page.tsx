@@ -17,9 +17,12 @@ import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingEdge, RoutingNode, RoutingNodeData } from "@/lib/types";
 import { ADVANCED_ROUTING_HREF } from "@/lib/api/services/campaign-routing";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
+import { usePageTitle } from "@/components/network/use-page-title";
 
 export default function RoutingEditorPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const plan = useRoutingStore((s) => s.getById(params.id));
@@ -29,7 +32,8 @@ export default function RoutingEditorPage() {
   const remove = useRoutingStore((s) => s.remove);
   const patchNodeData = useRoutingStore((s) => s.patchNodeData);
 
-  useBreadcrumbOverride(plan?.name);
+  useBreadcrumbOverride(plan ? localName(plan.name) : undefined);
+  usePageTitle("x318.network.title.routingEditor");
 
   // Working copy held in the canvas; we sync to the store on Save.
   const [workingNodes, setWorkingNodes] = useState<RoutingNode[]>(plan?.nodes ?? []);

@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
+import { countryLabel } from "@/components/numbers/country-label";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatLocalDate, formatNumber, formatTimer, toE164, uiLocaleTag } from "@/lib/format";
 import { tFor } from "@/lib/i18n";
@@ -314,7 +316,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("region") && (
                       <TableCell className={CELL}>
-                        {n.state?.trim() || n.country?.trim() || "—"}
+                        {n.state?.trim() || countryLabel(n.country) || "—"}
                       </TableCell>
                     )}
                     {visibleColumns.has("campaign") && (
@@ -324,7 +326,7 @@ export function TrackNumbersTable({
                             href={`${ROUTES.campaigns}/${n.campaignId}`}
                             className="text-foreground transition-colors hover:text-accent"
                           >
-                            {n.campaignName}
+                            <LocalName name={n.campaignName} />
                           </Link>
                         ) : (
                           <span>{t("trafficUI.numbers.track.unassigned")}</span>
@@ -365,7 +367,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("vendor") && (
                       <TableCell className={CELL}>
-                        {deriveVendor(n)}
+                        <LocalName name={deriveVendor(n)} />
                       </TableCell>
                     )}
                     {visibleColumns.has("live") && (

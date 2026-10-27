@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 
@@ -29,6 +30,7 @@ export function InvitePublisherDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const router = useRouter();
   const add = usePublishersStore((s) => s.add);
 
@@ -72,7 +74,7 @@ export function InvitePublisherDialog({
       numbersAssigned: 0,
       campaignIds: [],
     });
-    toast.success(t("networkUI.publishers.invite.invited").replace("{name}", created.name), {
+    toast.success(t("networkUI.publishers.invite.invited").replace("{name}", localName(created.name)), {
       description: t("networkUI.publishers.invite.willAppear"),
     });
     onClose(false);

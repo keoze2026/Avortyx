@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { friendlyErrorMessage } from "@/lib/api/errors";
@@ -29,6 +30,7 @@ import { useNumbersStore } from "@/lib/store/numbers-store";
 
 export default function CampaignsPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   // A publisher login: Manage Traffic switched off = look, don't change.
   // Creating a campaign also needs Number Creation (the server's "create").
   const partnerCan = usePartnerPermissions().can;
@@ -118,8 +120,8 @@ export default function CampaignsPage() {
     setCampaignStatus(id, next);
     toast.success(
       next === "active"
-        ? t("trafficUI.campaigns.toast.activated").replace("{name}", c.name)
-        : t("trafficUI.campaigns.toast.paused").replace("{name}", c.name),
+        ? t("trafficUI.campaigns.toast.activated").replace("{name}", localName(c.name))
+        : t("trafficUI.campaigns.toast.paused").replace("{name}", localName(c.name)),
     );
   };
 
@@ -127,7 +129,7 @@ export default function CampaignsPage() {
     const c = campaigns.find((x) => x.id === id);
     if (!c) return;
     remove(id);
-    toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", c.name));
+    toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", localName(c.name)));
   };
 
   const onClone = (id: string) => {
@@ -141,7 +143,7 @@ export default function CampaignsPage() {
     if (!cloneTarget) return;
     try {
       const copy = await cloneCampaign(cloneTarget.id);
-      toast.success(t("x5.campaigns.clonedAs").replace("{name}", copy.name), {
+      toast.success(t("x5.campaigns.clonedAs").replace("{name}", localName(copy.name)), {
         description: t("x5.campaigns.clonedHint"),
       });
     } catch (e) {
@@ -179,7 +181,10 @@ export default function CampaignsPage() {
       setSelectedIds(new Set());
       return;
     }
-    const nameOf = (id: string) => targets.find((c) => c.id === id)?.name ?? id;
+    const nameOf = (id: string) => {
+      const n = targets.find((c) => c.id === id)?.name;
+      return n ? localName(n) : id;
+    };
     toast.error(
       t(status === "active" ? "bulk.destinations.playPartial" : "bulk.destinations.pausePartial")
         .replace("{ok}", String(ok.length))
@@ -310,7 +315,7 @@ export default function CampaignsPage() {
         open={cloneOpen}
         onOpenChange={setCloneOpen}
         entity="campaign"
-        sourceName={cloneTarget?.name ?? ""}
+        sourceName={localName(cloneTarget?.name ?? "")}
         note={t("x5.campaigns.cloneNote")}
         onConfirm={onConfirmClone}
       />

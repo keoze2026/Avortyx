@@ -27,8 +27,30 @@ function dotFor(event: string): string {
   return "bg-muted-foreground";
 }
 
+/** The backend's alert types (notifications/models.py NotificationRule.Event); its labels are English. */
+const EVENT_KEYS: Record<string, string> = {
+  "call.missed": "x318.app.event.callMissed",
+  "call.completed": "x318.app.event.callCompleted",
+  "campaign.cap_reached": "x318.app.event.campaignCap",
+  "buyer.cap_reached": "x318.app.event.buyerCap",
+  "publisher.cap_reached": "x318.app.event.publisherCap",
+  "low.balance": "x318.app.event.lowBalance",
+  "campaign.paused": "x318.app.event.campaignPaused",
+  "daily.summary": "x318.app.event.dailySummary",
+  "call.started": "x318.app.event.newCall",
+  "destination.cap_reached": "x318.app.event.destinationCap",
+  "buyer.missed": "x318.app.event.buyerMissed",
+  "aht.low": "x318.app.event.ahtLow",
+  "number.deleted": "x318.app.event.numberDeleted",
+  "autopilot.alert": "x318.app.event.autopilot",
+  "number.not_working": "x318.app.event.numberNotWorking",
+};
+
 export function PopupAlertSettings({ className }: { className?: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  // English keeps the backend's own label; other languages use ours for the types we know.
+  const eventLabel = (e: { event: string; label: string }) =>
+    locale !== "en" && EVENT_KEYS[e.event] ? t(EVENT_KEYS[e.event]) : e.label;
   const events = useAlertPreferencesStore((s) => s.events);
   const popupsEnabled = useAlertPreferencesStore((s) => s.popupsEnabled);
   const popupEvents = useAlertPreferencesStore((s) => s.popupEvents);
@@ -112,14 +134,14 @@ export function PopupAlertSettings({ className }: { className?: string }) {
                   >
                     <span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotFor(e.event))} />
                     <span className={cn("min-w-0 flex-1 text-xs", checked ? "text-foreground" : "text-muted-foreground")}>
-                      {e.label}
+                      {eventLabel(e)}
                     </span>
                     <Switch
                       id={id}
                       checked={checked}
                       disabled={!popupsEnabled}
                       onCheckedChange={(v) => guard(setEvent(e.event, v))}
-                      aria-label={e.label}
+                      aria-label={eventLabel(e)}
                     />
                   </label>
                 </li>

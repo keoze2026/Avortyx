@@ -53,9 +53,13 @@ import { gettingStarted } from "./getting-started";
 import { tfnWords } from "./tfn-words";
 import { telegramConnect } from "./telegram-connect";
 import { tfnTestReport } from "./tfn-test-report";
+import { everythingReports } from "./everything-reports";
+import { everythingNetwork } from "./everything-network";
+import { everythingApp } from "./everything-app";
+import { everythingUi } from "./everything-ui";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
@@ -70,7 +74,9 @@ for (const area of AREAS) {
  * isn't changing their language"). English is never overridden.
  */
 export const OVERRIDE: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
-for (const area of [acronyms, tfnWords]) {
+// CH-318: the "everything translated" files also correct texts the main
+// dictionaries hold in English (Email, White Label...), so they win too.
+for (const area of [acronyms, tfnWords, everythingReports, everythingNetwork, everythingApp, everythingUi]) {
   for (const locale of ["ru", "ja", "zh"] as LocaleId[]) Object.assign(OVERRIDE[locale], area[locale]);
 }
 

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { toE164 } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -78,6 +79,7 @@ export function DestinationBuilder({
   defaultBuyerId,
 }: DestinationBuilderProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const add = useDestinationsStore((s) => s.add);
   const update = useDestinationsStore((s) => s.update);
   const existing = useDestinationsStore((s) =>
@@ -152,10 +154,10 @@ export function DestinationBuilder({
     try {
       if (existing) {
         await update(existing.id, payload);
-        toast.success(t("networkUI.destinations.toast.updated").replace("{name}", payload.name));
+        toast.success(t("networkUI.destinations.toast.updated").replace("{name}", localName(payload.name)));
       } else {
         const created = await add(payload);
-        toast.success(t("networkUI.destinations.toast.created").replace("{name}", created.name));
+        toast.success(t("networkUI.destinations.toast.created").replace("{name}", localName(created.name)));
       }
       onOpenChange(false);
     } catch (e) {
@@ -222,7 +224,7 @@ export function DestinationBuilder({
               <SelectContent>
                 {buyers.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
-                    {b.name}
+                    <LocalName name={b.name} />
                   </SelectItem>
                 ))}
               </SelectContent>

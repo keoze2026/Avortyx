@@ -34,9 +34,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
-import { TIMEZONES } from "@/lib/timezones";
+import { TIMEZONES, localizedTimezoneLabel } from "@/lib/timezones";
+import { uiLocaleTag } from "@/lib/format";
 import type {
   BusinessHourSlot,
   Destination,
@@ -262,7 +264,7 @@ export function DestinationSettingsTab({ destination }: DestinationSettingsTabPr
       {/* ─── Header: timezone selector on the right ─────────────────── */}
       <div className="flex items-center justify-between gap-3 pb-1">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{draft.name}</h2>
+          <h2 className="text-lg font-semibold tracking-tight"><LocalName name={draft.name} /></h2>
           <p className="text-xs text-muted-foreground">
             {t("networkUI.destinations.settings.manageSettings")}
           </p>
@@ -275,7 +277,7 @@ export function DestinationSettingsTab({ destination }: DestinationSettingsTabPr
           <SelectContent className="max-h-80">
             {TIMEZONES.map((z) => (
               <SelectItem key={z.iana} value={z.iana}>
-                {z.label}
+                {localizedTimezoneLabel(z.iana, z.label, uiLocaleTag())}
               </SelectItem>
             ))}
           </SelectContent>
@@ -306,7 +308,7 @@ export function DestinationSettingsTab({ destination }: DestinationSettingsTabPr
             <SelectContent>
               {buyers.map((b) => (
                 <SelectItem key={b.id} value={b.id}>
-                  {b.name}
+                  <LocalName name={b.name} />
                 </SelectItem>
               ))}
             </SelectContent>

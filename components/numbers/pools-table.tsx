@@ -17,6 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
+import { countryLabel } from "@/components/numbers/country-label";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatNumber } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
@@ -60,11 +62,13 @@ export function deriveMisses(_p: NumberPool): number | undefined {
   return undefined;
 }
 
-function formatSeconds(s: number): string {
-  if (s < 60) return `${s}s`;
+function formatSeconds(s: number, t: (key: string) => string): string {
+  if (s < 60) return t("x318.network.unit.seconds").replace("{n}", String(s));
   const m = Math.floor(s / 60);
   const rest = s % 60;
-  return rest === 0 ? `${m}m` : `${m}m ${rest}s`;
+  return rest === 0
+    ? t("x318.network.unit.minutes").replace("{n}", String(m))
+    : t("x318.network.unit.minSec").replace("{m}", String(m)).replace("{s}", String(rest));
 }
 
 /* ===========================================================
@@ -100,6 +104,7 @@ export function PoolsTable({
   onToggleAll,
 }: Props) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const router = useRouter();
   const setActive = useNumbersStore((s) => s.setPoolActive);
   const remove = useNumbersStore((s) => s.removePool);
@@ -156,11 +161,11 @@ export function PoolsTable({
                     />
                   </TableCell>
                   {visibleColumns.has("name") && (
-                    <TableCell className="text-left font-medium">{p.name}</TableCell>
+                    <TableCell className="text-left font-medium"><LocalName name={p.name} /></TableCell>
                   )}
                   {visibleColumns.has("country") && (
                     <TableCell className="text-muted-foreground">
-                      {derivePoolCountry(p) ?? POOL_DASH}
+                      {countryLabel(derivePoolCountry(p)) || POOL_DASH}
                     </TableCell>
                   )}
                   {visibleColumns.has("poolSize") && (
@@ -170,17 +175,17 @@ export function PoolsTable({
                   )}
                   {visibleColumns.has("campaign") && (
                     <TableCell className="text-left text-xs text-muted-foreground">
-                      {p.campaignName}
+                      <LocalName name={p.campaignName} />
                     </TableCell>
                   )}
                   {visibleColumns.has("closedBrowserDelay") && (
                     <TableCell className="font-mono text-xs tabular-nums">
-                      {deriveClosedBrowserDelay(p) === undefined ? POOL_DASH : formatSeconds(deriveClosedBrowserDelay(p)!)}
+                      {deriveClosedBrowserDelay(p) === undefined ? POOL_DASH : formatSeconds(deriveClosedBrowserDelay(p)!, t)}
                     </TableCell>
                   )}
                   {visibleColumns.has("idleLimit") && (
                     <TableCell className="font-mono text-xs tabular-nums">
-                      {deriveIdleLimit(p) === undefined ? POOL_DASH : formatSeconds(deriveIdleLimit(p)!)}
+                      {deriveIdleLimit(p) === undefined ? POOL_DASH : formatSeconds(deriveIdleLimit(p)!, t)}
                     </TableCell>
                   )}
                   {visibleColumns.has("impressions") && (
@@ -203,7 +208,7 @@ export function PoolsTable({
                             (v
                               ? t("trafficUI.numbers.pools.toast.activated")
                               : t("trafficUI.numbers.pools.toast.paused")
-                            ).replace("{name}", p.name),
+                            ).replace("{name}", localName(p.name)),
                           );
                         }}
                         aria-label={t("trafficUI.numbers.pools.toggle").replace("{name}", p.name)}
@@ -228,7 +233,7 @@ export function PoolsTable({
                         aria-label={t("trafficUI.numbers.pools.remove").replace("{name}", p.name)}
                         onClick={() => {
                           remove(p.id);
-                          toast.success(t("trafficUI.numbers.pools.removed").replace("{name}", p.name));
+                          toast.success(t("trafficUI.numbers.pools.removed").replace("{name}", localName(p.name)));
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

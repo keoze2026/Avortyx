@@ -30,6 +30,7 @@ import { VERTICAL_ACCENT, type Campaign } from "@/lib/types";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { localizeName } from "@/lib/name-translation";
+import { VerticalLabel } from "@/components/campaigns/vertical-label";
 import { cn } from "@/lib/utils";
 
 const DOT: Record<string, string> = {
@@ -78,7 +79,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
     setRenaming(true);
     try {
       await update(campaign.id, { name });
-      toast.success(t("trafficUI.campaigns.detail.renamed").replace("{name}", name));
+      toast.success(t("trafficUI.campaigns.detail.renamed").replace("{name}", localizeName(name, locale)));
       setRenameOpen(false);
     } catch (e) {
       toast.error(e instanceof Error && e.message ? e.message : t("trafficUI.campaigns.detail.renameFailed"));
@@ -95,13 +96,13 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
     setStatus(campaign.id, next);
     toast.success(
       next === "active"
-        ? t("trafficUI.campaigns.toast.activated").replace("{name}", campaign.name)
-        : t("trafficUI.campaigns.toast.paused").replace("{name}", campaign.name),
+        ? t("trafficUI.campaigns.toast.activated").replace("{name}", localizeName(campaign.name, locale))
+        : t("trafficUI.campaigns.toast.paused").replace("{name}", localizeName(campaign.name, locale)),
     );
   };
   const onArchive = () => {
     remove(campaign.id);
-    toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", campaign.name));
+    toast.success(t("trafficUI.campaigns.toast.archived").replace("{name}", localizeName(campaign.name, locale)));
     router.push(ROUTES.campaigns);
   };
 
@@ -124,7 +125,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
           </Button>
           <div className="mt-2 flex items-center gap-2 text-[11px]">
             <span className={cn("inline-block h-1.5 w-1.5 rounded-full", DOT[tone])} />
-            <span className="font-mono text-muted-foreground">{campaign.vertical}</span>
+            <span className="font-mono text-muted-foreground"><VerticalLabel vertical={campaign.vertical} /></span>
             <span className="text-muted-foreground/60">·</span>
             <span className="font-mono text-muted-foreground">{campaign.id}</span>
           </div>

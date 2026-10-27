@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { formatNumber, toE164 } from "@/lib/format";
@@ -99,6 +100,7 @@ export function DestinationsTable({
   onSelectionChange,
 }: DestinationsTableProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const router = useRouter();
   const buyers = useBuyersStore((s) => s.buyers);
@@ -227,7 +229,7 @@ export function DestinationsTable({
                           onCheckedChange={(v) => toggleRow(destination.id, v === true)}
                           aria-label={t("common.bulk.selectRowAria").replace(
                             "{name}",
-                            destination.name,
+                            localName(destination.name),
                           )}
                         />
                       </TableCell>
@@ -239,7 +241,7 @@ export function DestinationsTable({
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-2 font-medium transition-colors hover:text-accent"
                       >
-                        <span className="truncate max-w-[14rem]">{destination.name}</span>
+                        <LocalName name={destination.name} className="truncate max-w-[14rem]" />
                         {atCap && (
                           <AlertTriangle
                             className="h-3.5 w-3.5 text-[color:var(--warning)]"
@@ -257,10 +259,10 @@ export function DestinationsTable({
                           onClick={(e) => e.stopPropagation()}
                           className="transition-colors hover:text-accent"
                         >
-                          {buyer.name}
+                          <LocalName name={buyer.name} />
                         </Link>
                       ) : destination.buyerName ? (
-                        <span>{destination.buyerName}</span>
+                        <LocalName name={destination.buyerName} />
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -291,7 +293,7 @@ export function DestinationsTable({
                           }
                           ariaLabel={t(
                             "networkUI.destinations.table.editConcurrencyCapAria",
-                          ).replace("{name}", destination.name)}
+                          ).replace("{name}", localName(destination.name))}
                         />
                       </span>
                     </TableCell>
@@ -323,7 +325,7 @@ export function DestinationsTable({
                           }
                           ariaLabel={t(
                             "networkUI.destinations.table.editDailyCapAria",
-                          ).replace("{name}", destination.name)}
+                          ).replace("{name}", localName(destination.name))}
                         />
                       </span>
                     </TableCell>
@@ -348,7 +350,7 @@ export function DestinationsTable({
                           }
                           ariaLabel={t(
                             "networkUI.destinations.table.editMonthlyCapAria",
-                          ).replace("{name}", destination.name)}
+                          ).replace("{name}", localName(destination.name))}
                         />
                       </span>
                     </TableCell>
@@ -370,8 +372,8 @@ export function DestinationsTable({
                         className="data-[state=checked]:bg-[color:var(--success)]"
                         aria-label={
                           destination.enabled
-                            ? t("networkUI.destinations.table.disableAria").replace("{name}", destination.name)
-                            : t("networkUI.destinations.table.enableAria").replace("{name}", destination.name)
+                            ? t("networkUI.destinations.table.disableAria").replace("{name}", localName(destination.name))
+                            : t("networkUI.destinations.table.enableAria").replace("{name}", localName(destination.name))
                         }
                       />
                     </TableCell>
@@ -386,13 +388,13 @@ export function DestinationsTable({
                           icon={Pencil}
                           label={t(
                             "networkUI.destinations.table.editAria",
-                          ).replace("{name}", destination.name)}
+                          ).replace("{name}", localName(destination.name))}
                           onClick={() => onEdit?.(destination.id)}
                         /></Can>
                         {onClone && can("destinations", "edit") ? (
                           <RowActionIcon
                             icon={CirclePlus}
-                            label={t("x6.destinations.cloneAria").replace("{name}", destination.name)}
+                            label={t("x6.destinations.cloneAria").replace("{name}", localName(destination.name))}
                             onClick={() => onClone(destination.id)}
                           />
                         ) : null}
@@ -400,7 +402,7 @@ export function DestinationsTable({
                           icon={Trash2}
                           label={t(
                             "networkUI.destinations.table.deleteAria",
-                          ).replace("{name}", destination.name)}
+                          ).replace("{name}", localName(destination.name))}
                           tone="destructive"
                           onClick={() => onDelete?.(destination.id)}
                         /></Can>

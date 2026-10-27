@@ -28,6 +28,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { COUNTRY_NAMES } from "@/lib/countries";
+import { countryLabel } from "@/components/numbers/country-label";
 
 export interface CreatePoolInput {
   name: string;
@@ -135,7 +136,7 @@ export function CreateNumberPoolDialog({ open, onOpenChange, onCreate }: Props) 
                 ) : (
                   filteredCountries.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {c}
+                      {countryLabel(c)}
                     </SelectItem>
                   ))
                 )}

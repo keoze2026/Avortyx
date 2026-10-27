@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import { routingService, type RoutingDestination } from "@/lib/api/services/routing.service";
 import { AttachDestinationDialog } from "./attach-destination-dialog";
@@ -118,6 +119,7 @@ const MAX_DUPLICATE_HOURS = 43800;
 
 export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const updateCampaign = useCampaignsStore((s) => s.update);
 
   // ─── Block duplicate calls ──────────────────────────────────────────────
@@ -386,10 +388,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     if (d.convertOn === "incoming") return t("trafficUI.campaigns.settings.forward.conversion.events.incomingCall");
     if (d.convertOn === "connected") return t("trafficUI.campaigns.settings.forward.conversion.events.callConnected");
     if (d.convertOn === "length")
-      return `${t("trafficUI.campaigns.settings.forward.conversion.events.callLength")} ${d.convertSeconds}s`;
+      return `${t("trafficUI.campaigns.settings.forward.conversion.events.callLength")} ${t("x318.network.unit.seconds").replace("{n}", String(d.convertSeconds))}`;
     // The campaign's rule: answered, and at least its minimum duration.
     return campaignMinSec > 0
-      ? `${t("trafficUI.campaigns.settings.forward.conversion.events.callLength")} ${campaignMinSec}s`
+      ? `${t("trafficUI.campaigns.settings.forward.conversion.events.callLength")} ${t("x318.network.unit.seconds").replace("{n}", String(campaignMinSec))}`
       : t("trafficUI.campaigns.settings.forward.conversion.events.callConnected");
   };
 
@@ -400,7 +402,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     try {
       await routingService.removeDestination(ruleId, id);
       setRouted((rows) => rows.filter((r) => r.id !== id));
-      toast.success(t("trafficUI.campaigns.settings.forward.toast.detached").replace("{name}", name));
+      toast.success(t("trafficUI.campaigns.settings.forward.toast.detached").replace("{name}", localName(name)));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("y.err.destRemove"));
     }
@@ -604,7 +606,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         {routedLoaded && ruleId && ruleStatus !== "active" && (
           <div className="flex flex-col gap-2 border-b border-border bg-destructive/10 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-destructive">
-              {t("y.fwd.routingOff").replace("{status}", ruleStatus ?? "off")}
+              {t("y.fwd.routingOff").replace("{status}", ruleStatusLabel(t, ruleStatus))}
             </p>
             <Button size="sm" variant="destructive" disabled={turningOn} onClick={() => void turnRoutingOn()}>
               {turningOn && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {t("y.fwd.turnRoutingOn")}
@@ -703,10 +705,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         href={d.destId ? `${ROUTES.destinations}/${d.destId}` : ROUTES.destinations}
                         className="text-xs font-medium transition-colors hover:text-accent"
                       >
-                        {d.name}
+                        <LocalName name={d.name} />
                       </Link>
                       <div className="mt-0.5 text-[10px] text-muted-foreground">
-                        {buyer?.name ?? d.buyerName ?? "—"}
+                        {buyer?.name ?? d.buyerName ? <LocalName name={buyer?.name ?? d.buyerName} /> : "—"}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-[9.5px] font-medium tabular-nums text-foreground">
@@ -745,8 +747,8 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                           void setEnabled(d.destId, v);
                           toast.success(
                             v
-                              ? t("trafficUI.campaigns.settings.forward.row.enabled").replace("{name}", d.name)
-                              : t("trafficUI.campaigns.settings.forward.row.disabled").replace("{name}", d.name),
+                              ? t("trafficUI.campaigns.settings.forward.row.enabled").replace("{name}", localName(d.name))
+                              : t("trafficUI.campaigns.settings.forward.row.disabled").replace("{name}", localName(d.name)),
                           );
                         }}
                         aria-label={t("trafficUI.campaigns.settings.forward.row.toggle").replace("{name}", d.name)}
@@ -811,7 +813,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         <ConversionSettingsDialog
           open={!!editingDest}
           onOpenChange={(o) => !o && closeEdit()}
-          destinationName={editingDest.name}
+          destinationName={localName(editingDest.name)}
           campaignRate={campaignRate}
           initial={
             {
@@ -827,6 +829,19 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       )}
     </section>
   );
+}
+
+/** The routing rule's status in the "switched off ({status})" warning; English keeps the raw value. */
+const RULE_STATUS_KEYS: Record<string, string> = {
+  paused: "x318.network.ruleStatus.paused",
+  draft: "x318.network.ruleStatus.draft",
+  off: "x318.network.ruleStatus.off",
+  archived: "x318.network.ruleStatus.archived",
+};
+function ruleStatusLabel(t: (key: string) => string, status: string | null): string {
+  const value = status ?? "off";
+  const key = RULE_STATUS_KEYS[value];
+  return key ? t(key) : value;
 }
 
 function ChoiceRow<T extends string>({

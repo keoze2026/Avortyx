@@ -18,12 +18,14 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { formatCompact, formatCurrency } from "@/lib/format";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { usePermissions } from "@/lib/my-permissions";
 
 export default function PublishersPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const publishers = usePublishersStore((s) => s.publishers);
   const setPublisherStatus = usePublishersStore((s) => s.setStatus);
@@ -84,8 +86,8 @@ export default function PublishersPage() {
     setPublisherStatus(id, next);
     toast.success(
       next === "active"
-        ? t("networkUI.publishers.toast.activated").replace("{name}", p.name)
-        : t("networkUI.publishers.toast.paused").replace("{name}", p.name),
+        ? t("networkUI.publishers.toast.activated").replace("{name}", localName(p.name))
+        : t("networkUI.publishers.toast.paused").replace("{name}", localName(p.name)),
     );
   };
 
@@ -93,7 +95,7 @@ export default function PublishersPage() {
     const p = publishers.find((x) => x.id === id);
     if (!p) return;
     remove(id);
-    toast.success(t("networkUI.publishers.toast.removed").replace("{name}", p.name));
+    toast.success(t("networkUI.publishers.toast.removed").replace("{name}", localName(p.name)));
   };
 
   return (

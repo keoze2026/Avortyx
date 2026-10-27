@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import type { Buyer } from "@/lib/types";
@@ -24,6 +25,7 @@ import { usePermissions } from "@/lib/my-permissions";
 
 export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const router = useRouter();
   const setStatus = useBuyersStore((s) => s.setStatus);
@@ -37,13 +39,13 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
     setStatus(buyer.id, next);
     toast.success(
       next === "active"
-        ? t("networkUI.buyers.toast.activated").replace("{name}", buyer.name)
-        : t("networkUI.buyers.toast.paused").replace("{name}", buyer.name),
+        ? t("networkUI.buyers.toast.activated").replace("{name}", localName(buyer.name))
+        : t("networkUI.buyers.toast.paused").replace("{name}", localName(buyer.name)),
     );
   };
   const onRemove = () => {
     remove(buyer.id);
-    toast.success(t("networkUI.buyers.toast.removed").replace("{name}", buyer.name));
+    toast.success(t("networkUI.buyers.toast.removed").replace("{name}", localName(buyer.name)));
     router.push(ROUTES.buyers);
   };
 
@@ -67,7 +69,7 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
             <span className="inline-flex items-center gap-1.5 text-muted-foreground">
               <Building2 className="h-3 w-3" />
-              <span className="font-mono">{buyer.organization}</span>
+              <LocalName name={buyer.organization} className="font-mono" />
             </span>
             {buyer.contactName && (
               <>
@@ -87,7 +89,7 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
               </>
             )}
           </div>
-          <h1 className="mt-1 font-sans text-xl font-semibold tracking-tight sm:text-2xl">{buyer.name}</h1>
+          <h1 className="mt-1 font-sans text-xl font-semibold tracking-tight sm:text-2xl"><LocalName name={buyer.name} /></h1>
           {buyer.description && (
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{buyer.description}</p>
           )}

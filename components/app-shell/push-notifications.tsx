@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import {
   usePushNotificationsStore,
   type PushIcon,
@@ -67,6 +68,7 @@ export function PushNotifications() {
 
 function BannerCard({ banner }: { banner: PushNotification }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const router = useRouter();
   const dismiss = usePushNotificationsStore((s) => s.dismiss);
   const Icon: LucideIcon = banner.icon ? ICONS[banner.icon] : ICONS.alert;
@@ -127,7 +129,7 @@ function BannerCard({ banner }: { banner: PushNotification }) {
         </div>
         {banner.source && (
           <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            {banner.source}
+            {banner.source === "AI Insights" ? t("nav.aiInsights") : localName(banner.source)}
           </div>
         )}
         <p className="mt-1 line-clamp-2 text-[12px] text-muted-foreground/90">

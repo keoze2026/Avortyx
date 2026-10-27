@@ -22,12 +22,14 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { formatCompact, formatCurrency } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { usePermissions } from "@/lib/my-permissions";
 
 export default function BuyersPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const buyers = useBuyersStore((s) => s.buyers);
   // Until the first load finishes, show a loading table and "—" in the
@@ -117,8 +119,8 @@ export default function BuyersPage() {
     setBuyerStatus(id, next);
     toast.success(
       next === "active"
-        ? t("networkUI.buyers.toast.activated").replace("{name}", b.name)
-        : t("networkUI.buyers.toast.paused").replace("{name}", b.name),
+        ? t("networkUI.buyers.toast.activated").replace("{name}", localName(b.name))
+        : t("networkUI.buyers.toast.paused").replace("{name}", localName(b.name)),
     );
   };
 
@@ -126,7 +128,7 @@ export default function BuyersPage() {
     const b = buyers.find((x) => x.id === id);
     if (!b) return;
     remove(id);
-    toast.success(t("networkUI.buyers.toast.removed").replace("{name}", b.name));
+    toast.success(t("networkUI.buyers.toast.removed").replace("{name}", localName(b.name)));
   };
 
   const selectedBuyers = useMemo(
@@ -156,7 +158,10 @@ export default function BuyersPage() {
       setSelectedIds(new Set());
       return;
     }
-    const nameOf = (id: string) => targets.find((b) => b.id === id)?.name ?? id;
+    const nameOf = (id: string) => {
+      const n = targets.find((b) => b.id === id)?.name;
+      return n ? localName(n) : id;
+    };
     toast.error(
       t(status === "active" ? "bulk.destinations.playPartial" : "bulk.destinations.pausePartial")
         .replace("{ok}", String(ok.length))

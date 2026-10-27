@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { ROUTES } from "@/lib/constants";
 import { toE164 } from "@/lib/format";
@@ -43,6 +44,7 @@ export function DestinationDetailHeader({
   onEdit,
 }: DestinationDetailHeaderProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const router = useRouter();
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
@@ -54,8 +56,8 @@ export function DestinationDetailHeader({
       await setEnabled(destination.id, !destination.enabled);
       toast.success(
         destination.enabled
-          ? t("networkUI.destinations.toast.paused").replace("{name}", destination.name)
-          : t("networkUI.destinations.toast.enabled").replace("{name}", destination.name),
+          ? t("networkUI.destinations.toast.paused").replace("{name}", localName(destination.name))
+          : t("networkUI.destinations.toast.enabled").replace("{name}", localName(destination.name)),
       );
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("y.err.destUpdate")));
@@ -65,7 +67,7 @@ export function DestinationDetailHeader({
   const onRemove = async () => {
     try {
       await remove(destination.id);
-      toast.success(t("networkUI.destinations.toast.removed").replace("{name}", destination.name));
+      toast.success(t("networkUI.destinations.toast.removed").replace("{name}", localName(destination.name)));
       router.push(ROUTES.destinations);
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("y.err.destDelete")));
@@ -102,14 +104,14 @@ export function DestinationDetailHeader({
                   href={`${ROUTES.buyers}/${buyer.id}`}
                   className="inline-flex items-center gap-1 font-mono text-muted-foreground hover:text-accent"
                 >
-                  <Building2 className="h-3 w-3" /> {buyer.name}
+                  <Building2 className="h-3 w-3" /> <LocalName name={buyer.name} />
                 </Link>
               </>
             )}
           </div>
 
           <h1 className="mt-1 font-sans text-xl font-semibold tracking-tight sm:text-2xl">
-            {destination.name}
+            <LocalName name={destination.name} />
           </h1>
         </div>
 

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
 import { MOCK_DAILY_NEWS, type NewsCategory, type NewsItem } from "@/lib/mock/news";
 import { readDailySnapshot, writeDailySnapshot } from "@/lib/news-snapshots";
+import { uiLocaleTag } from "@/lib/format";
 
 const DAILY_CATEGORIES: NewsCategory[] = ["Tech", "Business", "World", "Politics", "Science", "Sports"];
 
@@ -95,7 +96,7 @@ export default function DailyNewsPage() {
               <span className="hidden text-[11px] text-muted-foreground sm:inline">
                 {refreshing
                   ? t("toolsUI.news.feed.stale")
-                  : t("toolsUI.news.daily.lastUpdated").replace("{time}", new Date(fetchedAt).toLocaleTimeString())}
+                  : t("toolsUI.news.daily.lastUpdated").replace("{time}", new Date(fetchedAt).toLocaleTimeString(uiLocaleTag()))}
               </span>
             )}
             <Button variant="outline" size="sm" onClick={() => void load()} disabled={refreshing}>

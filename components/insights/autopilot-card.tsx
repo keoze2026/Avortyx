@@ -31,6 +31,7 @@ import { usePermissions } from "@/lib/my-permissions";
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useTranslation } from "@/hooks/use-translation";
+import { uiLocaleTag } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Tone = "safe" | "caution" | "aggressive";
@@ -300,7 +301,7 @@ export function AutopilotCard() {
 
   const when = (iso: string | null) =>
     iso
-      ? new Date(iso).toLocaleString("en-US", {
+      ? new Date(iso).toLocaleString(uiLocaleTag(), {
           timeZone,
           month: "short",
           day: "numeric",

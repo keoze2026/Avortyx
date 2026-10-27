@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 
 interface EditBuyerDialogProps {
@@ -28,6 +29,7 @@ interface EditBuyerDialogProps {
 
 export function EditBuyerDialog({ buyerId, onOpenChange }: EditBuyerDialogProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const buyers = useBuyersStore((s) => s.buyers);
   const update = useBuyersStore((s) => s.update);
   const updateCap = useBuyersStore((s) => s.updateCap);
@@ -76,7 +78,7 @@ export function EditBuyerDialog({ buyerId, onOpenChange }: EditBuyerDialogProps)
           monthly: dailyCap * 25,
         });
       }
-      toast.success(t("networkUI.buyers.edit.updated").replace("{name}", name.trim()));
+      toast.success(t("networkUI.buyers.edit.updated").replace("{name}", localName(name.trim())));
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("y.err.buyerSave"));

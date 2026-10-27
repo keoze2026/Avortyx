@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import type { Publisher } from "@/lib/types";
@@ -24,6 +25,7 @@ import { usePermissions } from "@/lib/my-permissions";
 
 export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const { can } = usePermissions();
   const router = useRouter();
   const setStatus = usePublishersStore((s) => s.setStatus);
@@ -37,13 +39,13 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
     setStatus(publisher.id, next);
     toast.success(
       next === "active"
-        ? t("networkUI.publishers.toast.activated").replace("{name}", publisher.name)
-        : t("networkUI.publishers.toast.paused").replace("{name}", publisher.name),
+        ? t("networkUI.publishers.toast.activated").replace("{name}", localName(publisher.name))
+        : t("networkUI.publishers.toast.paused").replace("{name}", localName(publisher.name)),
     );
   };
   const onRemove = () => {
     remove(publisher.id);
-    toast.success(t("networkUI.publishers.toast.removed").replace("{name}", publisher.name));
+    toast.success(t("networkUI.publishers.toast.removed").replace("{name}", localName(publisher.name)));
     router.push(ROUTES.publishers);
   };
 
@@ -67,7 +69,7 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
             <span className="inline-flex items-center gap-1.5 text-muted-foreground">
               <Users className="h-3 w-3" />
-              <span className="font-mono">{publisher.organization}</span>
+              <LocalName name={publisher.organization} className="font-mono" />
             </span>
             {publisher.contactName && (
               <>
@@ -87,7 +89,7 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
               </>
             )}
           </div>
-          <h1 className="mt-1 font-sans text-xl font-semibold tracking-tight sm:text-2xl">{publisher.name}</h1>
+          <h1 className="mt-1 font-sans text-xl font-semibold tracking-tight sm:text-2xl"><LocalName name={publisher.name} /></h1>
           {publisher.description && (
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{publisher.description}</p>
           )}

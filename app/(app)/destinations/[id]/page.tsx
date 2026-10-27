@@ -11,12 +11,14 @@ import { DestinationStatsRow } from "@/components/destinations/destination-stats
 import { EmptyState } from "@/components/shared/empty-state";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { Locked } from "@/components/shared/can";
 
 export default function DestinationDetailPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const destination = useDestinationsStore((s) => s.getById(params.id));
@@ -25,7 +27,7 @@ export default function DestinationDetailPage() {
 
   const [builderOpen, setBuilderOpen] = useState(false);
 
-  useBreadcrumbOverride(destination?.name);
+  useBreadcrumbOverride(destination ? localName(destination.name) : undefined);
 
   // On direct deep-link the store may not be hydrated yet — trigger a fetch
   // and wait. Only redirect once we've confirmed the destination really

@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
+import { usePageTitle } from "@/components/network/use-page-title";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { Locked } from "@/components/shared/can";
 
@@ -24,6 +26,7 @@ function DetailLoading() {
 
 export default function PublisherDetailPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const publisher = usePublishersStore((s) => s.getById(params.id));
@@ -31,7 +34,8 @@ export default function PublisherDetailPage() {
   const loading = usePublishersStore((s) => s.loading);
   const fetchPublishers = usePublishersStore((s) => s.fetch);
 
-  useBreadcrumbOverride(publisher?.name);
+  useBreadcrumbOverride(publisher ? localName(publisher.name) : undefined);
+  usePageTitle("x318.network.title.publisher");
 
   const triedLoad = useRef(false);
   // After a hard refresh (Ctrl+Shift+R) the list isn't loaded yet, so the

@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { PayoutModel } from "@/lib/types";
@@ -50,6 +51,13 @@ const STEP_KEYS: Record<Step, string> = {
   Basics: "trafficUI.campaigns.builder.steps.basics",
   "Payout & caps": "trafficUI.campaigns.builder.steps.payout",
   Review: "trafficUI.campaigns.builder.steps.review",
+};
+
+/** The payout model on the Review step ("per-qualified" in English, as before). */
+const PAYOUT_MODEL_KEYS: Record<string, string> = {
+  "per-call": "x318.network.payoutModel.perCall",
+  "per-qualified": "x318.network.payoutModel.perQualified",
+  "per-minute": "x318.network.payoutModel.perMinute",
 };
 
 interface FormState {
@@ -75,6 +83,7 @@ const EMPTY: FormState = {
 
 export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const router = useRouter();
   const add = useCampaignsStore((s) => s.add);
 
@@ -140,7 +149,7 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
       callsMonth: 0,
       callsGlobal: 0,
     });
-    toast.success(t("trafficUI.campaigns.toast.created").replace("{name}", created.name), {
+    toast.success(t("trafficUI.campaigns.toast.created").replace("{name}", localName(created.name)), {
       description: t("trafficUI.campaigns.toast.createdDescription"),
     });
     onClose(false);
@@ -322,12 +331,12 @@ export function CampaignBuilder({ open, onOpenChange }: CampaignBuilderProps) {
                       {form.name || t("trafficUI.campaigns.builder.untitled")}
                     </div>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                      <Field label={t("trafficUI.campaigns.builder.labels.payoutModel")} value={form.payoutModel} />
+                      <Field label={t("trafficUI.campaigns.builder.labels.payoutModel")} value={PAYOUT_MODEL_KEYS[form.payoutModel] ? t(PAYOUT_MODEL_KEYS[form.payoutModel]) : form.payoutModel} />
                       <Field label={t("trafficUI.campaigns.builder.labels.payoutLabel")} value={`$${form.payout.toFixed(2)}`} />
                       <Field label={t("y.cb.revenue")} value={`$${form.revenue.toFixed(2)}`} />
                       <Field
                         label={t("trafficUI.campaigns.builder.labels.qualify")}
-                        value={form.payoutModel === "per-qualified" ? `${form.qualifyDurationSec}s` : "—"}
+                        value={form.payoutModel === "per-qualified" ? t("x318.network.unit.seconds").replace("{n}", String(form.qualifyDurationSec)) : "—"}
                       />
                       <Field label={t("trafficUI.campaigns.builder.labels.dailyCap")} value={form.dailyCap === 0 ? t("trafficUI.campaigns.builder.unlimited") : form.dailyCap.toString()} />
                       <Field

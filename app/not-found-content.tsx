@@ -118,15 +118,15 @@ export function NotFoundContent({ publicSite }: { publicSite: boolean }) {
             {/* Coordinate footer */}
             <div className="mt-8 grid grid-cols-3 gap-3 border-t border-border/50 pt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               <div className="text-left">
-                <div className="text-muted-foreground/60">err</div>
+                <div className="text-muted-foreground/60">{t("x318.app.notFound.err")}</div>
                 <div className="text-foreground/85">HTTP/1.1 404</div>
               </div>
               <div className="text-center">
-                <div className="text-muted-foreground/60">node</div>
-                <div className="text-foreground/85">us-east · edge</div>
+                <div className="text-muted-foreground/60">{t("x318.app.notFound.node")}</div>
+                <div className="text-foreground/85">{t("x318.app.notFound.nodeValue")}</div>
               </div>
               <div className="text-right">
-                <div className="text-muted-foreground/60">trace</div>
+                <div className="text-muted-foreground/60">{t("x318.app.notFound.trace")}</div>
                 <div className="inline-flex items-center gap-1 text-foreground/85">
                   <Search className="h-2.5 w-2.5" />
                   vrtyx_404

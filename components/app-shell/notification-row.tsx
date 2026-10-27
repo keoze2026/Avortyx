@@ -3,6 +3,7 @@
 import { Building2, MapPin, Megaphone, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import {
   ALERT_KIND_DOT,
   ALERT_KIND_TEXT,
@@ -17,6 +18,9 @@ import { cn } from "@/lib/utils";
  */
 export function NotificationRow({ item }: { item: NotificationItem }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
+  // "AI Insights" is the feed's own default source; anything else is a name the team typed.
+  const sourceLabel = item.source === "AI Insights" ? t("nav.aiInsights") : localName(item.source);
   const positive = (item.delta ?? 0) >= 0;
   // Prefer the fine-grained alert-kind color (missed=red / cap-over=orange
   // / low-aht=yellow) when present; fall back to the severity dot.
@@ -61,7 +65,7 @@ export function NotificationRow({ item }: { item: NotificationItem }) {
           <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{item.time}</span>
         </div>
         {item.source && !item.destination && !item.buyer && !item.campaign && (
-          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.source}</div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground" title={sourceLabel !== item.source ? item.source : undefined}>{sourceLabel}</div>
         )}
 
         {/* Structured entity context — explicit "Destination: X" / "Buyer: Y"
@@ -74,21 +78,24 @@ export function NotificationRow({ item }: { item: NotificationItem }) {
               <EntityChip
                 icon={MapPin}
                 label={t("notificationsUI.entity.destination")}
-                value={item.destination}
+                value={localName(item.destination)}
+                real={item.destination}
               />
             )}
             {item.buyer && (
               <EntityChip
                 icon={Building2}
                 label={t("notificationsUI.entity.buyer")}
-                value={item.buyer}
+                value={localName(item.buyer)}
+                real={item.buyer}
               />
             )}
             {item.campaign && (
               <EntityChip
                 icon={Megaphone}
                 label={t("notificationsUI.entity.campaign")}
-                value={item.campaign}
+                value={localName(item.campaign)}
+                real={item.campaign}
               />
             )}
           </div>
@@ -138,10 +145,13 @@ function EntityChip({
   icon: Icon,
   label,
   value,
+  real,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
+  /** The name as typed, shown on hover when the chip shows it in another script. */
+  real?: string;
 }) {
   return (
     <span className="inline-flex max-w-full items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px]">
@@ -149,7 +159,7 @@ function EntityChip({
       <span className="font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <span className="truncate text-foreground/90">{value}</span>
+      <span className="truncate text-foreground/90" title={real && real !== value ? real : undefined}>{value}</span>
     </span>
   );
 }

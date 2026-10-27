@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { formatCompact, formatPercent, formatRelativeTime, toE164 } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 
@@ -71,11 +72,17 @@ export function PublisherNumbersTab({ publisherId }: { publisherId: string }) {
               <TableCell className="font-mono text-xs">{toE164(n.number)}</TableCell>
               <TableCell>
                 <Badge variant="outline" className="capitalize">
-                  {n.type === "tollfree" ? t("networkUI.publishers.numbers.tollFree") : n.type}
+                  {n.type === "tollfree"
+                    ? t("networkUI.publishers.numbers.tollFree")
+                    : n.type === "local"
+                      ? t("x318.network.numberType.local")
+                      : n.type === "international"
+                        ? t("x318.network.numberType.international")
+                        : n.type}
                 </Badge>
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">
-                {n.campaignName ?? "—"}
+                {n.campaignName ? <LocalName name={n.campaignName} /> : "—"}
               </TableCell>
               <TableCell>
                 <NumberStatusBadge status={n.status} />

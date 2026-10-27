@@ -46,11 +46,14 @@ import { PublisherBlockedNumbers } from "@/components/publishers/publisher-block
 import { usePartnerMembers } from "@/hooks/use-partner-members";
 import { forgetEmails, markInvited, removePartnerMember } from "@/lib/partner-access";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import {
   TIMEZONES,
   usePublisherAccessStore,
 } from "@/lib/store/publisher-access-store";
 import type { Publisher } from "@/lib/types";
+import { localizedTimezoneLabel } from "@/lib/timezones";
+import { uiLocaleTag } from "@/lib/format";
 
 interface Props {
   publisher: Publisher;
@@ -208,7 +211,7 @@ function HeaderRow({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-xl font-semibold tracking-tight"><LocalName name={title} /></h2>
           <Info className="h-4 w-4 text-muted-foreground" />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -222,7 +225,7 @@ function HeaderRow({
         <SelectContent>
           {TIMEZONES.map((tz) => (
             <SelectItem key={tz.value} value={tz.value}>
-              {tz.label}
+              {localizedTimezoneLabel(tz.value, tz.label, uiLocaleTag())}
             </SelectItem>
           ))}
         </SelectContent>

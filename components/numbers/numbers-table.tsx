@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatPercent, formatRelativeTime, toE164 } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
@@ -41,11 +42,11 @@ export function NumbersTable({ numbers }: { numbers: TrackingNumber[] }) {
             <TableHead>{t("trafficUI.numbers.track.headers.number")}</TableHead>
             <TableHead>{t("trafficUI.numbers.track.headers.type")}</TableHead>
             <TableHead>{t("trafficUI.numbers.track.headers.campaign")}</TableHead>
-            <TableHead>Geo</TableHead>
+            <TableHead>{t("x318.network.numbers.geo")}</TableHead>
             <TableHead>{t("trafficUI.numbers.track.headers.status")}</TableHead>
             <TableHead>{t("trafficUI.numbers.poolCard.callsToday")}</TableHead>
-            <TableHead>Conv.</TableHead>
-            <TableHead>Last call</TableHead>
+            <TableHead>{t("x318.network.numbers.conv")}</TableHead>
+            <TableHead>{t("x318.network.numbers.lastCall")}</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -66,7 +67,7 @@ export function NumbersTable({ numbers }: { numbers: TrackingNumber[] }) {
                       href={`${ROUTES.campaigns}/${n.campaignId}`}
                       className="truncate text-foreground transition-colors hover:text-accent"
                     >
-                      {n.campaignName}
+                      <LocalName name={n.campaignName} />
                     </Link>
                   ) : (
                     <span className="text-muted-foreground italic">{t("trafficUI.numbers.track.unassigned")}</span>

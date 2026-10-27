@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 
 interface EditPublisherDialogProps {
@@ -27,6 +28,7 @@ interface EditPublisherDialogProps {
 
 export function EditPublisherDialog({ publisherId, onOpenChange }: EditPublisherDialogProps) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const publishers = usePublishersStore((s) => s.publishers);
   const update = usePublishersStore((s) => s.update);
 
@@ -65,7 +67,7 @@ export function EditPublisherDialog({ publisherId, onOpenChange }: EditPublisher
       payoutRate: payoutRate / 100,
     });
     setSubmitting(false);
-    toast.success(t("networkUI.publishers.edit.updated").replace("{name}", name.trim()));
+    toast.success(t("networkUI.publishers.edit.updated").replace("{name}", localName(name.trim())));
     onOpenChange(false);
   };
 

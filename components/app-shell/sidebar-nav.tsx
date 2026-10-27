@@ -283,7 +283,7 @@ function StatusFooter({ collapsed }: { collapsed: boolean }) {
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-1.5">
-        <Stat label={t("sidebar.rtt")} value="14ms" />
+        <Stat label={t("sidebar.rtt")} value={t("x318.app.ms").replace("{n}", "14")} />
         <Stat label={t("sidebar.active")} value="247" />
         <Stat label={t("sidebar.queue")} value="0" />
       </div>

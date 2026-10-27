@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
@@ -108,7 +109,7 @@ export function BuyerDestinationsTab({ buyer }: BuyerDestinationsTabProps) {
                       href={`${ROUTES.destinations}/${d.id}`}
                       className="block truncate text-sm font-semibold transition-colors hover:text-accent"
                     >
-                      {d.name}
+                      <LocalName name={d.name} />
                     </Link>
                     <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                       {toE164(d.tfn)}

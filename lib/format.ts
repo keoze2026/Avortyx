@@ -78,6 +78,10 @@ export function formatNumber(n: number) {
 
 /** "1234" → "1.2K", "1234567" → "1.2M" */
 export function formatCompact(n: number) {
+  // CH-318: "1,2 тыс." / "1.2千" / "1.2千" in the chosen language; English unchanged.
+  if (!isEnglishUi() && Math.abs(n) >= 1_000) {
+    return new Intl.NumberFormat(uiLocaleTag(), { notation: "compact", maximumFractionDigits: 1 }).format(n);
+  }
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
@@ -92,7 +96,21 @@ export function formatPercent(n: number, fractionDigits = 1) {
 }
 
 /** Seconds → "3m 24s" or "47s" */
+const DURATION_UNITS: Record<string, { m: string; s: string; sep: string }> = {
+  "ru-RU": { m: " мин", s: " с", sep: " " },
+  "ja-JP": { m: "分", s: "秒", sep: "" },
+  "zh-CN": { m: "分", s: "秒", sep: "" },
+};
+
 export function formatDuration(seconds: number) {
+  // CH-318: units in the chosen language ("3 мин 24 с", "3分24秒"); English unchanged.
+  const u = DURATION_UNITS[uiLocaleTag()];
+  if (u) {
+    if (seconds < 60) return `${seconds}${u.s}`;
+    const mm = Math.floor(seconds / 60);
+    const ss = seconds % 60;
+    return ss === 0 ? `${mm}${u.m}` : `${mm}${u.m}${u.sep}${ss}${u.s}`;
+  }
   if (seconds < 60) return `${seconds}s`;
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;

@@ -54,7 +54,11 @@ import {
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
+import { formatLocalDate } from "@/lib/format";
+import { tFor } from "@/lib/i18n";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useLocaleStore } from "@/lib/store/locale-store";
 
 // The http client turns every response key into camelCase, so the row is typed
 // the way it arrives. It was typed snake_case before, which read every field
@@ -105,11 +109,12 @@ const camel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperC
 
 function errText(e: unknown): string {
   if (e instanceof ApiError) return e.message;
-  return "Something went wrong. Try again.";
+  return tFor(useLocaleStore.getState().locale, "x1.carrierCosts.genericError");
 }
 
 export default function OwnerPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
 
   const [rows, setRows] = useState<OrgRow[]>([]);
@@ -327,7 +332,7 @@ export default function OwnerPage() {
               {rows.map((o) => (
                 <TableRow key={o.id} className={o.isActive ? "" : "opacity-60"}>
                   <TableCell>
-                    <div className="font-medium">{o.name}</div>
+                    <LocalName name={o.name} className="block font-medium" />
                     <div className="text-xs text-muted-foreground">{o.slug}</div>
                   </TableCell>
                   <TableCell>
@@ -436,7 +441,7 @@ export default function OwnerPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {t("owner.orgs.editRates")} — {feesFor?.name}
+              {t("owner.orgs.editRates")} — {localName(feesFor?.name)}
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
@@ -465,7 +470,7 @@ export default function OwnerPage() {
           <DialogHeader>
             <DialogTitle>
               {moneyFor?.direction === "credit" ? t("owner.orgs.credit") : t("owner.orgs.debit")} —{" "}
-              {moneyFor?.org.name}
+              {localName(moneyFor?.org.name)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
@@ -502,7 +507,7 @@ export default function OwnerPage() {
             <AlertDialogTitle>
               {suspendFor?.isActive
                 ? t("owner.orgs.suspendTitle")
-                : `${t("owner.orgs.activate")} — ${suspendFor?.name}`}
+                : `${t("owner.orgs.activate")} — ${localName(suspendFor?.name)}`}
             </AlertDialogTitle>
             {suspendFor?.isActive && (
               <AlertDialogDescription>{t("owner.orgs.suspendBody")}</AlertDialogDescription>
@@ -522,7 +527,7 @@ export default function OwnerPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-4 w-4" /> {t("owner.orgs.deleteTitle")} — {deleteFor?.name}
+              <Trash2 className="h-4 w-4" /> {t("owner.orgs.deleteTitle")} — {localName(deleteFor?.name)}
             </DialogTitle>
           </DialogHeader>
           {!deletePreview ? (
@@ -541,7 +546,7 @@ export default function OwnerPage() {
                 <dd className="text-right tabular-nums">{deletePreview.calls}</dd>
                 <dt className="text-muted-foreground">{t("owner.orgs.lastCall")}</dt>
                 <dd className="text-right tabular-nums">
-                  {deletePreview.lastCall ? new Date(deletePreview.lastCall).toLocaleDateString() : "—"}
+                  {deletePreview.lastCall ? formatLocalDate(deletePreview.lastCall) : "—"}
                 </dd>
                 <dt className="text-muted-foreground">{t("owner.orgs.balance")}</dt>
                 <dd className="text-right tabular-nums">{money(deletePreview.balance)}</dd>

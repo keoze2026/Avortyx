@@ -15,6 +15,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
+import { usePageTitle } from "@/components/network/use-page-title";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { cn } from "@/lib/utils";
 import { Locked } from "@/components/shared/can";
@@ -32,6 +34,7 @@ function DetailLoading() {
 
 export default function BuyerDetailPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const buyer = useBuyersStore((s) => s.getById(params.id));
@@ -67,7 +70,8 @@ export default function BuyerDetailPage() {
     { id: "settings", label: t("networkUI.buyers.tabs.settings"), icon: SettingsIcon },
   ];
 
-  useBreadcrumbOverride(buyer?.name);
+  useBreadcrumbOverride(buyer ? localName(buyer.name) : undefined);
+  usePageTitle("x318.network.title.buyer");
 
   const triedLoad = useRef(false);
   // After a hard refresh (Ctrl+Shift+R) the list isn't loaded yet, so the

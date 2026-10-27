@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { AuthGuard } from "@/components/app-shell/auth-guard";
+import { DocumentTitle } from "@/components/app-shell/document-title";
 import { NotificationRuntime } from "@/components/app-shell/notification-runtime";
 import { OnboardingGate } from "@/components/app-shell/onboarding-gate";
 import { AppSidebar } from "@/components/app-shell/sidebar-nav";
@@ -32,6 +33,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <AppSidebar />
           <SidebarInset className="app-canvas !bg-transparent">
             <Topbar />
+            <DocumentTitle />
             <NotificationRuntime />
             <StoreHydrator />
             {/* "Need help?" chat bubble, bottom-right on every signed-in page. */}

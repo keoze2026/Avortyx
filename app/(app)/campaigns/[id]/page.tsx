@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { useBreadcrumbOverride } from "@/hooks/use-breadcrumb-override";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
+import { usePageTitle } from "@/components/network/use-page-title";
 import { campaignsService } from "@/lib/api/services/campaigns.service";
 import { useCampaignSettingsStore } from "@/lib/store/campaign-settings-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -47,6 +49,7 @@ function toLiveSettings(campaign: Campaign): CampaignAdvancedSettings {
 
 export default function CampaignDetailPage() {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -55,7 +58,8 @@ export default function CampaignDetailPage() {
   const campaignsLoading = useCampaignsStore((s) => s.loading);
   const fetchCampaigns = useCampaignsStore((s) => s.fetch);
 
-  useBreadcrumbOverride(campaign?.name);
+  useBreadcrumbOverride(campaign ? localName(campaign.name) : undefined);
+  usePageTitle("x318.network.title.campaign");
 
   const seedSettings = useCampaignSettingsStore((s) => s.seed);
   const [loadState, setLoadState] = useState<LoadState>("loading");

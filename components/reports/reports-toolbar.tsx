@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TimezonePicker } from "@/components/shared/timezone-picker";
 import { useTranslation } from "@/hooks/use-translation";
-import { dayKeyToLocalDate, formatNumber, zonedDayKey } from "@/lib/format";
+import { dayKeyToLocalDate, formatNumber, uiLocaleTag, zonedDayKey } from "@/lib/format";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
@@ -197,14 +197,14 @@ export function ReportsToolbar({
     if (updatedAt == null) return "";
     let time: string;
     try {
-      time = new Intl.DateTimeFormat(undefined, {
+      time = new Intl.DateTimeFormat(uiLocaleTag(), {
         hour: "numeric",
         minute: "2-digit",
         second: "2-digit",
         timeZone,
       }).format(updatedAt);
     } catch {
-      time = new Date(updatedAt).toLocaleTimeString();
+      time = new Date(updatedAt).toLocaleTimeString(uiLocaleTag());
     }
     return t("toolsUI.reports.toolbar.updatedAt").replace("{time}", time);
   }, [updatedAt, timeZone, t]);

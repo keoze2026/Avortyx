@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { http } from "@/lib/api/http";
 import { useBuyerMembersStore } from "@/lib/store/buyer-members-store";
 import { markInvited } from "@/lib/partner-access";
@@ -99,7 +100,7 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
               <DialogTitle>{t("x5.buyerInvite.title")}</DialogTitle>
               <DialogDescription>
                 {descParts[0]}
-                <span className="font-mono">{buyer?.name}</span>
+                <LocalName name={buyer?.name} className="font-mono" />
                 {descParts[1]}
               </DialogDescription>
             </div>
@@ -125,7 +126,7 @@ export function BuyerInviteDialog({ buyer, onOpenChange }: BuyerInviteDialogProp
               id="bi-contact"
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
-              placeholder="Jane Doe"
+              placeholder={t("x318.network.placeholder.contactPerson")}
             />
           </div>
           <div className="space-y-2">

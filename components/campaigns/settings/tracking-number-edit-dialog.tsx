@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { toE164 } from "@/lib/format";
@@ -246,7 +247,7 @@ export function TrackingNumberEditDialog({
                     <SelectItem value={NO_PUBLISHER}>{t("y.tned.noPublisher")}</SelectItem>
                     {publishers.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name}
+                        <LocalName name={p.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>

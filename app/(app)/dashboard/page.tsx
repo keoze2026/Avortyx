@@ -27,7 +27,7 @@ import type { DashboardSnapshot } from "@/lib/api/services/analytics.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { getCachedSnapshot, loadSnapshotShared, snapshotKey } from "@/lib/dashboard-snapshot";
 import { isPinRequiredError } from "@/lib/reports-scope";
-import { calendarDayKey, dayKeyToLocalDate, toE164, zonedDayKey } from "@/lib/format";
+import { calendarDayKey, dayKeyToLocalDate, toE164, uiLocaleTag, zonedDayKey } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -252,7 +252,7 @@ export default function DashboardPage() {
   }, [snapshot]);
 
   const updatedLabel = snapshot
-    ? new Date(snapshot.takenAt).toLocaleTimeString(undefined, { timeZone })
+    ? new Date(snapshot.takenAt).toLocaleTimeString(uiLocaleTag(), { timeZone })
     : null;
   const updatedKey = t("dashboard.updatedAt");
   const updatedPrefix = updatedKey === "dashboard.updatedAt" ? "Updated" : updatedKey;
@@ -273,7 +273,7 @@ export default function DashboardPage() {
             {updatedLabel && (
               <span className="whitespace-nowrap text-[11px] text-muted-foreground tabular-nums">
                 {updatedPrefix} {updatedLabel}
-                {loading && " · Updating…"}
+                {loading && ` · ${t("x318.reports.updating")}`}
               </span>
             )}
             <TimezonePicker />

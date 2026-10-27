@@ -25,6 +25,13 @@ function makeId() {
   return `ac_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Role names in the chosen language; the stored role stays "owner" / "editor" / "viewer". */
+const ROLE_KEYS: Record<string, string> = {
+  owner: "trafficUI.campaigns.settings.access.roles.owner",
+  editor: "trafficUI.campaigns.settings.access.roles.editor",
+  viewer: "trafficUI.campaigns.settings.access.roles.viewer",
+};
+
 const ROLE_VARIANT: Record<AccessGrant["role"], React.ComponentProps<typeof Badge>["variant"]> = {
   owner: "success",
   editor: "default",
@@ -124,7 +131,7 @@ export function AccessTab({ campaignId }: { campaignId: string }) {
                   </div>
                 </div>
                 <Badge variant={ROLE_VARIANT[g.role]} className="capitalize">
-                  {g.role}
+                  {ROLE_KEYS[g.role] ? t(ROLE_KEYS[g.role]) : g.role}
                 </Badge>
                 <Button
                   variant="ghost"

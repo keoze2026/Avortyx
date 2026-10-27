@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { NAV_GROUPS, NAV_LABEL_BY_PATH } from "@/lib/nav";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -29,16 +30,22 @@ function sectionIndexFor(href: string) {
   return "—";
 }
 
+/** Menu label keys by path, so the crumbs read in the chosen language. */
+const NAV_KEY_BY_PATH: Record<string, string> = Object.fromEntries(
+  NAV_GROUPS.flatMap((g) => g.items.map((i) => [i.href, i.nameKey])),
+);
+
 export function Breadcrumbs({ className }: { className?: string }) {
   const pathname = usePathname();
   const overrides = useUIStore((s) => s.breadcrumbOverrides);
+  const { t } = useTranslation();
 
   if (!pathname || pathname === "/") return null;
 
   const segments = pathname.split("/").filter(Boolean);
   const crumbs = segments.map((seg, i) => {
     const href = "/" + segments.slice(0, i + 1).join("/");
-    const label = overrides[href] ?? NAV_LABEL_BY_PATH[href] ?? humanize(seg);
+    const label = overrides[href] ?? (NAV_KEY_BY_PATH[href] ? t(NAV_KEY_BY_PATH[href]) : NAV_LABEL_BY_PATH[href] ?? humanize(seg));
     return { href, label };
   });
 
@@ -46,7 +53,7 @@ export function Breadcrumbs({ className }: { className?: string }) {
 
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t("x318.app.breadcrumb")}
       className={cn(
         "flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em]",
         className,

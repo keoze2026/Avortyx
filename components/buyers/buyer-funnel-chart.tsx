@@ -118,7 +118,7 @@ export function BuyerFunnelChart({ buyer }: BuyerFunnelChartProps) {
       value: counts[c.key],
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, buyerTfns, recentCalls]);
+  }, [range, buyerTfns, recentCalls, t]);
 
   const subLabel =
     range === "today"

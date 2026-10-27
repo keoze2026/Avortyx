@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Newspaper, Sparkles, TrendingUp } from "lucide-react";
 
 import { BrandVortex } from "@/components/auth/brand-vortex";
+import { DocumentTitle } from "@/components/app-shell/document-title";
 import { Wordmark } from "@/components/brand/wordmark";
 import { formatBtcSpot, useBtcSpot } from "@/hooks/use-btc-spot";
 import { useTranslation } from "@/hooks/use-translation";
@@ -50,6 +51,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <main className="dark site-surface relative isolate min-h-screen overflow-hidden">
       {/* Vortex covers the full viewport behind the grid. */}
       <BrandVortex centerX={0.38} />
+      <DocumentTitle />
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[3fr_2fr]">
         {/* ─── Left column ───────────────────────────────────────── */}

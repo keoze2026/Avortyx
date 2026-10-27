@@ -47,7 +47,13 @@ export function BuyerOverviewTab({ buyer }: { buyer: Buyer }) {
               <dt className="text-muted-foreground">{t("networkUI.buyers.overview.concurrencyCap")}</dt>
               <dd className="text-right font-mono">{buyer.concurrencyCap}</dd>
               <dt className="text-muted-foreground">{t("networkUI.buyers.overview.bidModel")}</dt>
-              <dd className="text-right font-mono capitalize">{buyer.payoutModel}</dd>
+              <dd className="text-right font-mono capitalize">
+                {buyer.payoutModel === "tiered"
+                  ? t("x318.network.buyerModel.tiered")
+                  : buyer.payoutModel === "flat"
+                    ? t("x318.network.buyerModel.flat")
+                    : buyer.payoutModel}
+              </dd>
               <dt className="text-muted-foreground">{t("networkUI.buyers.overview.lifetimeSpend")}</dt>
               <dd className="text-right font-mono">{formatCurrency(buyer.lifetimeSpend)}</dd>
             </dl>

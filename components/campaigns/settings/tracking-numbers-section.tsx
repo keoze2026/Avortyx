@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ export function TrackingNumbersSection({
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   // Stable selector + useMemo to avoid the new-ref-per-render Zustand loop.
   const allNumbers = useNumbersStore((s) => s.numbers);
   // Calls up right now on each tracking number, for the LIVE column (Sir, CH-212).
@@ -151,7 +153,7 @@ export function TrackingNumbersSection({
   const nameSizers = Array.from(
     new Set(numbers.map((n) => n.label?.trim() || (readOnly ? "—" : namePlaceholder))),
   );
-  const publisherCh = Math.min(30, longest(numbers.map((n) => n.publisherName ?? "—")) + 1);
+  const publisherCh = Math.min(30, longest(numbers.map((n) => (n.publisherName ? localName(n.publisherName) : "—"))) + 1);
   // One width for every data column, so the headings sit at even gaps: 9
   // columns beside the checkbox, 8 on the read-only (partner) view.
   const col = readOnly ? "w-[12.5%]" : "w-[11%]";
@@ -289,7 +291,7 @@ export function TrackingNumbersSection({
                         block is centred under the heading. */}
                     <TableCell className="text-xs text-muted-foreground">
                       <div className="mx-auto max-w-full truncate text-left" style={{ width: `${publisherCh}ch` }}>
-                        {n.publisherName ?? "—"}
+                        {n.publisherName ? <LocalName name={n.publisherName} /> : "—"}
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-xs tabular-nums">

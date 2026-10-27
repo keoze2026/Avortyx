@@ -23,13 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { toE164 } from "@/lib/format";
 import type { NumberStatus, TrackingNumber } from "@/lib/types";
 
-import { deriveAllocated, deriveName } from "./track-numbers-table";
+import { deriveAllocated, deriveDisplayName, deriveName } from "./track-numbers-table";
 import { carriersService, type Carrier } from "@/lib/api/services/numbers.service";
 
 interface Props {
@@ -163,7 +164,7 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
               id="edit-num-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={deriveName(number)}
+              placeholder={deriveDisplayName(number)}
             />
           </div>
 
@@ -179,7 +180,7 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
                 </SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+                    <LocalName name={c.name} />
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -198,7 +199,7 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
                 </SelectItem>
                 {carriers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.code} — {c.name}
+                    {c.code} — <LocalName name={c.name} />
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -218,12 +219,12 @@ export function EditNumberDialog({ number, open, onOpenChange }: Props) {
                 {/* Keep the current one listed even if it is not in the store. */}
                 {number.publisherId && !publishers.some((p) => p.id === number.publisherId) && (
                   <SelectItem value={number.publisherId}>
-                    {number.publisherName ?? number.publisherId}
+                    {number.publisherName ? <LocalName name={number.publisherName} /> : number.publisherId}
                   </SelectItem>
                 )}
                 {publishers.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name}
+                    <LocalName name={p.name} />
                   </SelectItem>
                 ))}
               </SelectContent>

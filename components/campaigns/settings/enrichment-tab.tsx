@@ -143,7 +143,11 @@ export function EnrichmentTab({ campaignId }: { campaignId: string }) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{u.label}</span>
                     <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                      {u.hook}
+                      {u.hook === "pre-route"
+                        ? t("x318.network.hook.preRoute")
+                        : u.hook === "post-connect"
+                          ? t("x318.network.hook.postConnect")
+                          : u.hook}
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {t("trafficUI.campaigns.settings.enrichment.timeoutSuffix").replace("{ms}", String(u.timeoutMs))}

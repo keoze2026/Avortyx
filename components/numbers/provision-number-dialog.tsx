@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { API_BASE_URL } from "@/lib/api/env";
 import { getAccessToken } from "@/lib/api/tokens";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -47,6 +48,7 @@ type NumberType = "toll_free" | "local";
 
 export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: Props) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const lockedCampaign =
     lockedCampaignId ? campaigns.find((c) => c.id === lockedCampaignId) : undefined;
@@ -130,7 +132,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
       }
       setResults(items);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("'+P+'searchFailed"));
+      toast.error(e instanceof Error ? e.message : t("trafficUi.numbers.provision.searchFailed"));
     } finally {
       setSearching(false);
     }
@@ -182,11 +184,11 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
         ? campaigns.find((c) => c.id === campaignId)
         : undefined;
       toast.success(
-        t(provisioned > 1 ? "'+P+'provisionedMany" : "'+P+'provisionedOne").replace("{count}", String(provisioned)),
+        t(provisioned > 1 ? "trafficUi.numbers.provision.provisionedMany" : "trafficUi.numbers.provision.provisionedOne").replace("{count}", String(provisioned)),
         {
           description: campaign
-            ? t("trafficUI.numbers.provision.toast.attachedTo").replace("{name}", campaign.name)
-            : t("'+P+'noCampaign"),
+            ? t("trafficUI.numbers.provision.toast.attachedTo").replace("{name}", localName(campaign.name))
+            : t("trafficUi.numbers.provision.noCampaign"),
         },
       );
     }
@@ -214,12 +216,12 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
               <DialogTitle>
                 {step === "form"
                   ? t("trafficUI.numbers.provision.title")
-                  : t("'+P+'availableTitle")}
+                  : t("trafficUi.numbers.provision.availableTitle")}
               </DialogTitle>
               <DialogDescription>
                 {step === "form"
                   ? t("trafficUI.numbers.provision.description")
-                  : t("'+P+'foundCount").replace("{count}", String(results.length))}
+                  : t("trafficUi.numbers.provision.foundCount").replace("{count}", String(results.length))}
               </DialogDescription>
             </div>
           </div>
@@ -260,13 +262,13 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
             {/* Area code */}
             <div className="space-y-2">
               <Label htmlFor="prov-area">
-                {numberType === "toll_free" ? t("'+P+'tollFreePrefix") : t("'+P+'areaCode")}
+                {numberType === "toll_free" ? t("trafficUi.numbers.provision.tollFreePrefix") : t("trafficUi.numbers.provision.areaCode")}
               </Label>
               <Input
                 id="prov-area"
                 type="text"
                 inputMode="numeric"
-                placeholder={numberType === "toll_free" ? t("'+P+'tollFreeExample") : t("'+P+'areaCodeExample")}
+                placeholder={numberType === "toll_free" ? t("trafficUi.numbers.provision.tollFreeExample") : t("trafficUi.numbers.provision.areaCodeExample")}
                 value={areaCode}
                 onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
                 className="font-mono"
@@ -295,7 +297,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                 <Label>{t("trafficUI.numbers.provision.attachCampaign")}</Label>
                 <div className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
                   <Hash className="h-3.5 w-3.5 shrink-0 text-accent" />
-                  <span className="font-medium text-foreground">{lockedCampaign.name}</span>
+                  <LocalName name={lockedCampaign.name} className="font-medium text-foreground" />
                 </div>
               </div>
             ) : (
@@ -311,7 +313,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                     </SelectItem>
                     {campaigns.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.name}
+                        <LocalName name={c.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -356,7 +358,7 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                   </span>
                   {num.monthly_price != null && (
                     <span className="text-xs text-muted-foreground">
-                      {t("'+P+'perMonth").replace("{price}", Number(num.monthly_price).toFixed(2))}
+                      {t("trafficUi.numbers.provision.perMonth").replace("{price}", Number(num.monthly_price).toFixed(2))}
                     </span>
                   )}
                 </button>
@@ -405,8 +407,8 @@ export function ProvisionNumberDialog({ open, onOpenChange, lockedCampaignId }: 
                   <>
                     <Plus className="h-3.5 w-3.5" />{" "}
                     {selected.size > 1
-                      ? t("'+P+'provisionMany").replace("{count}", String(selected.size))
-                      : t("'+P+'provisionOne")}
+                      ? t("trafficUi.numbers.provision.provisionMany").replace("{count}", String(selected.size))
+                      : t("trafficUi.numbers.provision.provisionOne")}
                   </>
                 )}
               </Button>

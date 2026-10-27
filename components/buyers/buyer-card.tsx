@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
 import type { Buyer } from "@/lib/types";
@@ -54,9 +55,9 @@ export function BuyerCard({ buyer, onToggle, onArchive }: BuyerCardProps) {
                 href={`${ROUTES.buyers}/${buyer.id}`}
                 className="block truncate font-semibold leading-snug transition-colors hover:text-accent"
               >
-                {buyer.name}
+                <LocalName name={buyer.name} />
               </Link>
-              <p className="truncate text-[11px] text-muted-foreground">{buyer.organization}</p>
+              <p className="truncate text-[11px] text-muted-foreground"><LocalName name={buyer.organization} /></p>
             </div>
           </div>
           <div className="flex items-center gap-1">

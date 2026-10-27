@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
 import { formatCompact, formatCurrency, formatPercent } from "@/lib/format";
 import type { Publisher } from "@/lib/types";
@@ -55,9 +56,9 @@ export function PublisherCard({
                 href={`${ROUTES.publishers}/${publisher.id}`}
                 className="block truncate font-semibold leading-snug transition-colors hover:text-accent"
               >
-                {publisher.name}
+                <LocalName name={publisher.name} />
               </Link>
-              <p className="truncate text-[11px] text-muted-foreground">{publisher.organization}</p>
+              <p className="truncate text-[11px] text-muted-foreground"><LocalName name={publisher.organization} /></p>
             </div>
           </div>
           <div className="flex items-center gap-1">

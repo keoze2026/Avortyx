@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { numbersService } from "@/lib/api/services/numbers.service";
@@ -50,12 +51,12 @@ type Mode = "add" | "buy";
 // Used by the "Buy new" mode to generate plausible candidate numbers.
 // Mirrors ProvisionNumberDialog's STATE_OPTIONS so demo behavior is consistent.
 const STATE_OPTIONS = [
-  { code: "TX", city: "Austin", area: 512 },
-  { code: "CA", city: "Los Angeles", area: 213 },
-  { code: "FL", city: "Miami", area: 305 },
-  { code: "NY", city: "New York", area: 212 },
-  { code: "IL", city: "Chicago", area: 312 },
-  { code: "GA", city: "Atlanta", area: 404 },
+  { code: "TX", city: "Austin", cityKey: "x318.network.city.austin", area: 512 },
+  { code: "CA", city: "Los Angeles", cityKey: "x318.network.city.losAngeles", area: 213 },
+  { code: "FL", city: "Miami", cityKey: "x318.network.city.miami", area: 305 },
+  { code: "NY", city: "New York", cityKey: "x318.network.city.newYork", area: 212 },
+  { code: "IL", city: "Chicago", cityKey: "x318.network.city.chicago", area: 312 },
+  { code: "GA", city: "Atlanta", cityKey: "x318.network.city.atlanta", area: 404 },
 ];
 
 /* randomLocalNumber and randomTollfree used to live here. They invented an
@@ -72,6 +73,7 @@ const STATE_OPTIONS = [
 
 export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: Props) {
   const { t } = useTranslation();
+  const localName = useLocalName();
   const campaigns = useCampaignsStore((s) => s.campaigns);
   const campaign = campaigns.find((c) => c.id === campaignId);
   const allNumbers = useNumbersStore((s) => s.numbers);
@@ -168,7 +170,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         selected.size === 1
           ? t("x5.attachNumbers.toastAttachedOne")
           : t("x5.attachNumbers.toastAttachedMany").replace("{count}", String(selected.size)),
-        { description: t("x5.attachNumbers.routingTo").replace("{name}", campaign.name) },
+        { description: t("x5.attachNumbers.routingTo").replace("{name}", localName(campaign.name)) },
       );
       onOpenChange(false);
     } catch (e) {
@@ -239,7 +241,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         bought.length === 1
           ? t("x5.attachNumbers.purchasedOne")
           : t("x5.attachNumbers.purchasedMany").replace("{count}", String(bought.length)),
-        { description: t("x5.attachNumbers.attachedTo").replace("{name}", campaign.name) },
+        { description: t("x5.attachNumbers.attachedTo").replace("{name}", localName(campaign.name)) },
       );
       onOpenChange(false);
     } catch (e) {
@@ -266,7 +268,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
               <DialogTitle className="uppercase tracking-wide">{t("x5.attachNumbers.title")}</DialogTitle>
               <DialogDescription>
                 {descParts[0]}
-                <span className="font-medium text-foreground">{campaign?.name ?? t("x5.attachNumbers.thisCampaign")}</span>
+                <span className="font-medium text-foreground">{campaign ? localName(campaign.name) : t("x5.attachNumbers.thisCampaign")}</span>
                 {descParts[1]}
               </DialogDescription>
             </div>
@@ -496,7 +498,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
                   <SelectContent>
                     {STATE_OPTIONS.map((o) => (
                       <SelectItem key={o.code} value={o.code}>
-                        {o.city}, {o.code} · ({o.area})
+                        {t(o.cityKey)}, {o.code} · ({o.area})
                       </SelectItem>
                     ))}
                   </SelectContent>

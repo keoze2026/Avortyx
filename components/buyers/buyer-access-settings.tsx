@@ -33,12 +33,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 import {
   emptyBuyerAccess,
   useBuyerAccessStore,
 } from "@/lib/store/buyer-access-store";
 import { usePartnerSettingsStore } from "@/lib/store/partner-settings-store";
 import { TIMEZONES } from "@/lib/store/publisher-access-store";
+import { localizedTimezoneLabel } from "@/lib/timezones";
+import { uiLocaleTag } from "@/lib/format";
 import type { Buyer } from "@/lib/types";
 
 interface Props {
@@ -95,7 +98,7 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
         <div>
           <div className="flex items-center gap-2">
             <h2 className={embedded ? "text-base font-semibold tracking-tight" : "text-xl font-semibold tracking-tight"}>
-              {buyer.name}
+              <LocalName name={buyer.name} />
             </h2>
             <Info className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -108,7 +111,7 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
           <SelectContent>
             {TIMEZONES.map((tz) => (
               <SelectItem key={tz.value} value={tz.value}>
-                {tz.label}
+                {localizedTimezoneLabel(tz.value, tz.label, uiLocaleTag())}
               </SelectItem>
             ))}
           </SelectContent>
