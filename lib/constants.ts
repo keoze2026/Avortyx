@@ -44,6 +44,7 @@ export const ROUTES = {
   settings: "/settings",
   notifications: "/notifications",
   workspace: "/workspace",
+  gettingStarted: "/getting-started",
 
   // Suppression list — VoIP/TCPA shields + manual block list
   voipShield: "/voip-shield",

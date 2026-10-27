@@ -37,6 +37,7 @@ import { Crown, Landmark, Send,
   Newspaper,
   Gift,
   ScanFace,
+  CirclePlay,
 } from "lucide-react";
 
 import { ROUTES } from "./constants";
@@ -73,6 +74,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     items: [
       { label: "Workspace", nameKey: "nav.workspace", href: ROUTES.workspace, icon: Briefcase, roles: ["admin"] },
+      // Sir, 27 Oct: the demo video, right below Workspace.
+      { label: "Getting Started", nameKey: "nav.gettingStarted", href: ROUTES.gettingStarted, icon: CirclePlay, roles: ["admin"] },
       { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true },
       { label: "Carrier Costs", nameKey: "nav.carrierCosts", href: "/owner/carrier-costs", icon: Landmark, roles: ["admin"], superuserOnly: true },
     ],

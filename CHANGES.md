@@ -570,3 +570,16 @@ language; the public TFN Check link has a language picker. The last English
 copies in the language dictionaries were translated.
 
 Commit: see git log --grep CH-302.
+
+## CH-306 - Getting Started: the portal demo video, below Workspace
+**2026-10-27 · Portal**
+
+Sir, 27 Oct: the demo video "below Workspace". New menu item **Getting
+Started** (admins), right under Workspace, opens a page with the walkthrough
+video "Go live step by step" (4K, 2:38, plays while it loads) and its nine
+chapters beside it - Create a publisher, Create a buyer, Add destinations,
+Create a campaign, Add tracking numbers, Route calls and set revenue, Set the
+CC, Go live, Your day-to-day tools. Press a chapter to jump there; the
+chapter playing is highlighted. Labels in all four languages.
+
+Commit: see git log --grep CH-306.
