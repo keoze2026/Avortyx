@@ -119,7 +119,7 @@ export function TestsTodayCard({
         {kind && (
           <span
             className={cn(
-              "rounded border px-1.5 py-0.5 text-[10px] font-medium",
+              "inline-block min-w-[5.25rem] rounded border px-1.5 py-0.5 text-center text-[10px] font-medium",
               type === "main" && "border-accent/40 bg-accent/10 text-accent",
               type === "team" && "border-border bg-muted/50 text-foreground",
               type === "publisher" && "border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 text-[color:var(--warning)]",
@@ -166,8 +166,11 @@ export function TestsTodayCard({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-5 text-[10px] uppercase tracking-wider">{t("tfnCheck.table.number")}</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider">{t("x343.by.header")}</TableHead>
+                <TableHead className="pl-5 text-left text-[10px] uppercase tracking-wider">{t("tfnCheck.table.number")}</TableHead>
+                {/* CH-357 (Sir, 29 Oct: "organize in one parallel line"): Number and
+                    Run by start at the same left edge on every row, and every badge
+                    is the same width, so the names line up too. */}
+                <TableHead className="text-left text-[10px] uppercase tracking-wider">{t("x343.by.header")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("x342.today.checked")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("x342.today.lastResult")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.tests")}</TableHead>
@@ -183,13 +186,13 @@ export function TestsTodayCard({
                 return (
                   <React.Fragment key={n.number}>
                     <TableRow className="cursor-pointer" onClick={() => toggle(n.number)}>
-                      <TableCell className="whitespace-nowrap pl-5 font-mono text-xs">
+                      <TableCell className="whitespace-nowrap pl-5 text-left font-mono text-xs">
                         <span className="inline-flex items-center gap-1.5">
                           {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                           {n.number}
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs">
+                      <TableCell className="text-left text-xs">
                         {/* Until the server sends last_by (backend CH-343), the newest test's
                             own "by" fills the column: the person's name. */}
                         <Runner

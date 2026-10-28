@@ -752,3 +752,12 @@ so any consumer can see how many times TFNs were tested."
   failed)" - also on share links.
 
 Backend half: CH-341 in call_platform. Commit: see git log --grep CH-341.
+
+## CH-357 - TFN Check: "Run by" in one straight line
+**2026-10-29 · TFN Check**
+
+Sir, 29 Oct: "Organize in one parallel line". In Today's checks and test
+calls, Number and Run by start at the same left edge on every row (they were
+centred, so each row started somewhere else), and every Run by badge
+(Publisher, Main account, Team...) has the same width, so the names after it
+line up too.
