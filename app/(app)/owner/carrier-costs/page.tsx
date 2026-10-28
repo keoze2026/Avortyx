@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { MonthPicker } from "@/components/shared/month-picker";
 import { CompanyProfitCard } from "@/components/owner/company-profit-card";
+import { ExpensesCard } from "@/components/owner/expenses-card";
 import { RoutingCostCard, routeNameLabel } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -384,6 +385,10 @@ export default function CarrierCostsPage() {
           minus what the carriers charge us. Today / Yesterday / Week / Month /
           dates like the routing cost, opening on Today (CH-334). */}
       <CompanyProfitCard />
+
+      {/* The day's expenses, line by line (CH-336): TFN cost, each carrier's
+          minutes and cost, routing, and the total. */}
+      <ExpensesCard />
 
       {/* The month's whole bill in one place (CH-254): TFN carriers and routing. */}
       {data?.summary && (

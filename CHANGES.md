@@ -716,3 +716,23 @@ in pop up alert, not as main account".
   kept per login, so another login's list on the same browser is not used.
 
 Backend half: CH-335 in call_platform. Commit: see git log --grep CH-335.
+
+## CH-336 - Carrier Costs: the day's expenses, line by line
+**2026-10-28 · Owner › Carrier Costs**
+
+Sir, 28 Oct: "For daily create like this - TFN cost, Xolo HR min, Freedom HR
+min and their cost, then expense of that day".
+
+- New "Expenses" card under the company profit, with the same Today /
+  Yesterday / This week / This month / dates (opens on Today):
+  TFN cost (monthly TFN fees by the day), one tile per TFN carrier
+  ("XOLO High Risk minutes", "Freedom minutes"...: cost, and minutes x rate
+  under it), monthly charges by the day, routing minutes x rate, routing
+  monthly fee by the day, and the total expense of those days.
+- The total equals the profit card's "Carrier costs" for the same days.
+  TFNs with calls but no carrier are flagged under it (no rate, so not in
+  the total).
+- A carrier's rate is the one under its Edit rates (e.g. Freedom $0.0035 a
+  minute).
+
+Backend half: CH-336 in call_platform (/api/owner/expenses). Commit: see git log --grep CH-336.
