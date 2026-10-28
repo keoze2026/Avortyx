@@ -227,8 +227,8 @@ export function toE164(value: string | null | undefined): string {
  * change to it: only the Caller ID column renders the bare digits.
  */
 export function formatCallerId(value: string | null | undefined): string {
-  // A caller ID that is a word, not a number: "Test" on a TFN test call
-  // (CH-313). toE164 would turn it into nothing.
+  // A caller ID that is a word, not a number: "TFN Test" on a TFN test call
+  // (CH-313, CH-344). toE164 would turn it into nothing.
   const raw = (value ?? "").trim();
   if (raw && !/\d/.test(raw)) return raw;
   return toE164(value).replace(/^\+/, "");
