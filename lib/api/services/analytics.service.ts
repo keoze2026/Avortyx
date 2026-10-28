@@ -689,8 +689,10 @@ export const analyticsService = {
     query: Omit<CallLogQuery, "page" | "pageSize">,
     options: { timeZone?: string } = {},
   ): Promise<Call[]> {
-    const PAGE_SIZE = 500;
-    const MAX_PAGES = 40;
+    // 2000 a request, the most the server gives (CH-345): a week is ~7
+    // requests instead of ~28. Same 20,000-row backstop as before.
+    const PAGE_SIZE = 2000;
+    const MAX_PAGES = 10;
     /** Pages fetched at the same time once the total is known. 6, not 4
      *  (CH-232): a month is ~22 pages, so 4 rounds instead of 6. */
     const PARALLEL = 6;
