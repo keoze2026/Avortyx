@@ -1,4 +1,4 @@
-# Avortyx portal - notes for Claude
+# Avortyx portal - notes for the review bot
 
 Read `docs/SYSTEM-MAP.md` first (a copy of the backend's): what each section
 does, which API and tables it reads, and what must always stay true. Past
@@ -24,7 +24,7 @@ changes are in `CHANGES.md` (search it for any name before changing it).
 
 ## Reviewing a pull request (Avortyx Guard)
 
-The review job (`.github/workflows/claude-review.yml`) asks for an impact
+The review bot (`.github/workflows/review-bot.yml`) asks for an impact
 report: sections touched, other sections that share the same store, service
 or component, backend changes needed, server restart needed, missing
 translations, tests or checks that prove it.

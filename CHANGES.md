@@ -772,8 +772,9 @@ to check everything". Everything is described in docs/AVORTYX-GUARD.md.
   every `/api/...` path the portal calls exists on the server
   (scripts/check-api-paths.mjs against contract/api-paths.txt, fetched fresh
   from the backend when BACKEND_REPO_TOKEN is set), no secrets in the code.
-- `.github/workflows/claude-review.yml`: Claude posts an impact report on
-  every pull request, reading CLAUDE.md and docs/SYSTEM-MAP.md.
+- `.github/workflows/review-bot.yml`: the review bot posts an impact report
+  on every pull request, reading docs/REVIEW-BOT.md and docs/SYSTEM-MAP.md
+  (CH-356: one secret, REVIEW_BOT_API_KEY; no GitHub app to install).
 - `.github/workflows/smoke.yml` + scripts/smoke.cjs: after every production
   deploy and every 6 hours a robot logs in and opens the main pages; a
   failure goes to Telegram with a screenshot.
