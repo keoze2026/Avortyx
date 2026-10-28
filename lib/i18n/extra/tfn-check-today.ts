@@ -1,0 +1,53 @@
+/** CH-342: TFN Check's today list counts checks too, on the portal and the share link (Sir, 28 Oct). */
+import type { ExtraTranslations } from "./types";
+
+export const tfnCheckToday: ExtraTranslations = {
+  en: {
+    "x342.today.title": "Today's checks and test calls",
+    "x342.today.subtitle": "Every number checked or test-called since 12:00 AM EST, with how many times. The list starts again at midnight EST.",
+    "x342.today.totals": "{checks} checks · {tests} test calls today",
+    "x342.today.empty": "No numbers checked or tested yet today.",
+    "x342.today.checked": "Checked",
+    "x342.today.lastResult": "Check result",
+    "x342.today.testResult": "Last test result",
+    "x342.today.lastAt": "Last activity",
+    "x342.today.lastChecked": "Checked {count}× today, last at {time}.",
+    "x342.today.noTests": "No test calls today.",
+  },
+  ru: {
+    "x342.today.title": "Проверки и тестовые звонки за сегодня",
+    "x342.today.subtitle": "Каждый номер, проверенный или протестированный с 00:00 EST, и сколько раз. Список начинается заново в полночь EST.",
+    "x342.today.totals": "Сегодня проверок: {checks} · тестовых звонков: {tests}",
+    "x342.today.empty": "Сегодня номера ещё не проверялись и не тестировались.",
+    "x342.today.checked": "Проверок",
+    "x342.today.lastResult": "Результат проверки",
+    "x342.today.testResult": "Последний тест",
+    "x342.today.lastAt": "Последнее действие",
+    "x342.today.lastChecked": "Проверен сегодня {count} раз(а), последний раз в {time}.",
+    "x342.today.noTests": "Сегодня тестовых звонков не было.",
+  },
+  ja: {
+    "x342.today.title": "本日のチェックとテストコール",
+    "x342.today.subtitle": "午前0時（EST）以降にチェックまたはテストコールしたすべての番号と、その回数。リストは午前0時（EST）にリセットされます。",
+    "x342.today.totals": "本日 チェック {checks} 回 · テストコール {tests} 回",
+    "x342.today.empty": "本日はまだ番号のチェックやテストがありません。",
+    "x342.today.checked": "チェック回数",
+    "x342.today.lastResult": "チェック結果",
+    "x342.today.testResult": "最新のテスト結果",
+    "x342.today.lastAt": "最終操作",
+    "x342.today.lastChecked": "本日 {count} 回チェック、最終 {time}。",
+    "x342.today.noTests": "本日のテストコールはありません。",
+  },
+  zh: {
+    "x342.today.title": "今日检查与测试电话",
+    "x342.today.subtitle": "美国东部时间 (EST) 午夜 12 点以来检查或测试过的每个号码及次数。列表在 EST 午夜重新开始。",
+    "x342.today.totals": "今日检查 {checks} 次 · 测试电话 {tests} 次",
+    "x342.today.empty": "今天还没有检查或测试过号码。",
+    "x342.today.checked": "检查次数",
+    "x342.today.lastResult": "检查结果",
+    "x342.today.testResult": "最近测试结果",
+    "x342.today.lastAt": "最近操作",
+    "x342.today.lastChecked": "今天检查 {count} 次，最近一次在 {time}。",
+    "x342.today.noTests": "今天没有测试电话。",
+  },
+};

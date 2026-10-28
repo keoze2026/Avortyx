@@ -4,12 +4,13 @@
  *   POST   /api/numbers/check/              portal check (optionally queues test calls)
  *   POST   /api/numbers/check/test          one test call for one number (CH-239)
  *   GET    /api/numbers/check/test/{id}     that test call, step by step
- *   GET    /api/numbers/check/today         every test call since 12 AM Eastern (CH-341)
+ *   GET    /api/numbers/check/today         every check and test call since 12 AM Eastern (CH-341/342)
  *   GET    /api/numbers/check/links         share links
  *   POST   /api/numbers/check/links         make a share link
  *   DELETE /api/numbers/check/links/{id}    cancel a share link
  *   GET    /api/public/tfn-check/{token}    public: the link's name
  *   POST   /api/public/tfn-check/{token}    public: check (no login)
+ *   GET    /api/public/tfn-check/{token}/today  public: this link's checks today (CH-342)
  */
 import { http } from "@/lib/api/http";
 
@@ -59,16 +60,65 @@ export interface TfnTodayNumber {
   tests: number;
   passed: number;
   failed: number;
+  /** The latest check or test call today. */
   lastAt: string;
-  lastStatus: TfnTestCall["status"];
+  /** The last test call's result; null when the number was only checked. */
+  lastStatus: TfnTestCall["status"] | null;
+  /** Times checked today (CH-342); 0 when it was only test-called. */
+  checks: number;
+  lastCheckedAt: string | null;
+  lastResult: TfnStatus | null;
 }
 
 export interface TfnTestsToday {
   since: string;
   resetsAt: string;
+  /** Test calls today. */
   total: number;
+  /** Checks today (CH-342). */
+  totalChecks: number;
   numbers: TfnTodayNumber[];
   tests: TfnTestHistoryRow[];
+}
+
+interface TodayWire {
+  since: string;
+  resets_at: string;
+  total: number;
+  total_checks?: number;
+  numbers: Array<{
+    number: string;
+    tests: number;
+    passed: number;
+    failed: number;
+    last_at: string;
+    last_status: TfnTestCall["status"] | null;
+    checks?: number;
+    last_checked_at?: string | null;
+    last_result?: TfnStatus | null;
+  }>;
+  tests: Array<TestWire & { trigger: string; by: string; created_at: string }>;
+}
+
+function todayFromWire(w: TodayWire): TfnTestsToday {
+  return {
+    since: w.since,
+    resetsAt: w.resets_at,
+    total: w.total ?? 0,
+    totalChecks: w.total_checks ?? 0,
+    numbers: (w.numbers ?? []).map((n) => ({
+      number: n.number,
+      tests: n.tests,
+      passed: n.passed,
+      failed: n.failed,
+      lastAt: n.last_at,
+      lastStatus: n.last_status ?? null,
+      checks: n.checks ?? 0,
+      lastCheckedAt: n.last_checked_at ?? null,
+      lastResult: n.last_result ?? null,
+    })),
+    tests: (w.tests ?? []).map((t) => ({ ...testFromWire(t), trigger: t.trigger, by: t.by, createdAt: t.created_at })),
+  };
 }
 
 export interface TfnCheckResponse {
@@ -208,27 +258,17 @@ export const tfnCheckService = {
   },
 
   async testsToday(): Promise<TfnTestsToday> {
-    const w = await http.get<{
-      since: string;
-      resets_at: string;
-      total: number;
-      numbers: Array<{ number: string; tests: number; passed: number; failed: number; last_at: string; last_status: TfnTestCall["status"] }>;
-      tests: Array<TestWire & { trigger: string; by: string; created_at: string }>;
-    }>("/api/numbers/check/today", { rawResponse: true });
-    return {
-      since: w.since,
-      resetsAt: w.resets_at,
-      total: w.total ?? 0,
-      numbers: (w.numbers ?? []).map((n) => ({
-        number: n.number,
-        tests: n.tests,
-        passed: n.passed,
-        failed: n.failed,
-        lastAt: n.last_at,
-        lastStatus: n.last_status,
-      })),
-      tests: (w.tests ?? []).map((t) => ({ ...testFromWire(t), trigger: t.trigger, by: t.by, createdAt: t.created_at })),
-    };
+    const w = await http.get<TodayWire>("/api/numbers/check/today", { rawResponse: true });
+    return todayFromWire(w);
+  },
+
+  /** A share link's checks today and their test calls (CH-342). */
+  async publicToday(token: string): Promise<TfnTestsToday> {
+    const w = await http.get<TodayWire>(`/api/public/tfn-check/${encodeURIComponent(token)}/today`, {
+      anonymous: true,
+      rawResponse: true,
+    });
+    return todayFromWire(w);
   },
 
   async listLinks(): Promise<TfnCheckLink[]> {

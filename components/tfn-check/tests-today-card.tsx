@@ -5,6 +5,10 @@
  * 12 AM Eastern stays listed until the next Eastern midnight, so anyone can
  * see how many times each TFN was tested today and how each test went. A
  * publisher login sees its own numbers only (the backend scopes it).
+ *
+ * CH-342: the checks too - how many times each number was checked today and
+ * its last result - and the same card on the share-link page, where a partner
+ * sees only the numbers that link checked.
  */
 import * as React from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Loader2, RotateCw, XCircle } from "lucide-react";
@@ -20,6 +24,7 @@ import {
 } from "@/lib/api/services/tfn-check.service";
 import { tfnStepText } from "@/lib/i18n/server-text";
 import { cn } from "@/lib/utils";
+import { TfnStatusChip } from "./tfn-check-panel";
 
 const REFRESH_MS = 30_000;
 
@@ -32,8 +37,9 @@ function easternTime(iso: string): string {
   }).format(new Date(iso));
 }
 
-function Result({ status }: { status: TfnTestHistoryRow["status"] }) {
+function Result({ status }: { status: TfnTestHistoryRow["status"] | null }) {
   const { t } = useTranslation();
+  if (!status) return <span className="text-muted-foreground">—</span>;
   if (status === "passed")
     return (
       <span className="inline-flex items-center gap-1 text-[color:var(--success)]">
@@ -53,7 +59,14 @@ function Result({ status }: { status: TfnTestHistoryRow["status"] }) {
   );
 }
 
-export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
+export function TestsTodayCard({
+  refreshKey = 0,
+  load: loadToday = tfnCheckService.testsToday,
+}: {
+  refreshKey?: number;
+  /** The share-link page reads its own list (CH-342). */
+  load?: () => Promise<TfnTestsToday>;
+}) {
   const { t, locale } = useTranslation();
   const [data, setData] = React.useState<TfnTestsToday | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -62,13 +75,13 @@ export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      setData(await tfnCheckService.testsToday());
+      setData(await loadToday());
     } catch {
       // Shown again on the next refresh.
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadToday]);
 
   React.useEffect(() => {
     void load();
@@ -102,12 +115,14 @@ export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
     <Card className="overflow-hidden p-0">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
         <div>
-          <div className="text-sm font-semibold">{t("tfnCheck.today.title")}</div>
-          <div className="text-[11px] text-muted-foreground">{t("tfnCheck.today.subtitle")}</div>
+          <div className="text-sm font-semibold">{t("x342.today.title")}</div>
+          <div className="text-[11px] text-muted-foreground">{t("x342.today.subtitle")}</div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs tabular-nums text-muted-foreground">
-            {t("tfnCheck.today.total").replace("{count}", String(data?.total ?? 0))}
+            {t("x342.today.totals")
+              .replace("{checks}", String(data?.totalChecks ?? 0))
+              .replace("{tests}", String(data?.total ?? 0))}
           </span>
           <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading} title={t("tfnCheck.refresh")}>
             <RotateCw className={cn("h-4 w-4", loading && "animate-spin")} />
@@ -116,18 +131,20 @@ export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
       </div>
 
       {(data?.numbers.length ?? 0) === 0 ? (
-        <div className="px-5 py-8 text-center text-xs text-muted-foreground">{t("tfnCheck.today.empty")}</div>
+        <div className="px-5 py-8 text-center text-xs text-muted-foreground">{t("x342.today.empty")}</div>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-5 text-[10px] uppercase tracking-wider">{t("tfnCheck.table.number")}</TableHead>
+                <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("x342.today.checked")}</TableHead>
+                <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("x342.today.lastResult")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.tests")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.passed")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.failed")}</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider">{t("tfnCheck.today.last")}</TableHead>
-                <TableHead className="pr-5 text-right text-[10px] uppercase tracking-wider">{t("tfnCheck.today.lastAt")}</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider">{t("x342.today.testResult")}</TableHead>
+                <TableHead className="pr-5 text-right text-[10px] uppercase tracking-wider">{t("x342.today.lastAt")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -142,6 +159,10 @@ export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
                           {n.number}
                         </span>
                       </TableCell>
+                      <TableCell className="text-center text-xs font-semibold tabular-nums">{n.checks}</TableCell>
+                      <TableCell className="text-center">
+                        {n.lastResult ? <TfnStatusChip status={n.lastResult} /> : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell className="text-center text-xs font-semibold tabular-nums">{n.tests}</TableCell>
                       <TableCell className="text-center text-xs tabular-nums text-[color:var(--success)]">{n.passed}</TableCell>
                       <TableCell className="text-center text-xs tabular-nums text-destructive">{n.failed}</TableCell>
@@ -154,8 +175,18 @@ export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
                     </TableRow>
                     {isOpen && (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={6} className="bg-muted/20 px-5 py-2">
+                        <TableCell colSpan={8} className="bg-muted/20 px-5 py-2">
                           <div className="space-y-1">
+                            {n.lastCheckedAt && (
+                              <div className="text-[11px] text-muted-foreground">
+                                {t("x342.today.lastChecked")
+                                  .replace("{time}", `${easternTime(n.lastCheckedAt)} EST`)
+                                  .replace("{count}", String(n.checks))}
+                              </div>
+                            )}
+                            {(byNumber[n.number] ?? []).length === 0 && (
+                              <div className="text-[11px] text-muted-foreground">{t("x342.today.noTests")}</div>
+                            )}
                             {(byNumber[n.number] ?? []).map((row) => (
                               <div key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
                                 <span className="w-24 tabular-nums text-muted-foreground">{easternTime(row.createdAt)} EST</span>

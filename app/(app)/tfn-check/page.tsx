@@ -24,13 +24,15 @@ export default function TfnCheckPage() {
   // "TFN Test Calls" on in its Publisher Access, and no share links.
   const partner = usePartnerPermissions();
   const mayTest = !partner.isPartner || partner.can("tfn_test");
-  // CH-341: today's test history refreshes when a test call finishes.
+  // CH-341: today's history refreshes when a test call finishes, and
+  // (CH-342) after every Check, which is counted in it too.
   const [testsDone, setTestsDone] = React.useState(0);
   const onTestDone = React.useCallback(() => setTestsDone((n) => n + 1), []);
-  const onCheck = React.useCallback(
-    (numbers: string, test: boolean) => tfnCheckService.check(numbers, test),
-    [],
-  );
+  const onCheck = React.useCallback(async (numbers: string, test: boolean) => {
+    const res = await tfnCheckService.check(numbers, test);
+    setTestsDone((n) => n + 1);
+    return res;
+  }, []);
 
   return (
     <div className="space-y-8">

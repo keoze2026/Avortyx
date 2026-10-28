@@ -12,6 +12,7 @@ import { Link2Off, Loader2, ShieldCheck } from "lucide-react";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { LanguageToggle } from "@/components/shared/language-toggle";
+import { TestsTodayCard } from "@/components/tfn-check/tests-today-card";
 import { TfnCheckPanel } from "@/components/tfn-check/tfn-check-panel";
 import { useTranslation } from "@/hooks/use-translation";
 import { tfnCheckService } from "@/lib/api/services/tfn-check.service";
@@ -45,10 +46,18 @@ export default function PublicTfnCheckPage() {
     };
   }, [token]);
 
+  // Today's checks from this link and their test calls, kept until 12 AM
+  // Eastern (CH-342): read again after every Check.
+  const [checks, setChecks] = React.useState(0);
   const onCheck = React.useCallback(
-    (numbers: string) => tfnCheckService.publicCheck(token, numbers),
+    async (numbers: string) => {
+      const res = await tfnCheckService.publicCheck(token, numbers);
+      setChecks((n) => n + 1);
+      return res;
+    },
     [token],
   );
+  const loadToday = React.useCallback(() => tfnCheckService.publicToday(token), [token]);
 
   return (
     <main className="dark min-h-screen bg-background text-foreground">
@@ -86,7 +95,12 @@ export default function PublicTfnCheckPage() {
           </div>
         )}
 
-        {state === "ready" && <TfnCheckPanel onCheck={onCheck} />}
+        {state === "ready" && (
+          <div className="space-y-4">
+            <TfnCheckPanel onCheck={onCheck} />
+            <TestsTodayCard load={loadToday} refreshKey={checks} />
+          </div>
+        )}
 
         {state === "ready" && <StatusLegend />}
       </div>
