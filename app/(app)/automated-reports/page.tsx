@@ -24,6 +24,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
+import { TeamReportCard } from "@/components/automated-reports/team-report-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -118,6 +119,9 @@ export default function AutomatedReportsPage() {
           );
         })}
       </div>
+
+      {/* The team report from our own reports bot (CH-347). */}
+      <TeamReportCard />
 
       <Card>
         <CardContent className="p-0">
