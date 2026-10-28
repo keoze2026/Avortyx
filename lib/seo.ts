@@ -35,7 +35,29 @@ export function originFor(host: string | null | undefined): string {
   return `https://${h}`;
 }
 
-/** The pages Google may list on a host. */
+/**
+ * CH-340 (Sir, 28 Oct: "remove these details", "remove all Vercel details"):
+ * the only addresses Google may list. Google showed the site under
+ * www.v0l1.com (the recordings domain, which must never be linked to
+ * Avortyx) and under *.vercel.app. Any other host the same site answers on -
+ * v0l1.com, avortyx.vercel.app, preview links - now tells search engines to
+ * list nothing: "noindex" on every page and "Disallow: /" in robots.txt.
+ * NEXT_PUBLIC_INDEXED_HOSTS (comma-separated) overrides the list.
+ */
+const INDEXED_HOSTS = (process.env.NEXT_PUBLIC_INDEXED_HOSTS ||
+  "avortyx.io,www.avortyx.io,app.avortyx.io,avortyx.com,www.avortyx.com")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+
+export function isIndexedHost(host: string | null | undefined): boolean {
+  const h = (host ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
+  if (!h || h.startsWith("localhost") || h.startsWith("127.")) return true;
+  return INDEXED_HOSTS.includes(h);
+}
+
+/** The pages Google may list on a host (none on a host that is not ours to list). */
 export function publicPathsFor(host: string | null | undefined): readonly string[] {
+  if (!isIndexedHost(host)) return [];
   return isPortalHost(host) ? ["/login"] : PUBLIC_PATHS;
 }

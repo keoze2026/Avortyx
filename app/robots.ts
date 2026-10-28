@@ -1,12 +1,15 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 
-import { PRIVATE_PATHS, isPortalHost, originFor } from "@/lib/seo";
+import { PRIVATE_PATHS, isIndexedHost, isPortalHost, originFor } from "@/lib/seo";
 
 /** /robots.txt - CH-319: the sign-in page (portal) or the landing page (public
  *  site) is listed; the product is not. */
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const host = (await headers()).get("host");
+  // CH-340: v0l1.com, *.vercel.app and every other host that is not ours to
+  // list: nothing may be crawled, and no sitemap is offered.
+  if (!isIndexedHost(host)) return { rules: { userAgent: "*", disallow: "/" } };
   const origin = originFor(host);
   const rules = isPortalHost(host)
     ? {

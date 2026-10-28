@@ -26,6 +26,8 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isIndexedHost } from "@/lib/seo";
+
 const PORTAL_HOSTS = (process.env.PORTAL_HOSTS ?? "")
   .split(",")
   .map((h) => h.trim().toLowerCase())
@@ -41,6 +43,14 @@ function hostOf(req: NextRequest): string {
 }
 
 export function proxy(req: NextRequest) {
+  const res = route(req);
+  // CH-340: a host that is not ours to list (v0l1.com, *.vercel.app, previews)
+  // is never indexed, whatever page it serves.
+  if (!isIndexedHost(hostOf(req))) res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  return res;
+}
+
+function route(req: NextRequest): NextResponse {
   if (PORTAL_HOSTS.length === 0) return NextResponse.next();
 
   // "/careers/" and "/careers" are the same page.
