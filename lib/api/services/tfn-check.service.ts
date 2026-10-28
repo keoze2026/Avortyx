@@ -51,6 +51,8 @@ export interface TfnCheckResult {
   testsTodayFailed?: number;
   /** CH-358, team only: why the number is not taking calls. */
   why?: string;
+  /** CH-360: when the carrier watch last saw this number's carrier deliver. */
+  carrierCheckedAt?: string | null;
 }
 
 /** Today's test history on TFN Check (CH-341): kept until 12 AM Eastern. */
@@ -219,6 +221,7 @@ interface Wire {
     tests_today_passed?: number;
     tests_today_failed?: number;
     why?: string;
+    carrier_checked_at?: string | null;
   }>;
   summary: Record<TfnStatus, number>;
   invalid: string[];
@@ -243,6 +246,7 @@ function fromWire(w: Wire): TfnCheckResponse {
       testsTodayPassed: r.tests_today_passed,
       testsTodayFailed: r.tests_today_failed,
       why: r.why,
+      carrierCheckedAt: r.carrier_checked_at ?? null,
     })),
     summary: w.summary ?? ({} as Record<TfnStatus, number>),
     invalid: w.invalid ?? [],

@@ -42,12 +42,20 @@ export function tfnDetail(t: T, locale: string, r: TfnCheckResult): string {
     case "not_ready":
       return t(`tfnCheck.detail.${r.status}`);
     case "not_working":
+      // CH-360: its carrier stopped delivering (carrier watch).
+      if (r.detail.startsWith("Calls to this number are not reaching us")) return t("x360.detail.carrierDown");
       return r.lastTestAt ? fill(t("tfnCheck.detail.not_working"), { ago: ago(r.lastTestAt) }) : r.detail;
     case "working":
+      if (r.carrierCheckedAt && r.detail.startsWith("The carrier delivered"))
+        return fill(t("x360.detail.carrierOk"), { ago: ago(r.carrierCheckedAt) });
       if (r.lastCallAt) return fill(t("tfnCheck.detail.lastCall"), { ago: ago(r.lastCallAt) });
       if (r.lastTestAt) return fill(t("tfnCheck.detail.testReached"), { ago: ago(r.lastTestAt) });
       return r.detail;
     case "active": {
+      // CH-360: "Working" needs proof from the last hour.
+      if (r.detail.includes("not proven in the last hour") && r.lastCallAt)
+        return fill(t("x360.detail.activeOld"), { ago: ago(r.lastCallAt) });
+      if (r.detail === "Active, no calls in the last hour.") return t("x360.detail.activeHour");
       const hours = /last (\d+) hours/.exec(r.detail)?.[1] ?? "24";
       return fill(t("tfnCheck.detail.active"), { hours });
     }

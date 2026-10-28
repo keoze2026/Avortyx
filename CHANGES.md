@@ -804,3 +804,13 @@ Sir, 29 Oct: "for the Run by why are these still empty". With backend
 CH-359 Run by names who did the latest check or test call; a check through a
 share link shows a "Share link" badge with the link's name ("Your link" on
 the link itself). All four languages.
+
+## CH-360 - TFN Check: carrier watch and "proven in the last hour"
+**2026-10-29 · TFN Check**
+
+Sir, 29 Oct: "our system was showing the TFN as fine ... the TFN was not
+picking up calls due to a recharge issue". With backend CH-360: a TFN whose
+carrier stopped delivering reads "Calls to this number are not reaching us
+right now"; Working is proven within the last hour (including "The carrier
+delivered a test call 10 minutes ago"); otherwise Active, "not proven in the
+last hour". Legend updated. All four languages.
