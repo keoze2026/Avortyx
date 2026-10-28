@@ -82,7 +82,9 @@ export function TfnStatusChip({ status, label }: { status: TfnStatus; label?: st
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        // One size for every status (Sir, 29 Oct: "All boxes same size"): wide
+        // enough for the longest in any language ("Не принимает звонки"), text centred.
+        "inline-flex min-w-[8.75rem] items-center justify-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium",
         TFN_STATUS_TONE[status],
       )}
     >
