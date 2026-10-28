@@ -1,0 +1,46 @@
+# Avortyx Guard, layer 1 (CH-354): every portal change is type-checked before
+# it can merge. Branch protection on main requires "portal checks" to pass.
+# Vercel still builds a preview of every pull request.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portal:
+    name: portal checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+      - name: No new type errors
+        # The old errors (translations aside) are counted in
+        # .github/type-errors-allowed; a change may lower it, never raise it.
+        run: |
+          allowed=$(cat .github/type-errors-allowed)
+          pnpm exec tsc --noEmit -p . 2>&1 | grep "error TS" | grep -v "lib/i18n/translations/" > /tmp/ts-errors.txt || true
+          n=$(wc -l < /tmp/ts-errors.txt)
+          echo "Type errors: $n (allowed $allowed)"
+          if [ "$n" -gt "$allowed" ]; then
+            echo "New type errors:"; cat /tmp/ts-errors.txt; exit 1
+          fi
+      - name: No secrets in the code
+        run: |
+          if git grep -nE '[0-9]{8,10}:AA[A-Za-z0-9_-]{30,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}' -- . ':!*.md' ':!pnpm-lock.yaml' ':!package-lock.json'; then
+            echo "A token or key is in the code. Move it to the Vercel environment." && exit 1
+          fi

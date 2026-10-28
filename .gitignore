@@ -31,5 +31,8 @@ next-env.d.ts
 .claude/code-history
 .claude-code-history
 
-.github
+.github/*
+# Avortyx Guard (CH-354): the automatic checks are kept in git.
+!.github/workflows/
+!.github/type-errors-allowed
 .gitignore
