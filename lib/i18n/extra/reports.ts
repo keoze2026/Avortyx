@@ -7,7 +7,7 @@ import type { ExtraTranslations } from "./types";
 
 export const reports: ExtraTranslations = {
   en: {
-    "toolsUI.reports.callLog.failReason.callerIdBlocked": "Callerid Blocked",
+    "toolsUI.reports.callLog.failReason.callerIdBlocked": "CallerId Blocked",
     "toolsUI.reports.summary.drill.rowHint": "Show only this campaign",
     "toolsUI.reports.summary.drill.rowHintActive": "Show all campaigns again",
     "toolsUI.reports.summary.drill.clear": "Show all campaigns",

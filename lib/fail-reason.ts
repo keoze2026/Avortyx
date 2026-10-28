@@ -14,14 +14,20 @@
  * The words the portal uses for a fail reason (screen and export):
  *   "Duplicate call" / "Duplicate call blocked"  ->  "Duplicate Call"
  *   "Campaign cap reached" (any cap)              ->  "Overflow Missed"
- *   "Callerid Blocked" (a caller the team blocked) ->  "Callerid Blocked"
+ *   Any blocked caller ID - "CallerId Blocked", the older "Callerid Blocked",
+ *   "Caller is on a do-not-call register", "Caller flagged as spam / fraud",
+ *   "Caller is blacklisted" ->  "CallerId Blocked" (CH-349, Sir 28 Oct:
+ *   "Comment should only be CallerId Blocked")
  *   Any "Destination Missed" / "No Destination"      ->  "No Destination"
  *     (Sir: never "Destination Missed"; older rows still carry that wording)
  *   "No Answer": the call was sent to the line and did not connect (CH-193)
  * Anything else: each word starts with a capital, "blocked" dropped.
  */
-/** "Callerid Blocked" / "Caller ID Blocked", as the backend writes it for a blocked caller. */
-const CALLER_ID_BLOCKED = /^caller\s*-?\s*id\s*blocked$/i;
+/** A blocked caller ID, in every wording the backend has written for it
+ *  (backend routing/comments.py has the same rule, CH-349). */
+const CALLER_ID_BLOCKED =
+  /^caller\s*-?\s*id\s*blocked$|do[\s-]*not[\s-]*call|caller\s+flagged\s+as\s+(spam|fraud)|caller\s+is\s+blacklisted|blacklisted\s+number/i;
+const CALLER_ID_BLOCKED_TEXT = "CallerId Blocked";
 const DESTINATION_MISSED = /destination\s*missed/i;
 const NO_DESTINATION = /^no[\s_]*destination$/i;
 
@@ -38,7 +44,7 @@ export function failReasonLabel(reason: string | null | undefined): string {
   if (/duplicate/i.test(raw)) return "Duplicate Call";
   // A call from a number on Blocked Numbers (backend CH-136). Kept whole -
   // the "blocked" trim below would leave just "Callerid".
-  if (CALLER_ID_BLOCKED.test(raw)) return "Callerid Blocked";
+  if (CALLER_ID_BLOCKED.test(raw)) return CALLER_ID_BLOCKED_TEXT;
   if (/cap\s*reached|overflow/i.test(raw)) return "Overflow Missed";
   // The destination side could not take the call. Old rows say "Destination
   // Missed" (with or without a reason in brackets); new ones say it already.

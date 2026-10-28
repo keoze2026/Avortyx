@@ -4,7 +4,7 @@
  * BLOCKED NUMBERS on a publisher's Edit page.
  *
  * A caller added here is rejected on this publisher's tracking numbers only
- * (shown as a missed call, "Callerid Blocked"). The same caller still goes
+ * (shown as a missed call, "CallerId Blocked"). The same caller still goes
  * through on every other publisher. Saved on the server at once, no Save
  * button. The workspace-wide list (sidebar > Blocked Numbers) is separate.
  */

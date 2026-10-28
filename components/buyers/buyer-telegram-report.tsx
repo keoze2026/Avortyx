@@ -63,7 +63,7 @@ const COMMENTS = [
   "Not Connected",
   "Overflow Missed",
   "Duplicate Call",
-  "Callerid Blocked",
+  "CallerId Blocked",
   "Insufficient Funds",
 ];
 

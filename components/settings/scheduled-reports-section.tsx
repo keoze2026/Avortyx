@@ -416,7 +416,7 @@ export function ScheduledReportsSection() {
                           className="h-7 w-44 rounded-md border border-border bg-background px-2 text-xs"
                         >
                           <option value="">{t("buyerReport.pickComment")}</option>
-                          {["No Destination", "Not Connected", "Overflow Missed", "Duplicate Call", "Callerid Blocked", "Insufficient Funds"].map((c) => (
+                          {["No Destination", "Not Connected", "Overflow Missed", "Duplicate Call", "CallerId Blocked", "Insufficient Funds"].map((c) => (
                             <option key={c} value={c}>
                               {reportCommentLabel(t, c)}
                             </option>

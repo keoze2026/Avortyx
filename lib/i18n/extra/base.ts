@@ -21,7 +21,7 @@ export const base: ExtraTranslations = {
     "toolsUI.suppression.columns.blockedOn": "Blocked on",
     "toolsUI.suppression.blockedNumbers.sort.newest": "Newest first",
     "toolsUI.suppression.blockedNumbers.sort.oldest": "Oldest first",
-    "toolsUI.reports.callLog.callerIdBlocked": "Callerid Blocked",
+    "toolsUI.reports.callLog.callerIdBlocked": "CallerId Blocked",
     "toolsUI.reports.callLog.actions.unblockCaller": "Unblock caller",
     "toolsUI.reports.callLog.actions.prefixBlocked": "This caller is blocked by a prefix rule. Remove it on the Blocked Numbers page.",
     "toolsUI.reports.callLog.actions.blockError": "Couldn't update the Blocked Numbers list. Please try again.",
