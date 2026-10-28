@@ -11,6 +11,7 @@ import * as React from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { CheckLinksCard } from "@/components/tfn-check/check-links-card";
 import { TfnCheckPanel } from "@/components/tfn-check/tfn-check-panel";
+import { TestsTodayCard } from "@/components/tfn-check/tests-today-card";
 import { useTranslation } from "@/hooks/use-translation";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { tfnCheckService } from "@/lib/api/services/tfn-check.service";
@@ -23,6 +24,9 @@ export default function TfnCheckPage() {
   // "TFN Test Calls" on in its Publisher Access, and no share links.
   const partner = usePartnerPermissions();
   const mayTest = !partner.isPartner || partner.can("tfn_test");
+  // CH-341: today's test history refreshes when a test call finishes.
+  const [testsDone, setTestsDone] = React.useState(0);
+  const onTestDone = React.useCallback(() => setTestsDone((n) => n + 1), []);
   const onCheck = React.useCallback(
     (numbers: string, test: boolean) => tfnCheckService.check(numbers, test),
     [],
@@ -37,7 +41,11 @@ export default function TfnCheckPage() {
         onCheck={onCheck}
         onStartTest={mayTest ? tfnCheckService.startTestCall : undefined}
         onGetTest={mayTest ? tfnCheckService.getTestCall : undefined}
+        onTestDone={onTestDone}
       />
+      {/* Every test call since 12 AM Eastern, kept until the next Eastern
+          midnight (Sir, 28 Oct, CH-341). */}
+      <TestsTodayCard refreshKey={testsDone} />
       {!partner.isPartner && (
         <CheckLinksCard
           canEdit={can("tracking-numbers", "edit")}

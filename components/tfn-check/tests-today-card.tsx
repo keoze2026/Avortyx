@@ -1,0 +1,184 @@
+"use client";
+
+/**
+ * TFN Check: today's test calls (CH-341, Sir 28 Oct). Every test call since
+ * 12 AM Eastern stays listed until the next Eastern midnight, so anyone can
+ * see how many times each TFN was tested today and how each test went. A
+ * publisher login sees its own numbers only (the backend scopes it).
+ */
+import * as React from "react";
+import { CheckCircle2, ChevronDown, ChevronRight, Loader2, RotateCw, XCircle } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTranslation } from "@/hooks/use-translation";
+import {
+  tfnCheckService,
+  type TfnTestHistoryRow,
+  type TfnTestsToday,
+} from "@/lib/api/services/tfn-check.service";
+import { tfnStepText } from "@/lib/i18n/server-text";
+import { cn } from "@/lib/utils";
+
+const REFRESH_MS = 30_000;
+
+function easternTime(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(iso));
+}
+
+function Result({ status }: { status: TfnTestHistoryRow["status"] }) {
+  const { t } = useTranslation();
+  if (status === "passed")
+    return (
+      <span className="inline-flex items-center gap-1 text-[color:var(--success)]">
+        <CheckCircle2 className="h-3.5 w-3.5" /> {t("tfnCheck.today.passed")}
+      </span>
+    );
+  if (status === "failed")
+    return (
+      <span className="inline-flex items-center gap-1 text-destructive">
+        <XCircle className="h-3.5 w-3.5" /> {t("tfnCheck.today.failed")}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 text-muted-foreground">
+      <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("tfnCheck.today.running")}
+    </span>
+  );
+}
+
+export function TestsTodayCard({ refreshKey = 0 }: { refreshKey?: number }) {
+  const { t, locale } = useTranslation();
+  const [data, setData] = React.useState<TfnTestsToday | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [open, setOpen] = React.useState<Set<string>>(new Set());
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      setData(await tfnCheckService.testsToday());
+    } catch {
+      // Shown again on the next refresh.
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+    const id = window.setInterval(() => void load(), REFRESH_MS);
+    return () => window.clearInterval(id);
+  }, [load, refreshKey]);
+
+  const byNumber = React.useMemo(() => {
+    const m: Record<string, TfnTestHistoryRow[]> = {};
+    for (const row of data?.tests ?? []) (m[row.number] ??= []).push(row);
+    return m;
+  }, [data]);
+
+  const toggle = (n: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n);
+      else next.add(n);
+      return next;
+    });
+
+  const byText = (by: string) =>
+    ({ You: t("tfnCheck.today.byYou"), Avortyx: "Avortyx", Morning: t("tfnCheck.today.byMorning"), Automatic: t("tfnCheck.today.byAuto") })[by] ?? by;
+
+  const failedStep = (row: TfnTestHistoryRow) => {
+    const s = row.steps.find((x) => !x.ok);
+    return s ? tfnStepText(t, locale, s) : "";
+  };
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
+        <div>
+          <div className="text-sm font-semibold">{t("tfnCheck.today.title")}</div>
+          <div className="text-[11px] text-muted-foreground">{t("tfnCheck.today.subtitle")}</div>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {t("tfnCheck.today.total").replace("{count}", String(data?.total ?? 0))}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading} title={t("tfnCheck.refresh")}>
+            <RotateCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+        </div>
+      </div>
+
+      {(data?.numbers.length ?? 0) === 0 ? (
+        <div className="px-5 py-8 text-center text-xs text-muted-foreground">{t("tfnCheck.today.empty")}</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-5 text-[10px] uppercase tracking-wider">{t("tfnCheck.table.number")}</TableHead>
+                <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.tests")}</TableHead>
+                <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.passed")}</TableHead>
+                <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.failed")}</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider">{t("tfnCheck.today.last")}</TableHead>
+                <TableHead className="pr-5 text-right text-[10px] uppercase tracking-wider">{t("tfnCheck.today.lastAt")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data!.numbers.map((n) => {
+                const isOpen = open.has(n.number);
+                return (
+                  <React.Fragment key={n.number}>
+                    <TableRow className="cursor-pointer" onClick={() => toggle(n.number)}>
+                      <TableCell className="whitespace-nowrap pl-5 font-mono text-xs">
+                        <span className="inline-flex items-center gap-1.5">
+                          {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                          {n.number}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center text-xs font-semibold tabular-nums">{n.tests}</TableCell>
+                      <TableCell className="text-center text-xs tabular-nums text-[color:var(--success)]">{n.passed}</TableCell>
+                      <TableCell className="text-center text-xs tabular-nums text-destructive">{n.failed}</TableCell>
+                      <TableCell className="text-xs">
+                        <Result status={n.lastStatus} />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap pr-5 text-right text-xs tabular-nums text-muted-foreground">
+                        {easternTime(n.lastAt)} EST
+                      </TableCell>
+                    </TableRow>
+                    {isOpen && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={6} className="bg-muted/20 px-5 py-2">
+                          <div className="space-y-1">
+                            {(byNumber[n.number] ?? []).map((row) => (
+                              <div key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+                                <span className="w-24 tabular-nums text-muted-foreground">{easternTime(row.createdAt)} EST</span>
+                                <span className="w-28">
+                                  <Result status={row.status} />
+                                </span>
+                                {row.by && <span className="text-muted-foreground">{byText(row.by)}</span>}
+                                {row.status === "failed" && failedStep(row) && (
+                                  <span className="text-destructive">{failedStep(row)}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </Card>
+  );
+}

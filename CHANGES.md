@@ -736,3 +736,19 @@ min and their cost, then expense of that day".
   minute).
 
 Backend half: CH-336 in call_platform (/api/owner/expenses). Commit: see git log --grep CH-336.
+
+## CH-341 - TFN Check: today's test calls kept until 12 AM Eastern
+**2026-10-28 · TFN Check**
+
+Sir, 28 Oct: "make sure TFN check history of checking remains until 12 AM EST,
+so any consumer can see how many times TFNs were tested."
+
+- New "Today's test calls" card on TFN Check: every test call since 12:00 AM
+  EST, per number - tests, passed, failed, last result and time (EST). Click
+  a number to see each test: time, result, who ran it and why it failed.
+  Refreshes every 30 seconds and when a test call finishes; starts again at
+  midnight EST. Publishers see their own numbers only.
+- In the check results, each number says "Tested N× today (x passed, y
+  failed)" - also on share links.
+
+Backend half: CH-341 in call_platform. Commit: see git log --grep CH-341.

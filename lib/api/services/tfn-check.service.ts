@@ -4,6 +4,7 @@
  *   POST   /api/numbers/check/              portal check (optionally queues test calls)
  *   POST   /api/numbers/check/test          one test call for one number (CH-239)
  *   GET    /api/numbers/check/test/{id}     that test call, step by step
+ *   GET    /api/numbers/check/today         every test call since 12 AM Eastern (CH-341)
  *   GET    /api/numbers/check/links         share links
  *   POST   /api/numbers/check/links         make a share link
  *   DELETE /api/numbers/check/links/{id}    cancel a share link
@@ -40,6 +41,34 @@ export interface TfnCheckResult {
   lastCallAt: string | null;
   lastTestAt: string | null;
   lastTestPassed: boolean | null;
+  /** Test calls since 12 AM Eastern (CH-341); absent for a number that isn't ours. */
+  testsToday?: number;
+  testsTodayPassed?: number;
+  testsTodayFailed?: number;
+}
+
+/** Today's test history on TFN Check (CH-341): kept until 12 AM Eastern. */
+export interface TfnTestHistoryRow extends TfnTestCall {
+  trigger: string;
+  by: string;
+  createdAt: string;
+}
+
+export interface TfnTodayNumber {
+  number: string;
+  tests: number;
+  passed: number;
+  failed: number;
+  lastAt: string;
+  lastStatus: TfnTestCall["status"];
+}
+
+export interface TfnTestsToday {
+  since: string;
+  resetsAt: string;
+  total: number;
+  numbers: TfnTodayNumber[];
+  tests: TfnTestHistoryRow[];
 }
 
 export interface TfnCheckResponse {
@@ -119,6 +148,9 @@ interface Wire {
     last_call_at: string | null;
     last_test_at: string | null;
     last_test_passed: boolean | null;
+    tests_today?: number;
+    tests_today_passed?: number;
+    tests_today_failed?: number;
   }>;
   summary: Record<TfnStatus, number>;
   invalid: string[];
@@ -139,6 +171,9 @@ function fromWire(w: Wire): TfnCheckResponse {
       lastCallAt: r.last_call_at,
       lastTestAt: r.last_test_at,
       lastTestPassed: r.last_test_passed,
+      testsToday: r.tests_today,
+      testsTodayPassed: r.tests_today_passed,
+      testsTodayFailed: r.tests_today_failed,
     })),
     summary: w.summary ?? ({} as Record<TfnStatus, number>),
     invalid: w.invalid ?? [],
@@ -170,6 +205,30 @@ export const tfnCheckService = {
       rawResponse: true,
     });
     return testFromWire(w);
+  },
+
+  async testsToday(): Promise<TfnTestsToday> {
+    const w = await http.get<{
+      since: string;
+      resets_at: string;
+      total: number;
+      numbers: Array<{ number: string; tests: number; passed: number; failed: number; last_at: string; last_status: TfnTestCall["status"] }>;
+      tests: Array<TestWire & { trigger: string; by: string; created_at: string }>;
+    }>("/api/numbers/check/today", { rawResponse: true });
+    return {
+      since: w.since,
+      resetsAt: w.resets_at,
+      total: w.total ?? 0,
+      numbers: (w.numbers ?? []).map((n) => ({
+        number: n.number,
+        tests: n.tests,
+        passed: n.passed,
+        failed: n.failed,
+        lastAt: n.last_at,
+        lastStatus: n.last_status,
+      })),
+      tests: (w.tests ?? []).map((t) => ({ ...testFromWire(t), trigger: t.trigger, by: t.by, createdAt: t.created_at })),
+    };
   },
 
   async listLinks(): Promise<TfnCheckLink[]> {

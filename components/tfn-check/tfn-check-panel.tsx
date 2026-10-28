@@ -93,12 +93,15 @@ export function TfnCheckPanel({
   onCheck,
   onStartTest,
   onGetTest,
+  onTestDone,
   disabled = false,
 }: {
   onCheck: (numbers: string, test: boolean) => Promise<TfnCheckResponse>;
   /** Portal only: start a test call for one number (CH-239). */
   onStartTest?: (number: string) => Promise<TfnTestCall>;
   onGetTest?: (id: string) => Promise<TfnTestCall>;
+  /** Called when a test call passes or fails, e.g. to refresh today's history (CH-341). */
+  onTestDone?: () => void;
   disabled?: boolean;
 }) {
   const { t, locale } = useTranslation();
@@ -125,7 +128,10 @@ export function TfnCheckPanel({
         try {
           const next = await onGetTest(id);
           setTests((m) => ({ ...m, [number]: next }));
-          if (next.status === "passed" || next.status === "failed") return;
+          if (next.status === "passed" || next.status === "failed") {
+            onTestDone?.();
+            return;
+          }
         } catch {
           // A missed read is retried on the next tick.
         }
@@ -136,7 +142,7 @@ export function TfnCheckPanel({
         follow(number, id, since);
       }, TEST_POLL_MS);
     },
-    [onGetTest],
+    [onGetTest, onTestDone],
   );
 
   const startTest = async (number: string) => {
@@ -330,6 +336,14 @@ export function TfnCheckPanel({
                         {tfnDetail(t, locale, r)}
                         {r.lastTestPassed === true && (
                           <CheckCircle2 className="ml-1 inline h-3 w-3 text-[color:var(--success)]" />
+                        )}
+                        {(r.testsToday ?? 0) > 0 && (
+                          <div className="mt-0.5 text-[10px]">
+                            {t("tfnCheck.today.rowCount")
+                              .replace("{count}", String(r.testsToday))
+                              .replace("{passed}", String(r.testsTodayPassed ?? 0))
+                              .replace("{failed}", String(r.testsTodayFailed ?? 0))}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell className={cn("whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground", !canTest && "pr-5")}>
