@@ -49,9 +49,13 @@ export interface TfnCheckResult {
 }
 
 /** Today's test history on TFN Check (CH-341): kept until 12 AM Eastern. */
+/** Who ran a test call (CH-343). */
+export type TfnRunnerType = "main" | "team" | "publisher" | "buyer" | "auto" | "morning" | "unknown";
+
 export interface TfnTestHistoryRow extends TfnTestCall {
   trigger: string;
   by: string;
+  byType: TfnRunnerType | null;
   createdAt: string;
 }
 
@@ -68,6 +72,9 @@ export interface TfnTodayNumber {
   checks: number;
   lastCheckedAt: string | null;
   lastResult: TfnStatus | null;
+  /** Who ran the last test call today (CH-343). */
+  lastBy: string | null;
+  lastByType: TfnRunnerType | null;
 }
 
 export interface TfnTestsToday {
@@ -96,8 +103,10 @@ interface TodayWire {
     checks?: number;
     last_checked_at?: string | null;
     last_result?: TfnStatus | null;
+    last_by?: string | null;
+    last_by_type?: TfnRunnerType | null;
   }>;
-  tests: Array<TestWire & { trigger: string; by: string; created_at: string }>;
+  tests: Array<TestWire & { trigger: string; by: string; by_type?: TfnRunnerType | null; created_at: string }>;
 }
 
 function todayFromWire(w: TodayWire): TfnTestsToday {
@@ -116,8 +125,10 @@ function todayFromWire(w: TodayWire): TfnTestsToday {
       checks: n.checks ?? 0,
       lastCheckedAt: n.last_checked_at ?? null,
       lastResult: n.last_result ?? null,
+      lastBy: n.last_by ?? null,
+      lastByType: n.last_by_type ?? null,
     })),
-    tests: (w.tests ?? []).map((t) => ({ ...testFromWire(t), trigger: t.trigger, by: t.by, createdAt: t.created_at })),
+    tests: (w.tests ?? []).map((t) => ({ ...testFromWire(t), trigger: t.trigger, by: t.by, byType: t.by_type ?? null, createdAt: t.created_at })),
   };
 }
 

@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useTranslation } from "@/hooks/use-translation";
 import {
   tfnCheckService,
+  type TfnRunnerType,
   type TfnTestHistoryRow,
   type TfnTestsToday,
 } from "@/lib/api/services/tfn-check.service";
@@ -104,7 +105,35 @@ export function TestsTodayCard({
     });
 
   const byText = (by: string) =>
-    ({ You: t("tfnCheck.today.byYou"), Avortyx: "Avortyx", Morning: t("tfnCheck.today.byMorning"), Automatic: t("tfnCheck.today.byAuto") })[by] ?? by;
+    ({ You: t("tfnCheck.today.byYou"), Avortyx: "Avortyx", Morning: t("tfnCheck.today.byMorning"), Automatic: t("tfnCheck.today.byAuto"), Publisher: t("x343.by.publisher") })[by] ?? by;
+
+  /** CH-343: who ran it - "Main account · Sir", "Team · Evans",
+   *  "Publisher · Crug", "Automatic test". */
+  const Runner = ({ type, by }: { type: TfnRunnerType | null; by: string | null }) => {
+    if (!type && !by) return <span className="text-muted-foreground">—</span>;
+    const kind = type && type !== "unknown" ? t(`x343.by.${type}`) : "";
+    const name = by ? byText(by) : "";
+    const showName = name && name !== kind && type !== "auto" && type !== "morning";
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        {kind && (
+          <span
+            className={cn(
+              "rounded border px-1.5 py-0.5 text-[10px] font-medium",
+              type === "main" && "border-accent/40 bg-accent/10 text-accent",
+              type === "team" && "border-border bg-muted/50 text-foreground",
+              type === "publisher" && "border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 text-[color:var(--warning)]",
+              type === "buyer" && "border-border bg-muted/30 text-muted-foreground",
+              (type === "auto" || type === "morning") && "border-border bg-muted/30 text-muted-foreground",
+            )}
+          >
+            {kind}
+          </span>
+        )}
+        {showName && <span className="text-muted-foreground">{name}</span>}
+      </span>
+    );
+  };
 
   const failedStep = (row: TfnTestHistoryRow) => {
     const s = row.steps.find((x) => !x.ok);
@@ -138,6 +167,7 @@ export function TestsTodayCard({
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-5 text-[10px] uppercase tracking-wider">{t("tfnCheck.table.number")}</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider">{t("x343.by.header")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("x342.today.checked")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("x342.today.lastResult")}</TableHead>
                 <TableHead className="text-center text-[10px] uppercase tracking-wider">{t("tfnCheck.today.tests")}</TableHead>
@@ -159,6 +189,9 @@ export function TestsTodayCard({
                           {n.number}
                         </span>
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <Runner type={n.lastByType} by={n.lastBy} />
+                      </TableCell>
                       <TableCell className="text-center text-xs font-semibold tabular-nums">{n.checks}</TableCell>
                       <TableCell className="text-center">
                         {n.lastResult ? <TfnStatusChip status={n.lastResult} /> : <span className="text-xs text-muted-foreground">—</span>}
@@ -175,7 +208,7 @@ export function TestsTodayCard({
                     </TableRow>
                     {isOpen && (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={8} className="bg-muted/20 px-5 py-2">
+                        <TableCell colSpan={9} className="bg-muted/20 px-5 py-2">
                           <div className="space-y-1">
                             {n.lastCheckedAt && (
                               <div className="text-[11px] text-muted-foreground">
@@ -193,7 +226,7 @@ export function TestsTodayCard({
                                 <span className="w-28">
                                   <Result status={row.status} />
                                 </span>
-                                {row.by && <span className="text-muted-foreground">{byText(row.by)}</span>}
+                                {(row.by || row.byType) && <Runner type={row.byType} by={row.by} />}
                                 {row.status === "failed" && failedStep(row) && (
                                   <span className="text-destructive">{failedStep(row)}</span>
                                 )}
