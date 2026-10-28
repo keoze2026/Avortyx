@@ -175,7 +175,7 @@ export function CampaignsTable({
                 />
               </TableHead>
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
-              <TableHead>{t("trafficUI.campaigns.columns.campaign")}</TableHead>
+              <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
@@ -223,11 +223,10 @@ export function CampaignsTable({
                     </TableCell>
                   )}
                   <TableCell className="font-medium text-foreground">
-                    {/* Each name centred under the heading, like the numbers
-                        in the other columns (CH-270, replaces CH-269). The
-                        Active pill keeps the cell's right edge, so it never
-                        pushes the name off centre. */}
-                    <div className="relative flex items-center justify-center px-[76px]">
+                    {/* Names start at the cell's left edge, close to Progress,
+                        active and paused on the same line (CH-337, Sir). The
+                        Active pill keeps the cell's right edge. */}
+                    <div className="relative flex items-center justify-start pr-[76px]">
                       <span className="truncate" title={locale === "en" ? undefined : c.name}>
                         {localizeName(c.name, locale)}
                       </span>
