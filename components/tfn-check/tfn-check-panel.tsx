@@ -54,10 +54,11 @@ export const TFN_STATUS_TONE: Record<TfnStatus, string> = {
 
 /** A running test call is read again this often, for this long at most. */
 const TEST_POLL_MS = 1_000;
-const TEST_GIVE_UP_MS = 45_000;
+/** CH-348: the test now rings the buyer too (up to 30 s) - wait long enough. */
+const TEST_GIVE_UP_MS = 100_000;
 /** Steps in the order the call goes through them; the backend may record two
  *  at the same instant in either order. */
-const STEP_ORDER = ["placed", "reached", "number", "campaign", "routing"];
+const STEP_ORDER = ["placed", "carrier", "reached", "number", "campaign", "routing", "buyer_ringing", "buyer"];
 /** Statuses a test call cannot help with: the number is not ours any more. */
 const UNTESTABLE = new Set<TfnStatus>(["not_found", "expired"]);
 
@@ -438,7 +439,7 @@ function TestSteps({ test, running }: { test: TestState; running: boolean }) {
         </div>
       )}
       {!done && test.gaveUp && <div className="text-muted-foreground">{t("tfnCheck.test.timeout")}</div>}
-      <div className="pt-1 text-[10px] text-muted-foreground">{t("tfnCheck.test.note")}</div>
+      <div className="pt-1 text-[10px] text-muted-foreground">{t("x348.test.note")}</div>
       {/* CH-313: the test call is also a row in Reports, caller ID "TFN Test" (CH-344). */}
       {test.steps.some((st) => st.key === "reached") && (
         <div className="text-[10px] text-muted-foreground">{t("tfnCheck.test.inReports")}</div>

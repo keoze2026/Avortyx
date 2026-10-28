@@ -65,6 +65,19 @@ const STEP_EXACT: Record<string, string> = {
   "Routing OK: a buyer line is ready to take the call": "tfnCheck.step.routingOk",
   "Reached our phone system": "tfnCheck.step.reached",
   "Test call placed": "tfnCheck.step.placed",
+  // CH-348: end to end - carrier, routing, buyer answer.
+  "Came in through the carrier and reached our phone system": "x348.step.viaCarrier",
+  "Ringing the buyer's line": "x348.step.ringing",
+  "A buyer's agent answered": "x348.step.answered",
+  "No result from the buyer's line in time": "x348.step.noResult",
+};
+
+const DIAL_WHY: Record<string, string> = {
+  "no answer": "x348.why.noAnswer",
+  busy: "x348.why.busy",
+  "line congested": "x348.why.congested",
+  "line unavailable": "x348.why.unavailable",
+  "ended before an answer": "x348.why.ended",
 };
 
 /** One step of a TFN test call (backend phone_numbers/tfn_test.py). */
@@ -86,6 +99,10 @@ export function tfnStepText(t: T, locale: string, step: TfnTestStep): string {
   if (m) return fill(t("tfnCheck.step.notStarted"), { note: m[1] });
   m = /^The test call did not reach our call routing within (\d+)s$/.exec(text);
   if (m) return fill(t("tfnCheck.step.notReached"), { seconds: m[1] });
+  m = /^The buyer's line did not answer \((.*)\)$/.exec(text);
+  if (m) return fill(t("x348.step.notAnswered"), { why: DIAL_WHY[m[1]] ? t(DIAL_WHY[m[1]]) : m[1] });
+  m = /^Carrier route not checked: (.*)$/.exec(text);
+  if (m) return fill(t("x348.step.carrierNotChecked"), { why: m[1] });
   return text;
 }
 
