@@ -761,3 +761,28 @@ calls, Number and Run by start at the same left edge on every row (they were
 centred, so each row started somewhere else), and every Run by badge
 (Publisher, Main account, Team...) has the same width, so the names after it
 line up too.
+## CH-354 / CH-355 - Avortyx Guard
+**2026-10-29 · Quality**
+
+Sir, 29 Oct: "Why these tiny errors keep on coming? ... For how long I have
+to check everything". Everything is described in docs/AVORTYX-GUARD.md.
+
+- `.github/workflows/checks.yml` (every pull request and push to main): no
+  new TypeScript errors (old ones counted in .github/type-errors-allowed),
+  every `/api/...` path the portal calls exists on the server
+  (scripts/check-api-paths.mjs against contract/api-paths.txt, fetched fresh
+  from the backend when BACKEND_REPO_TOKEN is set), no secrets in the code.
+- `.github/workflows/claude-review.yml`: Claude posts an impact report on
+  every pull request, reading CLAUDE.md and docs/SYSTEM-MAP.md.
+- `.github/workflows/smoke.yml` + scripts/smoke.cjs: after every production
+  deploy and every 6 hours a robot logs in and opens the main pages; a
+  failure goes to Telegram with a screenshot.
+- Admins see a slim banner while a server update waits for its restart, or
+  while the server runs older code than the portal needs
+  (lib/server-version.ts). All four languages.
+
+Found: the portal calls /api/buyers/{id}/reporting-config and
+/api/billing/wallets/, which the server does not have
+(contract/api-paths-unknown.txt).
+
+Backend half: CH-354 / CH-355 in call_platform.

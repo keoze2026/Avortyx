@@ -1,0 +1,51 @@
+# Avortyx Guard, layer 5 (CH-355): a robot logs in to the live portal and
+# opens the main pages after every production deploy and every 6 hours.
+# A failure goes to Telegram with a screenshot. Read only.
+#
+# Secrets (repo Settings > Secrets and variables > Actions):
+#   PORTAL_URL, GUARD_EMAIL, GUARD_PASSWORD     required
+#   GUARD_REPORTS_PIN                           optional (opens Reports past its PIN)
+#   TELEGRAM_BOT_TOKEN, GUARD_CHAT_ID           optional (alerts)
+name: Robot check
+
+on:
+  deployment_status:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: robot-check
+  cancel-in-progress: false
+
+jobs:
+  robot:
+    name: robot check
+    # After a deploy: only a successful production deploy.
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment_status.environment, 'roduction'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install the robot browser
+        run: |
+          mkdir -p /tmp/robot && cd /tmp/robot
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Open every main page
+        env:
+          NODE_PATH: /tmp/robot/node_modules
+          PORTAL_URL: ${{ secrets.PORTAL_URL }}
+          GUARD_EMAIL: ${{ secrets.GUARD_EMAIL }}
+          GUARD_PASSWORD: ${{ secrets.GUARD_PASSWORD }}
+          GUARD_REPORTS_PIN: ${{ secrets.GUARD_REPORTS_PIN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GUARD_CHAT_ID: ${{ secrets.GUARD_CHAT_ID }}
+        run: node scripts/smoke.cjs

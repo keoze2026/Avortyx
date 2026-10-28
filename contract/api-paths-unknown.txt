@@ -1,0 +1,10 @@
+# API paths the portal calls that the server did not answer when the check
+# started (CH-355). Only a path NOT listed here fails the check. Remove a
+# line once the server has it, or the portal stops calling it.
+#
+# Payment card: the Capitalist wallet list was never built on the server
+# (the card shows "connect to view wallets" until it is).
+/api/billing/wallets/
+# Buyer settings > reporting columns: the server has no such endpoint, so
+# saving which columns a buyer sees does nothing. To build or remove.
+/api/buyers/{}/reporting-config

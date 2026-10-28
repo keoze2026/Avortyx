@@ -17,6 +17,10 @@ jobs:
     name: portal checks
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Optional (CH-355): a read-only token for keoze2026/call_platform, so the
+      # contract check uses the server's latest API list, not the copy here.
+      BACKEND_REPO_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -39,6 +43,13 @@ jobs:
           if [ "$n" -gt "$allowed" ]; then
             echo "New type errors:"; cat /tmp/ts-errors.txt; exit 1
           fi
+      - name: Latest server API list
+        if: ${{ env.BACKEND_REPO_TOKEN != '' }}
+        run: |
+          curl -fsSL -H "Authorization: Bearer $BACKEND_REPO_TOKEN" -H "Accept: application/vnd.github.raw" \
+            https://api.github.com/repos/keoze2026/call_platform/contents/docs/api-paths.txt -o contract/api-paths.txt
+      - name: Every API path the portal calls exists on the server
+        run: node scripts/check-api-paths.mjs
       - name: No secrets in the code
         run: |
           if git grep -nE '[0-9]{8,10}:AA[A-Za-z0-9_-]{30,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}' -- . ':!*.md' ':!pnpm-lock.yaml' ':!package-lock.json'; then
