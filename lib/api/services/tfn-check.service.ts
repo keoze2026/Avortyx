@@ -55,7 +55,8 @@ export interface TfnCheckResult {
 
 /** Today's test history on TFN Check (CH-341): kept until 12 AM Eastern. */
 /** Who ran a test call (CH-343). */
-export type TfnRunnerType = "main" | "team" | "publisher" | "buyer" | "auto" | "morning" | "unknown";
+/** "link": a check made through a share link (CH-359). */
+export type TfnRunnerType = "main" | "team" | "publisher" | "buyer" | "auto" | "morning" | "link" | "unknown";
 
 export interface TfnTestHistoryRow extends TfnTestCall {
   trigger: string;

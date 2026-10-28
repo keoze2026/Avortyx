@@ -796,3 +796,11 @@ New status (backend CH-358): live, but a call would not go through right now
 (no buyer open, balance, campaign limit). Red chip, in the summary, the share
 link legend and all four languages; the team also sees why under the
 details. Never the reason on a share link or a publisher login.
+
+## CH-359 - TFN Check: Run by for checks too
+**2026-10-29 · TFN Check**
+
+Sir, 29 Oct: "for the Run by why are these still empty". With backend
+CH-359 Run by names who did the latest check or test call; a check through a
+share link shows a "Share link" badge with the link's name ("Your link" on
+the link itself). All four languages.

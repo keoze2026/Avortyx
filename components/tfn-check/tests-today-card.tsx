@@ -105,7 +105,7 @@ export function TestsTodayCard({
     });
 
   const byText = (by: string) =>
-    ({ You: t("tfnCheck.today.byYou"), Avortyx: "Avortyx", Morning: t("tfnCheck.today.byMorning"), Automatic: t("tfnCheck.today.byAuto"), Publisher: t("x343.by.publisher") })[by] ?? by;
+    ({ You: t("tfnCheck.today.byYou"), Avortyx: "Avortyx", Morning: t("tfnCheck.today.byMorning"), Automatic: t("tfnCheck.today.byAuto"), Publisher: t("x343.by.publisher"), "Share link": t("x343.by.link"), "Your link": t("x359.yourLink") })[by] ?? by;
 
   /** CH-343: who ran it - "Main account · Sir", "Team · Evans",
    *  "Publisher · Crug", "Automatic test". */
@@ -124,6 +124,7 @@ export function TestsTodayCard({
               type === "team" && "border-border bg-muted/50 text-foreground",
               type === "publisher" && "border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 text-[color:var(--warning)]",
               type === "buyer" && "border-border bg-muted/30 text-muted-foreground",
+              type === "link" && "border-accent/30 bg-accent/5 text-accent",
               (type === "auto" || type === "morning") && "border-border bg-muted/30 text-muted-foreground",
             )}
           >
