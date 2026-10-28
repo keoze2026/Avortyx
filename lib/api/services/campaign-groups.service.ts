@@ -49,10 +49,21 @@ export interface GroupLine {
 
 export type GroupAction = "add" | "remove" | "update";
 
+/** One of several destinations changed together (CH-353). */
+export interface ApplyNumber {
+  number: string;
+  buyerId?: string;
+  revenue?: number;
+  convertOn?: "incoming" | "connected" | "length";
+  convertSeconds?: number;
+}
+
 export interface ApplyChange {
   groupIds: string[];
   action: GroupAction;
   number: string;
+  /** Several destinations at once, all or nothing (CH-353). */
+  numbers?: ApplyNumber[];
   buyerId?: string;
   priority?: number;
   weight?: number;
@@ -64,6 +75,7 @@ export interface ApplyChange {
 export interface ApplyResult {
   action: GroupAction;
   number: string;
+  numbers?: string[];
   groups: string[];
   changed: number;
   campaigns: number;
@@ -73,6 +85,8 @@ export interface ApplyResult {
     group: string;
     result: "added" | "removed" | "changed" | "unchanged";
     detail: string;
+    /** The destination this row is about (CH-353). */
+    number?: string;
   }[];
 }
 
