@@ -17,6 +17,8 @@ import { http } from "@/lib/api/http";
 export type TfnStatus =
   | "working"
   | "active"
+  /** CH-358: live, but routing would refuse a call right now (no buyer open, balance). */
+  | "not_ready"
   | "not_working"
   | "not_in_service"
   | "paused"
@@ -27,6 +29,7 @@ export type TfnStatus =
 export const TFN_STATUS_ORDER: TfnStatus[] = [
   "working",
   "active",
+  "not_ready",
   "not_working",
   "not_in_service",
   "paused",
@@ -46,6 +49,8 @@ export interface TfnCheckResult {
   testsToday?: number;
   testsTodayPassed?: number;
   testsTodayFailed?: number;
+  /** CH-358, team only: why the number is not taking calls. */
+  why?: string;
 }
 
 /** Today's test history on TFN Check (CH-341): kept until 12 AM Eastern. */
@@ -212,6 +217,7 @@ interface Wire {
     tests_today?: number;
     tests_today_passed?: number;
     tests_today_failed?: number;
+    why?: string;
   }>;
   summary: Record<TfnStatus, number>;
   invalid: string[];
@@ -235,6 +241,7 @@ function fromWire(w: Wire): TfnCheckResponse {
       testsToday: r.tests_today,
       testsTodayPassed: r.tests_today_passed,
       testsTodayFailed: r.tests_today_failed,
+      why: r.why,
     })),
     summary: w.summary ?? ({} as Record<TfnStatus, number>),
     invalid: w.invalid ?? [],

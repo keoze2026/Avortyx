@@ -787,3 +787,12 @@ Found: the portal calls /api/buyers/{id}/reporting-config and
 (contract/api-paths-unknown.txt).
 
 Backend half: CH-354 / CH-355 in call_platform.
+
+## CH-358 - TFN Check: "Not Taking Calls"
+**2026-10-29 · TFN Check**
+
+Sir, 29 Oct: "all buyers are off - how did the bot check the TFN is active?"
+New status (backend CH-358): live, but a call would not go through right now
+(no buyer open, balance, campaign limit). Red chip, in the summary, the share
+link legend and all four languages; the team also sees why under the
+details. Never the reason on a share link or a publisher login.

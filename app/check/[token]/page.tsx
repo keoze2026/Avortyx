@@ -110,7 +110,7 @@ export default function PublicTfnCheckPage() {
 
 function StatusLegend() {
   const { t } = useTranslation();
-  const codes = ["working", "active", "not_working", "not_in_service", "paused", "expired", "not_found"] as const;
+  const codes = ["working", "active", "not_ready", "not_working", "not_in_service", "paused", "expired", "not_found"] as const;
   return (
     <div className="mt-6 rounded-lg border border-border px-4 py-3 text-[11px] text-muted-foreground sm:px-5">
       <div className="mb-2 font-medium text-foreground">{t("tfnCheck.legend.title")}</div>

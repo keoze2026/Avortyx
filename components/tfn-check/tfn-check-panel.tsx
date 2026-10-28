@@ -38,13 +38,14 @@ import {
   type TfnTestStep,
 } from "@/lib/api/services/tfn-check.service";
 import { formatLocalDateTime, formatRelativeTime, uiLocaleTag } from "@/lib/format";
-import { tfnDetail, tfnStepText } from "@/lib/i18n/server-text";
+import { tfnDetail, tfnStepText, tfnWhy } from "@/lib/i18n/server-text";
 import { cn } from "@/lib/utils";
 
 /** Colour per status: green works, red does not, amber needs attention. */
 export const TFN_STATUS_TONE: Record<TfnStatus, string> = {
   working: "border-[color:var(--success)]/40 bg-[color:var(--success)]/10 text-[color:var(--success)]",
   active: "border-accent/40 bg-accent/10 text-accent",
+  not_ready: "border-destructive/40 bg-destructive/10 text-destructive",
   not_working: "border-destructive/40 bg-destructive/10 text-destructive",
   not_in_service: "border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 text-[color:var(--warning)]",
   paused: "border-border bg-muted/50 text-muted-foreground",
@@ -335,6 +336,8 @@ export function TfnCheckPanel({
                       </TableCell>
                       <TableCell className="min-w-[220px] text-xs text-muted-foreground">
                         {tfnDetail(t, locale, r)}
+                        {/* CH-358: the team sees why calls would not go through. */}
+                        {r.why && <div className="mt-0.5 text-[11px] font-medium text-destructive">{tfnWhy(t, r.why)}</div>}
                         {r.lastTestPassed === true && (
                           <CheckCircle2 className="ml-1 inline h-3 w-3 text-[color:var(--success)]" />
                         )}

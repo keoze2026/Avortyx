@@ -39,6 +39,7 @@ export function tfnDetail(t: T, locale: string, r: TfnCheckResult): string {
     case "expired":
     case "paused":
     case "not_in_service":
+    case "not_ready":
       return t(`tfnCheck.detail.${r.status}`);
     case "not_working":
       return r.lastTestAt ? fill(t("tfnCheck.detail.not_working"), { ago: ago(r.lastTestAt) }) : r.detail;
@@ -53,6 +54,19 @@ export function tfnDetail(t: T, locale: string, r: TfnCheckResult): string {
     default:
       return r.detail;
   }
+}
+
+/** CH-358: why a number is not taking calls (team only), in the chosen language. */
+const WHY_EXACT: Record<string, string> = {
+  "The account balance is too low for one call.": "x358.why.balance",
+  "No buyer line is open right now (all off, outside their hours, or at their cap).": "x358.why.noBuyer",
+};
+
+export function tfnWhy(t: T, why: string): string {
+  const key = WHY_EXACT[why];
+  if (key) return t(key);
+  if (why.startsWith("The campaign is at its limit right now")) return tOr(t, "x358.why.cap", why);
+  return why;
 }
 
 const STEP_EXACT: Record<string, string> = {

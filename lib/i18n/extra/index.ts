@@ -66,11 +66,12 @@ import { tfnCheckToday } from "./tfn-check-today";
 import { tfnTestRunner } from "./tfn-test-runner";
 import { teamReport } from "./team-report";
 import { serverUpdate } from "./server-update";
+import { tfnNotReady } from "./tfn-not-ready";
 import { tfnEndToEnd } from "./tfn-end-to-end";
 import { expenses } from "./expenses";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod, expenses, tfnToday, tfnCheckToday, tfnTestRunner, teamReport, tfnEndToEnd, serverUpdate];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod, expenses, tfnToday, tfnCheckToday, tfnTestRunner, teamReport, tfnEndToEnd, serverUpdate, tfnNotReady];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
