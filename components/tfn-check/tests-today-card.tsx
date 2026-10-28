@@ -190,7 +190,12 @@ export function TestsTodayCard({
                         </span>
                       </TableCell>
                       <TableCell className="text-xs">
-                        <Runner type={n.lastByType} by={n.lastBy} />
+                        {/* Until the server sends last_by (backend CH-343), the newest test's
+                            own "by" fills the column: the person's name. */}
+                        <Runner
+                          type={n.lastByType ?? byNumber[n.number]?.[0]?.byType ?? null}
+                          by={n.lastBy ?? byNumber[n.number]?.[0]?.by ?? null}
+                        />
                       </TableCell>
                       <TableCell className="text-center text-xs font-semibold tabular-nums">{n.checks}</TableCell>
                       <TableCell className="text-center">
