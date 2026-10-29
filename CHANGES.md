@@ -1051,3 +1051,10 @@ that looked like the save had been lost. Now Duplicate Handling, Direction
 Scope and Strict Mode are locked (dimmed) until the saved values load, so
 they always show what is really saved. A save the server refuses puts the
 previous choice back instead of showing the new one as if it were saved.
+
+## CH-388 - Destinations: the cap warning triangle is red
+**2026-10-29 · Destinations**
+
+Sir, 29 Oct: "Make triangle red as well". The triangle next to a destination
+whose daily or monthly cap is full is now the same red as a full CC or cap
+figure (CH-386), not yellow.

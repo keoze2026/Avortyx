@@ -248,7 +248,9 @@ export function DestinationsTable({
                         <LocalName name={destination.name} className="truncate max-w-[14rem]" />
                         {atCap && (
                           <AlertTriangle
-                            className="h-3.5 w-3.5 text-[color:var(--warning)]"
+                            // CH-388 (Sir, 29 Oct: "Make triangle red as well"):
+                            // the same red as a full CC / cap figure.
+                            className="h-3.5 w-3.5 text-destructive"
                             aria-label={t("networkUI.destinations.table.atCapAria")}
                           />
                         )}
