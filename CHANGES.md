@@ -948,3 +948,14 @@ lists only its own TFNs. Calls that were never sent to one of them (e.g. a
 TFN test that stopped before ringing a buyer line) are left out; a call that
 rang the buyer's TFN and was missed already shows under that TFN as Not
 Connected. Admin and publisher views are unchanged.
+
+## CH-378 - TFN test calls: hidden from buyers, shown as Passed
+**2026-10-29 · Reports / Call Logs**
+
+Sir, 29 Oct: "Whenever a publisher is testing a TFN it's showing on A49's
+TFNs, remove this from his end" and "This comment is creating confusion to
+publishers, they think the TFN is not working - for now make it passed".
+- Buyer logins no longer see TFN test calls (Reports and Call Logs).
+- Everyone else sees a TFN test in the Call Log with a green "Passed" status
+  and the comment "TFN Test" only - no "buyer's line did not answer".
+Display only: totals and the TFN Check result are unchanged.

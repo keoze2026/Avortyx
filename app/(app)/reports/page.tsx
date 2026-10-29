@@ -48,6 +48,7 @@ import {
 import { useReportChangeWatch } from "@/lib/report-watch";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { isTfnTestCall } from "@/lib/fail-reason";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
@@ -375,6 +376,8 @@ export default function ReportsPage() {
     // client-side day-boundary re-check here, since that's what applied the
     // wrong (browser-local) timezone in the first place.
     return viewCalls.filter((c) => {
+      // CH-378 (Sir, 29 Oct): a publisher's TFN test is not the buyer's call.
+      if (role === "buyer" && isTfnTestCall(c)) return false;
       if (campaignSet.size > 0 && !campaignSet.has(c.campaignId)) return false;
       if (buyerSet.size > 0 && (!c.buyerId || !buyerSet.has(c.buyerId))) return false;
       if (publisherSet.size > 0 && (!c.publisherId || !publisherSet.has(c.publisherId))) {
@@ -384,7 +387,7 @@ export default function ReportsPage() {
       if (drill && !callInDrill(c, drill, timeZone)) return false;
       return true;
     });
-  }, [filters, viewCalls, drill, timeZone]);
+  }, [filters, viewCalls, drill, timeZone, role]);
 
   // Columns the admin unticked under this buyer / publisher's Reporting
   // visibility. The Call Performance card follows them like the tables do.

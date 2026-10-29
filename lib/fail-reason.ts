@@ -35,6 +35,15 @@ const NO_DESTINATION = /^no[\s_]*destination$/i;
 const TFN_TEST = /^tfn\s*test\b/i;
 const TFN_TEST_FAILED = /^tfn\s*test\s*failed:?\s*(.*)$/i;
 
+/** CH-378: a TFN test call - caller ID "TFN Test" (CH-344) or a "TFN Test..."
+ *  comment. Buyer logins never see these, and the Call Log shows them as
+ *  Passed with the plain comment "TFN Test" (Sir, 29 Oct: "This comment is
+ *  creating confusion to publishers, they think the TFN is not working - for
+ *  now make it passed"). */
+export function isTfnTestCall(c: { callerNumber?: string | null; failReason?: string | null }): boolean {
+  return /^tfn\s*test\b/i.test((c.callerNumber ?? "").trim()) || TFN_TEST.test((c.failReason ?? "").trim());
+}
+
 export function failReasonLabel(reason: string | null | undefined): string {
   const raw = (reason ?? "").trim();
   if (!raw || raw === "—") return "";

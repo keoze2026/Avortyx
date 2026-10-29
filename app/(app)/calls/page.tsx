@@ -39,6 +39,7 @@ import { useLocaleStore } from "@/lib/store/locale-store";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { isTfnTestCall } from "@/lib/fail-reason";
 import { formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
@@ -157,6 +158,8 @@ export default function CallsPage() {
 
   const filtered = useMemo(() => {
     let calls = server.results ?? rangeCalls;
+    // CH-378: a buyer login never sees publishers' TFN test calls.
+    if (isBuyerLogin) calls = calls.filter((c) => !isTfnTestCall(c));
     if (campaignFilter !== "all") calls = calls.filter((c) => c.campaignId === campaignFilter);
     if (statuses.size > 0) calls = calls.filter((c) => statuses.has(c.status));
     if (query.trim()) {
@@ -172,7 +175,7 @@ export default function CallsPage() {
       );
     }
     return calls;
-  }, [query, campaignFilter, statuses, rangeCalls, server.results]);
+  }, [query, campaignFilter, statuses, rangeCalls, server.results, isBuyerLogin]);
 
   const summary = useMemo(() => totals(filtered), [filtered]);
 

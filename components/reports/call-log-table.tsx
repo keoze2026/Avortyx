@@ -73,7 +73,7 @@ import {
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { national, useBlockedCallerMatcher } from "@/lib/blocked-caller";
-import { failReasonLabel, localizeFailReason } from "@/lib/fail-reason";
+import { failReasonLabel, isTfnTestCall, localizeFailReason } from "@/lib/fail-reason";
 import { localizeName } from "@/lib/name-translation";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
@@ -304,6 +304,8 @@ function failReasonText(c: Call): string {
 
 /** The fail reason as shown on screen, in the chosen language (lib/fail-reason.ts). */
 function failReasonOnScreen(c: Call, locale: string, t: (key: string) => string): string {
+  // CH-378: a TFN test reads just "TFN Test", never why it "failed".
+  if (isTfnTestCall(c)) return localizeFailReason("TFN Test", locale, t);
   return c.isConverted === true ? "" : localizeFailReason(c.failReason, locale, t);
 }
 
@@ -1108,7 +1110,11 @@ export function CallLogTable({
                               A missed call that converted (destination paid on
                               Incoming) reads "Missed With Conversion" in blue;
                               that pill grows to fit its longer text. */}
-                          {convertedUnanswered(c) ? (
+                          {isTfnTestCall(c) ? (
+                            <Badge variant={statusVariant("completed")} className="w-24 justify-center">
+                              {t("x378.passed")}
+                            </Badge>
+                          ) : convertedUnanswered(c) ? (
                             <Badge variant="default" className="min-w-24 justify-center whitespace-nowrap bg-accent text-accent-foreground">
                               {t("status.missedWithConversion")}
                             </Badge>
