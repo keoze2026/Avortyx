@@ -456,7 +456,9 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
                 </div>
               </div>
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("cg.apply.searchDest")} />
-              <div className="max-h-48 overflow-y-auto rounded-md border">
+              {/* CH-397 (Sir, 29 Oct: "Destination box more large"): about 11
+                  rows instead of 5, never more than half the screen. */}
+              <div className="max-h-[min(28rem,50vh)] min-h-48 overflow-y-auto rounded-md border">
                 {shown.length === 0 ? (
                   <p className="p-3 text-center text-xs text-muted-foreground">{t("cg.apply.noDest")}</p>
                 ) : (
