@@ -1014,3 +1014,11 @@ list". When adding a destination, any destination already in every campaign
 of each ticked group is left out of the list (and a leftover tick on one is
 not sent). A destination missing from some campaigns still shows, so adding
 it fills the gaps. The server already skipped campaigns that had the number.
+
+## CH-384 - Campaign Groups: each action lists only the destinations it can use
+**2026-10-29 · Campaign Groups**
+
+Follow-up to CH-383. Add lists destinations not yet in every campaign of the
+ticked groups; Change and Remove now list only the destinations that are in
+those groups (a number the group does not have cannot be changed or removed
+there). A destination opened from its own row always stays.

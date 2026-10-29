@@ -172,14 +172,26 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
     return out;
   }, [action, groupIds, linesByGroup]);
 
+  // Change / remove: only the destinations that are in the ticked groups -
+  // a number the group does not have cannot be changed or removed there.
+  const inGroups = useMemo(() => {
+    if (action === "add" || groupIds.size === 0) return null;
+    const out = new Set<string>();
+    for (const gid of groupIds) for (const l of linesByGroup[gid] ?? []) out.add(key10(l.number));
+    return out;
+  }, [action, groupIds, linesByGroup]);
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const listed = options.filter((o) => !fullyIn.has(o.key) || o.key === (start.number ? key10(start.number) : ""));
+    const own = start.number ? key10(start.number) : "";
+    const listed = options.filter(
+      (o) => o.key === own || (!fullyIn.has(o.key) && (!inGroups || inGroups.has(o.key))),
+    );
     if (!q) return listed;
     return listed.filter(
       (o) => o.number.includes(q.replace(/\D/g, "") || q) || o.name.toLowerCase().includes(q) || o.buyerName.toLowerCase().includes(q),
     );
-  }, [options, query, fullyIn, start.number]);
+  }, [options, query, fullyIn, inGroups, start.number]);
 
   const chosenGroups = groups.filter((g) => groupIds.has(g.id));
   const campaignCount = chosenGroups.reduce((n, g) => n + g.campaigns.filter((c) => c.status !== "archived").length, 0);
