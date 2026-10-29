@@ -996,3 +996,12 @@ destinations 124 + 125. Now:
 - Campaigns / destinations lists every 30 s (was 15 s); blocked callers
   every 2 minutes.
 Each open tab picks this up after a reload.
+
+## CH-382 - Destinations: yellow warning only when a cap is full
+**2026-10-29 · Destinations**
+
+Sir, 29 Oct: "Remove this yellow error when CC is full, keep the rest on.
+Yellow should come when caps are full". The yellow triangle next to a
+destination's name now shows only when its daily or monthly cap is reached
+(e.g. Q08|4105 at 20 / 12 daily). A full CC (e.g. 4 / 4 live) no longer shows
+it; the Live figure still turns red as before.

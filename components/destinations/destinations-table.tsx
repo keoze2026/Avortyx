@@ -207,7 +207,11 @@ export function DestinationsTable({
                   destination.dailyCap > 0 ? daily / destination.dailyCap : 0;
                 const monthlyPct =
                   destination.monthlyCap > 0 ? monthly / destination.monthlyCap : 0;
-                const atCap = dailyPct >= 1 || livePct >= 1;
+                // CH-382 (Sir, 29 Oct: "Remove this yellow error when CC is
+                // full ... yellow should come when caps are full"): the warning
+                // is for a full daily or monthly cap only. A full CC is normal
+                // while calls are live and stays shown in red in the Live column.
+                const atCap = dailyPct >= 1 || monthlyPct >= 1;
 
                 const checked = !!selectedIds?.has(destination.id);
                 return (
