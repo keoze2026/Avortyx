@@ -5,7 +5,6 @@ import { AuthGuard } from "@/components/app-shell/auth-guard";
 import { DocumentTitle } from "@/components/app-shell/document-title";
 import { NotificationRuntime } from "@/components/app-shell/notification-runtime";
 import { OnboardingGate } from "@/components/app-shell/onboarding-gate";
-import { ServerUpdateBanner } from "@/components/app-shell/server-update-banner";
 import { AppSidebar } from "@/components/app-shell/sidebar-nav";
 import { StoreHydrator } from "@/components/app-shell/store-hydrator";
 import { SupportChat } from "@/components/app-shell/support-chat";
@@ -38,8 +37,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <AppSidebar />
           <SidebarInset className="app-canvas !bg-transparent">
             <Topbar />
-            {/* Admins: a server update waiting for its restart (CH-355). */}
-            <ServerUpdateBanner />
+            {/* CH-394: the server-update banner (CH-355) is never shown in the
+                portal (Sir, 29 Oct). Restart status is for the dev team only. */}
             <DocumentTitle />
             <NotificationRuntime />
             <StoreHydrator />
