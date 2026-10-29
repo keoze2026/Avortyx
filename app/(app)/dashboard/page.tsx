@@ -346,8 +346,11 @@ export default function DashboardPage() {
 
         {/* Row 2 — Top campaigns + Revenue by hour (secondary) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* CH-375: a buyer login does not see our campaigns. */}
-          {role !== "buyer" && (
+          {/* CH-375: a buyer login does not see our campaigns. CH-404 (Sir):
+              it sees its own top destinations there instead of a blank. */}
+          {role === "buyer" ? (
+            <TopCampaignsBars calls={NO_CALLS} destinations={snapshot?.destinations ?? []} dateLabel={dateLabel} />
+          ) : (
             <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
           )}
           {/* Shown to every login, each with its own money from its own calls:
@@ -369,6 +372,8 @@ export default function DashboardPage() {
           dateLabel={dateLabel}
           useLiveCounters={isToday}
           destinationFilter={allSelected ? undefined : destinationTfn}
+          // CH-404: a buyer login sees its own destinations, one row each.
+          by={role === "buyer" ? "destination" : "buyer"}
         />
       </ReportsPinGate>
     </>

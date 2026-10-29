@@ -47,11 +47,16 @@ interface BuyerSummaryCardProps {
   useLiveCounters?: boolean;
   /** When set, only the buyer of the destination with this TFN. */
   destinationFilter?: string;
+  /** CH-404: "destination" = one row per TFN (a buyer login's own lines),
+   *  in the same design; "buyer" (default) = one row per buyer. */
+  by?: "buyer" | "destination";
 }
 
 interface Row {
   id: string;
   name: string;
+  /** The TFN, for a row per destination. */
+  tfn?: string;
   buyer: Buyer | undefined;
   live: number;
   /** Sum of its TFNs' CC caps; 0 = at least one is unlimited. */
@@ -77,6 +82,7 @@ function buildRows(
   calls: Call[],
   buyers: Buyer[],
   useLiveCounters: boolean,
+  byDestination = false,
 ): Row[] {
   // Per TFN for a past range (the API has no per-destination counters for
   // past dates), keyed by E.164 so "18779641530" matches "+18779641530".
@@ -100,7 +106,7 @@ function buildRows(
   // the rest whose lines were switched off after their cap.
   type Acc = { live: number; calls: number; revenue: number; cc: number; allCc: boolean; cap: number; allCapped: boolean; n: number };
   const acc = (): Acc => ({ live: 0, calls: 0, revenue: 0, cc: 0, allCc: true, cap: 0, allCapped: true, n: 0 });
-  const rows = new Map<string, { id: string; name: string; buyer: Buyer | undefined; on: Acc; used: Acc }>();
+  const rows = new Map<string, { id: string; name: string; tfn?: string; buyer: Buyer | undefined; on: Acc; used: Acc }>();
   for (const d of destinations) {
     const buyer = buyerById.get(d.buyerId);
     const tfn = toE164(d.tfn);
@@ -110,11 +116,14 @@ function buildRows(
     const on = d.enabled && (!buyer || buyer.status === "active");
     const used = dayCalls > 0 || dayRevenue > 0 || live > 0;
     if (!on && !used) continue;
-    const key = d.buyerId || d.buyerName || d.id;
-    if (keepBuyer && !keepBuyer.has(key)) continue;
+    const buyerKey = d.buyerId || d.buyerName || d.id;
+    if (keepBuyer && !keepBuyer.has(buyerKey)) continue;
+    const key = byDestination ? d.id : buyerKey;
     let row = rows.get(key);
     if (!row) {
-      row = { id: key, name: buyer?.name ?? d.buyerName ?? d.name, buyer, on: acc(), used: acc() };
+      row = byDestination
+        ? { id: key, name: d.name || toE164(d.tfn), tfn: toE164(d.tfn), buyer, on: acc(), used: acc() }
+        : { id: key, name: buyer?.name ?? d.buyerName ?? d.name, buyer, on: acc(), used: acc() };
       rows.set(key, row);
     }
     for (const [a, take] of [[row.on, on], [row.used, on || used]] as const) {
@@ -129,18 +138,19 @@ function buildRows(
       else a.allCapped = false;
     }
   }
-  return [...rows.values()].map(({ id, name, buyer, on, used }) => {
+  return [...rows.values()].map(({ id, name, tfn, buyer, on, used }) => {
     const activeNow = on.n > 0;
     // Max and cap: of the lines it can take calls on now; for a buyer that
     // is paused now, of the lines it used today.
     const lines = activeNow ? on : used;
     return {
-      id, name, buyer, activeNow,
+      id, name, tfn, buyer, activeNow,
       live: used.live,
       calls: used.calls,
       revenue: used.revenue,
       max: lines.allCc ? lines.cc : 0,
-      dailyCap: buyer && buyer.dailyCap > 0 ? buyer.dailyCap : lines.allCapped ? lines.cap : 0,
+      // A line's own cap per destination; per buyer, the buyer's own cap first.
+      dailyCap: !byDestination && buyer && buyer.dailyCap > 0 ? buyer.dailyCap : lines.allCapped ? lines.cap : 0,
     };
   });
 }
@@ -158,6 +168,7 @@ export function BuyerSummaryCard({
   dateLabel,
   useLiveCounters = false,
   destinationFilter,
+  by = "buyer",
 }: BuyerSummaryCardProps) {
   const { t } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
@@ -170,12 +181,26 @@ export function BuyerSummaryCard({
   const [pausing, setPausing] = useState<Row | null>(null);
 
   const isPartner = role === "buyer" || role === "publisher";
-  const canEdit = !isPartner && can("buyers", "edit");
+  const byDest = by === "destination";
+  const canEdit = !isPartner && !byDest && can("buyers", "edit");
+  // A buyer login reads its own money as Spend (what it pays for the calls).
+  const isBuyer = role === "buyer";
+  const L = {
+    title: byDest ? t("x404.titleDest") : t("x399.title"),
+    hint: byDest ? t("x404.hintDest") : t("x399.hint"),
+    taking: byDest ? t("x404.takingDest") : t("x399.taking"),
+    col: byDest ? t("x404.colDest") : t("x399.colBuyer"),
+    empty: byDest ? t("x404.emptyDest") : t("x399.empty"),
+    money: isBuyer ? t("x404.spend") : t("x399.revenue"),
+    ofMoney: isBuyer ? t("x404.ofSpend") : t("x399.ofRevenue"),
+    most: isBuyer ? t("x404.mostSpend") : t("x399.mostRevenue"),
+    top: isBuyer ? t("x404.topSpend") : t("x399.topEarner"),
+  };
 
   const all = useMemo(
     () => buildRows(rangeDestinations ?? destinations, destinationFilter, calls, buyers,
-                    rangeDestinations ? true : useLiveCounters),
-    [rangeDestinations, destinations, destinationFilter, calls, buyers, useLiveCounters],
+                    rangeDestinations ? true : useLiveCounters, byDest),
+    [rangeDestinations, destinations, destinationFilter, calls, buyers, useLiveCounters, byDest],
   );
 
   const liveNow = all.reduce((n, r) => n + r.live, 0);
@@ -237,8 +262,8 @@ export function BuyerSummaryCard({
       {/* Header: title, the four figures, the filters */}
       <div className="flex flex-wrap items-end justify-between gap-4 px-6 pb-4 pt-5">
         <div>
-          <h3 className="text-base font-semibold">{t("x399.title")}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{t("x399.hint")}</p>
+          <h3 className="text-base font-semibold">{L.title}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{L.hint}</p>
           <div className="mt-3 flex flex-wrap items-stretch gap-x-6 gap-y-2">
             <div>
               <p className="text-[11px] text-muted-foreground">{t("x399.liveNow")}</p>
@@ -248,7 +273,7 @@ export function BuyerSummaryCard({
               </p>
             </div>
             <div className="border-l border-border pl-6">
-              <p className="text-[11px] text-muted-foreground">{t("x399.taking")}</p>
+              <p className="text-[11px] text-muted-foreground">{L.taking}</p>
               <p className="mt-0.5 text-xl font-semibold tabular-nums">
                 {taking.length}
                 <span className="ml-1 text-xs font-normal text-muted-foreground">
@@ -261,7 +286,7 @@ export function BuyerSummaryCard({
               <p className="mt-0.5 text-xl font-semibold tabular-nums">{formatNumber(callsTotal)}</p>
             </div>
             <div className="border-l border-border pl-6">
-              <p className="text-[11px] text-muted-foreground">{t("x399.revenue")}</p>
+              <p className="text-[11px] text-muted-foreground">{L.money}</p>
               <p className="mt-0.5 text-xl font-semibold tabular-nums">{formatCurrency(revenueTotal)}</p>
             </div>
           </div>
@@ -280,7 +305,7 @@ export function BuyerSummaryCard({
           </div>
           <div className="flex rounded-lg border border-border p-0.5">
             <button type="button" className={segment(sortBy === "revenue")} onClick={() => setSortBy("revenue")}>
-              {t("x399.revenue")}
+              {L.money}
             </button>
             <button type="button" className={segment(sortBy === "calls")} onClick={() => setSortBy("calls")}>
               {t("x399.calls")}
@@ -289,7 +314,11 @@ export function BuyerSummaryCard({
               {t("x399.live")}
             </button>
           </div>
-          {!isPartner && (
+          {byDest ? (
+            <Link href={ROUTES.destinations} className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:opacity-80">
+              {t("x404.manageDest")} <ArrowRight className="h-3 w-3" />
+            </Link>
+          ) : !isPartner && (
             <Link href={ROUTES.buyers} className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:opacity-80">
               {t("x399.manage")} <ArrowRight className="h-3 w-3" />
             </Link>
@@ -301,7 +330,7 @@ export function BuyerSummaryCard({
       <div className="overflow-x-auto">
         <div className="min-w-[900px]">
           <div className="grid grid-cols-[minmax(13rem,18rem)_minmax(10rem,13rem)_minmax(6.5rem,8rem)_minmax(5rem,6rem)_minmax(13rem,18rem)_11rem] justify-between items-center gap-x-4 border-y border-border px-6 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>{t("x399.colBuyer")}</span>
+            <span>{L.col}</span>
             <span>
               {t("x399.colConcurrency")}
               <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">{t("x399.liveMax")}</span>
@@ -312,14 +341,14 @@ export function BuyerSummaryCard({
               <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">{day}</span>
             </span>
             <span className="text-center">
-              {t("x399.revenue")}
+              {L.money}
               <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">{day}</span>
             </span>
             <span />
           </div>
 
           {rows.length === 0 ? (
-            <p className="px-6 py-8 text-center text-sm text-muted-foreground">{t("x399.empty")}</p>
+            <p className="px-6 py-8 text-center text-sm text-muted-foreground">{L.empty}</p>
           ) : (
             rows.map((r) => {
               const isTop = topEarner?.id === r.id;
@@ -336,8 +365,14 @@ export function BuyerSummaryCard({
                 >
                   {/* Buyer */}
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-[11px] font-semibold">
-                      {initials(r.name)}
+                    <span
+                      className={cn(
+                        "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 font-semibold",
+                        r.tfn ? "text-[10px] tabular-nums" : "text-[11px]",
+                      )}
+                    >
+                      {/* A line by its TFN's last four digits; a buyer by its initials. */}
+                      {r.tfn ? r.tfn.replace(/\D/g, "").slice(-4) : initials(r.name)}
                       <span
                         className={cn(
                           "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card",
@@ -347,7 +382,7 @@ export function BuyerSummaryCard({
                     </span>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        {r.buyer ? (
+                        {r.buyer && !byDest && !isPartner ? (
                           <Link href={`${ROUTES.buyers}/${r.buyer.id}`} className="truncate text-sm font-semibold hover:text-accent">
                             {r.name}
                           </Link>
@@ -356,11 +391,12 @@ export function BuyerSummaryCard({
                         )}
                         {isTop && (
                           <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent">
-                            {t("x399.topEarner")}
+                            {L.top}
                           </span>
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground">
+                        {r.tfn && <span className="font-mono">{r.tfn} · </span>}
                         {r.live > 0 ? t("x399.takingCalls") : r.activeNow ? t("x399.idle") : t("x399.pausedNow")}
                       </p>
                     </div>
@@ -401,7 +437,7 @@ export function BuyerSummaryCard({
                         <div className="h-full rounded-full bg-accent" style={{ width: `${share}%` }} />
                       </div>
                       <p className="mt-1 text-[11px] text-muted-foreground">
-                        {t("x399.ofRevenue").replace("{pct}", String(share))}
+                        {L.ofMoney.replace("{pct}", String(share))}
                       </p>
                     </div>
                     <span className="text-base font-semibold tabular-nums">{formatCurrency(r.revenue)}</span>
@@ -455,7 +491,7 @@ export function BuyerSummaryCard({
             {topEarner ? (
               <span>
                 <b className="font-semibold text-foreground">
-                  {t("x399.mostRevenue")
+                  {L.most
                     .replace("{name}", topEarner.name)
                     .replace("{amount}", formatCurrency(topEarner.revenue))}
                 </b>

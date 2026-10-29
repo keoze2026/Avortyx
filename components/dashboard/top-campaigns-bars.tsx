@@ -10,7 +10,7 @@ import { ROUTES } from "@/lib/constants";
 import { formatNumber } from "@/lib/format";
 import type { EntitySummary } from "@/lib/api/services/analytics.service";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
-import type { Call } from "@/lib/types";
+import type { Call, Destination } from "@/lib/types";
 
 interface Row {
   id: string;
@@ -26,6 +26,9 @@ interface TopCampaignsBarsProps {
   /** Per-campaign totals (e.g. from the dashboard snapshot). When passed, the
    *  ranking uses their connected counts instead of counting `calls`. */
   campaignSummaries?: EntitySummary[];
+  /** CH-404: a buyer login ranks its own destinations instead (it does not
+   *  see our campaigns) - calls per TFN for the day, same card and design. */
+  destinations?: Destination[];
 }
 
 /**
@@ -37,11 +40,18 @@ interface TopCampaignsBarsProps {
  * picker is the only time control now; this card ranks exactly what it's
  * handed.
  */
-export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCampaignsBarsProps) {
+export function TopCampaignsBars({ calls, dateLabel, campaignSummaries, destinations }: TopCampaignsBarsProps) {
   const { t } = useTranslation();
   const campaigns = useCampaignsStore((s) => s.campaigns);
 
   const data = useMemo<Row[]>(() => {
+    if (destinations) {
+      return destinations
+        .map((d) => ({ id: d.id, name: d.name || d.tfn, connected: d.dailyCalls || 0 }))
+        .filter((r) => r.connected > 0)
+        .sort((a, b) => b.connected - a.connected)
+        .slice(0, 6);
+    }
     const nameById = new Map(campaigns.map((c) => [c.id, c.name]));
     if (campaignSummaries) {
       return campaignSummaries
@@ -76,12 +86,16 @@ export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCam
       .filter((r) => r.connected > 0)
       .sort((a, b) => b.connected - a.connected)
       .slice(0, 6);
-  }, [calls, campaigns, campaignSummaries]);
+  }, [calls, campaigns, campaignSummaries, destinations]);
 
   const isToday = dateLabel === t("sharedUI.dateRange.today");
-  const subLabel = isToday
-    ? t("x398.topShareToday")
-    : t("x398.topShareOn").replace("{date}", dateLabel);
+  const subLabel = destinations
+    ? isToday
+      ? t("x404.topDestToday")
+      : t("x404.topDestOn").replace("{date}", dateLabel)
+    : isToday
+      ? t("x398.topShareToday")
+      : t("x398.topShareOn").replace("{date}", dateLabel);
   // CH-398 (Sir's design): each campaign's share of the top 6, and the bar
   // measured against the busiest one. No rank numbers (Sir: "just don't add
   // serial numbers").
@@ -92,11 +106,13 @@ export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCam
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 gap-3 pb-2">
         <div>
-          <CardTitle className="text-sm font-semibold">{t("dashboard.topCampaigns")}</CardTitle>
+          <CardTitle className="text-sm font-semibold">
+            {destinations ? t("x404.topDest") : t("dashboard.topCampaigns")}
+          </CardTitle>
           <p className="mt-0.5 text-[11px] text-muted-foreground">{subLabel}</p>
         </div>
         <Link
-          href={ROUTES.campaigns}
+          href={destinations ? ROUTES.destinations : ROUTES.campaigns}
           className="text-xs font-medium text-accent transition-opacity hover:opacity-80"
         >
           {t("common.viewAll")}
