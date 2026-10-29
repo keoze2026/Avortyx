@@ -285,13 +285,26 @@ function GroupLines({
                 <td className="px-4 py-2.5">{values(l.priorities)}</td>
                 <td className="px-4 py-2.5">{values(l.weights)}</td>
                 <td className="px-4 py-2.5">
-                  <div className={missing ? "text-amber-600 dark:text-amber-400" : ""}>
-                    {missing ? fill(t("cg.inSome"), { in: l.inCount, of: l.ofCount }) : fill(t("cg.inAll"), { n: l.ofCount })}
-                  </div>
-                  {missing && (
-                    <div className="text-xs text-muted-foreground">
-                      {fill(t("cg.missing"), { names: l.missingIn.map((m) => localName(m.campaignName)).join(", ") })}
+                  {/* CH-374, Sir 29 Oct: "Missing in - then long messages, I
+                      don't understand this". The campaigns the destination IS
+                      in, as the same chips the group header uses, and a short
+                      count. The long "missing in ..." list is gone. */}
+                  {missing ? (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {[...l.campaigns]
+                        .sort((a, b) => a.campaignName.localeCompare(b.campaignName, undefined, { numeric: true }))
+                        .map((c) => (
+                          <span key={c.id} className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs">
+                            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {localName(c.campaignName)}
+                          </span>
+                        ))}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {fill(t("cg.inSome"), { in: l.inCount, of: l.ofCount })}
+                      </span>
                     </div>
+                  ) : (
+                    <span>{fill(t("cg.inAll"), { n: l.ofCount })}</span>
                   )}
                 </td>
                 {canEdit && (

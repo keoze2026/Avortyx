@@ -905,3 +905,13 @@ header's left edge instead of in the middle. The headers are centred again,
 exactly like every other header (CH-368), and the shared box is as wide as
 the longest name only - so the names keep one straight line and that line is
 centred in the column.
+
+## CH-374 - Campaign Groups: show where a destination is, not a long "missing in" list
+**2026-10-29 · Campaign Groups**
+
+Sir, 29 Oct: "Missing in - then long messages, I don't understand this".
+The In Campaigns column listed every campaign a destination was NOT in
+("missing in C-02, C-03, C-05, ..."). It now shows the campaigns it IS in, as
+the same green chips the group header uses (e.g. C-12 C-13 C-14 C-15), with a
+short "4 of 12" after them. A destination in every campaign still reads
+"all 12". The + button still adds it to the rest.
