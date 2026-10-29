@@ -4,6 +4,7 @@ import { Columns, Download, Search, X } from "lucide-react";
 
 import { ExportMenu } from "@/components/shared/export-menu";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -107,6 +108,7 @@ export function CallsToolbar({
   total,
 }: Props) {
   const { t } = useTranslation();
+  const isBuyerLogin = useAuthStore((st) => st.user?.role) === "buyer";
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -196,7 +198,8 @@ export function CallsToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Column visibility */}
+        {/* Column visibility - CH-379: not offered to buyer logins. */}
+        {!isBuyerLogin && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 gap-1.5">
@@ -221,6 +224,7 @@ export function CallsToolbar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        )}
 
         <span className="ml-auto text-[11px] font-mono text-muted-foreground">
           {t("toolsUI.callLogs.toolbar.countOfTotal").replace("{count}", formatNumber(count)).replace("{total}", formatNumber(total))}

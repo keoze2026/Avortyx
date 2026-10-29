@@ -604,9 +604,9 @@ const COUNTRY_CODE_BY_NAME: Record<string, string> = Object.fromEntries(
 /** Tabs whose rows are names people entered: written in the chosen
  *  language's script (lib/name-translation.ts), never looked up. */
 const ENTERED_NAME_TABS = new Set<GroupKey>(["campaign", "publisher", "buyer"]);
-/** CH-375: the Call Summary tabs a buyer login may open - its own TFNs, by
- *  date and by caller profile. */
-const BUYER_TABS = new Set<string>(["destination", "date", "profile-carrier"]);
+/** CH-375/CH-379: the Call Summary tabs a buyer login may open - its own
+ *  TFNs, and by date (Sir, 29 Oct: "Hide caller profile"). */
+const BUYER_TABS = new Set<string>(["destination", "date"]); // CH-379: no Caller Profile
 /** Tabs whose rows are phone numbers: shown as they are. */
 const NUMBER_TABS = new Set<GroupKey>(["dialed", "numberPool", "identity-phone"]);
 
@@ -1358,6 +1358,7 @@ export function CallSummaryTable({
           })}
         </div>
         <div className="flex items-center gap-1">
+          {/* CH-379: buyers get no column picker */ !isBuyerLogin && (
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.reports.callLog.columnSettings")}>
@@ -1396,6 +1397,7 @@ export function CallSummaryTable({
               </div>
             </PopoverContent>
           </Popover>
+          )}
           {canDownload && (
             <ExportMenu onExport={onExport}>
               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.callLogs.toolbar.export")}>

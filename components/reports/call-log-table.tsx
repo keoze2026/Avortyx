@@ -922,6 +922,7 @@ export function CallLogTable({
               </button>
             )}
           </div>
+          {/* CH-379: buyers get no column picker */ role !== "buyer" && (
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("toolsUI.reports.callLog.columnSettings")}>
@@ -960,6 +961,7 @@ export function CallLogTable({
               </div>
             </PopoverContent>
           </Popover>
+          )}
           {canDownload && (
             <ExportMenu onExport={onExport}>
               <Button

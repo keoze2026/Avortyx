@@ -959,3 +959,13 @@ publishers, they think the TFN is not working - for now make it passed".
 - Everyone else sees a TFN test in the Call Log with a green "Passed" status
   and the comment "TFN Test" only - no "buyer's line did not answer".
 Display only: totals and the TFN Check result are unchanged.
+
+## CH-379 - Buyer login: no column picker, no Caller Profile
+**2026-10-29 · Buyer access**
+
+Sir, 29 Oct: "In our buyer access we have an option to select or unselect
+[columns], remove this from buyer access ... just hide" and "Hide caller
+profile". Buyer logins no longer get the column picker (gear) on the Call
+Summary or the Call Log in Reports, nor the Columns menu on the Call Logs
+page; they see the columns the admin allows, fixed. Their Call Summary has
+only the Destination and Date tabs.
