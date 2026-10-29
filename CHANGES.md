@@ -1039,3 +1039,15 @@ and once CC is filled red is fine. Yellow, Green remove these". The LIVE
 cell on the campaign page (tracking numbers and routed destinations) and the
 Live / Daily / Monthly cells on the Destinations page are now one colour;
 only a full CC or cap turns red. No more green or amber.
+
+## CH-387 - Campaign page: duplicate settings never show a false "Normal"
+**2026-10-29 · Campaigns**
+
+Sir, 29 Oct: "Routing - Different is working now, are you sure? And if you
+select Different and refresh many times it will not move to Normal?" The
+choice was saved in the database (C-06 read Different), but the page showed
+the default "Normal" until the campaign had loaded - with the server slow,
+that looked like the save had been lost. Now Duplicate Handling, Direction
+Scope and Strict Mode are locked (dimmed) until the saved values load, so
+they always show what is really saved. A save the server refuses puts the
+previous choice back instead of showing the new one as if it were saved.

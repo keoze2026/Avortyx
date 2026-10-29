@@ -156,6 +156,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         setDuplicate(h === "original" ? "Original" : h === "different" ? "Different" : "Normal");
         setDirection((c.duplicateDirection ?? "destination") === "buyer" ? "Buyer" : "Destination");
         setStrict(Boolean(c.duplicateStrict));
+        setDupRoutingLoaded(true);
       })
       .catch(() => {
         if (!cancelled) toast.error(t("y.fwd.dupLoadFailed"));
@@ -193,16 +194,27 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   const [duplicate, setDuplicate] = useState<DuplicateHandling>("Normal");
   const [direction, setDirection] = useState<DirectionScope>("Destination");
   const [strict, setStrict] = useState(false);
+  // CH-387 (Sir, 29 Oct: "if you select Different and refresh many times, it
+  // will not move to Normal?"): until the campaign's saved choice has loaded,
+  // these controls are locked - they used to show the default "Normal" while
+  // the server was slow, which looked like the save had been lost. A save the
+  // server refuses puts the previous choice back instead of leaving the new
+  // one showing as if it were saved.
+  const [dupRoutingLoaded, setDupRoutingLoaded] = useState(false);
 
-  const saveDuplicateHandling = async (patch: {
-    duplicateHandling?: string;
-    duplicateDirection?: string;
-    duplicateStrict?: boolean;
-  }) => {
+  const saveDuplicateHandling = async (
+    patch: {
+      duplicateHandling?: string;
+      duplicateDirection?: string;
+      duplicateStrict?: boolean;
+    },
+    revert?: () => void,
+  ) => {
     try {
       await updateCampaign(campaignId, patch);
       toast.success(t("trafficUI.campaigns.settings.forward.duplicateSaved"));
     } catch {
+      revert?.();
       toast.error(t("y.fwd.dupRoutingSaveFailed"));
     }
   };
@@ -514,9 +526,11 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           value={duplicate}
           options={DUPLICATE_OPTIONS}
           labels={duplicateLabel}
+          disabled={!dupRoutingLoaded}
           onChange={(v) => {
+            const prev = duplicate;
             setDuplicate(v);
-            void saveDuplicateHandling({ duplicateHandling: v.toLowerCase() });
+            void saveDuplicateHandling({ duplicateHandling: v.toLowerCase() }, () => setDuplicate(prev));
           }}
         />
         <ChoiceRow
@@ -525,9 +539,11 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
           value={direction}
           options={DIRECTION_OPTIONS}
           labels={directionLabel}
+          disabled={!dupRoutingLoaded}
           onChange={(v) => {
+            const prev = direction;
             setDirection(v);
-            void saveDuplicateHandling({ duplicateDirection: v.toLowerCase() });
+            void saveDuplicateHandling({ duplicateDirection: v.toLowerCase() }, () => setDirection(prev));
           }}
         />
         <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
@@ -535,7 +551,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             <div className="text-xs font-medium">{t("trafficUI.campaigns.settings.forward.strictMode")}</div>
             <div className="text-[11px] text-muted-foreground">{t("trafficUI.campaigns.settings.forward.strictModeHint")}</div>
           </div>
-          <Switch className="data-[state=checked]:bg-accent" checked={strict} onCheckedChange={(on) => { setStrict(on); void saveDuplicateHandling({ duplicateStrict: on }); }} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
+          <Switch className="data-[state=checked]:bg-accent" checked={strict} disabled={!dupRoutingLoaded} onCheckedChange={(on) => { setStrict(on); void saveDuplicateHandling({ duplicateStrict: on }, () => setStrict(!on)); }} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
         </div>
         <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
           <div>
@@ -851,6 +867,7 @@ function ChoiceRow<T extends string>({
   options,
   labels,
   onChange,
+  disabled = false,
 }: {
   label: string;
   description: string;
@@ -858,6 +875,8 @@ function ChoiceRow<T extends string>({
   options: readonly T[];
   labels?: Record<T, string>;
   onChange: (v: T) => void;
+  /** CH-387: locked until the saved value has loaded. */
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -865,11 +884,12 @@ function ChoiceRow<T extends string>({
         <Label className="text-xs font-medium">{label}</Label>
         <div className="text-[11px] text-muted-foreground">{description}</div>
       </div>
-      <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
+      <div className={cn("inline-flex rounded-md border border-border bg-muted p-0.5", disabled && "pointer-events-none opacity-50")} aria-busy={disabled}>
         {options.map((opt) => (
           <button
             key={opt}
             type="button"
+            disabled={disabled}
             onClick={() => onChange(opt)}
             className={cn(
               "rounded px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
