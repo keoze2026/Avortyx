@@ -78,10 +78,10 @@ function buildRows(destinations: Destination[], buyers: Buyer[]): Row[] {
   }));
 }
 
-/** Color a cell based on the fraction used (0..1). */
+/** Color a cell based on the fraction used (0..1): red when full, otherwise
+ *  the normal colour (CH-386, Sir: "Yellow, Green remove these"). */
 function pacingTone(pct: number): string {
   if (pct >= 1) return "text-destructive";
-  if (pct >= 0.85) return "text-[color:var(--warning)]";
   return "";
 }
 

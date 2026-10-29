@@ -1030,3 +1030,12 @@ Sir, 29 Oct: "fix the boxes for status, they should all be the same". Live,
 Completed, No Answer, Passed and Missed With Conversion now share one fixed
 width (10.5rem), wide enough for the longest one in every language; before,
 Missed With Conversion was wider than the rest.
+
+## CH-386 - Live / caps figures: one colour, red only when full
+**2026-10-29 · Campaigns / Destinations**
+
+Sir, 29 Oct: "Do not make multicolour for everything. Just keep one colour,
+and once CC is filled red is fine. Yellow, Green remove these". The LIVE
+cell on the campaign page (tracking numbers and routed destinations) and the
+Live / Daily / Monthly cells on the Destinations page are now one colour;
+only a full CC or cap turns red. No more green or amber.
