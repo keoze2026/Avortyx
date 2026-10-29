@@ -199,19 +199,20 @@ export function DestinationsTable({
               </TableRow>
             ) : (
               rows.map(({ destination, buyer, live, hourly, daily, monthly, global }) => {
-                const livePct =
-                  destination.concurrencyCap > 0
-                    ? live / destination.concurrencyCap
-                    : 0;
                 const dailyPct =
                   destination.dailyCap > 0 ? daily / destination.dailyCap : 0;
                 const monthlyPct =
                   destination.monthlyCap > 0 ? monthly / destination.monthlyCap : 0;
-                // CH-382 (Sir, 29 Oct: "Remove this yellow error when CC is
-                // full ... yellow should come when caps are full"): the warning
-                // is for a full daily or monthly cap only. A full CC is normal
-                // while calls are live and stays shown in red in the Live column.
-                const atCap = dailyPct >= 1 || monthlyPct >= 1;
+                // CH-391 (Sir, 29 Oct): the yellow triangle means the BUYER's
+                // own cap is reached - "we have funds for 100 calls, so the team
+                // sets a cap of 100 under the buyer ... once 100 hit, the yellow
+                // sign should come, so the team knows to ask the buyer for
+                // funds". A destination's own daily / monthly cap shows in red
+                // on its figure instead.
+                const atCap =
+                  !!buyer &&
+                  ((buyer.dailyCap > 0 && buyer.callsToday >= buyer.dailyCap) ||
+                    (buyer.monthlyCap > 0 && buyer.callsMonth >= buyer.monthlyCap));
 
                 const checked = !!selectedIds?.has(destination.id);
                 return (
@@ -247,12 +248,13 @@ export function DestinationsTable({
                       >
                         <LocalName name={destination.name} className="truncate max-w-[14rem]" />
                         {atCap && (
-                          <AlertTriangle
-                            // CH-388 (Sir, 29 Oct: "Make triangle red as well"):
-                            // the same red as a full CC / cap figure.
-                            className="h-3.5 w-3.5 text-destructive"
-                            aria-label={t("networkUI.destinations.table.atCapAria")}
-                          />
+                          <span title={t("x391.buyerCapReached")} className="inline-flex">
+                            <AlertTriangle
+                              // CH-391: yellow (Sir: "change color to Yellow").
+                              className="h-3.5 w-3.5 text-[color:var(--warning)]"
+                              aria-label={t("x391.buyerCapReached")}
+                            />
+                          </span>
                         )}
                       </Link>
                     </TableCell>
@@ -287,7 +289,7 @@ export function DestinationsTable({
                       <span
                         className={cn(
                           "inline-flex min-w-[3.5rem] items-center justify-center gap-1 rounded border border-border bg-muted/40 px-2 py-1 text-[10.5px] font-medium tabular-nums",
-                          pacingTone(livePct),
+                          // CH-391: Live keeps the normal colour even at 1 / 1.
                         )}
                       >
                         <span>{live}</span>

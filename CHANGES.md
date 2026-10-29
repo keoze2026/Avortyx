@@ -1076,3 +1076,19 @@ Sir, 29 Oct: "Give all these options, but the buyer should see their metrics
 only". Replaces CH-389's two figures: a buyer login sees all five - Active
 Live, Total Live, Total CC, Active TFNs, Unfilled CC - each summed from the
 buyer's own destinations, never the workspace's.
+
+## CH-391 - Destinations: CC stays white; yellow triangle = buyer cap reached
+**2026-10-29 · Destinations / Campaigns**
+
+Sir, 29 Oct: "Once CC is full like 1/1 keep the same white colour; once a cap
+is over just change the cap colour to red" and "That triangle - change colour
+to yellow. It should come when the buyer's cap is reached: we have funds for
+100 calls, so the team sets a cap of 100 under the buyer; the buyer has 10
+TFNs with 200 calls cap; once 100 is hit the yellow sign should come, so the
+team knows to ask the buyer for funds".
+- Live / CC figures are always the normal colour, even when full (Destinations
+  page and the campaign page).
+- A destination's own daily / monthly figure turns red when its cap is full.
+- The yellow triangle next to a destination now means its BUYER's daily or
+  monthly cap is reached; hover says "Buyer cap reached - ask the buyer for
+  funds to take more calls". All four languages.
