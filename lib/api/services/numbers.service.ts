@@ -64,6 +64,12 @@ interface NumberWire {
   assignedAt?: string | number | null;
   renewalDate?: string | number;
   provisionedAt?: string | number;
+  /** CH-369: the backend sends `created_at` (the day the number was added)
+   *  and never `provisioned_at`, so Lifetime read "now" and showed 1d on
+   *  every number. */
+  createdAt?: string | number;
+  /** CH-369: when the number stops (a set validity, e.g. HYU 30 days). */
+  expiresAt?: string | number | null;
   lastCallAt?: string | number;
   /** Editable fields surfaced in the row edit dialog. Without these on the
    *  wire shape, wireToNumber would silently drop them and the
@@ -156,7 +162,8 @@ function wireToNumber(w: NumberWire): TrackingNumber {
     carrierCode: w.carrierCode ?? undefined,
     assignedAt:
       w.assignedAt !== undefined && w.assignedAt !== null ? toTs(w.assignedAt) : undefined,
-    provisionedAt: toTs(w.provisionedAt),
+    provisionedAt: toTs(w.provisionedAt ?? w.createdAt),
+    expiresAt: w.expiresAt !== undefined && w.expiresAt !== null ? toTs(w.expiresAt) : undefined,
     lastCallAt: w.lastCallAt !== undefined ? toTs(w.lastCallAt) : undefined,
     // Round-trip the editable fields so a successful PATCH actually changes
     // what the user sees. `label: null` from the backend clears the field.

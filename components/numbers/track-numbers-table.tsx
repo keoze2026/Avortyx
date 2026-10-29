@@ -120,6 +120,14 @@ export function deriveLifetimeDays(n: TrackingNumber): number {
   return Math.max(1, Math.floor((Date.now() - n.provisionedAt) / DAY_MS));
 }
 
+/** CH-369: days until a number with an end date stops (rounded up, so a
+ *  30-day HYU number reads 30d on the day it is added), or null when it has
+ *  no end date. Sir, 29 Oct: "Lifetime details wrong - HYU" (it read 1d). */
+export function deriveDaysLeft(n: TrackingNumber): number | null {
+  if (!n.expiresAt) return null;
+  return Math.max(0, Math.ceil((n.expiresAt - Date.now()) / DAY_MS));
+}
+
 /** The carrier's short code, e.g. KMQ. Blank until a carrier is set on the
  *  number — the code is a row in the backend's carrier table, never a value
  *  guessed from the number or the vendor. */
@@ -344,8 +352,13 @@ export function TrackNumbersTable({
                       </TableCell>
                     )}
                     {visibleColumns.has("lifetime") && (
-                      <TableCell className={CELL}>
-                        {t("common.daysShort").replace("{n}", String(deriveLifetimeDays(n)))}
+                      <TableCell
+                        className={CELL}
+                        title={n.expiresAt ? t("x369.endsOn").replace("{date}", formatLocalDate(n.expiresAt, { month: "short", day: "numeric", year: "numeric" })) : undefined}
+                      >
+                        {deriveDaysLeft(n) !== null
+                          ? t("x369.daysLeft").replace("{n}", String(deriveDaysLeft(n)))
+                          : t("common.daysShort").replace("{n}", String(deriveLifetimeDays(n)))}
                       </TableCell>
                     )}
                     {visibleColumns.has("carrier") && (

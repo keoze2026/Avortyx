@@ -855,3 +855,13 @@ the header centred the word together with its sort arrow, so the word sat
 about 8px left of the names. A centred header now has an empty space the
 arrow's width on its left, so the word itself is exactly over the column's
 centre. Applies to every centred, sortable header in the call log.
+
+## CH-369 - Numbers: Lifetime shows the real figure
+**2026-10-29 · Numbers**
+
+Sir, 29 Oct: "Lifetime details wrong - HYU" - every number read 1d. The page
+read `provisioned_at`, which the backend never sends, so it counted from
+"now". It now reads `created_at` (the day the number was added). A number
+with an end date - the 20 HYU TFNs added today, valid 30 days - shows the
+days it has left instead ("30d left", then 29d, ...), with the end date on
+hover. All four languages.

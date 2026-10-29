@@ -60,6 +60,9 @@ export interface TrackingNumber {
   assignedAt?: number;
 
   provisionedAt: number;
+  /** When the number stops taking calls (ms epoch), e.g. a 30-day carrier
+   *  validity. Undefined = no end date. */
+  expiresAt?: number;
   lastCallAt?: number;
 
   /* ─── Tracking-number edit dialog fields ────────────────────────────
