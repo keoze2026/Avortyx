@@ -1058,3 +1058,13 @@ previous choice back instead of showing the new one as if it were saved.
 Sir, 29 Oct: "Make triangle red as well". The triangle next to a destination
 whose daily or monthly cap is full is now the same red as a full CC or cap
 figure (CH-386), not yellow.
+
+## CH-389 - Buyer login, Destinations: its own Live and Total CC only
+**2026-10-29 · Buyer access**
+
+Sir, 29 Oct: "Under Destination, Total Live is showing 62, which is our main
+account's live calls. It should only collect the buyer access details, and
+there Live and Total CC only". A buyer login's Destinations page now shows
+two figures, both summed from the buyer's own destinations: Live and Total
+CC. Active Live, Total Live (workspace-wide), Active TFNs and Unfilled CC
+are no longer shown to buyers. Admin view unchanged.
