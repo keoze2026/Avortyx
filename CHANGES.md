@@ -1068,3 +1068,11 @@ there Live and Total CC only". A buyer login's Destinations page now shows
 two figures, both summed from the buyer's own destinations: Live and Total
 CC. Active Live, Total Live (workspace-wide), Active TFNs and Unfilled CC
 are no longer shown to buyers. Admin view unchanged.
+
+## CH-390 - Buyer login, Destinations: all five figures, its own only
+**2026-10-29 · Buyer access**
+
+Sir, 29 Oct: "Give all these options, but the buyer should see their metrics
+only". Replaces CH-389's two figures: a buyer login sees all five - Active
+Live, Total Live, Total CC, Active TFNs, Unfilled CC - each summed from the
+buyer's own destinations, never the workspace's.

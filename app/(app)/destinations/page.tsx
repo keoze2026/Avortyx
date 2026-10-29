@@ -116,16 +116,20 @@ export default function DestinationsPage() {
   const isBuyerLogin = useAuthStore((st) => st.user?.role) === "buyer";
   const stats = useMemo(() => {
     if (isBuyerLogin) {
-      let live = 0;
+      // CH-390: all five figures, each from the buyer's own destinations only.
+      let totalLive = 0;
+      let activeLive = 0;
       let totalCC = 0;
       let activeTFNs = 0;
       for (const d of destinations) {
-        live += d.liveCalls || 0;
+        const live = d.liveCalls || 0;
+        totalLive += live;
         if (!d.enabled) continue;
+        activeLive += live;
         activeTFNs += 1;
         totalCC += d.concurrencyCap;
       }
-      return { activeLive: live, totalLive: live, totalCC, activeTFNs, vacantCC: Math.max(0, totalCC - live) };
+      return { activeLive, totalLive, totalCC, activeTFNs, vacantCC: Math.max(0, totalCC - activeLive) };
     }
     if (remoteStats) {
       return {
@@ -356,20 +360,16 @@ export default function DestinationsPage() {
 
         {/* Inline summary stats — one bordered card, all 5 stats split by hairlines */}
         <div className="ml-auto inline-flex h-9 items-stretch divide-x divide-border overflow-hidden rounded-md border border-border bg-card">
-          {(isBuyerLogin
-            ? [
-                // CH-389: a buyer sees its own Live and Total CC only.
-                { label: t("networkUI.destinations.table.live"), value: formatCompact(stats.totalLive) },
-                { label: t("networkUI.destinations.page.totalCC"), value: formatCompact(stats.totalCC) },
-              ]
-            : [
-                { label: t("networkUI.destinations.page.activeLive"), value: formatCompact(stats.activeLive) },
-                { label: t("networkUI.destinations.page.totalLive"), value: formatCompact(stats.totalLive) },
-                { label: t("networkUI.destinations.page.totalCC"), value: formatCompact(stats.totalCC) },
-                { label: t("networkUI.destinations.page.activeTFNs"), value: formatCompact(stats.activeTFNs) },
-                { label: t("networkUI.destinations.page.vacantCC"), value: formatCompact(stats.vacantCC) },
-              ]
-          ).map((s) => (
+          {/* CH-390 (Sir, 29 Oct: "Give all these options, but the buyer should
+              see their metrics only"): the same five figures for everyone; for
+              a buyer login each is summed from its own destinations above. */}
+          {[
+            { label: t("networkUI.destinations.page.activeLive"), value: formatCompact(stats.activeLive) },
+            { label: t("networkUI.destinations.page.totalLive"), value: formatCompact(stats.totalLive) },
+            { label: t("networkUI.destinations.page.totalCC"), value: formatCompact(stats.totalCC) },
+            { label: t("networkUI.destinations.page.activeTFNs"), value: formatCompact(stats.activeTFNs) },
+            { label: t("networkUI.destinations.page.vacantCC"), value: formatCompact(stats.vacantCC) },
+          ].map((s) => (
             <div
               key={s.label}
               className="flex items-center gap-1.5 px-3 text-[11px] text-muted-foreground"
