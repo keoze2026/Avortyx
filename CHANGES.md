@@ -1022,3 +1022,11 @@ Follow-up to CH-383. Add lists destinations not yet in every campaign of the
 ticked groups; Change and Remove now list only the destinations that are in
 those groups (a number the group does not have cannot be changed or removed
 there). A destination opened from its own row always stays.
+
+## CH-385 - Call Log: every status pill the same size
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "fix the boxes for status, they should all be the same". Live,
+Completed, No Answer, Passed and Missed With Conversion now share one fixed
+width (10.5rem), wide enough for the longest one in every language; before,
+Missed With Conversion was wider than the rest.

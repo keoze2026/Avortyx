@@ -102,6 +102,10 @@ const NUMBER_CELL = CELL;
  *  and the line sits in the middle of the column. The headers are not part
  *  of it: they stay centred like every other header (CH-368, CH-373). */
 const NAME_CELL = `${CELL} text-center`;
+/** CH-385 (Sir, 29 Oct: "fix the boxes for status, they should all be the
+ *  same"): every status pill - Live, Completed, No Answer, Passed and the
+ *  longest, Missed With Conversion - has one fixed width. */
+const STATUS_PILL = "w-[10.5rem] justify-center whitespace-nowrap";
 type NameCol = "campaign" | "publisher" | "buyer";
 const NAME_COLS: NameCol[] = ["campaign", "publisher", "buyer"];
 
@@ -1136,15 +1140,15 @@ export function CallLogTable({
                               Incoming) reads "Missed With Conversion" in blue;
                               that pill grows to fit its longer text. */}
                           {isTfnTestCall(c) ? (
-                            <Badge variant={statusVariant("completed")} className="w-24 justify-center">
+                            <Badge variant={statusVariant("completed")} className={STATUS_PILL}>
                               {t("x378.passed")}
                             </Badge>
                           ) : convertedUnanswered(c) ? (
-                            <Badge variant="default" className="min-w-24 justify-center whitespace-nowrap bg-accent text-accent-foreground">
+                            <Badge variant="default" className={cn(STATUS_PILL, "bg-accent text-accent-foreground")}>
                               {t("status.missedWithConversion")}
                             </Badge>
                           ) : (
-                            <Badge variant={statusVariant(c.status)} className="w-24 justify-center">
+                            <Badge variant={statusVariant(c.status)} className={STATUS_PILL}>
                               {isBusy(c) ? t("toolsUI.reports.callLog.statusLabel.busy") : t(STATUS_LABEL_KEYS[c.status])}
                             </Badge>
                           )}
