@@ -4,7 +4,8 @@ import type { ExtraTranslations } from "./types";
 export const buyersCard: ExtraTranslations = {
   en: {
     "x399.title": "Buyers",
-    "x399.hint": "Live concurrency and caps for each active buyer",
+    "x399.hint": "Live concurrency and caps for every buyer active today",
+    "x399.pausedNow": "Paused now",
     "x399.liveNow": "Live now",
     "x399.taking": "Buyers taking calls",
     "x399.of": "of {n}",
@@ -38,11 +39,12 @@ export const buyersCard: ExtraTranslations = {
     "x399.allLive": "Every buyer has live calls right now.",
     "x399.noneLive": "No live calls right now.",
     "x399.and": "and",
-    "x399.empty": "No active buyer with an active destination.",
+    "x399.empty": "No buyer active today.",
   },
   ru: {
     "x399.title": "Покупатели",
-    "x399.hint": "Текущая нагрузка и лимиты каждого активного покупателя",
+    "x399.hint": "Текущая нагрузка и лимиты всех покупателей, активных сегодня",
+    "x399.pausedNow": "Сейчас на паузе",
     "x399.liveNow": "Сейчас в эфире",
     "x399.taking": "Покупатели на звонках",
     "x399.of": "из {n}",
@@ -80,7 +82,8 @@ export const buyersCard: ExtraTranslations = {
   },
   ja: {
     "x399.title": "バイヤー",
-    "x399.hint": "稼働中の各バイヤーの同時通話数と上限",
+    "x399.hint": "本日稼働したすべてのバイヤーの同時通話数と上限",
+    "x399.pausedNow": "現在一時停止中",
     "x399.liveNow": "現在通話中",
     "x399.taking": "通話受付中のバイヤー",
     "x399.of": "/ {n}",
@@ -118,7 +121,8 @@ export const buyersCard: ExtraTranslations = {
   },
   zh: {
     "x399.title": "买家",
-    "x399.hint": "每个活跃买家的实时并发和上限",
+    "x399.hint": "今日所有活跃买家的实时并发和上限",
+    "x399.pausedNow": "当前已暂停",
     "x399.liveNow": "当前通话",
     "x399.taking": "正在接听的买家",
     "x399.of": "/ {n}",

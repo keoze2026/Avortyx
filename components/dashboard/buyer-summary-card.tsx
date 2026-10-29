@@ -60,6 +60,9 @@ interface Row {
   dailyCap: number;
   calls: number;
   revenue: number;
+  /** Has a TFN switched on and the buyer itself is active: it can take a
+   *  call right now. False for a buyer that worked today and is paused now. */
+  activeNow: boolean;
 }
 
 type Show = "all" | "live" | "idle";
@@ -91,40 +94,61 @@ function buildRows(
     ? new Set(destinations.filter((d) => toE164(d.tfn) === toE164(filter)).map((d) => d.buyerId || d.buyerName))
     : null;
 
-  const rows = new Map<string, Row & { allCc: boolean; allCapped: boolean; tfnCap: number }>();
+  // CH-399 (Sir: "push all active buyers today until bottom"): every buyer
+  // that is active now (a TFN switched on, the buyer active) AND every buyer
+  // that took calls in the selected day, even if paused since - R48, Q07 and
+  // the rest whose lines were switched off after their cap.
+  type Acc = { live: number; calls: number; revenue: number; cc: number; allCc: boolean; cap: number; allCapped: boolean; n: number };
+  const acc = (): Acc => ({ live: 0, calls: 0, revenue: 0, cc: 0, allCc: true, cap: 0, allCapped: true, n: 0 });
+  const rows = new Map<string, { id: string; name: string; buyer: Buyer | undefined; on: Acc; used: Acc }>();
   for (const d of destinations) {
-    // Active TFNs of active buyers only, as before.
-    if (!d.enabled) continue;
     const buyer = buyerById.get(d.buyerId);
-    if (buyer && buyer.status !== "active") continue;
+    const tfn = toE164(d.tfn);
+    const dayCalls = useLiveCounters ? d.dailyCalls || 0 : callsByTfn.get(tfn) ?? 0;
+    const dayRevenue = useLiveCounters ? d.dailyRevenue || 0 : revenueByTfn.get(tfn) ?? 0;
+    const live = d.liveCalls || 0;
+    const on = d.enabled && (!buyer || buyer.status === "active");
+    const used = dayCalls > 0 || dayRevenue > 0 || live > 0;
+    if (!on && !used) continue;
     const key = d.buyerId || d.buyerName || d.id;
     if (keepBuyer && !keepBuyer.has(key)) continue;
     let row = rows.get(key);
     if (!row) {
-      row = {
-        id: key, name: buyer?.name ?? d.buyerName ?? d.name, buyer,
-        live: 0, max: 0, dailyCap: 0, calls: 0, revenue: 0, allCc: true, allCapped: true, tfnCap: 0,
-      };
+      row = { id: key, name: buyer?.name ?? d.buyerName ?? d.name, buyer, on: acc(), used: acc() };
       rows.set(key, row);
     }
-    const tfn = toE164(d.tfn);
-    row.live += d.liveCalls || 0;
-    row.calls += useLiveCounters ? d.dailyCalls || 0 : callsByTfn.get(tfn) ?? 0;
-    row.revenue += useLiveCounters ? d.dailyRevenue || 0 : revenueByTfn.get(tfn) ?? 0;
-    if (d.concurrencyCap > 0) row.max += d.concurrencyCap;
-    else row.allCc = false;
-    if (d.dailyCap > 0) row.tfnCap += d.dailyCap;
-    else row.allCapped = false;
+    for (const [a, take] of [[row.on, on], [row.used, on || used]] as const) {
+      if (!take) continue;
+      a.n += 1;
+      a.live += live;
+      a.calls += dayCalls;
+      a.revenue += dayRevenue;
+      if (d.concurrencyCap > 0) a.cc += d.concurrencyCap;
+      else a.allCc = false;
+      if (d.dailyCap > 0) a.cap += d.dailyCap;
+      else a.allCapped = false;
+    }
   }
-  return [...rows.values()].map(({ allCc, allCapped, tfnCap, ...r }) => ({
-    ...r,
-    max: allCc ? r.max : 0,
-    dailyCap: r.buyer && r.buyer.dailyCap > 0 ? r.buyer.dailyCap : allCapped ? tfnCap : 0,
-  }));
+  return [...rows.values()].map(({ id, name, buyer, on, used }) => {
+    const activeNow = on.n > 0;
+    // Max and cap: of the lines it can take calls on now; for a buyer that
+    // is paused now, of the lines it used today.
+    const lines = activeNow ? on : used;
+    return {
+      id, name, buyer, activeNow,
+      live: used.live,
+      calls: used.calls,
+      revenue: used.revenue,
+      max: lines.allCc ? lines.cc : 0,
+      dailyCap: buyer && buyer.dailyCap > 0 ? buyer.dailyCap : lines.allCapped ? lines.cap : 0,
+    };
+  });
 }
 
 function initials(name: string): string {
   const letters = name.replace(/[^A-Za-z0-9]/g, "");
+  // A short code (Q07, R48, 11H) is shown whole; a name by its first two letters.
+  if (letters.length > 0 && letters.length <= 3) return letters.toUpperCase();
   return (letters.slice(0, 2) || name.slice(0, 2)).toUpperCase();
 }
 
@@ -157,6 +181,9 @@ export function BuyerSummaryCard({
   const liveNow = all.reduce((n, r) => n + r.live, 0);
   const taking = all.filter((r) => r.live > 0);
   const idle = all.filter((r) => r.live === 0);
+  // The footer names only buyers that could take a call now and have none -
+  // not every buyer paused since this morning.
+  const idleNow = idle.filter((r) => r.activeNow);
   const callsTotal = all.reduce((n, r) => n + r.calls, 0);
   const revenueTotal = all.reduce((n, r) => n + r.revenue, 0);
   const topEarner = all.reduce<Row | null>((best, r) => (r.revenue > 0 && (!best || r.revenue > best.revenue) ? r : best), null);
@@ -314,7 +341,7 @@ export function BuyerSummaryCard({
                       <span
                         className={cn(
                           "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card",
-                          r.live > 0 ? GREEN_BG : "bg-muted-foreground/50",
+                          r.live > 0 ? GREEN_BG : r.activeNow ? "bg-muted-foreground/50" : "bg-[color:var(--warning)]",
                         )}
                       />
                     </span>
@@ -334,7 +361,7 @@ export function BuyerSummaryCard({
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        {r.live > 0 ? t("x399.takingCalls") : t("x399.idle")}
+                        {r.live > 0 ? t("x399.takingCalls") : r.activeNow ? t("x399.idle") : t("x399.pausedNow")}
                       </p>
                     </div>
                   </div>
@@ -382,7 +409,7 @@ export function BuyerSummaryCard({
 
                   {/* Actions: shown on hover */}
                   <div className="flex items-center justify-end gap-1.5">
-                    {r.buyer && canEdit ? (
+                    {r.buyer && canEdit && r.buyer.status === "active" ? (
                       <>
                         <span className="text-muted-foreground group-hover:hidden">
                           <MoreHorizontal className="h-4 w-4" />
@@ -446,12 +473,12 @@ export function BuyerSummaryCard({
             <span>
               {liveNow === 0 ? (
                 t("x399.noneLive")
-              ) : idle.length === 0 ? (
+              ) : idleNow.length === 0 ? (
                 t("x399.allLive")
               ) : (
                 <>
                   <b className="font-semibold text-foreground">
-                    {(idle.length === 1 ? t("x399.idleOne") : t("x399.idleSome")).replace("{names}", list(idle.map((r) => r.name)))}
+                    {(idleNow.length === 1 ? t("x399.idleOne") : t("x399.idleSome")).replace("{names}", list(idleNow.map((r) => r.name)))}
                   </b>{" "}
                   {(carriers.length === 1 ? t("x399.carryingOne") : t("x399.carrying"))
                     .replace("{names}", list(carriers.map((r) => r.name)))
