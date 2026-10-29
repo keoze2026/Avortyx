@@ -846,3 +846,12 @@ Sir, 29 Oct: "Move Campaign - inch left only, on top publisher". In Call
 Summary the tab row (Campaign, Publisher, ...) sat 4px right of the title and
 the first column. It now starts on the same left edge, so CAMPAIGN sits
 straight above the first column's names.
+
+## CH-368 - Reports call log: header word exactly over the centred names
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "Is publisher perfectly centered?" The names were centred, but
+the header centred the word together with its sort arrow, so the word sat
+about 8px left of the names. A centred header now has an empty space the
+arrow's width on its left, so the word itself is exactly over the column's
+centre. Applies to every centred, sortable header in the call log.

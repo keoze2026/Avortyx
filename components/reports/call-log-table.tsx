@@ -486,6 +486,12 @@ function LogSortHeader({
         isActive ? "text-foreground" : "hover:text-foreground",
       )}
     >
+      {/* CH-368: a centred header puts an empty space the arrow's width on
+          its left, so the WORD sits exactly over the centre of the column -
+          over the centred values below - not word + arrow together, which
+          left the word about 8px left of the names (Sir: "Is publisher
+          perfectly centered?"). */}
+      {align === "center" && <span aria-hidden className="h-3 w-3 shrink-0" />}
       <span>{label}</span>
       {isActive ? (
         dir === "asc" ? (
