@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
-import { DestinationSummaryTable } from "@/components/dashboard/destination-summary-table";
+import { BuyerSummaryCard } from "@/components/dashboard/buyer-summary-card";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { TopCampaignsBars } from "@/components/dashboard/top-campaigns-bars";
 import { VerticalDonut } from "@/components/dashboard/vertical-donut";
@@ -358,8 +358,10 @@ export default function DashboardPage() {
           <RevenueChart calls={NO_CALLS} series={snapshot?.timeSeries ?? []} dateLabel={dateLabel} />
         </div>
 
-        {/* Row 3 — Destinations table (each TFN with its own CC and Cap) */}
-        <DestinationSummaryTable
+        {/* Row 3 — Buyers (CH-399, Sir's design): each active buyer with its live
+            concurrency, daily cap, calls and revenue - in place of the
+            per-TFN Destinations table. */}
+        <BuyerSummaryCard
           calls={NO_CALLS}
           // While a view loads, only TODAY may fall back to the live
           // destination counters - for any other range they are the wrong day.
