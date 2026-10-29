@@ -1,9 +1,11 @@
 "use client";
 
+import type * as React from "react";
 import {
   ArrowUpDown,
   ChevronDown,
   Filter,
+  Plus,
   RefreshCw,
   Search,
   Settings,
@@ -85,6 +87,8 @@ interface BuyersToolbarProps {
   onRefresh: () => void;
   /** Leave out to hide the Create button (the role has no Edit tick). */
   onCreate?: () => void;
+  /** Shown at the left end of the toolbar. */
+  leading?: React.ReactNode;
 }
 
 export function BuyersTableToolbar({
@@ -100,10 +104,13 @@ export function BuyersTableToolbar({
   onColumns,
   onRefresh,
   onCreate,
+  leading,
 }: BuyersToolbarProps) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center justify-end gap-1">
+      {/* CH-405: e.g. the "Show buyer cap" switch, at the left end. */}
+      {leading && <div className="mr-auto">{leading}</div>}
       {/* Search */}
       <Popover>
         <PopoverTrigger asChild>
@@ -291,8 +298,13 @@ export function BuyersTableToolbar({
 
       {/* Create */}
       {onCreate && (
-        <Button size="sm" className="ml-1 h-8 px-4" onClick={onCreate}>
-          {t("networkUI.common.create")}
+        <Button
+          size="sm"
+          className="ml-1 h-8 gap-1.5 bg-accent px-4 text-accent-foreground hover:bg-[color:var(--accent-hover)]"
+          onClick={onCreate}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t("x405.createBuyer")}
         </Button>
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, PhoneForwarded, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, PhoneForwarded, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -10,6 +10,7 @@ import {
   type BuyerColumnKey,
 } from "@/components/buyers/buyers-table-toolbar";
 import { Card } from "@/components/ui/card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -23,7 +24,9 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { ROUTES } from "@/lib/constants";
-import { formatCurrency } from "@/lib/format";
+/** Calls with thousands separators, as in Sir's Buyers design (3,575). */
+const GROUPED = new Intl.NumberFormat("en-US");
+export const formatCalls = (n: number) => GROUPED.format(n);
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import type { Buyer } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -41,6 +44,13 @@ interface BuyersTableProps {
   /** Optional controlled selection. When omitted, the table owns it internally. */
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
+  /** CH-405: the Buyer cap column ("Show buyer cap"). */
+  showCap?: boolean;
+}
+
+/** The buyer's own daily cap is full: routing sends it nothing more today. */
+export function buyerCapHit(b: Buyer): boolean {
+  return b.dailyCap > 0 && (b.capUsedToday ?? b.callsToday) >= b.dailyCap;
 }
 
 export function BuyersTable({
@@ -52,6 +62,7 @@ export function BuyersTable({
   onAddTfn,
   selectedIds,
   onSelectionChange,
+  showCap = true,
 }: BuyersTableProps) {
   const { t } = useTranslation();
   const { can } = usePermissions();
@@ -83,7 +94,7 @@ export function BuyersTable({
       <div className="overflow-x-auto">
         <Table className="min-w-[900px]">
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
+            <TableRow className="hover:bg-transparent [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-muted-foreground">
               <TableHead className="w-10 pl-4">
                 <Checkbox
                   checked={allChecked || (indeterminate && "indeterminate")}
@@ -92,22 +103,28 @@ export function BuyersTable({
                 />
               </TableHead>
               <TableHead className="text-left">{t("networkUI.common.name")}</TableHead>
-              {columns.live && <TableHead className="!text-center">{t("buyersRow.live")}</TableHead>}
+              {columns.live && <TableHead className="!text-center">{t("x405.concurrency")}</TableHead>}
+              {showCap && <TableHead className="text-left">{t("x405.buyerCap")}</TableHead>}
               {columns.hourly && <TableHead className="!text-center">{t("networkUI.common.hourly")}</TableHead>}
               {columns.daily && <TableHead className="!text-center">{t("networkUI.common.daily")}</TableHead>}
               {columns.monthly && <TableHead className="!text-center">{t("networkUI.common.monthly")}</TableHead>}
               {columns.global && <TableHead className="!text-center">{t("networkUI.common.global")}</TableHead>}
-              {columns.status && <TableHead>{t("networkUI.common.status")}</TableHead>}
-              <TableHead className="pr-4">{t("networkUI.common.actions")}</TableHead>
+              {columns.status && <TableHead className="!text-center">{t("networkUI.common.status")}</TableHead>}
+              <TableHead className="pr-4 !text-center">{t("networkUI.common.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {buyers.map((b) => {
               const isActive = b.status === "active";
+              const capHit = buyerCapHit(b);
               return (
                 <TableRow
                   key={b.id}
-                  className="cursor-pointer"
+                  className={cn(
+                    "cursor-pointer border-l-2 border-l-transparent",
+                    // Cap reached: an amber edge and tint, as in Sir's design.
+                    capHit && "border-l-[color:var(--warning)] bg-[color:var(--warning)]/5",
+                  )}
                   onClick={() => router.push(`${ROUTES.buyers}/${b.id}`)}
                 >
                   <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
@@ -117,8 +134,16 @@ export function BuyersTable({
                       aria-label={t("networkUI.buyers.table.selectOneAria").replace("{name}", b.name)}
                     />
                   </TableCell>
-                  <TableCell className="text-left font-medium text-foreground">
-                    <LocalName name={b.name} />
+                  <TableCell className="text-left font-semibold text-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <LocalName name={b.name} />
+                      {capHit && (
+                        <span className="inline-flex items-center gap-1 rounded border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--warning)]">
+                          <AlertTriangle className="h-3 w-3" />
+                          {t("x405.capHit")}
+                        </span>
+                      )}
+                    </span>
                   </TableCell>
                   {columns.live && (
                     <TableCell className="!text-center text-muted-foreground" onClick={(e) => e.stopPropagation()}>
@@ -131,28 +156,33 @@ export function BuyersTable({
                       />
                     </TableCell>
                   )}
+                  {showCap && (
+                    <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
+                      <BuyerCapCell buyer={b} hit={capHit} />
+                    </TableCell>
+                  )}
                   {columns.hourly && (
-                    <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      <WindowCell spend={b.hourlySpend} calls={b.hourlyCalls} />
+                    <TableCell className="!text-center">
+                      <CallsCell calls={b.hourlyCalls} />
                     </TableCell>
                   )}
                   {columns.daily && (
-                    <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      <WindowCell spend={b.spendToday} calls={b.callsToday} />
+                    <TableCell className="!text-center">
+                      <CallsCell calls={b.callsToday} />
                     </TableCell>
                   )}
                   {columns.monthly && (
-                    <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      <WindowCell spend={b.spendMonth} calls={b.callsMonth} />
+                    <TableCell className="!text-center">
+                      <CallsCell calls={b.callsMonth} />
                     </TableCell>
                   )}
                   {columns.global && (
-                    <TableCell className="!text-center tabular-nums text-muted-foreground">
-                      <WindowCell spend={b.lifetimeSpend} calls={b.globalCalls} />
+                    <TableCell className="!text-center">
+                      <CallsCell calls={b.globalCalls} />
                     </TableCell>
                   )}
                   {columns.status && (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="!text-center" onClick={(e) => e.stopPropagation()}>
                       <Switch
                         // Green when the buyer is active (taking calls).
                         className="data-[state=checked]:bg-[color:var(--success)] dark:data-[state=checked]:bg-[color:var(--success)]"
@@ -163,7 +193,7 @@ export function BuyersTable({
                       />
                     </TableCell>
                   )}
-                  <TableCell className="pr-4" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="pr-4 !text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-0.5">
                       <Can area="buyers" action="edit"><ActionIcon
                         icon={Pencil}
@@ -197,16 +227,68 @@ export function BuyersTable({
 
 /* ─────────────────────────────────────────────────────────────────── */
 
-/** One spend window: the spend, with the number of calls under it. */
-function WindowCell({ spend, calls }: { spend: number; calls: number }) {
+/** One window, in calls (CH-405, Sir's design: "all figures in calls"). */
+function CallsCell({ calls }: { calls: number }) {
+  return calls > 0 ? (
+    <span className="text-sm font-semibold tabular-nums text-foreground">{formatCalls(calls)}</span>
+  ) : (
+    <span className="text-muted-foreground/60">—</span>
+  );
+}
+
+/**
+ * The buyer's own daily cap: used / cap with a bar (amber when full), and on
+ * hover the breakdown against its TFN caps. "No cap" when it has none.
+ */
+function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
   const { t } = useTranslation();
+  if (!(b.dailyCap > 0)) return <span className="text-xs text-muted-foreground/70">{t("x405.noCap")}</span>;
+  const used = b.capUsedToday ?? b.callsToday;
+  const pct = Math.min(100, (used / b.dailyCap) * 100);
+  const n = b.tfnCount ?? 0;
   return (
-    <span className="inline-flex flex-col items-center leading-tight">
-      <span>{formatCurrency(spend, true)}</span>
-      <span className="text-[10px] text-muted-foreground/80">
-        {t(calls === 1 ? "buyersRow.callsOne" : "buyersRow.callsMany").replace("{n}", calls.toLocaleString("en-US"))}
-      </span>
-    </span>
+    <HoverCard openDelay={120} closeDelay={60}>
+      <HoverCardTrigger asChild>
+        <span className="inline-flex cursor-default flex-col gap-1">
+          <span className="text-xs tabular-nums">
+            <span className={cn("font-semibold", hit ? "text-[color:var(--warning)]" : "text-foreground")}>
+              {formatCalls(used)}
+            </span>
+            <span className="text-muted-foreground"> / {formatCalls(b.dailyCap)}</span>
+          </span>
+          <span className="h-1 w-16 overflow-hidden rounded-full bg-muted/60">
+            <span
+              className={cn("block h-full rounded-full", hit ? "bg-[color:var(--warning)]" : "bg-accent")}
+              style={{ width: `${Math.max(3, pct)}%` }}
+            />
+          </span>
+        </span>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-64 p-3 text-xs" align="start">
+        <p className="mb-2 font-semibold">{t("x405.breakdown").replace("{name}", b.name)}</p>
+        <dl className="space-y-1">
+          {[
+            [t("x405.capFunds"), t("x405.nCalls").replace("{n}", formatCalls(b.dailyCap))],
+            [t("x405.used"), formatCalls(used)],
+            [t("x405.left"), formatCalls(Math.max(0, b.dailyCap - used))],
+            [
+              t("x405.tfnCaps").replace("{n}", String(n)),
+              (b.tfnUncapped ?? 0) > 0
+                ? `${formatCalls(b.tfnCapTotal ?? 0)} · ${t("x405.tfnNoCap").replace("{n}", String(b.tfnUncapped))}`
+                : formatCalls(b.tfnCapTotal ?? 0),
+            ],
+          ].map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="font-semibold tabular-nums">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-2 border-t border-border pt-2 text-muted-foreground">
+          {t("x405.note").replace("{cap}", formatCalls(b.dailyCap)).replace("{n}", String(n))}
+        </p>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 

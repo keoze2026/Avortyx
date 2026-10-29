@@ -62,6 +62,14 @@ interface BuyerListWire {
   totalSpend?: number | string;
   acceptRate?: number;
   conversionRate?: number;
+  /** CH-405: caps, cap usage and TFN caps on each list row. */
+  dailyCap?: number;
+  monthlyCap?: number;
+  capUsedToday?: number;
+  capUsedMonth?: number;
+  tfnCount?: number;
+  tfnCapTotal?: number;
+  tfnUncapped?: number;
 }
 
 interface BuyerWire extends BuyerListWire {
@@ -200,8 +208,13 @@ function listWireToBuyer(w: BuyerListWire): Buyer {
     payoutModel: normalizePayoutModel(w.payoutModel),
     concurrencyCap: typeof w.maxConcurrency === "number" ? w.maxConcurrency : 0,
     concurrencyKnown: typeof w.maxConcurrency === "number",
-    dailyCap: 0,
-    monthlyCap: 0,
+    dailyCap: w.dailyCap ?? 0,
+    monthlyCap: w.monthlyCap ?? 0,
+    capUsedToday: w.capUsedToday,
+    capUsedMonth: w.capUsedMonth,
+    tfnCount: w.tfnCount,
+    tfnCapTotal: w.tfnCapTotal,
+    tfnUncapped: w.tfnUncapped,
     // Usage counters: read off the list payload when the backend includes
     // them (0 otherwise) — these used to be hardcoded to 0 regardless of
     // what the response carried.

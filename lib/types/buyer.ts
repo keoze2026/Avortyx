@@ -51,5 +51,14 @@ export interface Buyer {
   conversionRate: number;
 
   campaignIds: string[];
+
+  /* CH-405: from the Buyers list - how far into its own daily / monthly cap
+   * (counted as routing counts it), and its live TFNs with their daily caps. */
+  capUsedToday?: number;
+  capUsedMonth?: number;
+  tfnCount?: number;
+  tfnCapTotal?: number;
+  /** Live TFNs with no daily cap of their own. */
+  tfnUncapped?: number;
   createdAt: number;
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2 } from "lucide-react";
+import { Ban, Building2, CircleCheck, Phone, Users } from "lucide-react";
 import { toast } from "sonner";
 
-import { BuyersTable } from "@/components/buyers/buyers-table";
+import { BuyersTable, buyerCapHit, formatCalls } from "@/components/buyers/buyers-table";
 import {
   ALL_BUYER_COLUMNS,
   BuyersTableToolbar,
@@ -21,9 +21,10 @@ import { ListLoading } from "@/components/shared/list-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { useLocalName } from "@/lib/i18n/local-name";
-import { formatCompact, formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { usePermissions } from "@/lib/my-permissions";
 
@@ -66,7 +67,25 @@ export default function BuyersPage() {
   // Toolbar state
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BuyerTableStatusFilter>("all");
-  const [sort, setSort] = useState<BuyerTableSortKey>("recent");
+  // Busiest first by default (CH-405); active buyers always above the rest.
+  const [sort, setSort] = useState<BuyerTableSortKey>("calls");
+  // CH-405: the Buyer cap column, on by default; remembered per browser.
+  const [showCap, setShowCap] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("avx.buyers.showCap") === "0") setShowCap(false);
+    } catch {
+      /* storage unavailable: keep the default */
+    }
+  }, []);
+  const toggleCap = (on: boolean) => {
+    setShowCap(on);
+    try {
+      window.localStorage.setItem("avx.buyers.showCap", on ? "1" : "0");
+    } catch {
+      /* not remembered, still applied */
+    }
+  };
   // 50 buyers per page by default (boss request); 10 / 25 / 100 still selectable.
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(0);
@@ -93,11 +112,19 @@ export default function BuyersPage() {
         return false;
       return true;
     });
+    // CH-405 (Sir: "active buyers always top, paused and non-active buyers
+    // bottom"): active buyers first, whatever the sort; the chosen sort
+    // orders each group, then the name.
+    const group = (x: (typeof list)[number]) => (x.status === "active" ? 0 : 1);
     return [...list].sort((a, b) => {
-      if (sort === "spend") return b.spendToday - a.spendToday;
-      if (sort === "calls") return b.callsToday - a.callsToday;
-      if (sort === "bid") return b.bidAmount - a.bidAmount;
-      return b.createdAt - a.createdAt;
+      const g = group(a) - group(b);
+      if (g !== 0) return g;
+      let d = 0;
+      if (sort === "spend") d = b.spendToday - a.spendToday;
+      else if (sort === "calls") d = b.callsToday - a.callsToday || b.callsMonth - a.callsMonth;
+      else if (sort === "bid") d = b.bidAmount - a.bidAmount;
+      else d = b.createdAt - a.createdAt;
+      return d || a.name.localeCompare(b.name);
     });
   }, [buyers, query, statusFilter, sort]);
 
@@ -106,10 +133,10 @@ export default function BuyersPage() {
 
   const stats = useMemo(() => {
     const active = buyers.filter((b) => b.status === "active").length;
-    const capped = buyers.filter((b) => b.status === "capped").length;
-    const spend = buyers.reduce((s, b) => s + b.spendToday, 0);
+    // Buyers whose own daily cap is full - routing sends them nothing more.
+    const capped = buyers.filter(buyerCapHit).length;
     const calls = buyers.reduce((s, b) => s + b.callsToday, 0);
-    return { total: buyers.length, active, capped, spend, calls };
+    return { total: buyers.length, active, capped, calls };
   }, [buyers]);
 
   const onToggle = (id: string) => {
@@ -201,18 +228,30 @@ export default function BuyersPage() {
         description={t("networkUI.buyers.page.description")}
       />
 
-      {/* Inventory summary */}
+      {/* Inventory summary (CH-405, Sir's design) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: t("networkUI.buyers.stats.total"), value: waiting ? "—" : formatCompact(stats.total) },
-          { label: t("networkUI.buyers.stats.active"), value: waiting ? "—" : formatCompact(stats.active) },
-          { label: t("networkUI.buyers.stats.capped"), value: waiting ? "—" : formatCompact(stats.capped) },
-          { label: t("networkUI.buyers.stats.spendToday"), value: waiting ? "—" : formatCurrency(stats.spend) },
+          { icon: Users, label: t("x405.kpiTotal"), value: stats.total, tone: "" },
+          { icon: CircleCheck, label: t("x405.kpiActive"), value: stats.active, tone: "" },
+          { icon: Ban, label: t("x405.kpiCapHit"), value: stats.capped, tone: stats.capped > 0 ? "warn" : "" },
+          { icon: Phone, label: t("x405.kpiCalls"), value: stats.calls, tone: "" },
         ].map((s) => (
           <Card key={s.label}>
-            <CardContent className="p-4">
-              <div className="text-xl font-semibold tabular-nums tracking-tight">{s.value}</div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground">{s.label}</div>
+            <CardContent className="flex items-center gap-3 p-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <s.icon className="h-4 w-4" />
+              </span>
+              <div>
+                <div
+                  className={cn(
+                    "text-xl font-semibold tabular-nums tracking-tight",
+                    s.tone === "warn" && "text-[color:var(--warning)]",
+                  )}
+                >
+                  {waiting ? "—" : formatCalls(s.value)}
+                </div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">{s.label}</div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -231,6 +270,12 @@ export default function BuyersPage() {
         onColumns={setColumns}
         onRefresh={() => toast.success(t("networkUI.buyers.toast.refreshed"))}
         onCreate={can("buyers", "edit") ? () => setInviteOpen(true) : undefined}
+        leading={
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium">
+            <Switch checked={showCap} onCheckedChange={toggleCap} className="scale-75" />
+            {t("x405.showCap")}
+          </label>
+        }
       />
 
       {selectedBuyers.length > 0 && can("buyers", "edit") && (
@@ -264,7 +309,9 @@ export default function BuyersPage() {
             onAddTfn={setAddTfnFor}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
+            showCap={showCap}
           />
+          <p className="-mt-1 text-right text-[11px] text-muted-foreground">{t("x405.legend")}</p>
           <Pagination
             page={page}
             pageSize={pageSize}
