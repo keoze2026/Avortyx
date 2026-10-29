@@ -865,3 +865,10 @@ read `provisioned_at`, which the backend never sends, so it counted from
 with an end date - the 20 HYU TFNs added today, valid 30 days - shows the
 days it has left instead ("30d left", then 29d, ...), with the end date on
 hover. All four languages.
+
+## CH-370 - Numbers: Lifetime without the word "left"
+**2026-10-29 · Numbers**
+
+Sir, 29 Oct: "remove the word left, just let it be 30d". A number with an end
+date shows its days left as plain "30d" (then 29d, ...); the end date is
+still on hover.

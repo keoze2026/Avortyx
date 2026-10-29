@@ -357,7 +357,7 @@ export function TrackNumbersTable({
                         title={n.expiresAt ? t("x369.endsOn").replace("{date}", formatLocalDate(n.expiresAt, { month: "short", day: "numeric", year: "numeric" })) : undefined}
                       >
                         {deriveDaysLeft(n) !== null
-                          ? t("x369.daysLeft").replace("{n}", String(deriveDaysLeft(n)))
+                          ? t("common.daysShort").replace("{n}", String(deriveDaysLeft(n)))
                           : t("common.daysShort").replace("{n}", String(deriveLifetimeDays(n)))}
                       </TableCell>
                     )}
