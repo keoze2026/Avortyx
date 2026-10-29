@@ -168,7 +168,8 @@ export default function DestinationsPage() {
         await setEnabled(id, false);
         toast.success(t("networkUI.destinations.toast.paused").replace("{name}", localName(d.name)));
       } else {
-        // Switching ON: a buyer can have many live TFNs, so only another
+        // Switching ON: a buyer can have many live TFNs and a number can be
+        // live under several buyers (CH-392), so only the same buyer's other
         // destination live on this same number is switched off first.
         const off = await enableExclusive(id);
         toast.success(t("networkUI.destinations.toast.enabled").replace("{name}", localName(d.name)), {

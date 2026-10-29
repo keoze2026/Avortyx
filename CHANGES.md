@@ -1092,3 +1092,14 @@ team knows to ask the buyer for funds".
 - The yellow triangle next to a destination now means its BUYER's daily or
   monthly cap is reached; hover says "Buyer cap reached - ask the buyer for
   funds to take more calls". All four languages.
+
+## CH-392 - The same TFN under different buyers
+
+Campaign team, 29 Oct: they had to pause one buyer's TFN to put the same number
+on another buyer. With backend CH-392 a number can be live once per buyer.
+  - Destinations: Play (one or many) switches off only the SAME buyer's other
+    live destination on that number, no longer another buyer's.
+  - Reports / Calls: Destination Name is the call's own buyer's destination.
+  - Campaign Groups: a number on several buyers is listed once per buyer, so
+    the team picks which buyer to add.
+Deploy together with backend CH-392.

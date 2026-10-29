@@ -48,12 +48,16 @@ export function exportNumber(value: string | null | undefined): string {
 /** Destination number -> its name. Live destinations win over switched-off ones; a
  *  "name" that is just the number again is not a name. */
 export function destinationNameMap(
-  destinations: ReadonlyArray<{ tfn: string; name?: string | null; enabled?: boolean }>,
+  destinations: ReadonlyArray<{ tfn: string; name?: string | null; enabled?: boolean; buyerId?: string | null }>,
 ): Map<string, string> {
+  // Keyed by number, and by buyer + number (CH-392: one TFN can be on several
+  // buyers, each with its own destination name). A live one wins.
   const names = new Map<string, string>();
   for (const d of [...destinations].sort((a, b) => Number(!!a.enabled) - Number(!!b.enabled))) {
     const name = d.name?.trim();
-    if (name && name !== d.tfn) names.set(toE164(d.tfn), name);
+    if (!name || name === d.tfn) continue;
+    names.set(toE164(d.tfn), name);
+    if (d.buyerId) names.set(`${d.buyerId}|${toE164(d.tfn)}`, name);
   }
   return names;
 }
@@ -64,10 +68,15 @@ export interface DestinationInfo {
 }
 
 /** The destination a call was sent to: its name (when one is set) and number. */
-export function destinationOf(call: Pick<Call, "destinationNumber"> | undefined, names: ReadonlyMap<string, string>): DestinationInfo {
+export function destinationOf(
+  call: (Pick<Call, "destinationNumber"> & { buyerId?: string | null }) | undefined,
+  names: ReadonlyMap<string, string>,
+): DestinationInfo {
   const raw = call?.destinationNumber?.trim() ?? "";
   if (!raw) return { name: "", number: "" };
-  return { name: names.get(toE164(raw)) ?? "", number: exportNumber(raw) };
+  const e164 = toE164(raw);
+  const own = call?.buyerId ? names.get(`${call.buyerId}|${e164}`) : undefined;
+  return { name: own ?? names.get(e164) ?? "", number: exportNumber(raw) };
 }
 
 const norm = (h: string) => h.trim().toLowerCase();

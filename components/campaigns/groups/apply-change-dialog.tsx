@@ -81,7 +81,10 @@ interface Billing {
 const NO_BILLING: Billing = { rate: "", convertOn: "", seconds: "" };
 
 interface Option {
+  /** The number's last 10 digits, or digits|buyer when the number is on several buyers (CH-392). */
   key: string;
+  /** The number's last 10 digits. */
+  num10: string;
   number: string;
   name: string;
   buyerId?: string;
@@ -135,17 +138,34 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
   // Every number the team can pick: the Destinations page, plus anything
   // already routed in the groups (an old line with no Destination row).
   const options = useMemo<Option[]>(() => {
-    const m = new Map<string, Option>();
+    // One TFN can be on several buyers (CH-392): then each buyer is its own
+    // line to pick, so the team chooses which buyer the campaigns pay.
+    const buyersOf = new Map<string, Set<string>>();
     for (const d of destinations) {
       const k = key10(d.tfn);
-      if (k.length === 10 && !m.has(k)) {
-        m.set(k, { key: k, number: toE164(d.tfn), name: d.name, buyerId: d.buyerId || undefined, buyerName: d.buyerName ?? "" });
+      if (k.length !== 10) continue;
+      if (!buyersOf.has(k)) buyersOf.set(k, new Set());
+      buyersOf.get(k)!.add(d.buyerId || "");
+    }
+    const m = new Map<string, Option>();
+    const numbers = new Set<string>();
+    // Live destinations first, so a buyer's live line names the option.
+    for (const d of [...destinations].sort((a, b) => Number(b.enabled) - Number(a.enabled))) {
+      const k = key10(d.tfn);
+      if (k.length !== 10) continue;
+      const key = (buyersOf.get(k)?.size ?? 0) > 1 ? `${k}|${d.buyerId || ""}` : k;
+      if (!m.has(key)) {
+        m.set(key, { key, num10: k, number: toE164(d.tfn), name: d.name, buyerId: d.buyerId || undefined, buyerName: d.buyerName ?? "" });
+        numbers.add(k);
       }
     }
     for (const lines of Object.values(linesByGroup)) {
       for (const l of lines) {
         const k = key10(l.number);
-        if (!m.has(k)) m.set(k, { key: k, number: l.number, name: "", buyerId: l.buyerId ?? undefined, buyerName: l.buyerName });
+        if (!numbers.has(k)) {
+          m.set(k, { key: k, num10: k, number: l.number, name: "", buyerId: l.buyerId ?? undefined, buyerName: l.buyerName });
+          numbers.add(k);
+        }
       }
     }
     return [...m.values()].sort((a, b) => a.buyerName.localeCompare(b.buyerName) || a.number.localeCompare(b.number));
@@ -185,7 +205,7 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
     const q = query.trim().toLowerCase();
     const own = start.number ? key10(start.number) : "";
     const listed = options.filter(
-      (o) => o.key === own || (!fullyIn.has(o.key) && (!inGroups || inGroups.has(o.key))),
+      (o) => o.num10 === own || (!fullyIn.has(o.num10) && (!inGroups || inGroups.has(o.num10))),
     );
     if (!q) return listed;
     return listed.filter(
@@ -196,12 +216,27 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
   const chosenGroups = groups.filter((g) => groupIds.has(g.id));
   const campaignCount = chosenGroups.reduce((n, g) => n + g.campaigns.filter((c) => c.status !== "archived").length, 0);
   const byKey = useMemo(() => new Map(options.map((o) => [o.key, o])), [options]);
+  // Opened from a row, the tick is the bare number; when that number is on
+  // several buyers (CH-392) it becomes the first of its lines.
+  useEffect(() => {
+    setPicked((prev) => {
+      let changed = false;
+      const next = prev.map((k) => {
+        if (byKey.has(k)) return k;
+        const o = options.find((x) => x.num10 === k);
+        if (!o) return k;
+        changed = true;
+        return o.key;
+      });
+      return changed ? [...new Set(next)] : prev;
+    });
+  }, [byKey, options]);
   // A tick on a destination that is already in the whole group (CH-383) is not
   // sent: adding it there again would only duplicate it.
   const chosen = picked
-    .filter((k) => action !== "add" || !fullyIn.has(k))
     .map((k) => byKey.get(k))
-    .filter((o): o is Option => Boolean(o));
+    .filter((o): o is Option => Boolean(o))
+    .filter((o) => action !== "add" || !fullyIn.has(o.num10));
   const pickedSet = new Set(picked);
 
   const togglePick = (k: string) =>

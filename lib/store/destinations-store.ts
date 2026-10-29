@@ -43,8 +43,9 @@ interface DestinationsState {
   /**
    * Play / pause several destinations (the bulk bar) in ONE request to
    * /api/destinations/bulk-enable (falls back to one request per TFN if that
-   * endpoint is not there). A buyer may have many live TFNs; only two live
-   * destinations on the SAME number are refused. A refused one is put back on
+   * endpoint is not there). A buyer may have many live TFNs, and a number may
+   * be live under several buyers; only the same buyer twice on the SAME
+   * number is refused (CH-392). A refused one is put back on
    * its own and reported, the others keep their new state.
    */
   setEnabledMany: (
@@ -53,15 +54,16 @@ interface DestinationsState {
   ) => Promise<{
     ok: string[];
     failed: { id: string; message: string }[];
-    /** Selected, but another selected destination with the same number went live instead. */
+    /** Selected, but another selected destination of the same buyer on the same number went live instead. */
     skipped: string[];
     /** Live destinations that were switched off to make room. */
     switchedOff: Destination[];
   }>;
   /**
    * Switch a destination ON. A buyer can have many live TFNs (calls rotate
-   * across them), but one number can be live on only one destination, so a
-   * live destination on the SAME number is switched OFF first - what the
+   * across them) and a number can be live under several buyers (CH-392), but
+   * one buyer can be live only once on a number, so a live destination of
+   * the SAME buyer on the SAME number is switched OFF first - what the
    * server's own message asks the user to do by hand. Returns those it
    * switched off (usually none).
    */
@@ -79,6 +81,14 @@ interface DestinationsState {
 function numberKey(tfn: string): string {
   const digits = (tfn ?? "").replace(/\D/g, "");
   return digits.length >= 10 ? digits.slice(-10) : `raw:${tfn ?? ""}`;
+}
+
+/**
+ * One buyer on one number (CH-392). The same TFN may be live under different
+ * buyers; only the same buyer twice on one number is refused by the server.
+ */
+function lineKey(d: Pick<Destination, "tfn" | "buyerId">): string {
+  return `${d.buyerId ?? ""}|${numberKey(d.tfn)}`;
 }
 
 /** The bulk endpoint takes at most this many ids per request. */
@@ -247,12 +257,12 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
   enableExclusive: async (id) => {
     const target = get().destinations.find((d) => d.id === id);
     if (!target) return [];
-    const sameNumber = (a: string, b: string) => numberKey(a) === numberKey(b);
     const blockers = () =>
       get().destinations.filter(
         // A buyer may have several live destinations (calls rotate across
-        // them); only one may be live on the SAME number.
-        (d) => d.id !== id && d.enabled && sameNumber(d.tfn, target.tfn),
+        // them), and one number may be live under several buyers (CH-392);
+        // only the SAME buyer on the SAME number is switched off.
+        (d) => d.id !== id && d.enabled && lineKey(d) === lineKey(target),
       );
     const first = blockers();
     const touched = [id, ...first.map((b) => b.id)];
@@ -317,15 +327,16 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
     const byId = new Map(all.map((d) => [d.id, d] as const));
     const selected = new Set(ids);
 
-    // A buyer can have many live TFNs now, so every selected destination is
-    // played. The one rule left: a number can be live on only one destination,
-    // so of several selected ones on the SAME number, only one is played.
+    // A buyer can have many live TFNs, and a number can be live under several
+    // buyers (CH-392), so every selected destination is played. The one rule
+    // left: a buyer can be live only once on a number, so of several selected
+    // ones of the SAME buyer on the SAME number, only one is played.
     // Ones already live keep their number first.
     const takenNumbers = new Set<string>();
     if (enabled) {
       for (const id of ids) {
         const d = byId.get(id);
-        if (d?.enabled) takenNumbers.add(numberKey(d.tfn));
+        if (d?.enabled) takenNumbers.add(lineKey(d));
       }
     }
     const send: string[] = [];
@@ -337,7 +348,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
         continue;
       }
       if (enabled) {
-        const key = numberKey(current.tfn);
+        const key = lineKey(current);
         if (takenNumbers.has(key)) {
           skipped.push(id);
           continue;
@@ -377,12 +388,12 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       return { done, bad };
     };
 
-    // Playing: a live destination that is NOT selected but holds the same
-    // number would make the server refuse ours, so switch it off first - the
+    // Playing: a live destination that is NOT selected but is the same buyer
+    // on the same number would make the server refuse ours, so switch it off first - the
     // same thing a single Play does.
-    const sendNumbers = new Set(send.map((id) => numberKey(byId.get(id)?.tfn ?? "")));
+    const sendNumbers = new Set(send.filter((id) => byId.has(id)).map((id) => lineKey(byId.get(id)!)));
     const blockers = enabled
-      ? all.filter((d) => d.enabled && !selected.has(d.id) && sendNumbers.has(numberKey(d.tfn)))
+      ? all.filter((d) => d.enabled && !selected.has(d.id) && sendNumbers.has(lineKey(d)))
       : [];
 
     // Move every switch NOW, in one update; the server catches up behind it
