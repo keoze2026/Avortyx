@@ -20,7 +20,8 @@
 import { http } from "@/lib/api/http";
 import { useCallsStore } from "@/lib/store/calls-store";
 
-export const LIVE_COUNT_POLL_MS = 10_000;
+// CH-381: 20 s (was 10 s); still instant on the Live Monitor and on focus.
+export const LIVE_COUNT_POLL_MS = 20_000;
 /** Give up on the number (header falls back to the KPI figure) after this many failures in a row. */
 const MAX_FAILURES = 3;
 /** Calls to refreshLiveCountNow() closer together than this are merged into one request. */

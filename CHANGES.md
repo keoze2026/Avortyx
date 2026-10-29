@@ -981,3 +981,18 @@ now shows the number the caller dialled (our TFN), the same as the download
 always did; before, it showed the buyer's number. Buyer logins do not see
 Called Number (our TFN); they see their own Destination Name and TFN. The
 download has the same columns.
+
+## CH-381 - Portal asks the server half as often
+**2026-10-29 · Performance**
+
+29 Oct, 92 live calls: the web app was at 92% CPU and the database at 81%;
+campaign pages hung on "Loading" and settings did not save. In 2 minutes the
+server answered ~1,300 portal requests, mostly timers from open tabs:
+dashboard 182, live summary 166, blocked callers 131, campaigns 126,
+destinations 124 + 125. Now:
+- Reports "Auto refresh" every 60 s (was 30 s), and never from a hidden tab.
+- Header figures every 30 s (was 15 s), never from a hidden tab.
+- Live count and live counters every 20 s (was 10 s).
+- Campaigns / destinations lists every 30 s (was 15 s); blocked callers
+  every 2 minutes.
+Each open tab picks this up after a reload.

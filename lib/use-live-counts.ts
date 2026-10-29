@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { http } from "@/lib/api/http";
 
-const POLL_MS = 10_000;
+const POLL_MS = 20_000; // CH-381: was 10 s
 
 export interface LiveCounts {
   tracking: Record<string, number>;

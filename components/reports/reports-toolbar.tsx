@@ -62,7 +62,9 @@ const REFRESH_LABEL_KEYS: Record<RefreshOption, string> = {
 /** How many seconds before the option fires onRefresh again. 0 = no timer. */
 const REFRESH_SECONDS: Record<RefreshOption, number> = {
   Off: 0,
-  "Auto refresh": 30, // sensible default for the "smart" auto mode
+  // CH-381: 60 s, was 30 s - every open Reports page reloads its heavy
+  // queries on this timer, and 29 Oct the server ran out of breath.
+  "Auto refresh": 60,
   "Every 10 s": 10,
   "Every 30 s": 30,
   "Every 1 min": 60,
@@ -181,8 +183,9 @@ export function ReportsToolbar({
     const id = window.setInterval(() => {
       setRemaining((s) => {
         if (s <= 1) {
-          // Fire the refresh and rearm.
-          refreshRef.current("auto");
+          // Fire the refresh and rearm - only while someone is looking at
+          // the tab (CH-381): a background tab never loads the reports.
+          if (document.visibilityState === "visible") refreshRef.current("auto");
           return intervalSec;
         }
         return s - 1;

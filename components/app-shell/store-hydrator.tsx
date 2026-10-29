@@ -65,10 +65,13 @@ export function StoreHydrator() {
   // nobody's looking, and it keeps a backgrounded tab from hammering the API.
   useEffect(() => {
     if (!isAuthed) return;
+    let blockedTick = 0;
     const tick = () => {
       if (document.visibilityState !== "visible") return;
       // A caller blocked from another account turns red here too (CH-185).
-      void useBlockedCallersStore.getState().fetch();
+      // CH-381: every 2 minutes, not on every tick - it rarely changes.
+      blockedTick = (blockedTick + 1) % 4;
+      if (blockedTick === 0) void useBlockedCallersStore.getState().fetch();
       // On the Dashboard these figures come from its single snapshot
       // request, so the separate polls are skipped while it's showing.
       if (useCallsStore.getState().snapshotDrivesKpis) return;
@@ -109,7 +112,9 @@ function loadSecondaryStores() {
   void useWorkspaceMetaStore.getState().fetch();
 }
 
-const LIVE_COUNTER_POLL_MS = 15_000;
+// CH-381: 30 s (was 15 s). 29 Oct, 92 live calls: these four lists from
+// every open tab were a large share of the requests that overloaded the server.
+const LIVE_COUNTER_POLL_MS = 30_000;
 
 /** Delay before the non-essential stores load after sign-in / page load. */
 const SECONDARY_LOAD_DELAY_MS = 1_500;

@@ -19,7 +19,8 @@ import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
-const KPI_POLL_MS = 15_000;
+// CH-381: 30 s (was 15 s), and never from a hidden tab.
+const KPI_POLL_MS = 30_000;
 
 export function Topbar() {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export function Topbar() {
       // On the Dashboard the header figures come from its snapshot instead,
       // so they match the panels below them exactly.
       if (useCallsStore.getState().snapshotDrivesKpis) return;
+      if (document.visibilityState !== "visible") return;
       void useCallsStore.getState().fetchKpis();
     }, KPI_POLL_MS);
     return () => window.clearInterval(id);
