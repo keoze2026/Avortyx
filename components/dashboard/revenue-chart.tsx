@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -87,6 +86,14 @@ export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
   const total = data.reduce((s, p) => s + p.revenue, 0);
   const peak = data.length ? Math.max(...data.map((p) => p.revenue)) : 0;
   const avg = Math.round(total / Math.max(data.length, 1));
+  // CH-398 (Sir's design): the peak hour is marked on the curve, "$173 at 12 PM".
+  const peakIndex = peak > 0 ? data.findIndex((p) => p.revenue === peak) : -1;
+  const peakTime = (() => {
+    const h = peakIndex >= 0 ? Number(String(data[peakIndex].x).slice(0, 2)) : NaN;
+    return Number.isFinite(h) ? `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}` : "";
+  })();
+  // One label every 3 hours: 00:00, 03:00 ... 21:00.
+  const ticks = data.filter((_, i) => i % 3 === 0).map((p) => p.x);
 
   // The admin unticked this money under the partner's Reporting visibility.
   if (view.hidden) {
@@ -113,47 +120,43 @@ export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
             </span>
             <span className="text-[11px] text-muted-foreground">
               {t("dashboard.chart.peak")} {formatCurrency(peak)} · {t("dashboard.chart.avg")} {formatCurrency(avg)}
+              {t("x398.perHour")}
             </span>
           </div>
         </div>
-        <span className="rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+        <span className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium tabular-nums text-foreground">
           {dateLabel}
         </span>
       </CardHeader>
       <CardContent>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 28, right: 22, left: 22, bottom: 0 }}>
               <defs>
-                {/* Fill — single indigo fading to transparent */}
-                <linearGradient id="rev-step-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.40} />
+                {/* Fill - the theme accent fading to transparent */}
+                <linearGradient id="rev-smooth-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
                   <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="x"
+                ticks={ticks}
+                interval={0}
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                axisLine={false}
+                axisLine={{ stroke: "var(--border)" }}
                 tickLine={false}
-                minTickGap={24}
-                tickMargin={8}
+                tickMargin={10}
               />
-              <YAxis
-                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v: number) => (v >= 1000 ? `$${Math.round(v / 1000)}k` : `$${v}`)}
-                width={48}
-              />
+              {/* Scale only - Sir's design shows no y-axis numbers. */}
+              <YAxis hide domain={[0, (max: number) => (max > 0 ? max * 1.15 : 1)]} />
               <ReferenceLine
                 y={avg}
                 stroke="var(--muted-foreground)"
                 strokeDasharray="4 4"
-                strokeOpacity={0.55}
+                strokeOpacity={0.45}
                 label={{
-                  value: `avg`,
+                  value: `${t("dashboard.chart.avg")} ${formatCurrency(avg)}`,
                   position: "insideTopRight",
                   fontSize: 10,
                   fill: "var(--muted-foreground)",
@@ -165,16 +168,35 @@ export function RevenueChart({ calls, dateLabel, series }: RevenueChartProps) {
                 formatter={(value: number) => [formatCurrency(value), title]}
               />
               <Area
-                type="stepAfter"
+                type="monotone"
                 dataKey="revenue"
                 stroke="var(--accent)"
                 strokeWidth={2.5}
-                fill="url(#rev-step-fill)"
-                dot={{
-                  r: 2.5,
-                  stroke: "var(--accent)",
-                  strokeWidth: 1.5,
-                  fill: "var(--card)",
+                fill="url(#rev-smooth-fill)"
+                // Only the peak hour gets a dot, with its amount and time.
+                dot={(props: { cx?: number; cy?: number; index?: number }) => {
+                  const { cx, cy, index } = props;
+                  if (index !== peakIndex || cx == null || cy == null) {
+                    return <g key={`d-${index}`} />;
+                  }
+                  return (
+                    <g key="peak">
+                      <circle cx={cx} cy={cy} r={9} fill="var(--accent)" fillOpacity={0.25} />
+                      <circle cx={cx} cy={cy} r={5} fill="#fff" stroke="var(--accent)" strokeWidth={2} />
+                      <text
+                        x={cx}
+                        y={cy - 16}
+                        textAnchor="middle"
+                        fontSize={11}
+                        fontWeight={600}
+                        fill="var(--foreground)"
+                      >
+                        {t("x398.peakAt")
+                          .replace("{amount}", formatCurrency(peak))
+                          .replace("{time}", peakTime)}
+                      </text>
+                    </g>
+                  );
                 }}
                 activeDot={{
                   r: 4,

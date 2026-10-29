@@ -2,23 +2,10 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { matchesCallStatusFilter } from "@/lib/call-status";
-import { CHART_TOOLTIP_PROPS } from "@/lib/chart-tooltip";
 import { ROUTES } from "@/lib/constants";
 import { formatNumber } from "@/lib/format";
 import type { EntitySummary } from "@/lib/api/services/analytics.service";
@@ -91,102 +78,59 @@ export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCam
       .slice(0, 6);
   }, [calls, campaigns, campaignSummaries]);
 
-  const subLabel = t("dashboard.topCampaignsHintOn").replace("{date}", dateLabel);
+  const isToday = dateLabel === t("sharedUI.dateRange.today");
+  const subLabel = isToday
+    ? t("x398.topShareToday")
+    : t("x398.topShareOn").replace("{date}", dateLabel);
+  // CH-398 (Sir's design): each campaign's share of the top 6, and the bar
+  // measured against the busiest one. No rank numbers (Sir: "just don't add
+  // serial numbers").
+  const top = data.length ? data[0].connected : 0;
+  const sum = data.reduce((n, r) => n + r.connected, 0);
 
-  // Recharts BarChart with layout="vertical" renders horizontal bars (y = category, x = value).
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 gap-3 pb-2">
         <div>
           <CardTitle className="text-sm font-semibold">{t("dashboard.topCampaigns")}</CardTitle>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {subLabel}
-          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{subLabel}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={ROUTES.campaigns}
-            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {t("common.viewAll")} <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </div>
+        <Link
+          href={ROUTES.campaigns}
+          className="text-xs font-medium text-accent transition-opacity hover:opacity-80"
+        >
+          {t("common.viewAll")}
+        </Link>
       </CardHeader>
       <CardContent>
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{ top: 4, right: 72, left: 4, bottom: 4 }}
-              barCategoryGap={12}
-            >
-              <CartesianGrid stroke="var(--border)" horizontal={false} />
-              <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                width={160}
-                interval={0}
-                // Custom tick: render the label at the LEFT edge of the YAxis
-                // area, with text-anchor:start. That way every campaign name
-                // starts in the same column instead of right-justifying to the
-                // bar (which makes them wander as names vary in length).
-                tick={(props: {
-                  x: number;
-                  y: number;
-                  payload: { value: string };
-                }) => {
-                  const { x, y, payload } = props;
-                  const v = payload.value;
-                  const label = v.length > 22 ? `${v.slice(0, 20)}…` : v;
-                  return (
-                    <text
-                      x={x - 156}
-                      y={y}
-                      dy={4}
-                      fontSize={11}
-                      fill="var(--foreground)"
-                      textAnchor="start"
-                    >
-                      {label}
-                    </text>
-                  );
-                }}
-              />
-              <Tooltip
-                {...CHART_TOOLTIP_PROPS}
-                cursor={false}
-                formatter={(v: number) => [formatNumber(v), t("dashboard.tooltips.connected")]}
-              />
-              <Bar
-                dataKey="connected"
-                radius={[0, 4, 4, 0]}
-                isAnimationActive
-                animationDuration={500}
-              >
-                {/* Top bar gets the brand accent at full strength, others fade
-                    slightly so the ranking reads at a glance — single hue only. */}
-                {data.map((d, i) => (
-                  <Cell
-                    key={d.id}
-                    fill="var(--accent)"
-                    fillOpacity={1 - i * 0.10}
-                  />
-                ))}
-                <LabelList
-                  dataKey="connected"
-                  position="right"
-                  formatter={(value: number) => formatNumber(value)}
-                  fill="var(--muted-foreground)"
-                  fontSize={11}
-                  className="tabular-nums"
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="flex h-72 w-full flex-col justify-center">
+          {data.length === 0 ? (
+            <p className="text-center text-xs text-muted-foreground">{t("trafficUI.common.noData")}</p>
+          ) : (
+            // One grid for every row, so names, bars, counts and shares line
+            // up in columns whatever the name lengths.
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-6">
+              {data.map((r) => (
+                <div key={r.id} className="contents" title={`${r.name}: ${formatNumber(r.connected)}`}>
+                  <span className="max-w-[10rem] truncate text-sm font-semibold">{r.name}</span>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted/40">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-500"
+                      style={{
+                        width: `${top ? Math.max(2, (r.connected / top) * 100) : 0}%`,
+                        background:
+                          "linear-gradient(90deg, color-mix(in oklab, var(--accent) 70%, transparent), color-mix(in oklab, var(--accent) 80%, white))",
+                      }}
+                    />
+                  </div>
+                  <span className="text-right text-sm font-semibold tabular-nums">{formatNumber(r.connected)}</span>
+                  <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
+                    {sum ? `${((r.connected / sum) * 100).toFixed(1)}%` : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
