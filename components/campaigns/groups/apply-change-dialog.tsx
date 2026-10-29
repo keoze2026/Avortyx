@@ -151,18 +151,45 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
     return [...m.values()].sort((a, b) => a.buyerName.localeCompare(b.buyerName) || a.number.localeCompare(b.number));
   }, [destinations, linesByGroup]);
 
+  // CH-383 (Sir, 29 Oct: "Once a TFN is added in the group it should not
+  // come in the list"): when adding, a destination already in every campaign
+  // of each ticked group is left out of the list - adding it again would
+  // only duplicate it. One missing from some campaigns still shows (adding
+  // fills the gaps). A destination opened from its own row stays.
+  const fullyIn = useMemo(() => {
+    const out = new Set<string>();
+    if (action !== "add" || groupIds.size === 0) return out;
+    const counts = new Map<string, number>();
+    for (const gid of groupIds) {
+      for (const l of linesByGroup[gid] ?? []) {
+        if (l.missingIn.length === 0) {
+          const k = key10(l.number);
+          counts.set(k, (counts.get(k) ?? 0) + 1);
+        }
+      }
+    }
+    for (const [k, n] of counts) if (n === groupIds.size) out.add(k);
+    return out;
+  }, [action, groupIds, linesByGroup]);
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter(
+    const listed = options.filter((o) => !fullyIn.has(o.key) || o.key === (start.number ? key10(start.number) : ""));
+    if (!q) return listed;
+    return listed.filter(
       (o) => o.number.includes(q.replace(/\D/g, "") || q) || o.name.toLowerCase().includes(q) || o.buyerName.toLowerCase().includes(q),
     );
-  }, [options, query]);
+  }, [options, query, fullyIn, start.number]);
 
   const chosenGroups = groups.filter((g) => groupIds.has(g.id));
   const campaignCount = chosenGroups.reduce((n, g) => n + g.campaigns.filter((c) => c.status !== "archived").length, 0);
   const byKey = useMemo(() => new Map(options.map((o) => [o.key, o])), [options]);
-  const chosen = picked.map((k) => byKey.get(k)).filter((o): o is Option => Boolean(o));
+  // A tick on a destination that is already in the whole group (CH-383) is not
+  // sent: adding it there again would only duplicate it.
+  const chosen = picked
+    .filter((k) => action !== "add" || !fullyIn.has(k))
+    .map((k) => byKey.get(k))
+    .filter((o): o is Option => Boolean(o));
   const pickedSet = new Set(picked);
 
   const togglePick = (k: string) =>

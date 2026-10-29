@@ -1005,3 +1005,12 @@ Yellow should come when caps are full". The yellow triangle next to a
 destination's name now shows only when its daily or monthly cap is reached
 (e.g. Q08|4105 at 20 / 12 daily). A full CC (e.g. 4 / 4 live) no longer shows
 it; the Live figure still turns red as before.
+
+## CH-383 - Campaign Groups: a destination already in the group is not offered again
+**2026-10-29 · Campaign Groups**
+
+Sir, 29 Oct: "Once a TFN is added in the group it should not come in the
+list". When adding a destination, any destination already in every campaign
+of each ticked group is left out of the list (and a leftover tick on one is
+not sent). A destination missing from some campaigns still shows, so adding
+it fills the gaps. The server already skipped campaigns that had the number.
