@@ -883,3 +883,14 @@ starts on one straight line, and moved a little right of the column edge
 (24px, the same as the first column of Call Summary). Each header word starts
 exactly above its names. The Call Summary tab fix from CH-367 and the
 centred-header fix from CH-368 (other columns) stay.
+
+## CH-372 - Reports call log: names in one straight line, centred in the column
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "retain the parallel line and move campaign and publisher names
+to the center". Every Campaign, Publisher and Buyer name sits in a box of the
+same width - the longest name on the page, or the header word with its sort
+arrow - and the box is centred in the column. Inside it the names are
+left-aligned, so they start on one straight line, the header word starts
+exactly above them, and the whole line sits in the middle of the column. The
+width is measured after each render, so it follows the page being shown.

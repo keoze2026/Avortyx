@@ -94,13 +94,43 @@ import { cn } from "@/lib/utils";
 const CELL = "whitespace-nowrap text-[9.5px] font-medium tabular-nums text-foreground";
 /** Dates, phone numbers and times: identical to CELL. */
 const NUMBER_CELL = CELL;
-/** Campaign, publisher and buyer names: left-aligned so every name starts on
- *  one straight line (CH-364), and moved a little right of the column edge so
- *  they sit towards the middle (CH-371, Sir 29 Oct: "Exact same but make it a
- *  bit right" - centring them, CH-367, broke the straight line). The header
- *  uses the same left padding, so its word starts exactly above the names. */
-const NAME_CELL = `${CELL} pl-6 text-left`;
-const NAME_HEAD = "pl-6 text-left";
+/** Campaign, publisher and buyer names (CH-372, Sir 29 Oct: "retain the
+ *  parallel line and move campaign and publisher names to the center"):
+ *  every name in a column sits in a box of the same width - as wide as the
+ *  longest name or the header word - and that box is centred in the column.
+ *  Inside it the names are left-aligned, so they start on one straight line
+ *  (CH-364) and the line sits in the middle of the column (CH-367). */
+const NAME_CELL = `${CELL} text-center`;
+const NAME_HEAD = "text-center";
+type NameCol = "campaign" | "publisher" | "buyer";
+const NAME_COLS: NameCol[] = ["campaign", "publisher", "buyer"];
+
+/** One name in the shared, centred box of its column. */
+function NameBox({ col, children }: { col: NameCol; children: React.ReactNode }) {
+  return (
+    <span className="inline-block text-left align-middle" style={{ width: `var(--nc-${col}, auto)` }}>
+      <span data-nc={col}>{children}</span>
+    </span>
+  );
+}
+
+/** Sets --nc-<column> on the table wrapper to the widest name (or header
+ *  word + its sort arrow) in that column, so every box has that width. Runs
+ *  after each render; it writes a style, never state, so it cannot loop. */
+function useNameBoxWidths(ref: React.RefObject<HTMLDivElement | null>) {
+  React.useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    for (const col of NAME_COLS) {
+      let widest = 0;
+      root.querySelectorAll<HTMLElement>(`[data-nc="${col}"]`).forEach((el) => {
+        widest = Math.max(widest, el.getBoundingClientRect().width + (Number(el.dataset.ncExtra) || 0));
+      });
+      if (widest > 0) root.style.setProperty(`--nc-${col}`, `${Math.ceil(widest)}px`);
+      else root.style.removeProperty(`--nc-${col}`);
+    }
+  });
+}
 
 type ColumnKey =
   | "campaign"
@@ -469,6 +499,7 @@ function LogSortHeader({
   dir,
   onClick,
   align = "center",
+  measure,
 }: {
   label: string;
   sortKey: LogSortKey;
@@ -476,6 +507,9 @@ function LogSortHeader({
   dir: SortDir;
   onClick: (key: LogSortKey) => void;
   align?: "left" | "center" | "right";
+  /** CH-372: the name column whose shared box width includes this header
+   *  (the word plus the 4px gap and 12px arrow after it). */
+  measure?: NameCol;
 }) {
   const isActive = active === sortKey;
   const justify = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
@@ -495,7 +529,7 @@ function LogSortHeader({
           left the word about 8px left of the names (Sir: "Is publisher
           perfectly centered?"). */}
       {align === "center" && <span aria-hidden className="h-3 w-3 shrink-0" />}
-      <span>{label}</span>
+      <span data-nc={measure} data-nc-extra={measure ? 16 : undefined}>{label}</span>
       {isActive ? (
         dir === "asc" ? (
           <ArrowUp className="h-3 w-3" />
@@ -714,6 +748,9 @@ export function CallLogTable({
    * we resolve it through GET /api/analytics/calls/{id}/recording, which
    * is what the endpoint exists for. */
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  // CH-372: one shared, centred box width per name column.
+  const nameBoxRef = React.useRef<HTMLDivElement | null>(null);
+  useNameBoxWidths(nameBoxRef);
   const [playingId, setPlayingId] = React.useState<string | null>(null);
   const [loadingId, setLoadingId] = React.useState<string | null>(null);
   // Resolved URLs are cached so replaying a row doesn't refetch.
@@ -941,19 +978,19 @@ export function CallLogTable({
       </div>
 
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" ref={nameBoxRef}>
           <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 {/* Row expander — opens the call's activity panel. */}
                 <TableHead className="w-9 pl-4" />
                 <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callDate")} sortKey="date" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>
-                {columns.campaign && <TableHead className={NAME_HEAD}><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} align="left" /></TableHead>}
-                {columns.publisher && <TableHead className={NAME_HEAD}><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} align="left" /></TableHead>}
+                {columns.campaign && <TableHead className={NAME_HEAD}><span className="inline-block align-middle" style={{ width: "var(--nc-campaign, auto)" }}><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} align="left" measure="campaign" /></span></TableHead>}
+                {columns.publisher && <TableHead className={NAME_HEAD}><span className="inline-block align-middle" style={{ width: "var(--nc-publisher, auto)" }}><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} align="left" measure="publisher" /></span></TableHead>}
                 {columns.caller && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.repeated && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.repeated")} sortKey="repeated" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.buyer && <TableHead className={NAME_HEAD}><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} align="left" /></TableHead>}
+                {columns.buyer && <TableHead className={NAME_HEAD}><span className="inline-block align-middle" style={{ width: "var(--nc-buyer, auto)" }}><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} align="left" measure="buyer" /></span></TableHead>}
                 {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -1001,12 +1038,12 @@ export function CallLogTable({
                       </TableCell>
                       {columns.campaign && (
                         <TableCell className={NAME_CELL} title={locale === "en" ? undefined : c.campaignName}>
-                          {localizeName(c.campaignName, locale)}
+                          <NameBox col="campaign">{localizeName(c.campaignName, locale)}</NameBox>
                         </TableCell>
                       )}
                       {columns.publisher && (
                         <TableCell className={NAME_CELL} title={locale === "en" ? undefined : resolvePublisherName(c, publisherNameById) || undefined}>
-                          {localizeName(resolvePublisherName(c, publisherNameById), locale) || "—"}
+                          <NameBox col="publisher">{localizeName(resolvePublisherName(c, publisherNameById), locale) || "—"}</NameBox>
                         </TableCell>
                       )}
                       {columns.caller && (
@@ -1035,7 +1072,7 @@ export function CallLogTable({
                       )}
                       {columns.buyer && (
                         <TableCell className={NAME_CELL} title={locale === "en" ? undefined : c.buyerName ?? undefined}>
-                          {localizeName(c.buyerName, locale) || "—"}
+                          <NameBox col="buyer">{localizeName(c.buyerName, locale) || "—"}</NameBox>
                         </TableCell>
                       )}
                       {columns.revenue && (
