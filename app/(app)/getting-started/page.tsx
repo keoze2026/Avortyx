@@ -24,8 +24,12 @@ import { cn } from "@/lib/utils";
 // so no browser plays a cached piece of the old file.
 // CH-365: Sir's final cut (29 Oct), encoded the same way as CH-329 so it
 // plays at once in every browser; new names so no browser shows the old cut.
-const VIDEO_SRC = "/videos/avortyx-getting-started-v3.mp4";
-const POSTER_SRC = "/videos/avortyx-getting-started-v3.jpg";
+// CH-407: Sir's new cut (30 Oct, 4K source, same 2:38.6 and the same step
+// timings), encoded the same way: 1920x1080 H.264 High 4.1, a keyframe every
+// 2 s, index at the front so it starts at once; 12.7 MB instead of 36 MB.
+// The earlier cuts are removed from the site.
+const VIDEO_SRC = "/videos/avortyx-getting-started-v4.mp4";
+const POSTER_SRC = "/videos/avortyx-getting-started-v4.jpg";
 
 /** Chapter start times in seconds, read from the video's step cards. */
 const CHAPTERS = [
