@@ -300,7 +300,7 @@ export function BuyerSummaryCard({
       {/* The table */}
       <div className="overflow-x-auto">
         <div className="min-w-[900px]">
-          <div className="grid grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1fr)_7rem_6rem_minmax(12rem,1.3fr)_11rem] items-center gap-x-4 border-y border-border px-6 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="grid grid-cols-[minmax(13rem,18rem)_minmax(10rem,13rem)_minmax(6.5rem,8rem)_minmax(5rem,6rem)_minmax(13rem,18rem)_11rem] justify-between items-center gap-x-4 border-y border-border px-6 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             <span>{t("x399.colBuyer")}</span>
             <span>
               {t("x399.colConcurrency")}
@@ -330,7 +330,7 @@ export function BuyerSummaryCard({
                 <div
                   key={r.id}
                   className={cn(
-                    "group grid grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1fr)_7rem_6rem_minmax(12rem,1.3fr)_11rem] items-center gap-x-4 border-b border-l-2 border-b-border/60 border-l-transparent py-3 pl-[22px] pr-6 transition-colors last:border-b-0 hover:bg-muted/30",
+                    "group grid grid-cols-[minmax(13rem,18rem)_minmax(10rem,13rem)_minmax(6.5rem,8rem)_minmax(5rem,6rem)_minmax(13rem,18rem)_11rem] justify-between items-center gap-x-4 border-b border-l-2 border-b-border/60 border-l-transparent py-3 pl-[22px] pr-6 transition-colors last:border-b-0 hover:bg-muted/30",
                     isTop && "border-l-accent bg-muted/20",
                   )}
                 >
