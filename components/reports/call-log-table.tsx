@@ -97,11 +97,11 @@ const NUMBER_CELL = CELL;
 /** Campaign, publisher and buyer names (CH-372, Sir 29 Oct: "retain the
  *  parallel line and move campaign and publisher names to the center"):
  *  every name in a column sits in a box of the same width - as wide as the
- *  longest name or the header word - and that box is centred in the column.
- *  Inside it the names are left-aligned, so they start on one straight line
- *  (CH-364) and the line sits in the middle of the column (CH-367). */
+ *  longest name on the page - and that box is centred in the column. Inside
+ *  it the names are left-aligned, so they start on one straight line (CH-364)
+ *  and the line sits in the middle of the column. The headers are not part
+ *  of it: they stay centred like every other header (CH-368, CH-373). */
 const NAME_CELL = `${CELL} text-center`;
-const NAME_HEAD = "text-center";
 type NameCol = "campaign" | "publisher" | "buyer";
 const NAME_COLS: NameCol[] = ["campaign", "publisher", "buyer"];
 
@@ -114,8 +114,8 @@ function NameBox({ col, children }: { col: NameCol; children: React.ReactNode })
   );
 }
 
-/** Sets --nc-<column> on the table wrapper to the widest name (or header
- *  word + its sort arrow) in that column, so every box has that width. Runs
+/** Sets --nc-<column> on the table wrapper to the widest name in that
+ *  column, so every box has that width. Runs
  *  after each render; it writes a style, never state, so it cannot loop. */
 function useNameBoxWidths(ref: React.RefObject<HTMLDivElement | null>) {
   React.useLayoutEffect(() => {
@@ -499,7 +499,6 @@ function LogSortHeader({
   dir,
   onClick,
   align = "center",
-  measure,
 }: {
   label: string;
   sortKey: LogSortKey;
@@ -507,9 +506,6 @@ function LogSortHeader({
   dir: SortDir;
   onClick: (key: LogSortKey) => void;
   align?: "left" | "center" | "right";
-  /** CH-372: the name column whose shared box width includes this header
-   *  (the word plus the 4px gap and 12px arrow after it). */
-  measure?: NameCol;
 }) {
   const isActive = active === sortKey;
   const justify = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
@@ -529,7 +525,7 @@ function LogSortHeader({
           left the word about 8px left of the names (Sir: "Is publisher
           perfectly centered?"). */}
       {align === "center" && <span aria-hidden className="h-3 w-3 shrink-0" />}
-      <span data-nc={measure} data-nc-extra={measure ? 16 : undefined}>{label}</span>
+      <span>{label}</span>
       {isActive ? (
         dir === "asc" ? (
           <ArrowUp className="h-3 w-3" />
@@ -985,12 +981,12 @@ export function CallLogTable({
                 {/* Row expander — opens the call's activity panel. */}
                 <TableHead className="w-9 pl-4" />
                 <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callDate")} sortKey="date" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>
-                {columns.campaign && <TableHead className={NAME_HEAD}><span className="inline-block align-middle" style={{ width: "var(--nc-campaign, auto)" }}><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} align="left" measure="campaign" /></span></TableHead>}
-                {columns.publisher && <TableHead className={NAME_HEAD}><span className="inline-block align-middle" style={{ width: "var(--nc-publisher, auto)" }}><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} align="left" measure="publisher" /></span></TableHead>}
+                {columns.campaign && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.publisher && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.caller && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.repeated && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.repeated")} sortKey="repeated" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.buyer && <TableHead className={NAME_HEAD}><span className="inline-block align-middle" style={{ width: "var(--nc-buyer, auto)" }}><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} align="left" measure="buyer" /></span></TableHead>}
+                {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}

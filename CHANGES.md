@@ -894,3 +894,14 @@ arrow - and the box is centred in the column. Inside it the names are
 left-aligned, so they start on one straight line, the header word starts
 exactly above them, and the whole line sits in the middle of the column. The
 width is measured after each render, so it follows the page being shown.
+
+## CH-373 - Reports call log: headers back as they were
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "you were supposed to fix only the campaign names and publisher
+names". CH-372 also moved the Campaign, Publisher and Buyer headers into the
+names' box, so the box took the header's width and the names sat under the
+header's left edge instead of in the middle. The headers are centred again,
+exactly like every other header (CH-368), and the shared box is as wide as
+the longest name only - so the names keep one straight line and that line is
+centred in the column.
