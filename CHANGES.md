@@ -969,3 +969,15 @@ profile". Buyer logins no longer get the column picker (gear) on the Call
 Summary or the Call Log in Reports, nor the Columns menu on the Call Logs
 page; they see the columns the admin allows, fixed. Their Call Summary has
 only the Destination and Date tabs.
+
+## CH-380 - Call Log: Destination Name and Destination TFN columns
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "Destination Name is missing, add in reporting ... and
+Destination TFN". The Reports Call Log has two new columns after Buyer:
+Destination Name (the name set on the buyer's destination, e.g. R1|6557)
+and Destination TFN (the buyer's number the call was sent to). Called Number
+now shows the number the caller dialled (our TFN), the same as the download
+always did; before, it showed the buyer's number. Buyer logins do not see
+Called Number (our TFN); they see their own Destination Name and TFN. The
+download has the same columns.

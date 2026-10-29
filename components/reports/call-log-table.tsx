@@ -139,6 +139,8 @@ type ColumnKey =
   | "dialed"
   | "repeated"
   | "buyer"
+  | "destName"
+  | "destTfn"
   | "revenue"
   | "payout"
   | "ttc"
@@ -157,6 +159,10 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   // window - Revo's "Dupe", in Sir's word "Repeated".
   { id: "repeated", label: "Repeated" },
   { id: "buyer", label: "Buyer" },
+  // CH-380 (Sir, 29 Oct: "Destination Name is missing, add in reporting ...
+  // and Destination TFN"): the buyer line the call was sent to.
+  { id: "destName", label: "Destination Name" },
+  { id: "destTfn", label: "Destination TFN" },
   { id: "revenue", label: "Revenue" },
   { id: "payout", label: "Payout" },
   { id: "ttc", label: "TTC" },
@@ -174,6 +180,8 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   dialed: "toolsUI.reports.callLog.columns.dialed",
   repeated: "toolsUI.reports.callLog.columns.repeated",
   buyer: "toolsUI.reports.callLog.columns.buyer",
+  destName: "x380.destName",
+  destTfn: "x380.destTfn",
   revenue: "toolsUI.reports.callLog.columns.revenue",
   payout: "toolsUI.reports.callLog.columns.payout",
   ttc: "toolsUI.reports.callLog.columns.ttc",
@@ -467,6 +475,10 @@ function sortValue(c: Call, key: LogSortKey, publisherNameById: Map<string, stri
     case "caller":
       return digitsOf(c.callerNumber);
     case "dialed":
+      return digitsOf(c.calledNumber);
+    case "destName":
+      return (c.destinationNumber ?? "").toLowerCase();
+    case "destTfn":
       return digitsOf(c.destinationNumber);
     case "repeated":
       return c.isDuplicate ? 1 : 0;
@@ -551,7 +563,10 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "caller":
       return formatCallerId(c.callerNumber);
     case "dialed":
-      return toE164(c.destinationNumber);
+      return toE164(c.calledNumber);
+    case "destName":
+    case "destTfn":
+      return "";
     case "repeated":
       return c.isDuplicate ? "Yes" : "No";
     case "buyer":
@@ -660,7 +675,7 @@ export function CallLogTable({
   const columns = React.useMemo(() => {
     const out = { ...columnsState };
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
-    if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; }
+    if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
     if (role === "publisher") out.revenue = false;
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
     if (!partnerCan("audio_recording")) out.recording = false;
@@ -870,15 +885,9 @@ export function CallLogTable({
       if (c.id === "duration") return [{ label: DURATION_HEADER, value: (row) => formatDuration(row.durationSec) }];
       if (c.id === "caller") return [{ label: "CALLER ID", value: (row) => exportNumber(row.callerNumber) }];
       if (c.id === "dialed") return [{ label: "CALLED NUMBER", value: (row) => exportNumber(row.calledNumber) }];
-      const col: ExportColumn<Call> = { label: t(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) };
-      // Destination name and number sit right after the buyer.
-      return c.id === "buyer"
-        ? [
-            col,
-            { label: DESTINATION_NAME_HEADER, value: (row) => destinationOf(row, destinationNames).name },
-            { label: DESTINATION_NUMBER_HEADER, value: (row) => destinationOf(row, destinationNames).number },
-          ]
-        : [col];
+      if (c.id === "destName") return [{ label: DESTINATION_NAME_HEADER, value: (row) => destinationOf(row, destinationNames).name }];
+      if (c.id === "destTfn") return [{ label: DESTINATION_NUMBER_HEADER, value: (row) => destinationOf(row, destinationNames).number }];
+      return [{ label: t(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) }];
     });
     downloadRows(format, upperLabels([dateCol, ...dataCols]), filtered, dateStamped("call-log"), "Call log", {
       boldHeader: true,
@@ -992,6 +1001,8 @@ export function CallLogTable({
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.repeated && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.repeated")} sortKey="repeated" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.destName && <TableHead className="text-center">{t("x380.destName")}</TableHead>}
+                {columns.destTfn && <TableHead className="text-center">{t("x380.destTfn")}</TableHead>}
                 {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -1063,7 +1074,9 @@ export function CallLogTable({
                       )}
                       {columns.dialed && (
                         <TableCell className={NUMBER_CELL}>
-                          {toE164(c.destinationNumber)}
+                          {/* CH-380: the number the caller dialled (our TFN), as in the
+                              download; the buyer's number is Destination TFN. */}
+                          {c.calledNumber ? toE164(c.calledNumber) : "\u2014"}
                         </TableCell>
                       )}
                       {columns.repeated && (
@@ -1074,6 +1087,16 @@ export function CallLogTable({
                       {columns.buyer && (
                         <TableCell className={NAME_CELL} title={locale === "en" ? undefined : c.buyerName ?? undefined}>
                           <NameBox col="buyer">{localizeName(c.buyerName, locale) || "—"}</NameBox>
+                        </TableCell>
+                      )}
+                      {columns.destName && (
+                        <TableCell className={`${CELL} text-center`}>
+                          {destinationOf(c, destinationNames).name || "\u2014"}
+                        </TableCell>
+                      )}
+                      {columns.destTfn && (
+                        <TableCell className={NUMBER_CELL}>
+                          {c.destinationNumber?.trim() ? toE164(c.destinationNumber) : "\u2014"}
                         </TableCell>
                       )}
                       {columns.revenue && (
