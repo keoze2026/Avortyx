@@ -1278,7 +1278,10 @@ export function CallSummaryTable({
       <div className="px-6 pt-5 text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.summary.title")}</div>
 
       {/* Tabs + right actions */}
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4">
+      {/* pl-3 + each tab's px-3 = 24px, the same left edge as the title above
+          and the first column (pl-6) below (CH-367, Sir: "Move Campaign an inch
+          left, on top of Publisher"). */}
+      <div className="flex items-center justify-between gap-2 border-b border-border pl-3 pr-4">
         <div className="no-scrollbar flex overflow-x-auto">
           {TABS.map((tabDef) => {
             // A dropdown tab is "active" when the current tab is any of its sub-options.

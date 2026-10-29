@@ -94,9 +94,10 @@ import { cn } from "@/lib/utils";
 const CELL = "whitespace-nowrap text-[9.5px] font-medium tabular-nums text-foreground";
 /** Dates, phone numbers and times: identical to CELL. */
 const NUMBER_CELL = CELL;
-/** Campaign, publisher and buyer names: left-aligned so names of any length
- *  start on one straight line (CH-364, Sir: "Publisher name not in parallel"). */
-const NAME_CELL = `${CELL} text-left`;
+/** Campaign, publisher and buyer names: centred under their headers, the same
+ *  as Repeated (CH-367, Sir 29 Oct: "Move Campaign name and Publisher Name in
+ *  center, like we have in repeated" - replaces CH-364's left alignment). */
+const NAME_CELL = `${CELL} text-center`;
 
 type ColumnKey =
   | "campaign"
@@ -938,12 +939,12 @@ export function CallLogTable({
                 {/* Row expander — opens the call's activity panel. */}
                 <TableHead className="w-9 pl-4" />
                 <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callDate")} sortKey="date" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>
-                {columns.campaign && <TableHead className="text-left"><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} align="left" /></TableHead>}
-                {columns.publisher && <TableHead className="text-left"><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} align="left" /></TableHead>}
+                {columns.campaign && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.campaign")} sortKey="campaign" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.publisher && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.publisher")} sortKey="publisher" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.caller && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.callerId")} sortKey="caller" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.repeated && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.repeated")} sortKey="repeated" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.buyer && <TableHead className="text-left"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} align="left" /></TableHead>}
+                {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}

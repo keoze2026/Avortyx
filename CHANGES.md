@@ -833,3 +833,16 @@ keyframe every 2 s, quick start (plays before it has fully downloaded),
 play. New file names so no browser plays the old video from its cache. New
 cover picture from the video's title card. Chapters checked against the new
 video: same times.
+
+## CH-367 - Reports: names centred again, summary tabs lined up
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "Move Campaign name and Publisher Name in center, like we have
+in repeated". The call log's Campaign, Publisher and Buyer names (and their
+headers) are centred again, the same as Repeated - replacing CH-364's left
+alignment.
+
+Sir, 29 Oct: "Move Campaign - inch left only, on top publisher". In Call
+Summary the tab row (Campaign, Publisher, ...) sat 4px right of the title and
+the first column. It now starts on the same left edge, so CAMPAIGN sits
+straight above the first column's names.
