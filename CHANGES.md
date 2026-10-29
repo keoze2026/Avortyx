@@ -822,3 +822,14 @@ Sir, 29 Oct: "Under report - Publisher name not in parallel". Names were
 centred, so short and long names started at different points. Publisher,
 Campaign and Buyer names (and their headers) are now left-aligned, so every
 name starts on one straight line. Numbers, money and status stay centred.
+
+## CH-365 - Getting Started: new demo video
+**2026-10-29 · Getting Started**
+
+Sir's final demo video replaces the old one. Encoded like CH-329 so it loads
+and plays straight away in every browser: 1920x1080, H.264 High 4.1, a
+keyframe every 2 s, quick start (plays before it has fully downloaded),
+14 MB. The original 4K file was level 6.0, which some graphics cards cannot
+play. New file names so no browser plays the old video from its cache. New
+cover picture from the video's title card. Chapters checked against the new
+video: same times.

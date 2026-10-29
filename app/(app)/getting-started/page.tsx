@@ -22,8 +22,10 @@ import { cn } from "@/lib/utils";
 // every 2 s). The 4K file was level 6.0, which some graphics cards will not
 // decode: it stayed black at 0:00 until someone skipped forward. A new name,
 // so no browser plays a cached piece of the old file.
-const VIDEO_SRC = "/videos/avortyx-getting-started-v2.mp4";
-const POSTER_SRC = "/videos/avortyx-getting-started.jpg";
+// CH-365: Sir's final cut (29 Oct), encoded the same way as CH-329 so it
+// plays at once in every browser; new names so no browser shows the old cut.
+const VIDEO_SRC = "/videos/avortyx-getting-started-v3.mp4";
+const POSTER_SRC = "/videos/avortyx-getting-started-v3.jpg";
 
 /** Chapter start times in seconds, read from the video's step cards. */
 const CHAPTERS = [
