@@ -38,6 +38,7 @@ import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useLocaleStore } from "@/lib/store/locale-store";
 import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
@@ -80,6 +81,15 @@ export default function CallsPage() {
   const [statuses, setStatuses] = useState<Set<CallStatus>>(new Set());
   const [campaignFilter, setCampaignFilter] = useState("all");
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(DEFAULT_VISIBLE);
+  // CH-375: a buyer login never sees our campaign or publisher names.
+  const isBuyerLogin = useAuthStore((s) => s.user?.role) === "buyer";
+  const shownColumns = useMemo(() => {
+    if (!isBuyerLogin) return visibleColumns;
+    const out = new Set(visibleColumns);
+    out.delete("campaign");
+    out.delete("publisher");
+    return out;
+  }, [visibleColumns, isBuyerLogin]);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [selected, setSelected] = useState<Call | null>(null);
@@ -192,7 +202,9 @@ export default function CallsPage() {
   const onExport = (format: ExportFormat) => {
     downloadRows(
       format,
-      callExportColumns(destinationNames, partnerCan("audio_recording")),
+      callExportColumns(destinationNames, partnerCan("audio_recording")).filter(
+        (c) => !isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase()),
+      ),
       filtered,
       dateStamped(`calls-${range}`),
       "Calls",
@@ -230,8 +242,8 @@ export default function CallsPage() {
           onToggleStatus={toggleStatus}
           campaignFilter={campaignFilter}
           onCampaign={setCampaignFilter}
-          campaigns={campaigns}
-          visibleColumns={visibleColumns}
+          campaigns={isBuyerLogin ? [] : campaigns}
+          visibleColumns={shownColumns}
           onToggleColumn={toggleColumn}
           onExport={canDownload ? onExport : undefined}
           count={filtered.length}
@@ -249,7 +261,7 @@ export default function CallsPage() {
           <>
             <CallsTable
               calls={paged}
-              visibleColumns={visibleColumns}
+              visibleColumns={shownColumns}
               onSelect={setSelected}
               selectedId={selected?.id}
             />

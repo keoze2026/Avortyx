@@ -35,6 +35,7 @@ import {
 import { callsService, type CallDetail } from "@/lib/api/services/calls.service";
 import { ROUTES } from "@/lib/constants";
 import { formatCallerId, formatCurrency, formatDuration, formatLocalDateTime, formatRelativeTime, toE164, uiLocaleTag } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Call } from "@/lib/types";
 
 interface Props {
@@ -117,6 +118,7 @@ function enrich(call: Call): CallEnrichment {
 
 export function CallDetailSheet({ call, onOpenChange }: Props) {
   const { t } = useTranslation();
+  const isBuyerLogin = useAuthStore((st) => st.user?.role) === "buyer";
   // Audio Recording switched off for this partner login: no player at all.
   const canListen = usePartnerPermissions().can("audio_recording");
   const open = !!call;
@@ -189,6 +191,9 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                     value={formatCallerId(call.callerNumber)}
                     sub={call.geo.state || call.geo.city ? [call.geo.city, call.geo.state].filter(Boolean).join(", ") : t("toolsUI.callLogs.detail.unknownGeo")}
                   />
+                  {/* CH-375: a buyer login sees no publisher, our TFN or campaign. */}
+                  {!isBuyerLogin && (
+                    <>
                   <Step
                     icon={Users}
                     label={t("toolsUI.callLogs.detail.publisher")}
@@ -210,6 +215,8 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
                     sub={call.campaignId}
                     href={`${ROUTES.campaigns}/${call.campaignId}`}
                   />
+                    </>
+                  )}
                   <Step
                     icon={Building2}
                     label={t("toolsUI.callLogs.detail.buyer")}

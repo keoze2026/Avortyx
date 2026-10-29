@@ -929,3 +929,12 @@ is seeing campaign details". A buyer login now sees:
   campaign.
 - Live Monitor: each live call shows its TFN, not the campaign or publisher.
 Admin and publisher views are unchanged.
+
+## CH-376 - Buyer login: no campaign or publisher on the Call Logs page either
+**2026-10-29 · Buyer access**
+
+Sir, 29 Oct: "Hide our campaign name and publisher name fast from buyer
+access to client". CH-375 covered Reports, Dashboard and Live Monitor. The
+Call Logs page now does the same for a buyer login: no Campaign or Publisher
+column, no campaign filter list, no Campaign or Publisher in the download,
+and the call details panel shows no publisher, our TFN or campaign.
