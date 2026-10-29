@@ -872,3 +872,14 @@ hover. All four languages.
 Sir, 29 Oct: "remove the word left, just let it be 30d". A number with an end
 date shows its days left as plain "30d" (then 29d, ...); the end date is
 still on hover.
+
+## CH-371 - Reports call log: names in one straight line, a bit to the right
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "Now it's again back with non parallel ... Exact same but make
+it a bit right". Centring the names (CH-367) broke the straight line.
+Campaign, Publisher and Buyer names are left-aligned again, so every name
+starts on one straight line, and moved a little right of the column edge
+(24px, the same as the first column of Call Summary). Each header word starts
+exactly above its names. The Call Summary tab fix from CH-367 and the
+centred-header fix from CH-368 (other columns) stay.
