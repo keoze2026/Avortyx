@@ -814,3 +814,11 @@ carrier stopped delivering reads "Calls to this number are not reaching us
 right now"; Working is proven within the last hour (including "The carrier
 delivered a test call 10 minutes ago"); otherwise Active, "not proven in the
 last hour". Legend updated. All four languages.
+
+## CH-364 - Reports call log: names in one straight line
+**2026-10-29 · Reports**
+
+Sir, 29 Oct: "Under report - Publisher name not in parallel". Names were
+centred, so short and long names started at different points. Publisher,
+Campaign and Buyer names (and their headers) are now left-aligned, so every
+name starts on one straight line. Numbers, money and status stay centred.
