@@ -92,25 +92,27 @@ export function BuyersTable({
   return (
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
-        <Table className="min-w-[900px]">
+        {/* CH-406: fixed column shares, so headers and values are evenly spaced
+            whatever the contents (Sir: "fix the header spacing"). */}
+        <Table className="min-w-[1000px] table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-muted-foreground">
-              <TableHead className="w-10 pl-4">
+              <TableHead className="w-12 pl-4">
                 <Checkbox
                   checked={allChecked || (indeterminate && "indeterminate")}
                   onCheckedChange={toggleAll}
                   aria-label={t("networkUI.buyers.table.selectAllAria")}
                 />
               </TableHead>
-              <TableHead className="text-left">{t("networkUI.common.name")}</TableHead>
-              {columns.live && <TableHead className="!text-center">{t("x405.concurrency")}</TableHead>}
-              {showCap && <TableHead className="text-left">{t("x405.buyerCap")}</TableHead>}
-              {columns.hourly && <TableHead className="!text-center">{t("networkUI.common.hourly")}</TableHead>}
-              {columns.daily && <TableHead className="!text-center">{t("networkUI.common.daily")}</TableHead>}
-              {columns.monthly && <TableHead className="!text-center">{t("networkUI.common.monthly")}</TableHead>}
-              {columns.global && <TableHead className="!text-center">{t("networkUI.common.global")}</TableHead>}
-              {columns.status && <TableHead className="!text-center">{t("networkUI.common.status")}</TableHead>}
-              <TableHead className="pr-4 !text-center">{t("networkUI.common.actions")}</TableHead>
+              <TableHead className="w-[17%] text-left">{t("networkUI.common.name")}</TableHead>
+              {columns.live && <TableHead className="w-[11%] !text-center">{t("x405.concurrency")}</TableHead>}
+              {showCap && <TableHead className="w-[12%] !text-center">{t("x405.buyerCap")}</TableHead>}
+              {columns.hourly && <TableHead className="w-[9%] !text-center">{t("networkUI.common.hourly")}</TableHead>}
+              {columns.daily && <TableHead className="w-[9%] !text-center">{t("networkUI.common.daily")}</TableHead>}
+              {columns.monthly && <TableHead className="w-[9%] !text-center">{t("networkUI.common.monthly")}</TableHead>}
+              {columns.global && <TableHead className="w-[9%] !text-center">{t("networkUI.common.global")}</TableHead>}
+              {columns.status && <TableHead className="w-[8%] !text-center">{t("networkUI.common.status")}</TableHead>}
+              <TableHead className="w-[11%] pr-4 !text-center">{t("networkUI.common.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -136,7 +138,11 @@ export function BuyersTable({
                   </TableCell>
                   <TableCell className="text-left font-semibold text-foreground">
                     <span className="inline-flex items-center gap-2">
-                      <LocalName name={b.name} />
+                      {/* A fixed slot for the name, so every "Cap hit" badge
+                          starts in the same line (CH-406). */}
+                      <span className="inline-block min-w-[3.5rem] truncate">
+                        <LocalName name={b.name} />
+                      </span>
                       {capHit && (
                         <span className="inline-flex items-center gap-1 rounded border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--warning)]">
                           <AlertTriangle className="h-3 w-3" />
@@ -157,7 +163,7 @@ export function BuyersTable({
                     </TableCell>
                   )}
                   {showCap && (
-                    <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="!text-center" onClick={(e) => e.stopPropagation()}>
                       <BuyerCapCell buyer={b} hit={capHit} />
                     </TableCell>
                   )}
@@ -249,7 +255,7 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
   return (
     <HoverCard openDelay={120} closeDelay={60}>
       <HoverCardTrigger asChild>
-        <span className="inline-flex cursor-default flex-col gap-1">
+        <span className="inline-flex cursor-default flex-col items-center gap-1">
           <span className="text-xs tabular-nums">
             <span className={cn("font-semibold", hit ? "text-[color:var(--warning)]" : "text-foreground")}>
               {formatCalls(used)}
