@@ -150,14 +150,16 @@
   --scrollbar-thumb: hsl(222 16% 22%);
   --scrollbar-thumb-hover: hsl(222 16% 32%);
 
-  --vortyx-teal: #3B82F6;                                    /* blue (legacy slot) */
-  --vortyx-cyan: #93C5FD;                                    /* lighter blue */
-  --vortyx-bright: #93C5FD;
-  --vortyx-deep: #1739A8;
+  /* CH-402: the brand slots on Sir's palette - brand #4F8CFF, hover
+     #3A72E8, muted #2A3F6B, light #7FAEFF, text #B3CDFF. */
+  --vortyx-teal: #4F8CFF;                                    /* brand (legacy slot) */
+  --vortyx-cyan: #B3CDFF;                                    /* light text blue */
+  --vortyx-bright: #7FAEFF;
+  --vortyx-deep: #2A3F6B;                                    /* muted */
   --vortyx-ultra: #DBEAFE;
-  --vortyx-glow: rgba(59, 130, 246, 0.20);
-  --vortyx-particle: rgba(59, 130, 246, 0.50);
-  --accent-gradient: linear-gradient(135deg, #1739A8 0%, #1D4ED8 55%, #93C5FD 100%);
+  --vortyx-glow: rgba(79, 140, 255, 0.20);
+  --vortyx-particle: rgba(79, 140, 255, 0.50);
+  --accent-gradient: linear-gradient(135deg, #2A3F6B 0%, #3A72E8 55%, #7FAEFF 100%);
 
   /* CH-401: on the dark canvas the active menu text is a light tint of the
      accent, not the accent itself. */
@@ -1500,7 +1502,7 @@
  */
 .app-canvas {
   background-image:
-    radial-gradient(ellipse 60% 50% at 20% 0%, rgba(82, 102, 224, 0.05), transparent 70%);
+    radial-gradient(ellipse 60% 50% at 20% 0%, rgba(79, 140, 255, 0.05), transparent 70%);
   /* No `background-attachment: fixed` (CH-285). This box never scrolls (the
      page scrolls inside it), so it looked the same, but "fixed" makes the
      browser repaint the whole box - the top bar included - on every change,
@@ -1751,11 +1753,12 @@
 
   --color-keppel-50:  #EFF6FF;
   --color-keppel-100: #DBEAFE;   /* = --vortyx-ultra */
-  --color-keppel-200: #BFDBFE;
-  --color-keppel-300: #93C5FD;   /* = --vortyx-bright (dark) */
-  --color-keppel-400: #60A5FA;   /* = --vortyx-bright (light) / --vortyx-cyan */
-  --color-keppel-500: #3B82F6;   /* = --accent (dark) / --vortyx-teal (dark) */
-  --color-keppel-600: #2563EB;
+  --color-keppel-200: #CFE0FF;
+  /* CH-402: Sir's palette, so the website and login match the app. */
+  --color-keppel-300: #B3CDFF;   /* text blue */
+  --color-keppel-400: #7FAEFF;   /* light brand */
+  --color-keppel-500: #4F8CFF;   /* brand = --accent (dark) */
+  --color-keppel-600: #3A72E8;   /* hover */
   --color-keppel-700: #1D4ED8;   /* = --vortyx-teal (light) */
   --color-keppel-800: #1E40AF;
   --color-keppel-900: #1E3A8A;
@@ -1803,14 +1806,14 @@
   /* Brand mark + auth vortex read these — identical to the app's dark-mode
      `--vortyx-*` values (see `.dark` at the top of this file), so the logo
      gradient is the same on the site, at login and in the dashboard. */
-  --vortyx-bright: var(--color-keppel-300);   /* #93C5FD */
-  --vortyx-cyan:   var(--color-keppel-300);
-  --vortyx-teal:   var(--color-keppel-500);   /* #3B82F6 */
-  --vortyx-deep:   #1739A8;
+  --vortyx-bright: var(--color-keppel-400);   /* #7FAEFF */
+  --vortyx-cyan:   var(--color-keppel-300);   /* #B3CDFF */
+  --vortyx-teal:   var(--color-keppel-500);   /* #4F8CFF */
+  --vortyx-deep:   #2A3F6B;
   --vortyx-ultra:  var(--color-keppel-100);   /* #DBEAFE */
-  --vortyx-glow:   rgba(59, 130, 246, 0.20);
-  --vortyx-particle: rgba(59, 130, 246, 0.50);
-  --accent-gradient: linear-gradient(135deg, #1739A8 0%, #1D4ED8 55%, var(--color-keppel-300) 100%);
+  --vortyx-glow:   rgba(79, 140, 255, 0.20);
+  --vortyx-particle: rgba(79, 140, 255, 0.50);
+  --accent-gradient: linear-gradient(135deg, #2A3F6B 0%, #3A72E8 55%, #7FAEFF 100%);
 
   color-scheme: dark;
   background: var(--background);

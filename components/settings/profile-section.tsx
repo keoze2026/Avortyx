@@ -148,7 +148,7 @@ export function ProfileSection() {
             ) : (
               <div
                 className="flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold text-background shadow-lg"
-                style={{ background: "linear-gradient(135deg, #818CF8, #5266E0, #3A4BC4)" }}
+                style={{ background: "var(--accent-gradient)" }}
               >
                 {initials}
               </div>

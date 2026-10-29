@@ -61,7 +61,7 @@ export function TopologyOverview({ plans }: TopologyOverviewProps) {
       <div
         aria-hidden
         className="pointer-events-none absolute -right-24 -bottom-24 h-72 w-72 rounded-full blur-3xl opacity-60"
-        style={{ background: "radial-gradient(circle, rgba(82,102,224,0.18), transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, var(--vortyx-glow), transparent 70%)" }}
       />
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-hex-dot opacity-40" />
       <div aria-hidden className="absolute inset-x-8 top-0 h-px edge-rule-top" />

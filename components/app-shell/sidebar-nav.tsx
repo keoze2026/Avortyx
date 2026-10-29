@@ -166,7 +166,7 @@ function BrandHeader({ collapsed }: { collapsed: boolean }) {
               // Reads the theme ramp rather than fixed hexes, so the wordmark
               // tracks the selected accent like the mark beside it already did.
               background:
-                "linear-gradient(120deg, var(--vortyx-deep, #1739A8) 0%, var(--vortyx-teal, #1D4ED8) 55%, var(--vortyx-bright, #60A5FA) 100%)",
+                "linear-gradient(120deg, var(--vortyx-deep, #2A3F6B) 0%, var(--vortyx-teal, #4F8CFF) 55%, var(--vortyx-bright, #7FAEFF) 100%)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               WebkitTextFillColor: "transparent",
