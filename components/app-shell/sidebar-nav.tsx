@@ -202,11 +202,13 @@ function SidebarItem({
         href={item.href}
         title={collapsed ? label : undefined}
         className={cn(
-          "group/item relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 transition-all",
+          "group/item relative flex h-9 items-center gap-2.5 rounded-lg border-l-[3px] px-2.5 transition-all",
           "group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+          // CH-401 (Sir's colour polish): a soft tint, light accent text and a
+          // 3px accent edge instead of the solid blue pill.
           active
-            ? "bg-accent text-accent-foreground shadow-[0_4px_16px_rgba(82,102,224,0.30)]"
-            : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+            ? "border-l-[color:var(--nav-active-border)] bg-[color:var(--nav-active-bg)] font-semibold text-[color:var(--nav-active-fg)]"
+            : "border-l-transparent text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
         )}
       >
         {/* Icon */}
@@ -229,7 +231,7 @@ function SidebarItem({
               "shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider",
               "group-data-[collapsible=icon]:hidden",
               active
-                ? "bg-accent-foreground/20 text-accent-foreground"
+                ? "bg-accent/20 text-[color:var(--nav-active-fg)]"
                 : item.badge === "Live"
                   ? "bg-[color:var(--success)]/15 text-[color:var(--success)]"
                   : "bg-accent/15 text-accent",

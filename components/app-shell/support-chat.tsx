@@ -46,7 +46,7 @@ const DARK = "border border-white/10 bg-zinc-800 text-white hover:bg-zinc-700";
 
 /** The round chat button: the portal's blue, with the same soft glow as the
  *  active sidebar item, and a white icon. */
-const BUBBLE = "bg-accent text-accent-foreground hover:bg-accent/90";
+const BUBBLE = "bg-accent text-accent-foreground hover:bg-[color:var(--accent-hover)]";
 const BUBBLE_GLOW = "shadow-[0_4px_16px_rgba(82,102,224,0.30)]";
 
 /* ─── Per-user storage ───────────────────────────────────────────────── */

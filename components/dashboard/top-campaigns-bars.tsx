@@ -118,8 +118,8 @@ export function TopCampaignsBars({ calls, dateLabel, campaignSummaries }: TopCam
                       className="h-full rounded-full transition-[width] duration-500"
                       style={{
                         width: `${top ? Math.max(2, (r.connected / top) * 100) : 0}%`,
-                        background:
-                          "linear-gradient(90deg, color-mix(in oklab, var(--accent) 70%, transparent), color-mix(in oklab, var(--accent) 80%, white))",
+                        // CH-401: #3A72E8 -> #7FAEFF on the default blue.
+                        background: "linear-gradient(90deg, var(--bar-from), var(--bar-to))",
                       }}
                     />
                   </div>
