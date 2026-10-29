@@ -111,6 +111,7 @@ export default function DashboardPage() {
 
   const destination = allSelected ? undefined : destinationTfn;
   const userId = useAuthStore((s) => s.user?.id);
+  const role = useAuthStore((s) => s.user?.role);
   const viewKey = snapshotKey({ dateFrom: fromKey, dateTo: toKey, timeZone, destination });
 
   // A new date range or time zone makes the per-destination counts out of date.
@@ -345,7 +346,10 @@ export default function DashboardPage() {
 
         {/* Row 2 — Top campaigns + Revenue by hour (secondary) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
+          {/* CH-375: a buyer login does not see our campaigns. */}
+          {role !== "buyer" && (
+            <TopCampaignsBars calls={NO_CALLS} campaignSummaries={snapshot?.campaigns ?? []} dateLabel={dateLabel} />
+          )}
           {/* Shown to every login, each with its own money from its own calls:
               admin -> Revenue, publisher -> Earnings (their payout),
               buyer -> Spend. The chart picks the figure itself (see

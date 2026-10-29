@@ -657,7 +657,8 @@ export function CallLogTable({
   const canDownload = usePermissions().can("reporting", "download") && partnerCan("download_reports");
   const columns = React.useMemo(() => {
     const out = { ...columnsState };
-    if (role === "buyer") out.payout = false;
+    // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
+    if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; }
     if (role === "publisher") out.revenue = false;
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
     if (!partnerCan("audio_recording")) out.recording = false;

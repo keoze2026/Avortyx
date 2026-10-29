@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { ROUTES } from "@/lib/constants";
-import { formatCallerId, formatCurrency, formatDuration, formatRelativeTime } from "@/lib/format";
+import { formatCallerId, formatCurrency, formatDuration, formatRelativeTime, toE164 } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const STATUS_META: Record<CallStatus, { icon: typeof Phone; color: string; label
 };
 
 export function RecentCallsFeed() {
+  const isBuyerLogin = useAuthStore((st) => st.user?.role) === "buyer";
   const { t } = useTranslation();
   // IMPORTANT: subscribe to `s.recent` directly. Returning `s.recent.slice(0, 8)`
   // from inside the selector creates a NEW array reference on every call —
@@ -69,7 +71,9 @@ export function RecentCallsFeed() {
                     {c.geo.state}
                   </Badge>
                 </div>
-                <div className="truncate text-[11px] text-muted-foreground">{c.campaignName}</div>
+                <div className="truncate text-[11px] text-muted-foreground">
+                  {isBuyerLogin ? toE164(c.destinationNumber) : c.campaignName}
+                </div>
               </div>
               <div className="flex items-center justify-end gap-2 text-right">
                 {/* Audio waveform when the call is live; ringing shows a

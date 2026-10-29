@@ -915,3 +915,17 @@ The In Campaigns column listed every campaign a destination was NOT in
 the same green chips the group header uses (e.g. C-12 C-13 C-14 C-15), with a
 short "4 of 12" after them. A destination in every campaign still reads
 "all 12". The + button still adds it to the rest.
+
+## CH-375 - Buyer login: its own TFNs and calls, not our campaigns
+**2026-10-29 · Buyer access**
+
+Sir, 29 Oct (buyer A49): "Instead of their buyer TFNs and live calls ... he
+is seeing campaign details". A buyer login now sees:
+- Reports, Call Summary: opens on Destination (its own TFNs); only the
+  Destination, Date and Caller Profile tabs. No Campaign, Publisher, Dialed,
+  Number Pool or Traffic Source tabs.
+- Call Log: no Campaign or Publisher columns (Payout was already hidden).
+- Dashboard: no Top Campaigns chart; recent calls show its TFN, not the
+  campaign.
+- Live Monitor: each live call shows its TFN, not the campaign or publisher.
+Admin and publisher views are unchanged.

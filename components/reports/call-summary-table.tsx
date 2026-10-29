@@ -604,6 +604,9 @@ const COUNTRY_CODE_BY_NAME: Record<string, string> = Object.fromEntries(
 /** Tabs whose rows are names people entered: written in the chosen
  *  language's script (lib/name-translation.ts), never looked up. */
 const ENTERED_NAME_TABS = new Set<GroupKey>(["campaign", "publisher", "buyer"]);
+/** CH-375: the Call Summary tabs a buyer login may open - its own TFNs, by
+ *  date and by caller profile. */
+const BUYER_TABS = new Set<string>(["destination", "date", "profile-carrier"]);
 /** Tabs whose rows are phone numbers: shown as they are. */
 const NUMBER_TABS = new Set<GroupKey>(["dialed", "numberPool", "identity-phone"]);
 
@@ -1077,7 +1080,19 @@ export function CallSummaryTable({
   onDrillChange,
 }: CallSummaryTableProps) {
   const { t, locale } = useTranslation();
-  const [tab, setTab] = React.useState<GroupKey>("campaign");
+  // CH-375 (Sir, 29 Oct, buyer A49: "Instead of their buyer TFNs and live
+  // calls ... he is seeing campaign details"): a buyer login sees its own
+  // TFNs (Destination) first and never our campaign, publisher, dialed-TFN,
+  // number-pool or traffic-source breakdowns.
+  const tabRole = useAuthStore((st) => st.user?.role);
+  const isBuyerLogin = tabRole === "buyer";
+  const tabs = React.useMemo(() => (isBuyerLogin ? TABS.filter((td) => BUYER_TABS.has(td.id)) : TABS), [isBuyerLogin]);
+  const [tab, setTab] = React.useState<GroupKey>(isBuyerLogin ? "destination" : "campaign");
+  React.useEffect(() => {
+    if (!isBuyerLogin) return;
+    const allowed = tabs.flatMap((td) => (td.sub ? td.sub.map((s) => s.id) : [td.id]));
+    if (!allowed.includes(tab)) setTab("destination");
+  }, [isBuyerLogin, tabs, tab]);
   /** A row's name as shown on screen and in the export (see localizeRowLabel). */
   const showLabel = (label: string) => localizeRowLabel(label, tab, locale, t);
   const copyLabel = (el: HTMLElement, label: string) => {
@@ -1283,7 +1298,7 @@ export function CallSummaryTable({
           left, on top of Publisher"). */}
       <div className="flex items-center justify-between gap-2 border-b border-border pl-3 pr-4">
         <div className="no-scrollbar flex overflow-x-auto">
-          {TABS.map((tabDef) => {
+          {tabs.map((tabDef) => {
             // A dropdown tab is "active" when the current tab is any of its sub-options.
             const subIds = tabDef.sub?.map((s) => s.id) ?? [tabDef.id];
             const active = subIds.includes(tab);
@@ -1393,7 +1408,7 @@ export function CallSummaryTable({
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-6 text-left">
                   <SortHeader
-                    label={(() => { const k = TABS.find((td) => td.id === tab)?.labelKey; return k ? t(k) : t("toolsUI.reports.summary.columns.group"); })()}
+                    label={(() => { const k = tabs.find((td) => td.id === tab)?.labelKey; return k ? t(k) : t("toolsUI.reports.summary.columns.group"); })()}
                     sortKey="label"
                     active={sortKey}
                     dir={sortDir}

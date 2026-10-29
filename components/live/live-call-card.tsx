@@ -9,7 +9,8 @@ import { CallWaveform } from "@/components/live/call-waveform";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { formatCallerId, formatTimer } from "@/lib/format";
+import { formatCallerId, formatTimer, toE164 } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Call, CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +73,7 @@ interface LiveCallCardProps {
 }
 
 export function LiveCallCard({ call, isLive, onHangup }: LiveCallCardProps) {
+  const isBuyerLogin = useAuthStore((st) => st.user?.role) === "buyer";
   const { t } = useTranslation();
   const now = useNow(1000);
   const hangupControl = isLive && onHangup ? <HangupButton callId={call.id} onHangup={onHangup} /> : null;
@@ -113,13 +115,16 @@ export function LiveCallCard({ call, isLive, onHangup }: LiveCallCardProps) {
             <Badge variant="outline" className="text-[10px]">
               <MapPin className="h-2.5 w-2.5" /> {call.geo.state}
             </Badge>
-            {call.publisherName && (
+            {call.publisherName && !isBuyerLogin && (
               <span className="hidden text-[10px] font-mono text-muted-foreground sm:inline">
                 {t("liveUI.card.via")} {call.publisherName}
               </span>
             )}
           </div>
-          <div className="truncate text-xs text-muted-foreground">{call.campaignName}</div>
+          {/* CH-375: a buyer sees which of its TFNs the call is on, not our campaign. */}
+          <div className="truncate text-xs text-muted-foreground">
+            {isBuyerLogin ? toE164(call.destinationNumber) : call.campaignName}
+          </div>
         </div>
 
         <div className="flex flex-col items-end">
