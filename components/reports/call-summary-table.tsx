@@ -1178,14 +1178,19 @@ export function CallSummaryTable({
 
   const groupedRows = React.useMemo(() => {
     const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
+    // CH-377 (Sir, 29 Oct: "Why it's showing Not forwarded, remove this"): a
+    // buyer's Destination tab lists only its own TFNs. A call that was never
+    // sent to one of them is not the buyer's; a call that rang the buyer's TFN
+    // and was missed stays under that TFN as Not Connected.
+    const tabCalls = isBuyerLogin && tab === "destination" ? calls.filter((c) => !!c.destinationNumber?.trim()) : calls;
     const grouped = summary
       ? applyEntitySummary(
-          groupCalls(calls, tab, timeZone, destinationNames),
+          groupCalls(tabCalls, tab, timeZone, destinationNames),
           summary,
           SUMMARY_ROWS_ONLY.has(tab),
           SUMMARY_COST_ONLY.has(tab),
         )
-      : groupCalls(calls, tab, timeZone, destinationNames);
+      : groupCalls(tabCalls, tab, timeZone, destinationNames);
     // Merge the per-entity live counters in before sorting / totals / export,
     // so every consumer of these rows sees the same figure. `max`, not
     // "prefer the entity": both sources count the same in-flight calls, and
@@ -1203,7 +1208,7 @@ export function CallSummaryTable({
       }
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive]);
+  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive, isBuyerLogin]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.

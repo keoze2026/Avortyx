@@ -938,3 +938,13 @@ access to client". CH-375 covered Reports, Dashboard and Live Monitor. The
 Call Logs page now does the same for a buyer login: no Campaign or Publisher
 column, no campaign filter list, no Campaign or Publisher in the download,
 and the call details panel shows no publisher, our TFN or campaign.
+
+## CH-377 - Buyer login: no "Not forwarded" row
+**2026-10-29 · Buyer access**
+
+Sir, 29 Oct: "Why it's showing Not forwarded, remove this option too. If the
+buyer TFN missed it should show missed on his TFN". A buyer's Destination tab
+lists only its own TFNs. Calls that were never sent to one of them (e.g. a
+TFN test that stopped before ringing a buyer line) are left out; a call that
+rang the buyer's TFN and was missed already shows under that TFN as Not
+Connected. Admin and publisher views are unchanged.
