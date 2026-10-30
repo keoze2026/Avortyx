@@ -1111,6 +1111,7 @@ export function CallSummaryTable({
   // name carries the campaigns its tracking numbers are assigned to, from the
   // Phone Numbers list (expired numbers left out).
   const numbers = useNumbersStore((st) => st.numbers);
+
   const campaignsByPublisher = React.useMemo(() => {
     const byId = new Map<string, Set<string>>();
     const byName = new Map<string, Set<string>>();
@@ -1268,6 +1269,27 @@ export function CallSummaryTable({
     () => allRows.slice(page * pageSize, page * pageSize + pageSize),
     [allRows, page, pageSize],
   );
+
+  // CH-431 (Sir: "campaign tag in a perfect parallel line"): on the Publisher
+  // tab every name takes the width of the longest name on the page - measured
+  // in the browser after it is drawn - so all the campaign tags start on one
+  // line.
+  const tableBoxRef = React.useRef<HTMLDivElement>(null);
+  const [publisherNameWidth, setPublisherNameWidth] = React.useState<number | null>(null);
+  React.useLayoutEffect(() => {
+    if (tab !== "publisher") return;
+    const els = tableBoxRef.current?.querySelectorAll<HTMLElement>("[data-pub-name]");
+    if (!els?.length) return;
+    let widest = 0;
+    els.forEach((el) => {
+      const before = el.style.minWidth;
+      el.style.minWidth = "0px";
+      widest = Math.max(widest, el.getBoundingClientRect().width);
+      el.style.minWidth = before;
+    });
+    const next = Math.min(288, Math.ceil(widest));
+    setPublisherNameWidth((cur) => (cur === next ? cur : next));
+  }, [rows, tab, locale]);
 
   // Tell the page which calls this tab counts (see `onScopeChange`).
   React.useEffect(() => {
@@ -1458,7 +1480,7 @@ export function CallSummaryTable({
       </div>
 
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div ref={tableBoxRef} className="overflow-x-auto">
           <Table className="min-w-[1100px]">
             {/* CH-428: the sorted column carries a soft shade top to bottom. */}
             <colgroup>
@@ -1545,7 +1567,10 @@ export function CallSummaryTable({
                       >
                         {/* Double-click selects the whole name and copies it. */}
                         <span
-                          className="select-text"
+                          className={cn("select-text", tab === "publisher" && "inline-block align-baseline")}
+                          // CH-431: names as wide as the longest, so the tags line up.
+                          data-pub-name={tab === "publisher" ? "" : undefined}
+                          style={tab === "publisher" && publisherNameWidth ? { minWidth: publisherNameWidth } : undefined}
                           onDoubleClick={(e) => copyLabel(e.currentTarget, r.label)}
                         >
                           {showLabel(r.label)}
@@ -1556,7 +1581,7 @@ export function CallSummaryTable({
                           const shown = camps.slice(0, 3);
                           return (
                             <span
-                              className="ml-2.5 font-mono text-[10px] font-normal tracking-wide text-muted-foreground/60"
+                              className="ml-3 align-baseline font-mono text-[10px] font-normal tracking-wide text-muted-foreground/60"
                               title={camps.join(", ")}
                             >
                               {shown.join(", ")}
