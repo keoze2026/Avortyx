@@ -5,7 +5,7 @@ import type { ExtraTranslations } from "./types";
 export const campaignPage: ExtraTranslations = {
   en: {
     "x409.trackingTitle": "Tracking Numbers",
-    "x409.trackingHint": "Numbers publishers send calls to.",
+    "x409.trackingHint": "Numbers Publishers Send Calls To.",
     "x409.addNumber": "Add Number",
     "x408.allCampaigns": "All Campaigns",
     "x408.publisher": "Publisher",
@@ -20,8 +20,8 @@ export const campaignPage: ExtraTranslations = {
     "x408.nActive": "{n} active",
     "x408.nOn": "{n} on",
     "x408.routingRules": "Routing Rules",
-    "x408.routingRulesHint": "How incoming calls are forwarded.",
-    "x408.destinationsHint": "Where calls are forwarded, In priority order.",
+    "x408.routingRulesHint": "How Incoming Calls Are Forwarded.",
+    "x408.destinationsHint": "Where Calls Are Forwarded, In Priority Order.",
     "x408.addDestination": "Add Destination",
     "x408.repeatCaller": "Repeat Caller",
     "x408.sumBlocked": "Blocked",

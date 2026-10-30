@@ -18,7 +18,7 @@ export const teamReport: ExtraTranslations = {
     "x347.col.time": "Send Time",
     "x347.col.lastSent": "Last Sent",
     "x347.col.action": "Action",
-    "x347.kind.private": "Private chat",
+    "x347.kind.private": "Private Chat",
     "x347.kind.group": "Group",
     "x347.connectedBy": "connected by {name}",
     "x347.failed": "Not sent",

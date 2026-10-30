@@ -3,7 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const signIn: ExtraTranslations = {
   en: {
-    "signIn.subtitle": "Sign in to your workspace.",
+    "signIn.subtitle": "Sign in to Your Workspace.",
     "signIn.workEmail": "Work email",
     "signIn.forgotPassword": "Forgot password?",
     "signIn.keepSignedIn": "Keep me signed in",

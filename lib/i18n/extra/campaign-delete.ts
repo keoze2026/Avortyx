@@ -5,8 +5,8 @@ export const campaignDelete: ExtraTranslations = {
   en: {
     "cdel.title": "Delete this campaign?",
     "cdel.titleMany": "Delete {count} campaigns?",
-    "cdel.desc": "Are you sure you want to delete {name}?",
-    "cdel.descMany": "Are you sure you want to delete these campaigns?",
+    "cdel.desc": "Are You Sure You Want to Delete {name}?",
+    "cdel.descMany": "Are You Sure You Want to Delete These Campaigns?",
     "cdel.confirm": "Confirm",
     "cdel.cancel": "Cancel",
   },

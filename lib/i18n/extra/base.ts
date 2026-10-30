@@ -32,7 +32,7 @@ export const base: ExtraTranslations = {
     "campaignDailyCap.saveError": "Couldn't save the daily cap. Please try again.",
     // Campaign page: Call caps card.
     "callCaps.title": "Call Caps",
-    "callCaps.subtitle": "How many calls this campaign takes per day, per month and at the same time.",
+    "callCaps.subtitle": "How Many Calls This Campaign Takes per Day, per Month and at the Same Time.",
     "callCaps.daily": "Daily Cap",
     "callCaps.monthly": "Monthly Cap",
     "callCaps.concurrency": "Concurrency (calls at once)",

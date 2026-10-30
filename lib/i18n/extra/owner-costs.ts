@@ -72,7 +72,7 @@ export const ownerCosts: ExtraTranslations = {
     "owner.costs.sum.minutes": "Minutes",
     "owner.costs.sum.bill": "Monthly bill",
     "owner.costs.unassigned": "TFNs with No Carrier",
-    "owner.costs.unassignedHint": "Tick the numbers, pick their carrier and assign.",
+    "owner.costs.unassignedHint": "Tick the Numbers, Pick Their Carrier and Assign.",
     "owner.costs.assignTo": "Assign to Carrier",
     "owner.costs.assign": "Assign {count}",
     "owner.costs.assigned": "{count} TFNs assigned",

@@ -8,7 +8,7 @@ export const automatedReports: ExtraTranslations = {
   en: {
     "nav.automatedReports": "Automated Report",
     "autoReports.headline": "Automated Report",
-    "autoReports.subline": "Automate your reporting with Avortyx. Get timely reports delivered straight to you, automatically.",
+    "autoReports.subline": "Automate Your Reporting with Avortyx. Get Timely Reports Delivered Straight to You, Automatically.",
     "autoReports.feature.excel": "One Excel per destination",
     "autoReports.feature.options": "Buyer's own time and options",
     "autoReports.feature.approval": "Sent only with buyer approval",
@@ -30,7 +30,7 @@ export const automatedReports: ExtraTranslations = {
     "autoReports.setUp": "Set Up",
     "autoReports.manage": "Manage",
     "exportPick.title": "Export {format}: Choose the Details",
-    "exportPick.hint": "Tick what goes in the file and rename any heading. Remembered for your next export.",
+    "exportPick.hint": "Tick What Goes in the File and Rename Any Heading. Remembered for Your Next Export.",
     "exportPick.cancel": "Cancel",
     "exportPick.download": "Download ({count} columns)",
     "digestEdit.title": "Manual Edit: Headings and Comment Wording",

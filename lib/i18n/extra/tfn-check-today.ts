@@ -4,7 +4,7 @@ import type { ExtraTranslations } from "./types";
 export const tfnCheckToday: ExtraTranslations = {
   en: {
     "x342.today.title": "Today's Checks and Test Calls",
-    "x342.today.subtitle": "Every number checked or test-called since 12:00 AM EST, with how many times. The list starts again at midnight EST.",
+    "x342.today.subtitle": "Every Number Checked or Test-Called Since 12:00 AM EST, with How Many Times. The List Starts Again at Midnight EST.",
     "x342.today.totals": "{checks} checks · {tests} test calls today",
     "x342.today.empty": "No numbers checked or tested yet today.",
     "x342.today.checked": "Checked",

@@ -14,7 +14,7 @@ export const trafficUi: ExtraTranslations = {
     "trafficUi.numbers.provision.provisionedMany": "Provisioned {count} numbers",
     "trafficUi.numbers.provision.noCampaign": "No campaign attached",
     "trafficUi.numbers.provision.availableTitle": "Available Numbers",
-    "trafficUi.numbers.provision.foundCount": "{count} numbers found — select to provision",
+    "trafficUi.numbers.provision.foundCount": "{count} Numbers Found — Select to Provision",
     "trafficUi.numbers.provision.tollFreePrefix": "Toll-Free Prefix (optional)",
     "trafficUi.numbers.provision.areaCode": "Area Code (optional)",
     "trafficUi.numbers.provision.tollFreeExample": "e.g. 844, 800, 888",
