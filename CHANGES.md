@@ -1529,3 +1529,13 @@ once (the chart needs only the coin's symbol, which is in the link); the
 price header and the stats fill in when CoinGecko answers, with placeholders
 meanwhile, from one shared call. The CoinGecko call is capped at 8 seconds
 like the list's.
+
+## CH-441 - Publishers: headers evenly spaced
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: the header spacing was still uneven after CH-439 (big gap after
+Daily, Monthly and Global pushed right, Status close to Global). Hourly,
+Daily, Monthly, Global, Status and Actions are now the same width (13% each,
+Name 22%), all read from the left, so every header starts the same distance
+from the one before. Daily shows the bar and count, with "% connected" under
+them (still in one straight line).
