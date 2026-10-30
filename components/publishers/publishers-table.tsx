@@ -111,7 +111,7 @@ export function PublishersTable({
                   </TableCell>
 
                   {columns.hourly && (
-                    <TableCell className="!text-left">
+                    <TableCell className="!pl-5 !text-left">
                       {u ? (
                         <span className="inline-flex items-center gap-1.5 tabular-nums">
                           <span
@@ -138,12 +138,12 @@ export function PublishersTable({
                   )}
 
                   {columns.monthly && (
-                    <TableCell className="!text-left tabular-nums text-muted-foreground">
+                    <TableCell className="!pl-5 !text-left tabular-nums text-muted-foreground">
                       {u ? formatNumber(u.payableMonth) : <Dash />}
                     </TableCell>
                   )}
                   {columns.global && (
-                    <TableCell className="!text-left tabular-nums text-muted-foreground">
+                    <TableCell className="!pl-5 !text-left tabular-nums text-muted-foreground">
                       {u ? formatNumber(u.payableGlobal) : <Dash />}
                     </TableCell>
                   )}
