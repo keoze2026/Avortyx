@@ -1392,3 +1392,10 @@ very small in size just for quick view - arrow not needed". On the Publisher
 tab each publisher's name now carries, in small grey letters, the campaigns
 its tracking numbers are assigned to (from Phone Numbers; expired numbers
 left out). Up to three are shown, "+N" for more; hover shows all. No arrow.
+
+## CH-430 - "Call Summary", not all in capitals
+**2026-10-30 - Reports**
+
+Sir, 30 Oct: "Call Summary, not all in caps". The Call Summary title is now
+written "Call Summary" (capital first letters, as the rest of the portal),
+instead of CALL SUMMARY. Nothing else changes.
