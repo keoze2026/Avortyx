@@ -37,6 +37,7 @@ import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTime
 import { useUIStore } from "@/lib/store/ui-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
+import { useNumbersStore } from "@/lib/store/numbers-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
@@ -1105,6 +1106,28 @@ export function CallSummaryTable({
   }, [isBuyerLogin, tabs, tab]);
   /** A row's name as shown on screen and in the export (see localizeRowLabel). */
   const showLabel = (label: string) => localizeRowLabel(label, tab, locale, t);
+  // CH-429 (Sir, 30 Oct: "Next to it camps name which was assigned to that
+  // publisher - very small, just for quick view"): on the Publisher tab each
+  // name carries the campaigns its tracking numbers are assigned to, from the
+  // Phone Numbers list (expired numbers left out).
+  const numbers = useNumbersStore((st) => st.numbers);
+  const campaignsByPublisher = React.useMemo(() => {
+    const byId = new Map<string, Set<string>>();
+    const byName = new Map<string, Set<string>>();
+    for (const n of numbers) {
+      if (n.status === "expired" || !n.campaignName) continue;
+      const add = (m: Map<string, Set<string>>, k: string) => {
+        const set = m.get(k) ?? new Set<string>();
+        set.add(n.campaignName!);
+        m.set(k, set);
+      };
+      if (n.publisherId) add(byId, n.publisherId);
+      if (n.publisherName) add(byName, n.publisherName.trim().toLowerCase());
+    }
+    const sorted = (set?: Set<string>) =>
+      set ? [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
+    return (key: string, label: string) => sorted(byId.get(key) ?? byName.get(label.trim().toLowerCase()));
+  }, [numbers]);
   const copyLabel = (el: HTMLElement, label: string) => {
     const sel = window.getSelection();
     if (sel) {
@@ -1527,6 +1550,20 @@ export function CallSummaryTable({
                         >
                           {showLabel(r.label)}
                         </span>
+                        {tab === "publisher" && (() => {
+                          const camps = campaignsByPublisher(r.key, r.label);
+                          if (!camps.length) return null;
+                          const shown = camps.slice(0, 3);
+                          return (
+                            <span
+                              className="ml-2.5 font-mono text-[10px] font-normal tracking-wide text-muted-foreground/60"
+                              title={camps.join(", ")}
+                            >
+                              {shown.join(", ")}
+                              {camps.length > shown.length && ` +${camps.length - shown.length}`}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       {visible.live && (
                         <TableCell
