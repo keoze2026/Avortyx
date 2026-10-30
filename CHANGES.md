@@ -1269,3 +1269,19 @@ design itself: the first group opens straight away, a picker switches between
 groups when there are several, and New Group, Delete and (with more than one
 group) Change a Destination sit in its header. The picked group is kept in the
 address (?group=...). Real data only, as CH-415.
+
+## CH-422 - Add Destination: large list with check boxes
+**2026-10-30 - Campaign Groups**
+
+Sir, 30 Oct: "Make this box large and give check box too - few things you have
+to think as well". The destination drop-down in Add Destination is now a large
+list with check boxes, a search, Select All Shown and Clear:
+  - several destinations are added at once, at the same priority, weight and
+    campaigns
+  - each line shows where it is: "4 of 12", "New to Group", or "All 12" (already
+    in every campaign - cannot be picked); paused lines are marked
+  - each picked line new to the group gets its own Rate and Convert ON (every
+    buyer pays its own rate), with "Copy the First to All"
+  - limits stay per destination: shown when one line is picked
+  - each destination is saved on its own; any that fail are named and stay
+    ticked for a retry, the rest are kept
