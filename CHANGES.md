@@ -1499,3 +1499,12 @@ Totals row showed 56: Totals Live took the whole account's live calls as its
 floor. With a campaign, buyer or any row picked, the Totals row now adds up
 only the rows shown (Live 17 for TBLA); with nothing picked it is unchanged.
 Every other Totals figure already followed the picked row.
+
+## CH-438 - Publishers: "% connected" in one straight line
+**2026-10-30 - Publishers**
+
+Sir, 30 Oct: "the % connected need to be in a parallel line". In the Daily
+column the count before "% connected" was as wide as its digits (265, 78,
+10), so the text started at a different place on each row. The count now
+sits in a fixed-width box, right-aligned, so every "% connected" starts at
+the same line.
