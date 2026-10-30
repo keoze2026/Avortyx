@@ -85,10 +85,19 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
   fetch: async () => {
     set({ loading: true, error: null });
     try {
-      // Pull the first 200 — Phase 2 will add proper pagination plumbing
-      // for tables that need to page past this.
+      // CH-417: every buyer, page by page - the Buyers page's totals (Total,
+      // Active, Buyer Cap Hit, Calls Today) count this list, so it must be
+      // the whole of it. It stopped at the first 200.
       const startedAt = Date.now();
-      const page = await buyersService.list({ page: 1, pageSize: 200 });
+      const first = await buyersService.list({ page: 1, pageSize: 200 });
+      const items = [...first.items];
+      const size = first.items.length || 200;
+      for (let n = 2; items.length < (first.total ?? 0) && n <= 50; n++) {
+        const next = await buyersService.list({ page: n, pageSize: size });
+        if (!next.items.length) break;
+        items.push(...next.items);
+      }
+      const page = { ...first, items };
       // Keep play / pause clicked here while this load was on its way (CH-268).
       const onScreen = new Map(get().buyers.map((b) => [b.id, b.status] as const));
       const buyers = page.items.map((b) =>
