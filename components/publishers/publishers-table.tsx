@@ -76,12 +76,12 @@ export function PublishersTable({
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-4 text-left">{t("networkUI.common.name")}</TableHead>
-              {columns.hourly && <TableHead className="!text-left">{t("networkUI.common.hourly")}</TableHead>}
-              {columns.daily && <TableHead className="!text-left">{t("networkUI.common.daily")}</TableHead>}
-              {columns.monthly && <TableHead className="!text-right">{t("networkUI.common.monthly")}</TableHead>}
-              {columns.global && <TableHead className="!text-right">{t("networkUI.common.global")}</TableHead>}
-              {columns.status && <TableHead className="!text-left">{t("networkUI.common.status")}</TableHead>}
-              <TableHead className="pr-4 !text-right">{t("networkUI.common.actions")}</TableHead>
+              {columns.hourly && <TableHead className="w-[10%] !text-left">{t("networkUI.common.hourly")}</TableHead>}
+              {columns.daily && <TableHead className="w-[24%] !text-left">{t("networkUI.common.daily")}</TableHead>}
+              {columns.monthly && <TableHead className="w-[10%] !text-right">{t("networkUI.common.monthly")}</TableHead>}
+              {columns.global && <TableHead className="w-[10%] !text-right">{t("networkUI.common.global")}</TableHead>}
+              {columns.status && <TableHead className="w-[12%] !pl-10 !text-left">{t("networkUI.common.status")}</TableHead>}
+              <TableHead className="w-[8%] pr-4 !text-right">{t("networkUI.common.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -149,7 +149,7 @@ export function PublishersTable({
                   )}
 
                   {columns.status && (
-                    <TableCell className="!text-left" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="!pl-10 !text-left" onClick={(e) => e.stopPropagation()}>
                       <span className="inline-flex items-center gap-2">
                         <Switch
                           checked={isActive}
