@@ -1103,3 +1103,138 @@ on another buyer. With backend CH-392 a number can be live once per buyer.
   - Campaign Groups: a number on several buyers is listed once per buyer, so
     the team picks which buyer to add.
 Deploy together with backend CH-392.
+
+## CH-397 - Campaign Groups: larger destination list in "Change a Destination"
+**2026-10-30 - Campaign Groups**
+
+Sir, 30 Oct: "Destination Box more large". The destination list in the Change a
+Destination dialog is taller and wider, so more destinations show at once.
+
+## CH-398 - Dashboard: Top Campaigns and Revenue cards in Sir's design
+**2026-10-30 - Dashboard**
+
+Sir's dashboard design, without serial numbers. Top Campaigns shows each
+campaign's share of connected calls; Revenue shows the day's curve with peak
+and average. Real figures from the dashboard snapshot.
+
+## CH-399 - Dashboard: Buyers card in place of the Destinations table
+**2026-10-30 - Dashboard**
+
+Sir's Buyers card: every buyer with calls, connected calls and caps for the
+selected day.
+
+## CH-400 - Dashboard Buyers card: every buyer active today, down to the bottom
+**2026-10-30 - Dashboard**
+
+Sir: "Push all active buyers today until bottom". The card lists every buyer
+active today, including buyers paused later in the day.
+
+## CH-401 - Colour polish: brand blue #4F8CFF
+**2026-10-30 - Whole portal**
+
+Sir's palette: brand blue #4F8CFF, calmer active menu item, campaign bar gradient.
+
+## CH-402 - Colour polish: remaining old blues on Sir's palette
+**2026-10-30 - Whole portal**
+
+The last old blue tones moved to the new palette across every page.
+
+## CH-403 - Dashboard Buyers card: columns stay organised on wide screens
+**2026-10-30 - Dashboard**
+
+Sir: "Details are not organized". Fixed column widths on wide screens.
+
+## CH-404 - Buyer access dashboard: Top Destinations and a Destinations card
+**2026-10-30 - Buyer access**
+
+Sir: "Blank doesn't look good". A buyer login sees Top Destinations and its own
+Destinations card, including lines that had calls today and are now paused.
+Deploy with backend CH-404.
+
+## CH-405 - Buyers page in Sir's design, correct figures, active buyers on top
+**2026-10-30 - Buyers**
+
+Sir's Buyers page design with correct metrics (Eastern day, spend = what the
+buyer pays, refusals not counted). Active buyers on top, paused and inactive at
+the bottom. Show Buyer Cap switch and Buyer Cap column. Deploy with backend CH-405.
+
+## CH-406 - Buyers table: even header spacing; Cap Hit badges in one line
+**2026-10-30 - Buyers**
+
+Sir: "Fix the header spacing and cap hit needs to be in a parallel line".
+
+## CH-407 - Getting Started: Sir's new demo video
+**2026-10-30 - Getting Started**
+
+Sir's new demo video at 1080p for the web (4K source). The earlier videos
+(v1, v2, v3, about 52 MB) are removed.
+
+## CH-408 - Campaign page: top and Routing Rules in Sir's design
+**2026-10-30 - Campaign page**
+
+Header with status, publisher and ID chips, View Report and Activate; a row of
+five figures (Calls Today, Connected, Unique Callers, Tracking Numbers,
+Destinations); the Routing Rules card in two columns with a line showing where a
+repeat caller goes. Unique Callers needs backend CH-408.
+
+## CH-409 - Campaign page: Tracking Numbers card like Destinations
+**2026-10-30 - Campaign page**
+
+Tracking Numbers card with an icon title like Destinations; tracking numbers
+shown as plain digits (18776691938) in JetBrains Mono.
+
+## CH-410 - Title Case for every title, button, tab, column and menu item
+**2026-10-30 - Whole portal**
+
+Sir: capitalise titles the way CallsTalk.com does. English only; descriptions,
+pop-up messages and hints stay as sentences. Also carries the CH-409 follow-ups:
+the "Tracking Numbers" card title and "In priority order" under Destinations.
+
+## CH-411 - Campaign destinations: active TFNs always on top
+**2026-10-30 - Campaign page**
+
+Sir: "Active tfn on top always". Switched-on lines first in priority order,
+switched-off lines below, also in priority order.
+
+## CH-412 - Buyer Cap shows calls left; tracking numbers the row's size
+**2026-10-30 - Buyers / Campaign page**
+
+Each Buyer Cap bar shows "N left", or "Full" in amber when used up. Tracking
+numbers are 12px, the same size as the other figures in the row.
+
+## CH-413 - Title Case for the line under every title; Russian "User agent"
+**2026-10-30 - Whole portal**
+
+Sir: "Each needs to be in caps". The line under page, card and dialog titles
+(up to 20 words) uses Title Case too; longer explanations stay as sentences.
+The two Russian "User agent" labels left in English are translated.
+
+## CH-414 - Real data only: no sample or guessed figures on screen
+**2026-10-30 - Buyers / Dashboard / Daily News**
+
+Buyer Cap and Cap Hit use only the server's cap count ("-" when missing, no
+guess from calls today). The dashboard donut and calls chart are empty instead
+of showing sample numbers. Daily News shows the error instead of sample stories.
+
+## CH-415 - Campaign Group page in Sir's design, real data only
+**2026-10-30 - Campaign Groups**
+
+Each group has its own page: figures (destinations, campaigns, mixed priority,
+needs a check), how a call picks a destination, Destinations / Campaigns /
+Change History tabs, filters, bulk actions, a per-destination drawer (same or
+different per campaign), Add Destination drawer and Remove dialog. Priorities
+and weights come from the group's campaigns; limits and on / off from the real
+Destination records. Choosing only some campaigns and Change History need
+backend CH-415.
+
+## CH-416 - Buyers page figure cards in Sir's design
+**2026-10-30 - Buyers**
+
+Label and icon on top, the figure, a line under it: a blue bar of active buyers
+on Active, and a yellow Buyer Cap Hit card naming the buyers at cap.
+
+## CH-417 - Buyers list: load every buyer
+**2026-10-30 - Buyers**
+
+The list stopped at the first 200 buyers; it now loads every page, so the
+Buyers page totals always count all of them.
