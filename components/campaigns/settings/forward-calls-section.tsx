@@ -301,7 +301,11 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         convertOn: ((r.convertOn as ConvertKey) || "") as ConvertKey,
         convertSeconds: r.convertSeconds ?? 0,
       };
-    });
+    })
+      // CH-411 (Sir): active TFNs always on top, then the switched-off ones.
+      // `routed` is already in priority order and the sort is stable, so each
+      // group stays in priority order (1, 2, 5, 10...).
+      .sort((a, b) => Number(b.enabled) - Number(a.enabled));
   }, [routed, allDestinations]);
 
   // CH-408: the header's Destinations tile counts these lines.
