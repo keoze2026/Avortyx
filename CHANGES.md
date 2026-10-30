@@ -1554,3 +1554,10 @@ Sir, 31 Oct: "I meant just the header titles NAME and DAILY, revert content
 and move the two like 20px to the right". The Name and Daily contents are back
 where they were before CH-443; only the NAME and DAILY header titles sit 20px
 further right.
+
+## CH-445 - Publishers: Hourly, Monthly and Global figures moved right
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: "the figures below monthly and global like 10px to the right,
+hours too". The figures under HOURLY, MONTHLY and GLOBAL sit 10px further
+right. The headers are unchanged.
