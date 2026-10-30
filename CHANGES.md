@@ -1462,3 +1462,16 @@ Month / any dates, and Export (CSV).
   - price vs cost per minute: each code's rate + termination, our cost, the
     customer price and the margin (amber under 10%)
   - the old company profit card on Carrier Costs is replaced by this page
+
+## CH-435 - Calls by Hour: no cut in the candles
+**2026-10-30 - Dashboard, Reports**
+
+Sir, 30 Oct: "Candle still have small cut". Each candle was three blocks
+stacked (two blue, one red); where blocks met, a phone could leave one row of
+pixels unpainted - a dark cut across the candle. CH-277 and CH-288 only
+narrowed it. Now each candle is drawn as one shape: one blue column the full
+height with the red part painted over its bottom, so there is no join left
+to show a cut on any screen. The figures over the candles lost their dark
+outline, which cut dark gaps into the green line and into the next figure
+(177 / 179); on a narrow chart the figures get smaller so they never run
+into each other. Colours, heights and the line are unchanged.
