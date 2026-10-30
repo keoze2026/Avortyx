@@ -1586,3 +1586,16 @@ pages publishers and buyers open from their invite (Set Your Password), and
 sign-up, forgot and reset password, still used the app's plain Inter. They now
 use the sign-in page's font with the same figure style. Only the font changes;
 colours and layout stay as they are.
+
+## CH-449 - Invite page in the current sign-in design
+**2026-10-31 - Sign in / invites**
+
+Sir, 31 Oct: "Still old font coming on publisher and buyer invite" / "Still
+same". The Set Your Password page that publisher and buyer invites (and
+approved access requests) open still had the old split layout with the rings.
+It now sits in the sign-in screen's frame, the same as /login: backdrop,
+Avortyx AI, intro, footer and font, and the glass card with the sign-in
+page's fields and button. The form works as before (token, password, signed
+in, on to the dashboard); a too-short or mismatched password now shows under
+its field. The page moved from app/(auth) to app/(login)/set-password; its
+address is unchanged.
