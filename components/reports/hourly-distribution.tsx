@@ -23,24 +23,43 @@ import { formatCurrency, formatNumber, zonedDayKey, zonedHour } from "@/lib/form
 import { useUIStore } from "@/lib/store/ui-store";
 import { cn } from "@/lib/utils";
 
-/** How far a stacked block reaches down into the block beneath it (CH-288). */
-const STACK_OVERLAP_PX = 1;
-
 /**
- * One block of a stacked column, drawn `overlap` px taller at the bottom so
- * it covers the seam with the block below (that block is drawn first, so the
- * upper one paints over it). Empty blocks draw nothing, never a 1px line.
+ * One whole column (CH-435, Sir 30 Oct: "candle still have small cut").
+ *
+ * The column was three stacked blocks - converted and not converted (both
+ * blue) over no answer (red) - and wherever two blocks met, a phone could
+ * leave one pixel row unpainted: a dark cut across the candle (CH-277/288
+ * moved it, never removed it). Now it is drawn as one: a single blue column
+ * the full height, and the red part painted over its bottom. One shape, no
+ * joins, so there is no row left to miss on any screen.
  */
-function stackBlock(overlap: number) {
-  // Recharts types the shape's props as `unknown`; they are the block's
-  // rectangle (x, y, width, height, fill, radius).
-  function StackBlock(raw: unknown) {
-    const props = raw as RectangleProps;
-    const { height = 0, width = 0 } = props;
-    if (!(height > 0) || !(width > 0)) return <g />;
-    return <Rectangle {...props} height={height + overlap} />;
-  }
-  return StackBlock;
+function CandleShape(raw: unknown) {
+  const p = raw as RectangleProps & { payload?: Bucket };
+  const x = Number(p.x);
+  const y = Number(p.y);
+  const width = Number(p.width);
+  const height = Number(p.height);
+  const row = p.payload;
+  if (!row || !(height > 0) || !(width > 0) || ![x, y].every(Number.isFinite)) return <g />;
+  const total = row.converted + row.notConverted + row.noAnswer;
+  if (total <= 0) return <g />;
+  const redH = Math.round((row.noAnswer / total) * height);
+  const radius: [number, number, number, number] = [3, 3, 0, 0];
+  return (
+    <g>
+      {redH < height && <Rectangle x={x} y={y} width={width} height={height} radius={radius} fill={COLOR_NOTCONV} />}
+      {redH > 0 && (
+        <Rectangle
+          x={x}
+          y={y + height - redH}
+          width={width}
+          height={redH}
+          radius={redH >= height ? radius : [0, 0, 0, 0]}
+          fill={COLOR_NOANS}
+        />
+      )}
+    </g>
+  );
 }
 
 type Grain = "H" | "D" | "M";
@@ -252,19 +271,22 @@ function ColumnCountLabel({
   // Just above the column, leaving the rest of the gap clear below the line
   // (it rises steeply beside tall columns); never past the gap's middle.
   const baseline = columnTop - Math.min(5, Math.max(2, gapPx / 2 - 4.5));
+  // Room for the figure: the column's slot (the bar is 72% of it).
+  const slot = width / 0.72;
+  const digits = formatNumber(row.total).length;
+  const fontSize = Math.max(8, Math.min(11, (slot * 0.95) / (digits * 0.62)));
 
   return (
     <text
       x={x + width / 2}
       y={baseline}
       textAnchor="middle"
-      fontSize={11}
+      // CH-435: no dark outline round the figure - it cut dark gaps into
+      // the line and into the next column's figure. The size shrinks on a
+      // narrow chart so neighbouring figures never run into each other.
+      fontSize={fontSize}
       fontWeight={700}
       fill="var(--foreground)"
-      stroke="var(--card)"
-      strokeWidth={3}
-      strokeLinejoin="round"
-      paintOrder="stroke"
     >
       {formatNumber(row.total)}
     </text>
@@ -747,46 +769,10 @@ export function HourlyDistribution({
                   tickMargin={4}
                 />
                 <Tooltip cursor={false} content={<HourlyTooltipWrapper grain={grain} />} />
-                {/* Stack order — bottom to top:
-                     1. noAnswer      (red: missed, not converted)
-                     2. notConverted  (blue: answered, not converted)
-                     3. converted     (accent, top of stack) */}
-                {/* Every block is drawn on whole pixels (crispEdges), with no
-                    outline (CH-277), and each block above the bottom one
-                    reaches 1px down into the block beneath it (CH-288). The
-                    blocks met edge to edge, and on a phone (3 screen pixels
-                    to each page pixel) each edge was rounded on its own, so
-                    one pixel row between two blocks could stay unpainted: a
-                    dark line across the blue column on Sir's phone, 26 Oct,
-                    while a computer showed none. Drawn over each other, there
-                    is no row left to miss on any screen. */}
-                <Bar
-                  yAxisId="count"
-                  dataKey="noAnswer"
-                  stackId="calls"
-                  fill={COLOR_NOANS}
-                  shapeRendering="crispEdges"
-                  radius={[0, 0, 0, 0]}
-                  shape={stackBlock(0)}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="notConverted"
-                  stackId="calls"
-                  fill={COLOR_NOTCONV}
-                  shapeRendering="crispEdges"
-                  radius={[0, 0, 0, 0]}
-                  shape={stackBlock(STACK_OVERLAP_PX)}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="converted"
-                  stackId="calls"
-                  fill={COLOR_CONVERTED}
-                  shapeRendering="crispEdges"
-                  radius={[3, 3, 0, 0]}
-                  shape={stackBlock(STACK_OVERLAP_PX)}
-                />
+                {/* One column per period (CH-435): red (no answer) at the
+                    bottom, blue (answered: converted or not) above - drawn
+                    as one shape, see CandleShape. */}
+                <Bar yAxisId="count" dataKey="total" stackId="calls" fill={COLOR_NOTCONV} shape={CandleShape} />
                 {/* Calls line: follows the call totals on the columns'
                     scale, riding just above each column so the count sits
                     between the column and the line (see lineLevel). */}
