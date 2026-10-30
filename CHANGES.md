@@ -1408,3 +1408,15 @@ Summary Publisher tab the campaign tags (C-10, C-05 ...) used to start right
 after each name, so they zig-zagged. Every name now takes the width of the
 longest name on the page (measured in the browser), so all the tags start on
 the same line.
+
+## CH-432 - Call Summary: no shade, zeros in white, title in capitals
+**2026-10-30 - Reports**
+
+Sir, 30 Oct, on the Call Summary:
+  - "On background white shade is coming, remove that": the sorted column has
+    no shaded background any more
+  - "If value is 0 it should be in the same color, white, not light": 0,
+    0.0%, 00:00 and $0.00 show in the same white as every other figure;
+    Profit is green above zero, red below, white at zero
+  - "Capital letters call summary": the title is CALL SUMMARY again (CH-430
+    is undone)
