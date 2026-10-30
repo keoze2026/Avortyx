@@ -1576,3 +1576,13 @@ Sir, 31 Oct: "Under publisher access - Invite publisher coming no need for
 that". A publisher (or buyer) login saw the Invite Publisher button on the
 Publishers page. It is now hidden for publisher and buyer logins; admins and
 staff still see it as before.
+
+## CH-447 - Invite and sign-up pages in the sign-in font
+**2026-10-31 - Sign in / invites**
+
+Sir, 31 Oct: "Still old font coming on publisher and buyer invite". The
+sign-in page uses Inter with its optical sizes (app/(login)/font.ts), but the
+pages publishers and buyers open from their invite (Set Your Password), and
+sign-up, forgot and reset password, still used the app's plain Inter. They now
+use the sign-in page's font with the same figure style. Only the font changes;
+colours and layout stay as they are.
