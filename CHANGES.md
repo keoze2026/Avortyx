@@ -1332,3 +1332,11 @@ in bottom". In Add Destination the destination list now grows to fill the
 drawer's spare height, so many more lines show at once, and Which Campaigns,
 Routing and Limits sit at the bottom above the buttons. On a short screen the
 list keeps its old height and the drawer scrolls as before.
+
+## CH-426 - One sidebar button
+**2026-10-30 - Top bar**
+
+Since CH-424 the sidebar has its own open/close button beside the logo, so the
+top bar showed a second one doing the same thing. On a computer the top bar's
+button is gone; on a phone it stays, because there the sidebar is hidden and
+that button is the only way to open it.
