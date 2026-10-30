@@ -9,30 +9,35 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { Crown, Landmark, Send,
-  LayoutDashboard,
+// CH-419 (Sir, 30 Oct): sidebar icons from his reference picture where ours
+// differed; every other icon unchanged.
+import {
+  Crown,
+  Landmark,
+  Send,
+  LayoutGrid,
   Radio,
   Megaphone,
   Hash,
   SearchCheck,
   GitFork,
-  Building2,
+  Building,
   Briefcase,
   Target,
   Users,
-  PhoneCall,
-  PhoneForwarded,
-  PhoneIncoming,
+  Phone,
+  List,
   BarChart3,
   Store,
-  Sparkles,
+  Sparkle,
   Palette,
   Plug,
   CreditCard,
-  Settings,
+  Cog,
   Shield,
-  ShieldAlert,
-  PhoneOff,
+  ShieldCheck,
+  Ban,
+  FileText,
   Bitcoin,
   Newspaper,
   Gift,
@@ -73,7 +78,7 @@ const ALL_ROLES = ["admin", "buyer", "publisher"] as const;
 export const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: "Workspace", nameKey: "nav.workspace", href: ROUTES.workspace, icon: Briefcase, roles: ["admin"] },
+      { label: "Workspace", nameKey: "nav.workspace", href: ROUTES.workspace, icon: Building, roles: ["admin"] },
       // Sir, 27 Oct: the demo video, right below Workspace.
       { label: "Getting Started", nameKey: "nav.gettingStarted", href: ROUTES.gettingStarted, icon: CirclePlay, roles: ["admin"] },
       { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true },
@@ -84,7 +89,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Overview",
     labelKey: "nav.section.overview",
     items: [
-      { label: "Dashboard",    nameKey: "nav.dashboard",   href: ROUTES.dashboard, icon: LayoutDashboard, roles: ALL_ROLES },
+      { label: "Dashboard",    nameKey: "nav.dashboard",   href: ROUTES.dashboard, icon: LayoutGrid, roles: ALL_ROLES },
       { label: "Live Monitor", nameKey: "nav.liveMonitor", href: ROUTES.live,      icon: Radio,           roles: ALL_ROLES, badge: "Live" },
       { label: "Reports",      nameKey: "nav.reports",     href: ROUTES.reports,   icon: BarChart3,       roles: ALL_ROLES },
       // CH-261 (Sir, 25 Oct): every automated report in one place.
@@ -100,15 +105,15 @@ export const NAV_GROUPS: NavGroup[] = [
       // Publishers see it only with "TFN Test Calls" on in their Publisher Access (CH-240).
       { label: "TFN Check",     nameKey: "nav.tfnCheck",     href: ROUTES.tfnCheck,  icon: SearchCheck,     roles: ["admin", "publisher"], partnerPermission: "tfn_test" },
       { label: "Routing",       nameKey: "nav.routing",      href: ROUTES.routing,   icon: GitFork,         roles: ["admin"] },
-      { label: "IVR",           nameKey: "nav.ivr",          href: ROUTES.ivr,       icon: PhoneForwarded,  roles: ["admin"] },
-      { label: "Call Queue",    nameKey: "nav.callQueue",    href: ROUTES.queue,     icon: PhoneIncoming,   roles: ["admin"] },
+      { label: "IVR",           nameKey: "nav.ivr",          href: ROUTES.ivr,       icon: Phone,  roles: ["admin"] },
+      { label: "Call Queue",    nameKey: "nav.callQueue",    href: ROUTES.queue,     icon: List,   roles: ["admin"] },
     ],
   },
   {
     label: "Network",
     labelKey: "nav.section.network",
     items: [
-      { label: "Buyers",       nameKey: "nav.buyers",       href: ROUTES.buyers,       icon: Building2, roles: ["admin", "buyer"] },
+      { label: "Buyers",       nameKey: "nav.buyers",       href: ROUTES.buyers,       icon: Briefcase, roles: ["admin", "buyer"] },
       { label: "Destinations", nameKey: "nav.destinations", href: ROUTES.destinations, icon: Target,    roles: ["admin", "buyer"] },
       { label: "Publishers",   nameKey: "nav.publishers",   href: ROUTES.publishers,   icon: Users,     roles: ["admin", "publisher"] },
     ],
@@ -118,17 +123,17 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "nav.section.suppressionList",
     items: [
       { label: "VoIP Shield",     nameKey: "nav.voipShield",     href: ROUTES.voipShield,     icon: Shield,      roles: ["admin"] },
-      { label: "TCPA Shield",     nameKey: "nav.tcpaShield",     href: ROUTES.tcpaShield,     icon: ShieldAlert, roles: ["admin"] },
-      { label: "Blocked Numbers", nameKey: "nav.blockedNumbers", href: ROUTES.blockedNumbers, icon: PhoneOff,    roles: ["admin", "publisher"], partnerPermission: "block_numbers" },
+      { label: "TCPA Shield",     nameKey: "nav.tcpaShield",     href: ROUTES.tcpaShield,     icon: ShieldCheck, roles: ["admin"] },
+      { label: "Blocked Numbers", nameKey: "nav.blockedNumbers", href: ROUTES.blockedNumbers, icon: Ban,    roles: ["admin", "publisher"], partnerPermission: "block_numbers" },
     ],
   },
   {
     label: "Insights",
     labelKey: "nav.section.insights",
     items: [
-      { label: "Call Logs",   nameKey: "nav.callLogs",    href: ROUTES.calls,       icon: PhoneCall, roles: ALL_ROLES },
+      { label: "Call Logs",   nameKey: "nav.callLogs",    href: ROUTES.calls,       icon: FileText, roles: ALL_ROLES },
       { label: "Marketplace", nameKey: "nav.marketplace", href: ROUTES.marketplace, icon: Store,     roles: ["admin", "buyer"] },
-      { label: "AI Insights", nameKey: "nav.aiInsights",  href: ROUTES.insights,    icon: Sparkles,  roles: ["admin"], badge: "AI" },
+      { label: "AI Insights", nameKey: "nav.aiInsights",  href: ROUTES.insights,    icon: Sparkle,  roles: ["admin"], badge: "AI" },
     ],
   },
   {
@@ -148,7 +153,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Integrations", nameKey: "nav.integrations", href: ROUTES.integrations, icon: Plug,        roles: ["admin"] },
       { label: "White Label",  nameKey: "nav.whiteLabel",   href: ROUTES.whiteLabel,   icon: Palette,     roles: ["admin"] },
       { label: "Billing",      nameKey: "nav.billing",      href: ROUTES.billing,      icon: CreditCard,  roles: ["admin"] },
-      { label: "Settings",     nameKey: "nav.settings",     href: ROUTES.settings,     icon: Settings,    roles: ALL_ROLES },
+      { label: "Settings",     nameKey: "nav.settings",     href: ROUTES.settings,     icon: Cog,    roles: ALL_ROLES },
     ],
   },
 ];
