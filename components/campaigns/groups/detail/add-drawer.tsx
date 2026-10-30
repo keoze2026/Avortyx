@@ -335,8 +335,11 @@ export function AddDestinationDrawer({
           <SheetDescription className="text-xs">{fill(t("x415.addSub"), { group: group.name })}</SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-6 overflow-y-auto p-5">
-          <Step n={++n} title={t("x415.whichDestination")}>
+        {/* CH-425 (Sir, 30 Oct: "Destination put more down - Campaign, Routing
+            and Limits can be in bottom"): the destination list takes all the
+            spare height, the other steps sit at the bottom. */}
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-5">
+          <Step n={++n} title={t("x415.whichDestination")} grow={source === "existing"}>
             <div className="grid grid-cols-2 rounded-lg border border-border p-0.5 text-xs">
               {(["existing", "new"] as const).map((s) => (
                 <button key={s} type="button" onClick={() => setSource(s)} className={cn("rounded-md py-1.5", source === s ? "bg-muted font-medium" : "text-muted-foreground")}>
@@ -345,7 +348,7 @@ export function AddDestinationDrawer({
               ))}
             </div>
             {source === "existing" ? (
-              <div className="space-y-2">
+              <div className="flex flex-1 flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative min-w-0 flex-1">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -367,7 +370,7 @@ export function AddDestinationDrawer({
                   )}
                 </div>
                 {/* Sir: a large box with check boxes, not a small drop-down. */}
-                <div className="h-80 overflow-y-auto rounded-lg border border-border">
+                <div className="min-h-80 flex-1 basis-80 overflow-y-auto rounded-lg border border-border">
                   {pool.length === 0 ? (
                     <p className="p-4 text-xs text-muted-foreground">{t("x415.noMatch")}</p>
                   ) : (

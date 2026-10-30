@@ -72,13 +72,26 @@ export function CampaignsBar({ inCount, ofCount }: { inCount: number; ofCount: n
 }
 
 /** A numbered step heading in the drawers. */
-export function Step({ n, title, aside, children }: { n: number; title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+export function Step({
+  n,
+  title,
+  aside,
+  grow,
+  children,
+}: {
+  n: number;
+  title: string;
+  aside?: React.ReactNode;
+  /** CH-425: this step takes the drawer's spare height (Add Destination's list). */
+  grow?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="flex gap-3">
+    <section className={cn("flex gap-3", grow && "flex-1")}>
       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
         {n}
       </span>
-      <div className="min-w-0 flex-1 space-y-3">
+      <div className={cn("min-w-0 flex-1 space-y-3", grow && "flex flex-col")}>
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="text-sm font-semibold">{title}</h3>
           {aside && <span className="text-[11px] text-muted-foreground">{aside}</span>}
