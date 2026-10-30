@@ -1258,3 +1258,14 @@ chart, both made up in the portal. Both are gone; they will show again only if
 the server sends real values. Full check of the portal: the Campaign Group page
 and every other page read the server; the remaining files under lib/mock are
 formatters, types, colours and fixed option lists, not figures.
+
+## CH-421 - Campaign Groups page shows the group design directly
+**2026-10-30 - Campaign Groups**
+
+Sir, 30 Oct: "No changes at our end yet - under Campaign Group". CH-415 put
+Sir's design on each group's own page, behind an "Open Group" button, and left
+the old tables on the Campaign Groups page. Now the Campaign Groups page is the
+design itself: the first group opens straight away, a picker switches between
+groups when there are several, and New Group, Delete and (with more than one
+group) Change a Destination sit in its header. The picked group is kept in the
+address (?group=...). Real data only, as CH-415.
