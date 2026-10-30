@@ -9,14 +9,22 @@
  * Rate and Convert ON stay required for a line the group's campaigns do not
  * have yet (as on the campaign page, CH-248); a line already in some of them
  * keeps the billing it has there.
+ *
+ * CH-422 (Sir, 30 Oct: "Make this box large and give check box too"): existing
+ * destinations are picked from a large list with check boxes - several at
+ * once. Each one new to the group gets its own Rate and Convert ON (every
+ * buyer pays its own rate); priority, weight and campaigns are shared. A line
+ * already in every campaign of the group cannot be picked. Each destination is
+ * saved in its own transaction; any that fail are named, the rest are kept.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Info, Loader2 } from "lucide-react";
+import { Info, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslation } from "@/hooks/use-translation";
@@ -34,6 +42,19 @@ import { digits10, formatUs, shareAt, type GroupRow } from "./model";
 import { Step, toInt } from "./ui";
 
 type ConvertOn = "" | "incoming" | "connected" | "length";
+interface Bill {
+  rate: string;
+  convertOn: ConvertOn;
+  seconds: string;
+}
+const EMPTY_BILL: Bill = { rate: "", convertOn: "", seconds: "" };
+const billDone = (b: Bill | undefined) =>
+  !!b && b.rate.trim() !== "" && Number(b.rate) >= 0 && !!b.convertOn && (b.convertOn !== "length" || (toInt(b.seconds) ?? 0) > 0);
+const billWire = (b: Bill) => ({
+  revenue: Number(b.rate),
+  convertOn: b.convertOn as "incoming" | "connected" | "length",
+  convertSeconds: b.convertOn === "length" ? toInt(b.seconds) ?? 0 : 0,
+});
 
 export function AddDestinationDrawer({
   open,
@@ -58,7 +79,8 @@ export function AddDestinationDrawer({
   const updateDest = useDestinationsStore((s) => s.update);
 
   const [source, setSource] = useState<"existing" | "new">("existing");
-  const [destId, setDestId] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [bills, setBills] = useState<Record<string, Bill>>({});
   const [search, setSearch] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [newBuyer, setNewBuyer] = useState("");
@@ -76,7 +98,8 @@ export function AddDestinationDrawer({
   useEffect(() => {
     if (!open) return;
     setSource("existing");
-    setDestId("");
+    setPicked([]);
+    setBills({});
     setSearch("");
     setNewNumber("");
     setNewBuyer("");
@@ -92,41 +115,156 @@ export function AddDestinationDrawer({
     if (!buyers.length) void fetchBuyers();
   }, [open, buyers.length, fetchBuyers]);
 
-  const dest = useMemo(() => destinations.find((d) => d.id === destId) ?? null, [destinations, destId]);
+  const pickedDests = useMemo(
+    () => picked.map((id) => destinations.find((d) => d.id === id)).filter(Boolean) as Destination[],
+    [picked, destinations],
+  );
+  // Limits are each destination's own: shown for one at a time.
+  const dest = source === "existing" && pickedDests.length === 1 ? pickedDests[0] : null;
   useEffect(() => setLimits(limitsOf(dest)), [dest]);
 
-  const number = source === "existing" ? dest?.tfn ?? "" : toE164(newNumber);
+  const rowOf = (tfn: string) => rows.find((r) => r.digits === digits10(tfn)) ?? null;
+  const alreadyOf = (tfn: string) => new Set(rowOf(tfn)?.line.campaigns.map((c) => c.campaignId) ?? []);
+  const targetsOf = (tfn: string) => {
+    const has = alreadyOf(tfn);
+    return group.campaigns.filter((c) => !has.has(c.id) && (scope === "all" || some.has(c.id)));
+  };
+
+  // The one line the steps describe: the single pick, or the new number.
+  const number = source === "existing" ? pickedDests[0]?.tfn ?? "" : toE164(newNumber);
   const key = digits10(number);
   const row = useMemo(() => (key.length === 10 ? rows.find((r) => r.digits === key) ?? null : null), [rows, key]);
-  const already = new Set(row?.line.campaigns.map((c) => c.campaignId) ?? []);
+  const already = source === "existing" && pickedDests.length > 1 ? new Set<string>() : new Set(row?.line.campaigns.map((c) => c.campaignId) ?? []);
   const targets = group.campaigns.filter((c) => !already.has(c.id) && (scope === "all" || some.has(c.id)));
-  const needsBilling = !row;
+  const needsBilling = source === "new" ? !row : false;
   const buyerName =
-    source === "existing" ? dest?.buyerName ?? "" : buyers.find((b) => b.id === newBuyer)?.name ?? "";
+    source === "existing" ? pickedDests[0]?.buyerName ?? "" : buyers.find((b) => b.id === newBuyer)?.name ?? "";
+
+  // Existing picks: what each adds, and which are new to the group (own billing).
+  const plan = pickedDests.map((d) => ({ d, targets: targetsOf(d.tfn), isNew: !rowOf(d.tfn) }));
+  const adding = plan.filter((x) => x.targets.length > 0);
+  const newOnes = plan.filter((x) => x.isNew);
+  const rowsAdded = adding.reduce((s, x) => s + x.targets.length, 0);
+
+  // Already in every campaign of the group: nothing left to add.
+  const fullIn = (d: Destination) => {
+    const r = rows.find((x) => x.digits === digits10(d.tfn));
+    return !!r && r.inCount >= r.ofCount;
+  };
 
   const pool = useMemo(() => {
     const q = search.trim().toLowerCase();
     const qd = q.replace(/\D/g, "");
     return [...destinations]
       .filter((d) => !q || (d.buyerName ?? "").toLowerCase().includes(q) || d.name.toLowerCase().includes(q) || (qd && digits10(d.tfn).includes(qd)))
-      .sort((a, b) => Number(b.enabled) - Number(a.enabled) || (a.buyerName ?? "").localeCompare(b.buyerName ?? "", undefined, { numeric: true }));
-  }, [destinations, search]);
+      // CH-422: pickable lines first (not yet in every campaign), live before
+      // paused, then by buyer.
+      .sort(
+        (a, b) =>
+          Number(fullIn(a)) - Number(fullIn(b)) ||
+          Number(b.enabled) - Number(a.enabled) ||
+          (a.buyerName ?? "").localeCompare(b.buyerName ?? "", undefined, { numeric: true }),
+      );
+  }, [destinations, search, rows]);
+
+  const inAll = (d: Destination) => {
+    const r = rowOf(d.tfn);
+    return !!r && r.inCount >= r.ofCount;
+  };
 
   const p = toInt(priority) ?? 1;
   const w = toInt(weight) ?? 100;
   const share = shareAt(rows, p, w, key);
 
   const valid =
-    key.length === 10 &&
-    targets.length > 0 &&
-    (source === "existing" ? !!dest : !!newBuyer && (newName.trim().length >= 2 || !!buyerName)) &&
-    (!needsBilling || (rate.trim() !== "" && Number(rate) >= 0 && !!convertOn && (convertOn !== "length" || (toInt(seconds) ?? 0) > 0)));
+    source === "existing"
+      ? adding.length > 0 && newOnes.every((x) => billDone(bills[x.d.id]))
+      : key.length === 10 &&
+        targets.length > 0 &&
+        !!newBuyer &&
+        (newName.trim().length >= 2 || !!buyerName) &&
+        (!needsBilling || (rate.trim() !== "" && Number(rate) >= 0 && !!convertOn && (convertOn !== "length" || (toInt(seconds) ?? 0) > 0)));
+
+  const togglePick = (id: string, on: boolean) =>
+    setPicked((p) => (on ? (p.includes(id) ? p : [...p, id]) : p.filter((x) => x !== id)));
+  const setBill = (id: string, patch: Partial<Bill>) =>
+    setBills((b) => ({ ...b, [id]: { ...(b[id] ?? EMPTY_BILL), ...patch } }));
+  const copyFirstBill = () => {
+    const first = newOnes[0] && bills[newOnes[0].d.id];
+    if (!first) return;
+    setBills((b) => ({ ...b, ...Object.fromEntries(newOnes.map((x) => [x.d.id, { ...first }])) }));
+  };
+
+  /** One existing destination into the campaigns it is missing from. */
+  const addOne = async (d: Destination, camps: { id: string }[], isNew: boolean) => {
+    const billing = isNew ? billWire(bills[d.id] ?? EMPTY_BILL) : {};
+    try {
+      await campaignGroups.setLine(group.id, {
+        number: d.tfn,
+        buyerId: d.buyerId || undefined,
+        campaigns: camps.map((c) => ({ campaignId: c.id, included: true, priority: p, weight: w })),
+        ...billing,
+      });
+    } catch (e) {
+      // A server not updated yet has no /line: every missing campaign still
+      // goes through /apply, with the billing given or the one the line has.
+      const status = (e as { status?: number }).status;
+      const r = rowOf(d.tfn);
+      const known = r?.line.campaigns.find((c) => c.revenue != null && c.convertOn);
+      const bill = isNew
+        ? billing
+        : known
+          ? { revenue: Number(known.revenue), convertOn: known.convertOn as "incoming" | "connected" | "length", convertSeconds: known.convertSeconds }
+          : null;
+      const everyMissing = camps.length === group.campaigns.length - alreadyOf(d.tfn).size;
+      if ((status === 404 || status === 405) && everyMissing && bill) {
+        await campaignGroups.apply({ groupIds: [group.id], action: "add", number: d.tfn, buyerId: d.buyerId || undefined, priority: p, weight: w, ...bill });
+      } else throw e;
+    }
+  };
+
+  const saveMany = async () => {
+    setBusy(true);
+    const failed: string[] = [];
+    let done = 0;
+    for (const x of adding) {
+      try {
+        await addOne(x.d, x.targets, x.isNew);
+        done += 1;
+      } catch (e) {
+        failed.push(`${formatUs(x.d.tfn)} (${friendlyErrorMessage(e)})`);
+      }
+    }
+    try {
+      if (dest) {
+        const patch = limitsPatch(limitsOf(dest), limits);
+        if (Object.keys(patch).length) await updateDest(dest.id, patch);
+      }
+    } catch (e) {
+      failed.push(friendlyErrorMessage(e));
+    }
+    setBusy(false);
+    if (done) {
+      toast.success(
+        adding.length === 1
+          ? fill(t("x415.addedTo"), { name: localName(adding[0].d.buyerName ?? "") || formatUs(adding[0].d.tfn), n: adding[0].targets.length })
+          : fill(t("x422.addedMany"), { d: done }),
+      );
+      onDone();
+    }
+    if (failed.length) {
+      toast.error(fill(t("x422.someFailed"), { n: failed.length, list: failed.join("; ") }));
+      // Keep only the ones that failed picked, so they can be retried.
+      setPicked((p) => p.filter((id) => failed.some((f) => f.startsWith(formatUs(destinations.find((d) => d.id === id)?.tfn ?? "")))));
+    } else onOpenChange(false);
+  };
 
   const save = async () => {
     if (!valid) return;
+    if (source === "existing") return saveMany();
     setBusy(true);
     try {
-      let buyerId = source === "existing" ? dest?.buyerId || undefined : newBuyer;
+      let buyerId: string | undefined = newBuyer;
       // A new number becomes a destination first, so its limits and its
       // on / off are where routing reads them.
       if (source === "new") {
@@ -178,10 +316,6 @@ export function AddDestinationDrawer({
           await campaignGroups.apply({ groupIds: [group.id], action: "add", number, buyerId, priority: p, weight: w, ...billing });
         } else throw e;
       }
-      if (source === "existing" && dest) {
-        const patch = limitsPatch(limitsOf(dest), limits);
-        if (Object.keys(patch).length) await updateDest(dest.id, patch);
-      }
       toast.success(fill(t("x415.addedTo"), { name: localName(buyerName) || formatUs(number), n: targets.length }));
       onDone();
       onOpenChange(false);
@@ -195,7 +329,7 @@ export function AddDestinationDrawer({
   let n = 0;
   return (
     <Sheet open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
         <SheetHeader className="border-b border-border p-5">
           <SheetTitle className="text-lg">{t("x408.addDestination")}</SheetTitle>
           <SheetDescription className="text-xs">{fill(t("x415.addSub"), { group: group.name })}</SheetDescription>
@@ -212,33 +346,77 @@ export function AddDestinationDrawer({
             </div>
             {source === "existing" ? (
               <div className="space-y-2">
-                <div className="text-[11px] font-medium">{t("cg.col.destination")}</div>
-                <Select value={destId} onValueChange={setDestId}>
-                  <SelectTrigger className="h-10 w-full">
-                    <SelectValue placeholder={t("x415.pickDestination")} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-80">
-                    <div className="p-1.5">
-                      <Input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder={t("x415.search")} className="h-8 text-xs" />
-                    </div>
-                    {pool.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        <span className="inline-flex items-center gap-2">
-                          <span className="rounded border border-border px-1 text-[10px] font-semibold">{localName(d.buyerName ?? "")}</span>
-                          <span className="font-mono text-xs tabular-nums">{formatUs(d.tfn)}</span>
-                          {!d.enabled && <span className="text-[10px] text-muted-foreground">{t("cg.status.paused")}</span>}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {dest && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {row
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("x415.search")} className="h-9 pl-8 text-xs" />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-xs"
+                    onClick={() => setPicked((p) => [...new Set([...p, ...pool.filter((d) => !inAll(d)).map((d) => d.id)])])}
+                  >
+                    {t("x415.selectAll")}
+                  </Button>
+                  {picked.length > 0 && (
+                    <Button type="button" size="sm" variant="ghost" className="h-9 text-xs" onClick={() => setPicked([])}>
+                      {t("x415.clear")}
+                    </Button>
+                  )}
+                </div>
+                {/* Sir: a large box with check boxes, not a small drop-down. */}
+                <div className="h-80 overflow-y-auto rounded-lg border border-border">
+                  {pool.length === 0 ? (
+                    <p className="p-4 text-xs text-muted-foreground">{t("x415.noMatch")}</p>
+                  ) : (
+                    pool.map((d) => {
+                      const r = rowOf(d.tfn);
+                      const full = inAll(d);
+                      const on = picked.includes(d.id);
+                      return (
+                        <label
+                          key={d.id}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-3 border-b border-border px-3 py-2.5 last:border-b-0",
+                            on && "bg-accent/10",
+                            full && "cursor-not-allowed opacity-50",
+                          )}
+                        >
+                          <Checkbox checked={on} disabled={full} onCheckedChange={(v) => togglePick(d.id, v === true)} aria-label={d.tfn} />
+                          <span className="w-14 shrink-0 truncate rounded border border-border bg-muted/40 px-1.5 py-0.5 text-center text-[10px] font-semibold">
+                            {localName(d.buyerName ?? "")}
+                          </span>
+                          <span className="font-mono text-[13px] tabular-nums">{formatUs(d.tfn)}</span>
+                          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">{localName(d.name)}</span>
+                          {!d.enabled && <span className="shrink-0 text-[10px] text-amber-400">{t("cg.status.paused")}</span>}
+                          <span
+                            className={cn(
+                              "shrink-0 rounded border px-1.5 py-px text-[10px]",
+                              full
+                                ? "border-border text-muted-foreground"
+                                : r
+                                  ? "border-amber-500/30 text-amber-400"
+                                  : "border-accent/30 text-accent",
+                            )}
+                          >
+                            {full ? fill(t("x415.allN"), { n: group.campaigns.length }) : r ? fill(t("x415.nOfM"), { n: r.inCount, m: r.ofCount }) : t("x422.newToGroup")}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {picked.length === 0
+                    ? t("x422.pickHint")
+                    : picked.length === 1 && row
                       ? fill(t("x415.alreadyIn"), { n: row.inCount, m: row.ofCount })
-                      : fill(t("x415.inNone"), { m: group.campaigns.length })}
-                  </p>
-                )}
+                      : picked.length === 1
+                        ? fill(t("x415.inNone"), { m: group.campaigns.length })
+                        : fill(t("x422.pickedN"), { n: picked.length })}
+                </p>
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -342,6 +520,43 @@ export function AddDestinationDrawer({
             </p>
           </Step>
 
+          {source === "existing" && newOnes.length > 0 && (
+            <Step n={++n} title={t("x415.billing")} aside={t("x422.billingEach")}>
+              <div className="space-y-2">
+                {newOnes.map((x, i) => {
+                  const b = bills[x.d.id] ?? EMPTY_BILL;
+                  return (
+                    <div key={x.d.id} className="grid grid-cols-[minmax(0,1fr)_6rem_9rem] items-center gap-2">
+                      <span className="truncate text-xs">
+                        <span className="font-semibold">{localName(x.d.buyerName ?? "")}</span>{" "}
+                        <span className="font-mono tabular-nums text-muted-foreground">{formatUs(x.d.tfn)}</span>
+                      </span>
+                      <Input type="number" min={0} step="0.01" value={b.rate} onChange={(e) => setBill(x.d.id, { rate: e.target.value })} placeholder={t("cg.apply.rate")} className="h-8 font-mono" />
+                      <div className="flex gap-1">
+                        <Select value={b.convertOn || undefined} onValueChange={(v) => setBill(x.d.id, { convertOn: v as ConvertOn })}>
+                          <SelectTrigger className="h-8 w-full text-xs"><SelectValue placeholder={t("cg.apply.convertOn")} /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="incoming">{t("cg.apply.incoming")}</SelectItem>
+                            <SelectItem value="connected">{t("cg.apply.connected")}</SelectItem>
+                            <SelectItem value="length">{t("cg.apply.length")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {b.convertOn === "length" && (
+                          <Input type="number" min={1} value={b.seconds} onChange={(e) => setBill(x.d.id, { seconds: e.target.value })} placeholder={t("cg.apply.secondsShort")} className="h-8 w-16 font-mono" />
+                        )}
+                      </div>
+                      {i === 0 && newOnes.length > 1 && (
+                        <button type="button" onClick={copyFirstBill} className="col-span-3 justify-self-start text-[11px] text-accent hover:underline">
+                          {t("cg.apply.copyFirst")}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Step>
+          )}
+
           {needsBilling && (
             <Step n={++n} title={t("x415.billing")} aside={t("x415.billingAside")}>
               <div className="grid grid-cols-2 gap-3">
@@ -371,7 +586,9 @@ export function AddDestinationDrawer({
           )}
 
           <Step n={++n} title={t("x415.limitsTitle")} aside={t("x415.emptyNoLimit")}>
-            {source === "existing" && !dest ? (
+            {source === "existing" && pickedDests.length > 1 ? (
+              <p className="text-xs text-muted-foreground">{t("x422.limitsMany")}</p>
+            ) : source === "existing" && !dest ? (
               <p className="text-xs text-muted-foreground">{t("x415.pickFirst")}</p>
             ) : (
               <>
@@ -386,14 +603,21 @@ export function AddDestinationDrawer({
 
         <div className="flex items-center justify-between gap-3 border-t border-border p-4">
           <span className="text-[11px] text-muted-foreground">
-            {targets.length > 0 && (buyerName || key.length === 10)
-              ? fill(t("x415.addsTo"), { name: localName(buyerName) || formatUs(number), n: targets.length })
-              : ""}
+            {source === "existing"
+              ? adding.length > 1
+                ? fill(t("x422.addsMany"), { d: adding.length, r: rowsAdded })
+                : adding.length === 1
+                  ? fill(t("x415.addsTo"), { name: localName(adding[0].d.buyerName ?? "") || formatUs(adding[0].d.tfn), n: adding[0].targets.length })
+                  : ""
+              : targets.length > 0 && (buyerName || key.length === 10)
+                ? fill(t("x415.addsTo"), { name: localName(buyerName) || formatUs(number), n: targets.length })
+                : ""}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={busy}>{t("cg.cancel")}</Button>
             <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => void save()} disabled={busy || !valid}>
-              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {t("x408.addDestination")}
+              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{" "}
+              {source === "existing" && adding.length > 1 ? fill(t("x422.addN"), { n: adding.length }) : t("x408.addDestination")}
             </Button>
           </div>
         </div>
