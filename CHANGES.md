@@ -1561,3 +1561,10 @@ further right.
 Sir, 31 Oct: "the figures below monthly and global like 10px to the right,
 hours too". The figures under HOURLY, MONTHLY and GLOBAL sit 10px further
 right. The headers are unchanged.
+
+## CH-446 - Publishers: NAME title and Status buttons 5px right
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: "Just the header title NAME (5px) to the right and status
+buttons (5px right)". The NAME header title and the Status switches sit 5px
+further right. Nothing else moved.
