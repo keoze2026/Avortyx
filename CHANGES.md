@@ -1546,3 +1546,11 @@ them (still in one straight line).
 Sir, 31 Oct: "Move name and Daily like 1/2 inch to the right". The Name and
 Daily columns (header and contents) start about half an inch (48px) further
 right. Everything else is as in CH-441.
+
+## CH-444 - Publishers: only the NAME and DAILY titles moved right
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: "I meant just the header titles NAME and DAILY, revert content
+and move the two like 20px to the right". The Name and Daily contents are back
+where they were before CH-443; only the NAME and DAILY header titles sit 20px
+further right.
