@@ -98,8 +98,10 @@ export function Topbar() {
     // the stats were squeezed - fine again the moment the sidebar closed.
     <header className="sticky top-0 z-30 border-b border-border/50 bg-background">
       <div className="@container/topbar relative flex h-16 items-center gap-4 px-4 sm:px-6">
-        {/* LEFT — sidebar trigger only */}
-        <div className="flex items-center">
+        {/* LEFT — sidebar trigger only. CH-426: on a phone only - on a
+            computer the sidebar has its own button beside the logo (CH-424),
+            and two buttons doing the same thing looked like a mistake. */}
+        <div className="flex items-center md:hidden">
           {/* The whole square is the button (CH-231): on a phone the 32px icon
               inside a 36px box left a ring that was not tappable, and the box
               is 40px on touch screens - the size a thumb hits first time. */}
