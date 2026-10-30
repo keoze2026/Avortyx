@@ -1285,3 +1285,25 @@ list with check boxes, a search, Select All Shown and Clear:
   - limits stay per destination: shown when one line is picked
   - each destination is saved on its own; any that fail are named and stay
     ticked for a retry, the rest are kept
+
+## CH-423 - Publishers page in Sir's design, real counts only
+**2026-10-30 - Publishers**
+
+Sir's Publishers design. The page counts calls, not money, and every figure
+comes from the server (needs backend CH-423):
+  - cards: Total Publishers (how many sent calls today), Active (bar),
+    Payable Calls Today (with a bar per Eastern hour), Pending Payouts
+    ("All publishers settled" when none wait)
+  - tabs All / Active / Paused / No Calls Today, Find Publisher, sort,
+    refresh (now really reloads) and columns
+  - each row: initials, the campaigns its live TFNs send to and how many TFNs
+    (or "No campaign linked"); Hourly = payable calls in the last 60 minutes;
+    Daily = payable calls since midnight ET with a bar and the share of its
+    sent calls that were answered (amber under 50%); Monthly; Global; status
+    switch with "Paused"; edit and a menu (Open, Remove)
+  - order: active first, then most payable calls today
+  - removed: the Hourly "estimate" (today's revenue divided by hours gone)
+    and the revert icon that did nothing
+  - the list loads every publisher, page by page
+  - until the server sends the counts, the figures show a dash - never zeros or
+    guesses
