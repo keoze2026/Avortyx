@@ -1399,3 +1399,12 @@ left out). Up to three are shown, "+N" for more; hover shows all. No arrow.
 Sir, 30 Oct: "Call Summary, not all in caps". The Call Summary title is now
 written "Call Summary" (capital first letters, as the rest of the portal),
 instead of CALL SUMMARY. Nothing else changes.
+
+## CH-431 - Campaign tags in one straight line
+**2026-10-30 - Reports**
+
+Sir, 30 Oct: "Fix campaign tag to be in a perfect parallel line". On the Call
+Summary Publisher tab the campaign tags (C-10, C-05 ...) used to start right
+after each name, so they zig-zagged. Every name now takes the width of the
+longest name on the page (measured in the browser), so all the tags start on
+the same line.
