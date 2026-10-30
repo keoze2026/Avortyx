@@ -1568,3 +1568,11 @@ right. The headers are unchanged.
 Sir, 31 Oct: "Just the header title NAME (5px) to the right and status
 buttons (5px right)". The NAME header title and the Status switches sit 5px
 further right. Nothing else moved.
+
+## CH-448 - No Invite Publisher button for publisher logins
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: "Under publisher access - Invite publisher coming no need for
+that". A publisher (or buyer) login saw the Invite Publisher button on the
+Publishers page. It is now hidden for publisher and buyer logins; admins and
+staff still see it as before.
