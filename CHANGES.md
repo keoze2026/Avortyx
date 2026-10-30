@@ -1517,3 +1517,15 @@ whatever width the browser gave them, so there was a wide gap after Daily and
 Status sat right against Global. Hourly, Daily, Monthly, Global, Status and
 Actions now have set widths (10 / 24 / 10 / 10 / 12 / 8 % of the table, Name
 takes the rest), and Status starts a little further from Global.
+
+## CH-440 - Coin page opens at once
+**2026-10-31 - Coin Market**
+
+Sir, 31 Oct: clicking a coin in Coin Market "takes time to load". The coin
+page waited for CoinGecko's coin details before sending anything, with no
+time limit, so nothing happened on the click and the TradingView chart only
+began loading once CoinGecko answered. Now the page and the chart open at
+once (the chart needs only the coin's symbol, which is in the link); the
+price header and the stats fill in when CoinGecko answers, with placeholders
+meanwhile, from one shared call. The CoinGecko call is capped at 8 seconds
+like the list's.
