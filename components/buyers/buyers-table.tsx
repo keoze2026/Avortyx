@@ -252,17 +252,27 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
   const used = b.capUsedToday ?? b.callsToday;
   const pct = Math.min(100, (used / b.dailyCap) * 100);
   const n = b.tfnCount ?? 0;
+  const left = Math.max(0, b.dailyCap - used);
   return (
     <HoverCard openDelay={120} closeDelay={60}>
       <HoverCardTrigger asChild>
-        <span className="inline-flex cursor-default flex-col items-center gap-1">
-          <span className="text-xs tabular-nums">
-            <span className={cn("font-semibold", hit ? "text-[color:var(--warning)]" : "text-foreground")}>
-              {formatCalls(used)}
+        {/* CH-412 (Sir): used / cap on the left, how many are left on the
+            right ("Full" in amber once used up), the bar under both. */}
+        <span className="mx-auto flex w-full max-w-[9rem] cursor-default flex-col gap-1.5">
+          <span className="flex items-baseline justify-between gap-2 text-xs tabular-nums">
+            <span>
+              <span className={cn("font-semibold", hit ? "text-[color:var(--warning)]" : "text-foreground")}>
+                {formatCalls(used)}
+              </span>
+              <span className={hit ? "text-[color:var(--warning)]" : "text-muted-foreground"}> / {formatCalls(b.dailyCap)}</span>
             </span>
-            <span className="text-muted-foreground"> / {formatCalls(b.dailyCap)}</span>
+            {hit ? (
+              <span className="font-semibold text-[color:var(--warning)]">{t("x412.full")}</span>
+            ) : (
+              <span className="text-muted-foreground">{t("x412.nLeft").replace("{n}", formatCalls(left))}</span>
+            )}
           </span>
-          <span className="h-1 w-16 overflow-hidden rounded-full bg-muted/60">
+          <span className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
             <span
               className={cn("block h-full rounded-full", hit ? "bg-[color:var(--warning)]" : "bg-accent")}
               style={{ width: `${Math.max(3, pct)}%` }}
@@ -276,7 +286,7 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
           {[
             [t("x405.capFunds"), t("x405.nCalls").replace("{n}", formatCalls(b.dailyCap))],
             [t("x405.used"), formatCalls(used)],
-            [t("x405.left"), formatCalls(Math.max(0, b.dailyCap - used))],
+            [t("x405.left"), formatCalls(left)],
             [
               t("x405.tfnCaps").replace("{n}", String(n)),
               (b.tfnUncapped ?? 0) > 0

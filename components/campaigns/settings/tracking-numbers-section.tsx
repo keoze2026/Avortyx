@@ -252,8 +252,9 @@ export function TrackingNumbersSection({
                         />
                       </TableCell>
                     )}
-                    {/* Sir: digits only (18776691938), in JetBrains Mono like the design. */}
-                    <TableCell className="text-center font-mono text-[13px] font-medium tabular-nums tracking-wide text-foreground whitespace-nowrap">
+                    {/* Sir: digits only (18776691938), in JetBrains Mono, the same size as
+                        the other figures in the row (CH-412). */}
+                    <TableCell className="text-center font-mono text-xs font-medium tabular-nums text-foreground whitespace-nowrap">
                       {e164.replace(/^\+/, "")}
                     </TableCell>
                     <TableCell className="text-center">

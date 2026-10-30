@@ -3,6 +3,8 @@ import type { ExtraTranslations } from "./types";
 
 export const buyersPage: ExtraTranslations = {
   en: {
+    "x412.nLeft": "{n} left",
+    "x412.full": "Full",
     "x405.kpiTotal": "Total Buyers",
     "x405.kpiActive": "Active",
     "x405.kpiCapHit": "Buyer Cap Hit",
@@ -24,6 +26,8 @@ export const buyersPage: ExtraTranslations = {
     "x405.legend": "All figures in calls · ⚠ = buyer cap reached, routing stopped",
   },
   ru: {
+    "x412.nLeft": "Осталось {n}",
+    "x412.full": "Заполнено",
     "x405.kpiTotal": "Всего покупателей",
     "x405.kpiActive": "Активные",
     "x405.kpiCapHit": "Лимит исчерпан",
@@ -45,6 +49,8 @@ export const buyersPage: ExtraTranslations = {
     "x405.legend": "Все цифры в звонках · ⚠ = лимит покупателя исчерпан, маршрутизация остановлена",
   },
   ja: {
+    "x412.nLeft": "残り {n}",
+    "x412.full": "上限",
     "x405.kpiTotal": "バイヤー総数",
     "x405.kpiActive": "稼働中",
     "x405.kpiCapHit": "上限到達",
@@ -66,6 +72,8 @@ export const buyersPage: ExtraTranslations = {
     "x405.legend": "すべて通話件数 · ⚠ = バイヤー上限到達、ルーティング停止",
   },
   zh: {
+    "x412.nLeft": "剩余 {n}",
+    "x412.full": "已满",
     "x405.kpiTotal": "买家总数",
     "x405.kpiActive": "活跃",
     "x405.kpiCapHit": "已达买家上限",
