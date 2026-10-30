@@ -231,6 +231,16 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
 };
 
 
+/** CH-428 (Sir's design): the headings over the column groups. */
+const COLUMN_GROUPS: Array<{ id: string; labelKey: string; columns: ColumnKey[] }> = [
+  { id: "calls", labelKey: "x428.groupCalls", columns: ["live", "incoming", "connected", "qualified", "paid", "converted", "noConnect", "dupe"] },
+  { id: "performance", labelKey: "x428.groupPerformance", columns: ["conversionRate", "tcl", "acl"] },
+  { id: "money", labelKey: "x428.groupMoney", columns: ["payout", "revenue", "profit", "cost"] },
+];
+
+/** CH-428: a zero reads quieter than a real figure (Sir's design). */
+const ZERO = "text-muted-foreground/45";
+
 const ALL_VISIBLE: Record<ColumnKey, boolean> = COLUMNS.reduce(
   (acc, c) => ({ ...acc, [c.id]: true }),
   {} as Record<ColumnKey, boolean>,
@@ -1265,6 +1275,16 @@ export function CallSummaryTable({
 
   const visibleCount = COLUMNS.filter((c) => visible[c.id]).length;
   const colSpan = visibleCount + 1; // +1 for the label column
+  const tabLabel = (() => {
+    const own = tabs.find((td) => td.id === tab || td.sub?.some((s) => s.id === tab));
+    const sub = own?.sub?.find((s) => s.id === tab);
+    return t(sub?.labelKey ?? own?.labelKey ?? "toolsUI.reports.summary.columns.group");
+  })();
+  // CH-428: how many visible columns each heading (Calls / Performance / Money) spans.
+  const groupSpans = COLUMN_GROUPS.map((g) => ({
+    ...g,
+    span: g.columns.filter((c) => visible[c]).length,
+  })).filter((g) => g.span > 0);
 
   const toggleColumn = (id: ColumnKey) =>
     setVisible((v) => ({ ...v, [id]: !v[id] }));
@@ -1295,7 +1315,13 @@ export function CallSummaryTable({
   return (
     <Card className="overflow-hidden p-0">
       {/* Section title */}
-      <div className="px-6 pt-5 text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.summary.title")}</div>
+      {/* CH-428 (Sir's design): the title stays in capitals as we have it
+          (Sir: "Call Summary in caps the way we have"), with "By Publisher"
+          beside it naming the open tab. */}
+      <div className="flex items-baseline gap-2 px-6 pt-5">
+        <span className="text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.summary.title")}</span>
+        <span className="text-xs text-muted-foreground">{t("x428.byGroup").replace("{name}", tabLabel)}</span>
+      </div>
 
       {/* Tabs + right actions */}
       {/* pl-3 + each tab's px-3 = 24px, the same left edge as the title above
@@ -1314,14 +1340,14 @@ export function CallSummaryTable({
                   <DropdownMenuTrigger asChild>
                     <button
                       className={cn(
-                        "relative inline-flex items-center gap-1 whitespace-nowrap px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none",
-                        active ? "text-accent" : "text-muted-foreground hover:text-foreground",
+                        "relative inline-flex items-center gap-1 whitespace-nowrap px-3 py-3 text-[13px] font-medium transition-colors focus-visible:outline-none",
+                        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       {t(tabDef.labelKey)}
                       <ChevronDown className="h-3 w-3 opacity-70" />
                       {active && (
-                        <span aria-hidden className="absolute inset-x-2 -bottom-px h-0.5 bg-accent" />
+                        <span aria-hidden className="absolute inset-x-2 -bottom-px h-0.5 bg-foreground" />
                       )}
                     </button>
                   </DropdownMenuTrigger>
@@ -1330,7 +1356,7 @@ export function CallSummaryTable({
                       <DropdownMenuItem
                         key={s.id}
                         onSelect={() => setTab(s.id)}
-                        className={cn(tab === s.id && "text-accent")}
+                        className={cn(tab === s.id && "font-medium text-foreground")}
                       >
                         {t(s.labelKey)}
                       </DropdownMenuItem>
@@ -1345,13 +1371,13 @@ export function CallSummaryTable({
                 key={tabDef.id}
                 onClick={() => setTab(tabDef.id)}
                 className={cn(
-                  "relative whitespace-nowrap px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none",
-                  active ? "text-accent" : "text-muted-foreground hover:text-foreground",
+                  "relative whitespace-nowrap px-3 py-3 text-[13px] font-medium transition-colors focus-visible:outline-none",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {t(tabDef.labelKey)}
                 {active && (
-                  <span aria-hidden className="absolute inset-x-2 -bottom-px h-0.5 bg-accent" />
+                  <span aria-hidden className="absolute inset-x-2 -bottom-px h-0.5 bg-foreground" />
                 )}
               </button>
             );
@@ -1411,7 +1437,29 @@ export function CallSummaryTable({
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table className="min-w-[1100px]">
+            {/* CH-428: the sorted column carries a soft shade top to bottom. */}
+            <colgroup>
+              <col />
+              {COLUMNS.filter((c) => visible[c.id]).map((c) => (
+                <col key={c.id} className={cn(sortKey === c.id && "bg-muted/40")} />
+              ))}
+            </colgroup>
             <TableHeader>
+              {/* CH-428 (Sir's design): Calls, Performance and Money over their columns. */}
+              {groupSpans.length > 0 && (
+                <TableRow className="border-b-0 hover:bg-transparent">
+                  <TableHead className="h-7 pl-6" />
+                  {groupSpans.map((g) => (
+                    <TableHead
+                      key={g.id}
+                      colSpan={g.span}
+                      className="h-7 pb-0 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60"
+                    >
+                      {t(g.labelKey)}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              )}
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-6 text-left">
                   <SortHeader
@@ -1484,55 +1532,55 @@ export function CallSummaryTable({
                         <TableCell
                           className={cn(
                             "text-center tabular-nums",
-                            r.live > 0 && "font-semibold text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]",
+                            r.live > 0 ? "font-semibold text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]" : ZERO,
                           )}
                         >
                           {formatNumber(r.live)}
                         </TableCell>
                       )}
                       {visible.incoming && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.incoming)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.incoming === 0 && ZERO)}>{formatNumber(r.incoming)}</TableCell>
                       )}
                       {visible.connected && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.connected)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.connected === 0 && ZERO)}>{formatNumber(r.connected)}</TableCell>
                       )}
                       {visible.qualified && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.qualified)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.qualified === 0 && ZERO)}>{formatNumber(r.qualified)}</TableCell>
                       )}
                       {visible.paid && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.paid)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.paid === 0 && ZERO)}>{formatNumber(r.paid)}</TableCell>
                       )}
                       {visible.converted && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.converted)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.converted === 0 && ZERO)}>{formatNumber(r.converted)}</TableCell>
                       )}
                       {visible.noConnect && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.noConnect)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.noConnect === 0 && ZERO)}>{formatNumber(r.noConnect)}</TableCell>
                       )}
                       {visible.dupe && (
-                        <TableCell className="text-center tabular-nums">{formatNumber(r.dupe)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.dupe === 0 && ZERO)}>{formatNumber(r.dupe)}</TableCell>
                       )}
                       {visible.conversionRate && (
-                        <TableCell className="text-center tabular-nums">
+                        <TableCell className={cn("text-center tabular-nums", r.conversionRate === 0 && ZERO)}>
                           {formatPercent(r.conversionRate * 100, 1)}
                         </TableCell>
                       )}
                       {visible.tcl && (
-                        <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.tcl)}</TableCell>
+                        <TableCell className={cn("text-center font-mono tabular-nums", r.tcl === 0 && ZERO)}>{formatTimer(r.tcl)}</TableCell>
                       )}
                       {visible.acl && (
-                        <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.acl)}</TableCell>
+                        <TableCell className={cn("text-center font-mono tabular-nums", r.acl === 0 && ZERO)}>{formatTimer(r.acl)}</TableCell>
                       )}
                       {visible.payout && (
-                        <TableCell className="text-center tabular-nums">{formatCurrency(r.payout, true)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.payout === 0 && ZERO)}>{formatCurrency(r.payout, true)}</TableCell>
                       )}
                       {visible.revenue && (
-                        <TableCell className="text-center tabular-nums">{formatCurrency(r.revenue, true)}</TableCell>
+                        <TableCell className={cn("text-center tabular-nums", r.revenue === 0 && ZERO)}>{formatCurrency(r.revenue, true)}</TableCell>
                       )}
                       {visible.profit && (
                         <TableCell
                           className={cn(
                             "text-center tabular-nums",
-                            profit < 0 ? "text-destructive" : "text-[color:var(--success)]",
+                            profit < 0 ? "text-destructive" : profit > 0 ? "text-[color:var(--success)]" : ZERO,
                           )}
                         >
                           {formatCurrency(profit, true)}
@@ -1678,10 +1726,10 @@ export function CallSummaryTable({
                     <TableCell className="text-center font-mono tabular-nums">{formatTimer(totals.acl)}</TableCell>
                   )}
                   {visible.payout && (
-                    <TableCell className="text-center tabular-nums">{formatCurrency(totals.payout, true)}</TableCell>
+                    <TableCell className={cn("text-center tabular-nums", totals.payout === 0 && ZERO)}>{formatCurrency(totals.payout, true)}</TableCell>
                   )}
                   {visible.revenue && (
-                    <TableCell className="text-center tabular-nums">{formatCurrency(totals.revenue, true)}</TableCell>
+                    <TableCell className={cn("text-center tabular-nums", totals.revenue === 0 && ZERO)}>{formatCurrency(totals.revenue, true)}</TableCell>
                   )}
                   {visible.profit && (
                     <TableCell
@@ -1741,7 +1789,7 @@ interface SortHeaderProps {
 function Money({ value, tone = false }: { value: number | undefined; tone?: boolean }) {
   if (value === undefined) return <span className="text-muted-foreground/50">—</span>;
   return (
-    <span className={cn(tone && (value < 0 ? "text-destructive" : "text-[color:var(--success)]"))}>
+    <span className={cn(value === 0 ? ZERO : tone && (value < 0 ? "text-destructive" : "text-[color:var(--success)]"))}>
       {formatCurrency(value, true)}
     </span>
   );
