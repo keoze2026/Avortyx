@@ -1489,3 +1489,13 @@ rule; hovering a name shows it as typed. Search, filters and exports keep
 the real names. Kept as typed on purpose: the name you must type to delete
 a workspace, integration brand names (Slack ...), TFNs and carrier codes
 (HYU, KMQ, XLR).
+
+## CH-437 - Call Summary Totals follow the picked row
+**2026-10-30 - Reports**
+
+Sir, 30 Oct: "if someone clicks on any specific camp or buyer then total show
+according to their stats". With TBLA picked the row showed Live 17 but the
+Totals row showed 56: Totals Live took the whole account's live calls as its
+floor. With a campaign, buyer or any row picked, the Totals row now adds up
+only the rows shown (Live 17 for TBLA); with nothing picked it is unchanged.
+Every other Totals figure already followed the picked row.
