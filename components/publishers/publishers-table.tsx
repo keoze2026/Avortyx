@@ -269,7 +269,7 @@ function DailyCell({ usage, max }: { usage: NonNullable<Publisher["usage"]>; max
           style={{ width: `${width}%` }}
         />
       </span>
-      <span className="tabular-nums font-medium text-foreground">{formatNumber(usage.payableToday)}</span>
+      <span className="w-12 shrink-0 text-right tabular-nums font-medium text-foreground">{formatNumber(usage.payableToday)}</span>
       {pct !== null && (
         <span
           className={cn("text-[11px] tabular-nums", low ? "text-[color:var(--warning)]" : "text-muted-foreground")}
