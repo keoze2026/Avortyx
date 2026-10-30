@@ -1441,3 +1441,24 @@ metrics are 100% correct". Needs backend CH-433.
   - every figure from the server, nothing estimated in the browser; edit
     rates from the pencil by each code; profit, expenses, routing cost and
     TFNs without a carrier stay below
+
+## CH-434 - Company Profit page (Sir's design)
+**2026-10-30 - Owner**
+
+Sir's Company Profit page, its own page in the menu (Account > Company Profit,
+system owner only). Needs backend CH-434. Today / Yesterday / This Week / This
+Month / any dates, and Export (CSV).
+  - cards: charged to customers, carrier costs (each carrier), profit before
+    tax, margin (shown once customers are charged)
+  - customer charges: call minutes, recording, VoIP Shield, rejected calls,
+    TFN purchases, portal fees - quantity, price and amount, from what was
+    actually taken
+  - profit: charged, each carrier, carrier costs, profit before tax - the
+    carrier figures are the Carrier Costs statements, so both pages agree
+  - "if this traffic were billed to customers": customer minutes (each call
+    rounded up to the minute, with and without recording) against carrier
+    minutes and fixed fees
+  - by customer: each workspace's charges against what its traffic cost us
+  - price vs cost per minute: each code's rate + termination, our cost, the
+    customer price and the margin (amber under 10%)
+  - the old company profit card on Carrier Costs is replaced by this page
