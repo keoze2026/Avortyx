@@ -3,6 +3,10 @@ import type { ExtraTranslations } from "./types";
 
 export const buyersPage: ExtraTranslations = {
   en: {
+    "x416.activePaused": "{a} active · {p} paused",
+    "x416.routingStopped": "routing stopped",
+    "x416.noneAtCap": "No Buyer at Cap",
+    "x416.sinceMidnight": "Since Midnight ET",
     "x412.nLeft": "{n} left",
     "x412.full": "Full",
     "x405.kpiTotal": "Total Buyers",
@@ -26,6 +30,10 @@ export const buyersPage: ExtraTranslations = {
     "x405.legend": "All figures in calls · ⚠ = buyer cap reached, routing stopped",
   },
   ru: {
+    "x416.activePaused": "{a} активны · {p} на паузе",
+    "x416.routingStopped": "маршрутизация остановлена",
+    "x416.noneAtCap": "Никто не на лимите",
+    "x416.sinceMidnight": "С полуночи ET",
     "x412.nLeft": "Осталось {n}",
     "x412.full": "Заполнено",
     "x405.kpiTotal": "Всего покупателей",
@@ -49,6 +57,10 @@ export const buyersPage: ExtraTranslations = {
     "x405.legend": "Все цифры в звонках · ⚠ = лимит покупателя исчерпан, маршрутизация остановлена",
   },
   ja: {
+    "x416.activePaused": "稼働 {a} · 一時停止 {p}",
+    "x416.routingStopped": "ルーティング停止中",
+    "x416.noneAtCap": "上限到達のバイヤーなし",
+    "x416.sinceMidnight": "ET 午前0時から",
     "x412.nLeft": "残り {n}",
     "x412.full": "上限",
     "x405.kpiTotal": "バイヤー総数",
@@ -72,6 +84,10 @@ export const buyersPage: ExtraTranslations = {
     "x405.legend": "すべて通話件数 · ⚠ = バイヤー上限到達、ルーティング停止",
   },
   zh: {
+    "x416.activePaused": "{a} 运行 · {p} 暂停",
+    "x416.routingStopped": "已停止路由",
+    "x416.noneAtCap": "没有买家达到上限",
+    "x416.sinceMidnight": "自美东午夜起",
     "x412.nLeft": "剩余 {n}",
     "x412.full": "已满",
     "x405.kpiTotal": "买家总数",

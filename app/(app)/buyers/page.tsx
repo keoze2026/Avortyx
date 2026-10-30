@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Ban, Building2, CircleCheck, Phone, Users } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AlertTriangle, Building2, CircleCheck, Phone, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { BuyersTable, buyerCapHit, formatCalls } from "@/components/buyers/buyers-table";
@@ -20,7 +20,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ListLoading } from "@/components/shared/list-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
-import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { useLocalName } from "@/lib/i18n/local-name";
@@ -134,9 +133,10 @@ export default function BuyersPage() {
   const stats = useMemo(() => {
     const active = buyers.filter((b) => b.status === "active").length;
     // Buyers whose own daily cap is full - routing sends them nothing more.
-    const capped = buyers.filter(buyerCapHit).length;
+    const cappedNames = buyers.filter(buyerCapHit).map((b) => b.name);
     const calls = buyers.reduce((s, b) => s + b.callsToday, 0);
-    return { total: buyers.length, active, capped, calls };
+    const paused = buyers.filter((b) => b.status === "paused").length;
+    return { total: buyers.length, active, paused, capped: cappedNames.length, cappedNames, calls };
   }, [buyers]);
 
   const onToggle = (id: string) => {
@@ -228,33 +228,49 @@ export default function BuyersPage() {
         description={t("networkUI.buyers.page.description")}
       />
 
-      {/* Inventory summary (CH-405, Sir's design) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { icon: Users, label: t("x405.kpiTotal"), value: stats.total, tone: "" },
-          { icon: CircleCheck, label: t("x405.kpiActive"), value: stats.active, tone: "" },
-          { icon: Ban, label: t("x405.kpiCapHit"), value: stats.capped, tone: stats.capped > 0 ? "warn" : "" },
-          { icon: Phone, label: t("x405.kpiCalls"), value: stats.calls, tone: "" },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                <s.icon className="h-4 w-4" />
+      {/* Inventory summary (CH-405; CH-416 Sir's card design: label and icon
+          on top, the figure, then a line under it - a blue bar of active
+          buyers, and the Buyer Cap Hit card in yellow with who is at cap).
+          All of it from the buyers list the server sends. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label={t("x405.kpiTotal")}
+          icon={Users}
+          value={waiting ? "—" : formatCalls(stats.total)}
+          foot={waiting ? null : <span>{t("x416.activePaused").replace("{a}", String(stats.active)).replace("{p}", String(stats.paused))}</span>}
+        />
+        <KpiCard
+          label={t("x405.kpiActive")}
+          icon={CircleCheck}
+          value={waiting ? "—" : formatCalls(stats.active)}
+          foot={waiting ? null : <SegmentBar value={stats.active} total={stats.total} />}
+        />
+        <KpiCard
+          label={t("x405.kpiCapHit")}
+          icon={AlertTriangle}
+          tone="warn"
+          value={waiting ? "—" : formatCalls(stats.capped)}
+          foot={
+            waiting ? null : stats.cappedNames.length ? (
+              <span className="truncate">
+                <span className="font-medium text-foreground">
+                  {stats.cappedNames.slice(0, 3).map((n) => localName(n)).join(", ")}
+                  {stats.cappedNames.length > 3 ? ` +${stats.cappedNames.length - 3}` : ""}
+                </span>
+                {" · "}
+                {t("x416.routingStopped")}
               </span>
-              <div>
-                <div
-                  className={cn(
-                    "text-xl font-semibold tabular-nums tracking-tight",
-                    s.tone === "warn" && "text-[color:var(--warning)]",
-                  )}
-                >
-                  {waiting ? "—" : formatCalls(s.value)}
-                </div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">{s.label}</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            ) : (
+              <span>{t("x416.noneAtCap")}</span>
+            )
+          }
+        />
+        <KpiCard
+          label={t("x405.kpiCalls")}
+          icon={Phone}
+          value={waiting ? "—" : formatCalls(stats.calls)}
+          foot={waiting ? null : <span>{t("x416.sinceMidnight")}</span>}
+        />
       </div>
 
       <BuyersTableToolbar
@@ -335,5 +351,65 @@ export default function BuyersPage() {
         onOpenChange={(open) => !open && setEditId(null)}
       />
     </>
+  );
+}
+
+/** CH-416 (Sir's design): one figure card - label and icon tile on top, the
+ *  figure, a line under it. "warn" is the yellow Buyer Cap Hit card. */
+function KpiCard({
+  label,
+  icon: Icon,
+  value,
+  foot,
+  tone,
+}: {
+  label: string;
+  icon: LucideIcon;
+  value: string;
+  foot: ReactNode;
+  tone?: "warn";
+}) {
+  const warn = tone === "warn";
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border bg-card p-5",
+        warn ? "border-[color:var(--warning)]/40" : "border-border",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+            warn ? "bg-[color:var(--warning)]/10 text-[color:var(--warning)]" : "bg-accent/10 text-accent",
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+      <div
+        className={cn(
+          "-mt-1 text-3xl font-semibold tabular-nums tracking-tight",
+          warn && "text-[color:var(--warning)]",
+        )}
+      >
+        {value}
+      </div>
+      <div className="mt-3 flex h-5 min-w-0 items-center text-xs text-muted-foreground">{foot}</div>
+    </div>
+  );
+}
+
+/** Sir's dashed bar: 20 segments, the share of buyers that are active in blue. */
+function SegmentBar({ value, total }: { value: number; total: number }) {
+  const n = 20;
+  const on = total > 0 ? Math.round((value / total) * n) : 0;
+  return (
+    <span className="flex w-full gap-1" role="img" aria-label={`${value} / ${total}`}>
+      {Array.from({ length: n }, (_, i) => (
+        <span key={i} className={cn("h-1 flex-1 rounded-full", i < on ? "bg-accent" : "bg-muted/60")} />
+      ))}
+    </span>
   );
 }
