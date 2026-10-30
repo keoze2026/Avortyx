@@ -21,6 +21,8 @@ const ENDPOINT = "https://api.coingecko.com/api/v3/coins/markets";
 /** Hard cap on the upstream call. Without this, a slow CoinGecko response
  *  can hang `next build` until the 60s static-generation timeout fires. */
 const UPSTREAM_TIMEOUT_MS = 5_000;
+/** The coin detail payload is larger; give it a little longer. */
+const DETAIL_TIMEOUT_MS = 8_000;
 
 async function fetchWithTimeout(
   url: string,
@@ -207,10 +209,12 @@ export async function fetchCoinDetail(
     `localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`;
 
   try {
-    const res = await fetch(url, {
+    // CH-440: capped like the list call, so a slow CoinGecko can't hold the
+    // coin page's header and stats for long.
+    const res = await fetchWithTimeout(url, {
       next: { revalidate: revalidateSec },
       headers: { Accept: "application/json" },
-    });
+    }, DETAIL_TIMEOUT_MS);
     if (!res.ok) throw new Error(`CoinGecko returned ${res.status}`);
     const raw = (await res.json()) as CoinGeckoCoin;
     return toCoinDetail(raw, "live");
