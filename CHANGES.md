@@ -1238,3 +1238,12 @@ on Active, and a yellow Buyer Cap Hit card naming the buyers at cap.
 
 The list stopped at the first 200 buyers; it now loads every page, so the
 Buyers page totals always count all of them.
+
+## CH-419 - Sidebar icons from Sir's reference picture
+**2026-10-30 - Whole portal**
+
+Sir: "This photo is for only side icons ... only for icon references". Ten icons
+now match his picture: Workspace (building), Dashboard (grid), IVR (phone),
+Call Queue (list), Buyers (briefcase), TCPA Shield (shield with tick), Blocked
+Numbers (circle with slash), Call Logs (document), AI Insights (sparkle),
+Settings (cog). Every other icon, label and colour is unchanged.
