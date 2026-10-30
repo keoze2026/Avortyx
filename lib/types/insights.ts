@@ -19,8 +19,8 @@ export interface AiRecommendation {
   /** Why the AI is suggesting this — shown on expand */
   rationale: string;
   scope: RecommendationScope;
-  /** 0..1 — model confidence */
-  confidence: number;
+  /** 0..1 — model confidence; null when the server does not send one (CH-420). */
+  confidence: number | null;
   /** The headline impact if applied */
   impact: { label: string; /** Translation key for `label`, when it is a fixed text. */ labelKey?: string; value: string; direction: "up" | "down" };
   /** Trailing baseline series + forward projected (used for the micro-chart) */

@@ -76,18 +76,18 @@ function wireToRecommendation(w: WireRecommendation, idx: number): AiRecommendat
     body: w.message,
     rationale: w.message,
     scope: scopeFromCategory(w.category, w.entityId, w.title),
-    confidence: 0.85,
+    // CH-420: the server sends no confidence - show none rather than a made-up 85%.
+    confidence: null,
     impact: {
       label: "Expected effect",
       labelKey: "x2.insights.expectedEffect",
       value: w.action,
       direction: kind === "pause" ? "down" : "up",
     },
-    // Decorative micro-chart series — flat then projected step so the card's
-    // sparkline still has something to draw. Backend doesn't ship time-series
-    // per recommendation; the dashboard time-series is the proper source.
-    baseline: [60, 62, 58, 64, 66, 65, 67],
-    projected: kind === "pause" ? [50, 45, 42, 38, 36] : [70, 74, 78, 82, 85],
+    // CH-420: the server sends no time series per recommendation, so there is
+    // no before / after chart (it was drawn from invented numbers).
+    baseline: [],
+    projected: [],
     createdAt: Date.now(),
     status: "open",
   };

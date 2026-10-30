@@ -190,18 +190,19 @@ export function RecommendationCard({ recommendation: r, onAction }: Props) {
           </div>
 
           {/* Confidence ring */}
-          <ConfidenceRing value={r.confidence} tone={meta.tone.line} />
+          {r.confidence != null && <ConfidenceRing value={r.confidence} tone={meta.tone.line} />}
         </header>
 
         {/* Impact + chart */}
-        <div className="mt-4 grid grid-cols-1 items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+        <div className={cn("mt-4 grid grid-cols-1 items-center gap-3", data.length > 0 && "sm:grid-cols-[auto_minmax(0,1fr)]")}>
           <ImpactStat
             label={translatedImpactLabel}
             value={r.impact.value}
             direction={r.impact.direction}
             tone={meta.tone}
           />
-          <BeforeAfter data={data} line={meta.tone.line} />
+          {/* CH-420: drawn only from real figures; the server sends none today. */}
+          {data.length > 0 && <BeforeAfter data={data} line={meta.tone.line} />}
         </div>
 
         {/* Footer actions */}
