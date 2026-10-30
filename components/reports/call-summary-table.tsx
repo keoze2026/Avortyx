@@ -239,9 +239,6 @@ const COLUMN_GROUPS: Array<{ id: string; labelKey: string; columns: ColumnKey[] 
   { id: "money", labelKey: "x428.groupMoney", columns: ["payout", "revenue", "profit", "cost"] },
 ];
 
-/** CH-428: a zero reads quieter than a real figure (Sir's design). */
-const ZERO = "text-muted-foreground/45";
-
 const ALL_VISIBLE: Record<ColumnKey, boolean> = COLUMNS.reduce(
   (acc, c) => ({ ...acc, [c.id]: true }),
   {} as Record<ColumnKey, boolean>,
@@ -1361,10 +1358,10 @@ export function CallSummaryTable({
     <Card className="overflow-hidden p-0">
       {/* Section title */}
       {/* CH-428 (Sir's design): the title with "By Publisher" beside it
-          naming the open tab. CH-430 (Sir, 30 Oct: "Call Summary, not all in
-          caps"): written "Call Summary", capital first letters only. */}
+          naming the open tab. CH-432 (Sir, 30 Oct: "Capital letters call
+          summary"): CALL SUMMARY in capital letters, as it was. */}
       <div className="flex items-baseline gap-2 px-6 pt-5">
-        <span className="text-sm font-semibold text-foreground">{t("toolsUI.reports.summary.title")}</span>
+        <span className="text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.summary.title")}</span>
         <span className="text-xs text-muted-foreground">{t("x428.byGroup").replace("{name}", tabLabel)}</span>
       </div>
 
@@ -1482,13 +1479,6 @@ export function CallSummaryTable({
       <CardContent className="p-0">
         <div ref={tableBoxRef} className="overflow-x-auto">
           <Table className="min-w-[1100px]">
-            {/* CH-428: the sorted column carries a soft shade top to bottom. */}
-            <colgroup>
-              <col />
-              {COLUMNS.filter((c) => visible[c.id]).map((c) => (
-                <col key={c.id} className={cn(sortKey === c.id && "bg-muted/40")} />
-              ))}
-            </colgroup>
             <TableHeader>
               {/* CH-428 (Sir's design): Calls, Performance and Money over their columns. */}
               {groupSpans.length > 0 && (
@@ -1594,55 +1584,55 @@ export function CallSummaryTable({
                         <TableCell
                           className={cn(
                             "text-center tabular-nums",
-                            r.live > 0 ? "font-semibold text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]" : ZERO,
+                            r.live > 0 && "font-semibold text-[oklch(0.5_0.18_155)] dark:text-[oklch(0.78_0.18_155)]",
                           )}
                         >
                           {formatNumber(r.live)}
                         </TableCell>
                       )}
                       {visible.incoming && (
-                        <TableCell className={cn("text-center tabular-nums", r.incoming === 0 && ZERO)}>{formatNumber(r.incoming)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.incoming)}</TableCell>
                       )}
                       {visible.connected && (
-                        <TableCell className={cn("text-center tabular-nums", r.connected === 0 && ZERO)}>{formatNumber(r.connected)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.connected)}</TableCell>
                       )}
                       {visible.qualified && (
-                        <TableCell className={cn("text-center tabular-nums", r.qualified === 0 && ZERO)}>{formatNumber(r.qualified)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.qualified)}</TableCell>
                       )}
                       {visible.paid && (
-                        <TableCell className={cn("text-center tabular-nums", r.paid === 0 && ZERO)}>{formatNumber(r.paid)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.paid)}</TableCell>
                       )}
                       {visible.converted && (
-                        <TableCell className={cn("text-center tabular-nums", r.converted === 0 && ZERO)}>{formatNumber(r.converted)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.converted)}</TableCell>
                       )}
                       {visible.noConnect && (
-                        <TableCell className={cn("text-center tabular-nums", r.noConnect === 0 && ZERO)}>{formatNumber(r.noConnect)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.noConnect)}</TableCell>
                       )}
                       {visible.dupe && (
-                        <TableCell className={cn("text-center tabular-nums", r.dupe === 0 && ZERO)}>{formatNumber(r.dupe)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatNumber(r.dupe)}</TableCell>
                       )}
                       {visible.conversionRate && (
-                        <TableCell className={cn("text-center tabular-nums", r.conversionRate === 0 && ZERO)}>
+                        <TableCell className="text-center tabular-nums">
                           {formatPercent(r.conversionRate * 100, 1)}
                         </TableCell>
                       )}
                       {visible.tcl && (
-                        <TableCell className={cn("text-center font-mono tabular-nums", r.tcl === 0 && ZERO)}>{formatTimer(r.tcl)}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.tcl)}</TableCell>
                       )}
                       {visible.acl && (
-                        <TableCell className={cn("text-center font-mono tabular-nums", r.acl === 0 && ZERO)}>{formatTimer(r.acl)}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.acl)}</TableCell>
                       )}
                       {visible.payout && (
-                        <TableCell className={cn("text-center tabular-nums", r.payout === 0 && ZERO)}>{formatCurrency(r.payout, true)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatCurrency(r.payout, true)}</TableCell>
                       )}
                       {visible.revenue && (
-                        <TableCell className={cn("text-center tabular-nums", r.revenue === 0 && ZERO)}>{formatCurrency(r.revenue, true)}</TableCell>
+                        <TableCell className="text-center tabular-nums">{formatCurrency(r.revenue, true)}</TableCell>
                       )}
                       {visible.profit && (
                         <TableCell
                           className={cn(
                             "text-center tabular-nums",
-                            profit < 0 ? "text-destructive" : profit > 0 ? "text-[color:var(--success)]" : ZERO,
+                            profit < 0 ? "text-destructive" : profit > 0 && "text-[color:var(--success)]",
                           )}
                         >
                           {formatCurrency(profit, true)}
@@ -1788,10 +1778,10 @@ export function CallSummaryTable({
                     <TableCell className="text-center font-mono tabular-nums">{formatTimer(totals.acl)}</TableCell>
                   )}
                   {visible.payout && (
-                    <TableCell className={cn("text-center tabular-nums", totals.payout === 0 && ZERO)}>{formatCurrency(totals.payout, true)}</TableCell>
+                    <TableCell className="text-center tabular-nums">{formatCurrency(totals.payout, true)}</TableCell>
                   )}
                   {visible.revenue && (
-                    <TableCell className={cn("text-center tabular-nums", totals.revenue === 0 && ZERO)}>{formatCurrency(totals.revenue, true)}</TableCell>
+                    <TableCell className="text-center tabular-nums">{formatCurrency(totals.revenue, true)}</TableCell>
                   )}
                   {visible.profit && (
                     <TableCell
@@ -1799,7 +1789,7 @@ export function CallSummaryTable({
                         "text-center tabular-nums",
                         rowProfit(totals) < 0
                           ? "text-destructive"
-                          : "text-[color:var(--success)]",
+                          : rowProfit(totals) > 0 && "text-[color:var(--success)]",
                       )}
                     >
                       {formatCurrency(rowProfit(totals), true)}
@@ -1851,7 +1841,7 @@ interface SortHeaderProps {
 function Money({ value, tone = false }: { value: number | undefined; tone?: boolean }) {
   if (value === undefined) return <span className="text-muted-foreground/50">—</span>;
   return (
-    <span className={cn(value === 0 ? ZERO : tone && (value < 0 ? "text-destructive" : "text-[color:var(--success)]"))}>
+    <span className={cn(tone && value !== 0 && (value < 0 ? "text-destructive" : "text-[color:var(--success)]"))}>
       {formatCurrency(value, true)}
     </span>
   );
