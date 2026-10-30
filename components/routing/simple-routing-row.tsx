@@ -50,6 +50,7 @@ import type { Buyer, Campaign, Destination, TrackingNumber } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/lib/my-permissions";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 
 export const SHARE_LABEL: Record<Distribution, string> = {
   priority: "In order",
@@ -286,7 +287,7 @@ export function SimpleRoutingRow({
             )}
           />
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">{campaign.name}</div>
+            <div className="truncate text-sm font-semibold"><LocalName name={campaign.name} /></div>
             <div className="text-[11px] text-muted-foreground">
               {(trackingNumbers.length === 1 ? t("y.rrow.trackingOne") : t("y.rrow.trackingMany")).replace("{count}", String(trackingNumbers.length))}
               {routed.length > 1 && <> · {t(`y.rrow.share.${share}`)}</>}
@@ -453,7 +454,7 @@ export function SimpleRoutingRow({
                   <SelectItem value={NO_BUYER}>{t("y.rrow.noBuyer")}</SelectItem>
                   {buyers.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
-                      {b.name}
+                      <LocalName name={b.name} />
                     </SelectItem>
                   ))}
                 </SelectContent>

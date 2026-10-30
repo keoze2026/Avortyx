@@ -25,6 +25,7 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { RoutingNode, RoutingNodeData, RoutingNodeKind, Weekday } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const DAY_KEYS: Array<{ id: Weekday; key: string }> = [
   { id: 0, key: "trafficUI.common.days.sun" },
@@ -144,7 +145,7 @@ function InboundForm({ data, onPatch }: FormProps) {
           <SelectItem value="none">{t("trafficUI.routing.inspector.forms.unbound")}</SelectItem>
           {campaigns.map((c) => (
             <SelectItem key={c.id} value={c.id}>
-              {c.name}
+              <LocalName name={c.name} />
             </SelectItem>
           ))}
         </SelectContent>
@@ -406,7 +407,7 @@ function BuyerForm({ data, onPatch }: FormProps) {
             <SelectItem value="none">{t("trafficUI.routing.inspector.forms.buyerNone")}</SelectItem>
             {buyers.map((b) => (
               <SelectItem key={b.id} value={b.id}>
-                {b.name}
+                <LocalName name={b.name} />
               </SelectItem>
             ))}
           </SelectContent>

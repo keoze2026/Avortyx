@@ -33,6 +33,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 import { Can } from "@/components/shared/can";
 import { usePermissions } from "@/lib/my-permissions";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const STATUS_VARIANT: Record<WebhookStatus, React.ComponentProps<typeof Badge>["variant"]> = {
   active: "success",
@@ -163,7 +164,7 @@ export function WebhooksSection() {
                     </span>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h4 className="truncate text-sm font-semibold">{h.name}</h4>
+                        <h4 className="truncate text-sm font-semibold"><LocalName name={h.name} /></h4>
                         <Badge variant={STATUS_VARIANT[h.status]}>{t(STATUS_LABEL_KEYS[h.status])}</Badge>
                       </div>
                       <code className="mt-1 block truncate font-mono text-[11px] text-muted-foreground">

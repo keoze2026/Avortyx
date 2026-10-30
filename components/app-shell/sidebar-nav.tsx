@@ -47,6 +47,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useLocaleStore } from "@/lib/store/locale-store";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 function isVisibleForRole(item: NavItem, role: Role | undefined, isSuperuser: boolean) {
   if (!role) return false;
@@ -327,7 +328,7 @@ function AccountFooter({ collapsed }: { collapsed: boolean }) {
       <DropdownMenuContent side={collapsed ? "right" : "top"} align={collapsed ? "end" : "start"} className="w-60">
         <DropdownMenuLabel>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">{user.name}</span>
+            <span className="text-sm font-semibold"><LocalName name={user.name} /></span>
             <span className="font-mono text-[10px] text-muted-foreground">{user.email}</span>
           </div>
         </DropdownMenuLabel>

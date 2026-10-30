@@ -36,6 +36,7 @@ import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import type { Buyer, Call, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface BuyerSummaryCardProps {
   /** The selected range's calls - already date-scoped by the page. */
@@ -384,10 +385,10 @@ export function BuyerSummaryCard({
                       <div className="flex items-center gap-2">
                         {r.buyer && !byDest && !isPartner ? (
                           <Link href={`${ROUTES.buyers}/${r.buyer.id}`} className="truncate text-sm font-semibold hover:text-accent">
-                            {r.name}
+                            <LocalName name={r.name} />
                           </Link>
                         ) : (
-                          <span className="truncate text-sm font-semibold">{r.name}</span>
+                          <span className="truncate text-sm font-semibold"><LocalName name={r.name} /></span>
                         )}
                         {isTop && (
                           <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent">

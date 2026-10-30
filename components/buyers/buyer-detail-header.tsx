@@ -74,7 +74,7 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
             {buyer.contactName && (
               <>
                 <span className="text-muted-foreground/40">·</span>
-                <span className="font-mono text-muted-foreground">{buyer.contactName}</span>
+                <span className="font-mono text-muted-foreground"><LocalName name={buyer.contactName} /></span>
               </>
             )}
             {buyer.email && (

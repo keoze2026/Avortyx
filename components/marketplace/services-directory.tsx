@@ -60,6 +60,7 @@ import {
 } from "@/lib/api/services/marketplace-directory.service";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 /** Three rows of three before "Show all", like the reference. */
 const PREVIEW_COUNT = 9;
@@ -400,7 +401,7 @@ export function ServicesDirectory() {
               </div>
               <DialogHeader>
                 <DialogTitle className="flex items-center justify-between gap-3">
-                  <span>{details.name}</span>
+                  <span><LocalName name={details.name} /></span>
                   <FavoriteButton
                     active={!!details.isFavorite}
                     onClick={() => void toggleFavorite(details)}
@@ -524,7 +525,7 @@ function Logo({ service, large }: { service: MarketplaceService; large?: boolean
     return (
       <div className="flex flex-col items-center gap-1 text-neutral-500">
         <Globe className={large ? "h-8 w-8" : "h-6 w-6"} />
-        <span className="max-w-full truncate text-xs font-semibold">{service.name}</span>
+        <span className="max-w-full truncate text-xs font-semibold"><LocalName name={service.name} /></span>
       </div>
     );
   }
@@ -597,7 +598,7 @@ function ServiceCard({
 
       <div className="flex flex-1 flex-col items-center px-4 pb-4 pt-3 text-center">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          {service.name}
+          <LocalName name={service.name} />
           {!service.isActive && (
             <EyeOff className="h-3.5 w-3.5 text-muted-foreground" aria-label={t("marketplace.hidden")} />
           )}

@@ -27,6 +27,7 @@ import type { ExportFormat } from "@/lib/export";
 import { formatNumber } from "@/lib/format";
 import type { CallStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const RANGE_KEYS: Array<{ id: DateRange; key: string }> = [
   { id: "today", key: "toolsUI.callLogs.toolbar.today" },
@@ -163,7 +164,7 @@ export function CallsToolbar({
             <SelectItem value="all">{t("toolsUI.callLogs.toolbar.allCampaigns")}</SelectItem>
             {campaigns.map((c) => (
               <SelectItem key={c.id} value={c.id}>
-                {c.name}
+                <LocalName name={c.name} />
               </SelectItem>
             ))}
           </SelectContent>

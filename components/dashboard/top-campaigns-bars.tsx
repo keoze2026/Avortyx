@@ -11,6 +11,7 @@ import { formatNumber } from "@/lib/format";
 import type { EntitySummary } from "@/lib/api/services/analytics.service";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import type { Call, Destination } from "@/lib/types";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Row {
   id: string;
@@ -128,7 +129,7 @@ export function TopCampaignsBars({ calls, dateLabel, campaignSummaries, destinat
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-6">
               {data.map((r) => (
                 <div key={r.id} className="contents" title={`${r.name}: ${formatNumber(r.connected)}`}>
-                  <span className="max-w-[10rem] truncate text-sm font-semibold">{r.name}</span>
+                  <span className="max-w-[10rem] truncate text-sm font-semibold"><LocalName name={r.name} /></span>
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted/40">
                     <div
                       className="h-full rounded-full transition-[width] duration-500"

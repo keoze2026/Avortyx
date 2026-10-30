@@ -69,6 +69,7 @@ import { createCallSocket, type CallSocket } from "@/lib/api/socket";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { formatCallerId, formatCurrency, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const STATUS_VARIANT: Record<AuctionStatus, "success" | "outline" | "destructive"> = {
   open: "success",
@@ -622,7 +623,7 @@ function AuctionDetailSheet({
                       <SelectContent>
                         {buyers.map((b) => (
                           <SelectItem key={b.id} value={b.id}>
-                            {b.name}
+                            <LocalName name={b.name} />
                           </SelectItem>
                         ))}
                       </SelectContent>

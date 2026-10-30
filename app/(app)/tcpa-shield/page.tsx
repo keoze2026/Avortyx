@@ -48,6 +48,7 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useTcpaShieldStore } from "@/lib/store/tcpa-shield-store";
 import { Can } from "@/components/shared/can";
 import { usePermissions } from "@/lib/my-permissions";
+import { LocalName } from "@/lib/i18n/local-name";
 
 type SortKey = "name-asc" | "name-desc" | "type-asc" | "active-first";
 
@@ -265,7 +266,7 @@ export default function TcpaShieldPage() {
                       />
                     </TableCell>
                     {visibleColumns.has("name") && (
-                      <TableCell className="text-left font-medium">{e.name}</TableCell>
+                      <TableCell className="text-left font-medium"><LocalName name={e.name} /></TableCell>
                     )}
                     {visibleColumns.has("campaign") && (
                       <TableCell className="text-left text-muted-foreground">

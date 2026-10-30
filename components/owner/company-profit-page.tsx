@@ -19,6 +19,7 @@ import { friendlyErrorMessage } from "@/lib/api/errors";
 import { http } from "@/lib/api/http";
 import { downloadRows } from "@/lib/export";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 type LineKey = "minutes" | "recording" | "voip" | "rejected" | "tfn" | "portal" | "other";
 
@@ -243,7 +244,7 @@ export function CompanyProfitPage() {
                   {data.carriers.map((c) => (
                     <tr key={c.name} className="border-b border-border/50">
                       <td className="px-5 py-2.5">
-                        <div>{c.name}</div>
+                        <div><LocalName name={c.name} /></div>
                         <div className="text-[11px] text-muted-foreground">
                           {c.codes.map((x) => (x === "termination" ? t("x433.termination") : x)).join(" · ")}
                         </div>
@@ -413,7 +414,7 @@ function ByCustomer({ data }: { data: ProfitStatement }) {
         <tbody>
           {data.byCustomer.map((c) => (
             <tr key={c.id} className="border-b border-border/50">
-              <td className="px-5 py-2.5 font-medium">{c.name}</td>
+              <td className="px-5 py-2.5 font-medium"><LocalName name={c.name} /></td>
               <td className="px-3 py-2.5 text-right tabular-nums">{int(c.minutes)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{int(c.voip)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{int(c.rejected)}</td>

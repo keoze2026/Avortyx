@@ -36,6 +36,7 @@ function countTicks(caps: string[] | undefined): number | null {
 }
 import type { Member, MemberRole } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface WorkspaceRolesTableProps {
   members: Member[];
@@ -152,7 +153,7 @@ export function WorkspaceRolesTable({ members }: WorkspaceRolesTableProps) {
                   <TableCell className="pl-4 text-left">
                     <div className="inline-flex items-center gap-2 font-medium">
                       <ShieldCheck className="h-3.5 w-3.5 text-accent" />
-                      {r.name}
+                      <LocalName name={r.name} />
                     </div>
                   </TableCell>
                   <TableCell className="text-left text-[12px] text-muted-foreground">{r.description}</TableCell>

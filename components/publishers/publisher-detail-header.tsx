@@ -74,7 +74,7 @@ export function PublisherDetailHeader({ publisher }: { publisher: Publisher }) {
             {publisher.contactName && (
               <>
                 <span className="text-muted-foreground/40">·</span>
-                <span className="font-mono text-muted-foreground">{publisher.contactName}</span>
+                <span className="font-mono text-muted-foreground"><LocalName name={publisher.contactName} /></span>
               </>
             )}
             {publisher.email && (

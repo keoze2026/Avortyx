@@ -1091,7 +1091,7 @@ function ConversionSettingsDialog({
           <DialogTitle className="text-[13px] font-semibold uppercase tracking-wider">
             {t("trafficUI.campaigns.settings.forward.conversion.title")}
           </DialogTitle>
-          <p className="text-xs text-muted-foreground">{destinationName}</p>
+          <p className="text-xs text-muted-foreground"><LocalName name={destinationName} /></p>
         </DialogHeader>
 
         <div className="space-y-4">

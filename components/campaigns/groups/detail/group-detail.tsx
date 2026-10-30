@@ -34,7 +34,7 @@ import {
 } from "@/lib/api/services/campaign-groups.service";
 import { ROUTES } from "@/lib/constants";
 import { formatLocalDateTime } from "@/lib/format";
-import { useLocalName } from "@/lib/i18n/local-name";
+import { useLocalName, LocalName } from "@/lib/i18n/local-name";
 import { usePermissions } from "@/lib/my-permissions";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
@@ -219,13 +219,13 @@ export function GroupDetail({
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Link href={`${ROUTES.campaigns}/groups`} className="text-accent hover:underline">{t("cg.title")}</Link>
             <span>/</span>
-            <span>{group.name}</span>
+            <span><LocalName name={group.name} /></span>
           </nav>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <h1 className="truncate text-2xl font-semibold tracking-tight">{group.name}</h1>
+              <h1 className="truncate text-2xl font-semibold tracking-tight"><LocalName name={group.name} /></h1>
               <span
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",

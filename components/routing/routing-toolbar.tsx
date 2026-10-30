@@ -11,6 +11,7 @@ import { ADVANCED_ROUTING_HREF } from "@/lib/api/services/campaign-routing";
 import { formatRelativeTime } from "@/lib/format";
 import type { RoutingPlan, RoutingPlanStatus } from "@/lib/types";
 import { Can } from "@/components/shared/can";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   plan: RoutingPlan;
@@ -45,7 +46,7 @@ export function RoutingToolbar({ plan, dirty, saving, onSave, onPublishToggle, o
       <div className="mx-1 h-5 w-px bg-border" />
 
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-sm font-semibold">{plan.name}</span>
+        <span className="truncate text-sm font-semibold"><LocalName name={plan.name} /></span>
         <Badge variant={published ? "success" : "outline"} className="capitalize">
           {published && <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" />}
           {statusLabel[plan.status]}

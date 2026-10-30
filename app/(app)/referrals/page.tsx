@@ -43,6 +43,7 @@ import {
 } from "@/lib/api/services/referrals.service";
 import { formatCurrency, formatNumber, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 export default function ReferralsPage() {
   const { t } = useTranslation();
@@ -277,7 +278,7 @@ export default function ReferralsPage() {
               ) : (
                 visibleClients.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="pl-6 text-left font-medium">{c.name}</TableCell>
+                    <TableCell className="pl-6 text-left font-medium"><LocalName name={c.name} /></TableCell>
                     <TableCell className="text-left text-muted-foreground">{c.vertical}</TableCell>
                     <TableCell className="text-left text-xs text-muted-foreground">
                       {formatRelativeTime(c.joinedAt)}

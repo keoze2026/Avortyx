@@ -41,6 +41,7 @@ import { apiKeysService } from "@/lib/api/services/api-keys.service";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import type { ApiKey, ApiScope } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const SCOPE_TONE: Record<ApiScope, string> = {
   read: "border-accent/30 bg-accent/10 text-accent",
@@ -176,7 +177,7 @@ export function ApiKeysSection() {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{k.name}</span>
+                    <span className="text-sm font-semibold"><LocalName name={k.name} /></span>
                     {k.scopes.map((s) => (
                       <span
                         key={s}

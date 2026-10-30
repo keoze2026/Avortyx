@@ -31,6 +31,7 @@ import {
 import { workspaceService } from "@/lib/api/services/workspace.service";
 import type { Member, MemberRole, MemberStatus } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 
 /** Sir's order: Admin, Manager, Billing, Viewer, Publisher, Buyer, each group
  *  kept together. Billing is the billing login (a Viewer by role), shown right
@@ -184,7 +185,7 @@ export function WorkspaceMembersTable({ members, onMembersChange, loading = fals
                         <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[11px] font-bold text-accent ring-1 ring-accent/30">
                           {m.initials}
                         </span>
-                        <span className="truncate text-sm font-medium">{m.name}</span>
+                        <span className="truncate text-sm font-medium"><LocalName name={m.name} /></span>
                       </div>
                     </TableCell>
                     <TableCell className="text-left font-mono text-[11px] text-muted-foreground">

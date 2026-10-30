@@ -48,6 +48,7 @@ import { formatCallerId, formatCurrency, formatLocalDate, uiLocaleTag } from "@/
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   call: Call | null;
@@ -569,7 +570,7 @@ function DestinationList({
       {items.map((d, i) => (
         <li key={`${d.name}-${i}`} className="flex gap-2 text-[9.5px] font-medium tabular-nums">
           {numbered && <span className="w-6 shrink-0 text-right text-muted-foreground">{i + 1}.</span>}
-          <span className="min-w-0 break-all">{d.name}</span>
+          <span className="min-w-0 break-all"><LocalName name={d.name} /></span>
           {showReason && d.reason && (
             <span className="ml-auto shrink-0 text-[9.5px] text-muted-foreground">{d.reason}</span>
           )}

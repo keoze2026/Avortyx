@@ -23,6 +23,7 @@ import type { BlockedNumberScope } from "@/lib/mock/suppression";
 import { useTranslation } from "@/hooks/use-translation";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 type ChoiceType = "all" | "campaign";
 
@@ -116,7 +117,7 @@ export function BlockNumberDialog({ open, onOpenChange, onBlock }: Props) {
                   ) : (
                     campaigns.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.name}
+                        <LocalName name={c.name} />
                       </SelectItem>
                     ))
                   )}

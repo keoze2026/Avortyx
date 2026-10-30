@@ -19,6 +19,7 @@ import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { isDemoMode } from "@/lib/demo/flag";
 import { resetDemoStorage } from "@/lib/demo/persist";
+import { LocalName } from "@/lib/i18n/local-name";
 
 function initials(name: string) {
   return name
@@ -75,7 +76,7 @@ export function UserMenu() {
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">{user.name}</span>
+            <span className="text-sm font-semibold"><LocalName name={user.name} /></span>
             <span className="text-[10px] font-mono text-muted-foreground">{user.email}</span>
           </div>
         </DropdownMenuLabel>

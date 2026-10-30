@@ -35,6 +35,7 @@ import { useCallsStore } from "@/lib/store/calls-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call, Destination } from "@/lib/types";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const NO_CALLS: Call[] = [];
 
@@ -290,7 +291,7 @@ export default function DashboardPage() {
                   return (
                     <SelectItem key={d.id} value={d.tfn}>
                       <span className="flex items-center gap-2">
-                        <span className="font-medium">{d.name}</span>
+                        <span className="font-medium"><LocalName name={d.name} /></span>
                         <span className="font-mono text-[10px] text-muted-foreground">
                           {d.tfn}
                         </span>

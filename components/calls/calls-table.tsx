@@ -18,6 +18,7 @@ import { useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { ROUTES } from "@/lib/constants";
 import { formatCallerId, formatCurrency, formatHMS, formatRelativeTime } from "@/lib/format";
 import type { Call } from "@/lib/types";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   calls: Call[];
@@ -84,7 +85,7 @@ export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Prop
                         onClick={(e) => e.stopPropagation()}
                         className="block truncate text-xs transition-colors hover:text-accent"
                       >
-                        {c.campaignName}
+                        <LocalName name={c.campaignName} />
                       </Link>
                     </TableCell>
                   )}
@@ -96,7 +97,7 @@ export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Prop
                           onClick={(e) => e.stopPropagation()}
                           className="truncate transition-colors hover:text-accent"
                         >
-                          {c.publisherName}
+                          <LocalName name={c.publisherName} />
                         </Link>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -111,7 +112,7 @@ export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Prop
                           onClick={(e) => e.stopPropagation()}
                           className="truncate transition-colors hover:text-accent"
                         >
-                          {c.buyerName}
+                          <LocalName name={c.buyerName} />
                         </Link>
                       ) : (
                         <span className="italic text-muted-foreground">—</span>

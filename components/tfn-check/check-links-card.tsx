@@ -41,6 +41,7 @@ import { tfnCheckService, type TfnCheckLink } from "@/lib/api/services/tfn-check
 import { formatRelativeTime } from "@/lib/format";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const ALL = "__all__";
 
@@ -133,7 +134,7 @@ export function CheckLinksCard({ canEdit, canDelete }: { canEdit: boolean; canDe
               <TableBody>
                 {links.map((l) => (
                   <TableRow key={l.id} className={cn(!l.active && "opacity-60")}>
-                    <TableCell className="pl-5 text-xs font-medium">{l.name}</TableCell>
+                    <TableCell className="pl-5 text-xs font-medium"><LocalName name={l.name} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {l.publisherName ?? t("tfnCheck.links.allNumbers")}
                     </TableCell>
@@ -329,7 +330,7 @@ function CreateLinkDialog({
                 <SelectItem value={ALL}>{t("tfnCheck.links.allNumbers")}</SelectItem>
                 {publishers.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name}
+                    <LocalName name={p.name} />
                   </SelectItem>
                 ))}
               </SelectContent>

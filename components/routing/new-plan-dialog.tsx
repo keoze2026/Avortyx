@@ -28,6 +28,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useRoutingStore } from "@/lib/store/routing-store";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   open: boolean;
@@ -126,7 +127,7 @@ export function NewPlanDialog({ open, onOpenChange, defaultCampaignId }: Props) 
                 <SelectItem value="none">{t("trafficUI.routing.newDialog.unboundItem")}</SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+                    <LocalName name={c.name} />
                   </SelectItem>
                 ))}
               </SelectContent>

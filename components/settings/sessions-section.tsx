@@ -12,6 +12,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatRelativeTime } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useWorkspaceMetaStore } from "@/lib/store/workspace-meta-store";
+import { LocalName } from "@/lib/i18n/local-name";
 
 export function SessionsSection() {
   const { t } = useTranslation();
@@ -74,7 +75,7 @@ export function SessionsSection() {
                     )}
                     {/* The workspace admin sees everyone's sign-ins: say whose. */}
                     {s.userName && s.userId && myId && s.userId !== myId && (
-                      <span className="truncate text-xs text-muted-foreground">{s.userName}</span>
+                      <span className="truncate text-xs text-muted-foreground"><LocalName name={s.userName} /></span>
                     )}
                   </div>
                   <div className="mt-0.5 text-[11px] text-muted-foreground font-mono">

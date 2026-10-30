@@ -26,6 +26,7 @@ import { http } from "@/lib/api/http";
 import { downloadRows, type ExportColumn } from "@/lib/export";
 import { formatTimer, uiLocaleTag } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 /* ─── Wire (camelCase from the http layer) ─────────────────────────── */
 
@@ -433,7 +434,7 @@ function CompanyStatement({
     <section className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-4">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold">{c.name}</h2>
+          <h2 className="text-base font-semibold"><LocalName name={c.name} /></h2>
           <p className="mt-0.5 text-xs text-muted-foreground">{rateLine}</p>
         </div>
         <div className="text-right">
@@ -723,7 +724,7 @@ function Merged({ data, label }: { data: Statement; label: string }) {
             <tr className="border-b border-border text-[11px] text-muted-foreground">
               <th className="h-8 px-3 pl-5 text-left font-medium">{t("x433.costType")}</th>
               {cs.map((c) => (
-                <th key={c.name} className="h-8 px-3 text-right font-medium">{c.name}</th>
+                <th key={c.name} className="h-8 px-3 text-right font-medium"><LocalName name={c.name} /></th>
               ))}
               <th className="h-8 px-3 pr-5 text-right font-medium">{t("x433.total")}</th>
             </tr>

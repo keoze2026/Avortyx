@@ -45,6 +45,7 @@ import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useVoipShieldStore } from "@/lib/store/voip-shield-store";
 import { Can } from "@/components/shared/can";
 import { usePermissions } from "@/lib/my-permissions";
+import { LocalName } from "@/lib/i18n/local-name";
 
 type SortKey = "name-asc" | "name-desc" | "size-desc" | "size-asc";
 
@@ -267,7 +268,7 @@ export default function VoipShieldPage() {
                       />
                     </TableCell>
                     {visibleColumns.has("name") && (
-                      <TableCell className="text-left font-medium">{e.name}</TableCell>
+                      <TableCell className="text-left font-medium"><LocalName name={e.name} /></TableCell>
                     )}
                     {visibleColumns.has("campaign") && (
                       <TableCell className="text-left text-muted-foreground">

@@ -46,6 +46,7 @@ import { useUIStore } from "@/lib/store/ui-store";
 import { useWorkspaceMetaStore } from "@/lib/store/workspace-meta-store";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 
 type Filter = "all" | ActivityCategory;
 
@@ -445,7 +446,7 @@ function ActivityRow({
             <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[9px] font-bold text-accent ring-1 ring-accent/30">
               {event.actor.initials}
             </span>
-            <span className="truncate text-xs font-normal">{event.actor.name}</span>
+            <span className="truncate text-xs font-normal"><LocalName name={event.actor.name} /></span>
           </div>
         </TableCell>
         <TableCell className="px-2 py-1.5 text-left">

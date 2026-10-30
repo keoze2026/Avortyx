@@ -21,6 +21,7 @@ import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { formatCurrency, formatNumber, toE164 } from "@/lib/format";
 import type { Buyer, Call, Destination } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface DestinationSummaryTableProps {
   /** The selected range's calls — already date-scoped by the page. */
@@ -223,7 +224,7 @@ export function DestinationSummaryTable({
                   <TableRow key={destination.id}>
                     <TableCell className="w-[220px] pl-6 text-left">
                       <div className="text-[13px] font-medium leading-tight">
-                        {destination.name}
+                        <LocalName name={destination.name} />
                       </div>
                       <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                         {toE164(destination.tfn)}
@@ -238,10 +239,10 @@ export function DestinationSummaryTable({
                           href={`${ROUTES.buyers}/${buyer.id}`}
                           className="text-xs transition-colors hover:text-accent"
                         >
-                          {buyer.name}
+                          <LocalName name={buyer.name} />
                         </Link>
                       ) : destination.buyerName ? (
-                        <span className="text-xs">{destination.buyerName}</span>
+                        <span className="text-xs"><LocalName name={destination.buyerName} /></span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

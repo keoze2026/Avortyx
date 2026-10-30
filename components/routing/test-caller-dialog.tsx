@@ -38,6 +38,7 @@ import {
 } from "@/lib/api/services/routing.service";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   open: boolean;
@@ -165,12 +166,12 @@ export function TestCallerDialog({ open, onOpenChange, ruleId, ruleName }: Props
                   <div className="rounded-lg border border-[color:var(--success)]/40 bg-[color:var(--success)]/10 p-3">
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       <CheckCircle2 className="h-4 w-4 text-[color:var(--success)]" />
-                      {result.selectedDestination.name}
+                      <LocalName name={result.selectedDestination.name} />
                     </div>
                     <div className="mt-1 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
                       <span>
                         <span className="font-mono uppercase tracking-wider">{t("dashboard.columns.buyer")}</span>{" "}
-                        <span className="text-foreground">{result.selectedDestination.buyerName}</span>
+                        <span className="text-foreground"><LocalName name={result.selectedDestination.buyerName} /></span>
                       </span>
                       <span>
                         <span className="font-mono uppercase tracking-wider">{t("trafficUI.campaigns.settings.forward.headers.priority")}</span>{" "}

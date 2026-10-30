@@ -29,6 +29,7 @@ import { useRoutingStore } from "@/lib/store/routing-store";
 import type { RoutingPlan, RoutingPlanStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/lib/my-permissions";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const STATUS_TONE: Record<
   RoutingPlanStatus,
@@ -106,7 +107,7 @@ export function RoutingPlanCard({ plan }: { plan: RoutingPlan }) {
               {plan.campaignName && (
                 <>
                   <span aria-hidden>·</span>
-                  <span className="truncate opacity-80">{plan.campaignName}</span>
+                  <span className="truncate opacity-80"><LocalName name={plan.campaignName} /></span>
                 </>
               )}
             </div>
@@ -116,7 +117,7 @@ export function RoutingPlanCard({ plan }: { plan: RoutingPlan }) {
               href={`${ROUTES.routing}/${plan.id}`}
               className="mt-1.5 flex items-center gap-1 truncate text-base font-semibold leading-snug transition-colors hover:text-accent"
             >
-              <span className="truncate">{plan.name}</span>
+              <span className="truncate"><LocalName name={plan.name} /></span>
               <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
             </Link>
           </div>

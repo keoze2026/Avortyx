@@ -48,7 +48,7 @@ import {
   type GroupLine,
 } from "@/lib/api/services/campaign-groups.service";
 import { toE164 } from "@/lib/format";
-import { useLocalName } from "@/lib/i18n/local-name";
+import { useLocalName, LocalName } from "@/lib/i18n/local-name";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { fill, useResultDetail } from "./shared";
 
@@ -424,7 +424,7 @@ export function ApplyChangeDialog({ open, onOpenChange, groups, linesByGroup, st
                     }`}
                   >
                     <Checkbox checked={groupIds.has(g.id)} onCheckedChange={() => toggleGroup(g.id)} />
-                    <span className="font-medium">{g.name}</span>
+                    <span className="font-medium"><LocalName name={g.name} /></span>
                     <span className="text-xs text-muted-foreground">
                       {g.campaigns.length === 1 ? t("cg.campaignsCountOne") : fill(t("cg.campaignsCount"), { n: g.campaigns.length })}
                     </span>

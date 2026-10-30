@@ -69,6 +69,7 @@ import type {
   TrackingNumber,
 } from "@/lib/types";
 import { Can } from "@/components/shared/can";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const VENDOR_OPTIONS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
 const PHONE_FORMATS: { id: PhoneNumberFormat; label: string; labelKey?: string }[] = [
@@ -132,7 +133,7 @@ export default function NumberPoolDetailPage() {
       </Link>
 
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">{pool.name}</h1>
+        <h1 className="text-xl font-semibold tracking-tight"><LocalName name={pool.name} /></h1>
         <p className="mt-1 text-xs text-muted-foreground">
           {t("trafficUI.numbers.poolDetail.manageDescription")}
         </p>
@@ -671,7 +672,7 @@ function TrafficSourcesCard({
                         <TableCell className="pl-4 text-left">
                           <Checkbox aria-label={t("trafficUI.campaigns.table.selectRow").replace("{name}", s.name)} />
                         </TableCell>
-                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell className="font-medium"><LocalName name={s.name} /></TableCell>
                         <TableCell className="text-muted-foreground">{s.integration}</TableCell>
                         <TableCell className="tabular-nums">{s.events}</TableCell>
                         <TableCell className="tabular-nums">{s.conversions}</TableCell>

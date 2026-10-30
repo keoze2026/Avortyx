@@ -36,6 +36,7 @@ import { ApiError } from "@/lib/api/errors";
 import { ROUTES } from "@/lib/constants";
 import { formatLocalDateTime, uiLocaleTag } from "@/lib/format";
 import { reportResultText } from "@/lib/i18n/server-text";
+import { LocalName } from "@/lib/i18n/local-name";
 
 type State = "active" | "waiting_approval" | "off" | "not_set_up";
 
@@ -160,7 +161,7 @@ export default function AutomatedReportsPage() {
                 <TableBody>
                   {data.items.map((i) => (
                     <TableRow key={i.buyerId}>
-                      <TableCell className="font-medium">{i.buyerName}</TableCell>
+                      <TableCell className="font-medium"><LocalName name={i.buyerName} /></TableCell>
                       <TableCell className="text-center">
                         <Badge variant={STATE_VARIANT[i.state]}>{t(`autoReports.state.${i.state}`)}</Badge>
                       </TableCell>

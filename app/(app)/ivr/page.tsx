@@ -40,6 +40,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ivrService, type IvrFlow, type IvrFlowStatus } from "@/lib/api/services/ivr.service";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { Can } from "@/components/shared/can";
+import { LocalName } from "@/lib/i18n/local-name";
 
 const STATUS_VARIANT: Record<IvrFlowStatus, "success" | "outline" | "warning"> = {
   active: "success",
@@ -125,7 +126,7 @@ export default function IvrPage() {
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold">{f.name}</h3>
+                    <h3 className="truncate text-sm font-semibold"><LocalName name={f.name} /></h3>
                     {f.description && (
                       <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                         {f.description}
@@ -269,7 +270,7 @@ function CreateFlowDialog({
                 <SelectItem value="none">{t("ivrUI.create.unassigned")}</SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+                    <LocalName name={c.name} />
                   </SelectItem>
                 ))}
               </SelectContent>

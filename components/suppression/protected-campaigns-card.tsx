@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { cn } from "@/lib/utils";
+import { LocalName } from "@/lib/i18n/local-name";
 
 interface Props {
   selectedIds: string[];
@@ -136,7 +137,7 @@ export function ProtectedCampaignsCard({
                     >
                       <Check className="h-3 w-3" strokeWidth={3} />
                     </span>
-                    <span className="truncate">{c.name}</span>
+                    <span className="truncate"><LocalName name={c.name} /></span>
                   </button>
                 );
               })

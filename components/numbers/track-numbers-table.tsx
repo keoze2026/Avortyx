@@ -302,7 +302,7 @@ export function TrackNumbersTable({
                     )}
                     {visibleColumns.has("name") && (
                       <TableCell className={cn("text-left", CELL)}>
-                        {n.label?.trim() || deriveDisplayName(n)}
+                        <LocalName name={n.label?.trim() || deriveDisplayName(n)} />
                       </TableCell>
                     )}
                     {visibleColumns.has("country") && (
