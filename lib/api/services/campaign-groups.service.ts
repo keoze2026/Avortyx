@@ -90,6 +90,33 @@ export interface ApplyResult {
   }[];
 }
 
+/** CH-415: one destination in a group - which campaigns, and each one's own
+ *  priority / weight. Campaigns not listed are left as they are. */
+export interface SetLineCampaign {
+  campaignId: string;
+  included: boolean;
+  priority?: number;
+  weight?: number;
+}
+
+export interface SetLineChange {
+  number: string;
+  buyerId?: string;
+  campaigns: SetLineCampaign[];
+  /** Needed only when the destination is in none of the group's campaigns yet. */
+  revenue?: number;
+  convertOn?: "incoming" | "connected" | "length";
+  convertSeconds?: number;
+}
+
+/** CH-415: one line of a group's Change history. */
+export interface GroupHistoryItem {
+  id: string;
+  at: string;
+  by: string;
+  text: string;
+}
+
 const BASE = "/api/campaign-groups/";
 
 export const campaignGroups = {
@@ -120,5 +147,15 @@ export const campaignGroups = {
 
   async apply(change: ApplyChange): Promise<ApplyResult> {
     return http.post<ApplyResult>(`${BASE}apply`, { body: change });
+  },
+
+  /** CH-415: all or nothing, in one transaction on the server. */
+  async setLine(groupId: string, change: SetLineChange): Promise<ApplyResult> {
+    return http.post<ApplyResult>(`${BASE}${groupId}/line`, { body: change });
+  },
+
+  async history(groupId: string): Promise<GroupHistoryItem[]> {
+    const res = await http.get<{ items: GroupHistoryItem[] }>(`${BASE}${groupId}/history`);
+    return res.items ?? [];
   },
 };

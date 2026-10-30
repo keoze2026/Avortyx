@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Layers, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Layers, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ApplyChangeDialog, type ApplyStart } from "@/components/campaigns/groups/apply-change-dialog";
@@ -155,7 +155,10 @@ export default function CampaignGroupsPage() {
               <header className="flex flex-wrap items-start justify-between gap-3 border-b p-4">
                 <div className="min-w-0 space-y-2">
                   <div className="flex items-baseline gap-2">
-                    <h2 className="text-base font-semibold">{g.name}</h2>
+                    {/* CH-415: each group has its own page in Sir's design. */}
+                    <Link href={`${ROUTES.campaigns}/groups/${g.id}`} className="text-base font-semibold hover:underline">
+                      {g.name}
+                    </Link>
                     <span className="text-xs text-muted-foreground">
                       {g.campaigns.length === 1 ? t("cg.campaignsCountOne") : fill(t("cg.campaignsCount"), { n: g.campaigns.length })}
                     </span>
@@ -173,8 +176,14 @@ export default function CampaignGroupsPage() {
                     ))}
                   </div>
                 </div>
+                <div className="flex shrink-0 gap-2">
+                  <Link href={`${ROUTES.campaigns}/groups/${g.id}`}>
+                    <Button size="sm">
+                      {t("x415.openGroup")} <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 {canEdit && (
-                  <div className="flex shrink-0 gap-2">
+                  <>
                     <Button size="sm" variant="outline" onClick={() => openApply({ action: "add", groupIds: [g.id] })}>
                       <Plus className="h-4 w-4" /> {t("cg.apply.add")}
                     </Button>
@@ -184,8 +193,9 @@ export default function CampaignGroupsPage() {
                     <Button size="sm" variant="ghost" onClick={() => setDeleting(g)} aria-label={t("cg.delete")}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </>
                 )}
+                </div>
               </header>
               <GroupLines
                 group={g}

@@ -196,6 +196,7 @@ function wireToDestination(w: DestinationWire): Destination {
     // `forward_type` if the backend ever echoes it instead.
     forwardType: normalizeForwardType(w.routingType ?? w.forwardType),
     concurrencyCap: w.concurrencyCap ?? w.maxConcurrency ?? 0,
+    hourlyCap: w.hourlyCap ?? w.maxCallsHourly ?? 0,
     dailyCap: w.dailyCap ?? w.maxCallsDaily ?? 0,
     monthlyCap: w.monthlyCap ?? w.maxCallsMonthly ?? 0,
     // On / off, whichever way the server spells it (see enabledFromWire).
@@ -260,6 +261,7 @@ function destinationToWire(patch: Partial<Destination>): Record<string, unknown>
     if (mapped !== undefined) body.routingType = mapped;
   }
   if (patch.concurrencyCap !== undefined) body.concurrencyCap = patch.concurrencyCap;
+  if (patch.hourlyCap !== undefined) body.hourlyCap = patch.hourlyCap;
   if (patch.dailyCap !== undefined) body.dailyCap = patch.dailyCap;
   if (patch.monthlyCap !== undefined) body.monthlyCap = patch.monthlyCap;
   if (patch.enabled !== undefined) body.enabled = patch.enabled;

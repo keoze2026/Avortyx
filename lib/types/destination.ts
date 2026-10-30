@@ -47,6 +47,8 @@ export interface Destination {
   name: string;
   /** Max simultaneous live calls allowed on this destination. */
   concurrencyCap: number;
+  /** Max calls per hour. 0 = unlimited (CH-415: read for Campaign Groups). */
+  hourlyCap?: number;
   /** Max calls per day. 0 = unlimited. */
   dailyCap: number;
   /** Max calls per month. 0 = unlimited. */
