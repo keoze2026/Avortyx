@@ -12,17 +12,21 @@
  *
  * CH-334: the company profit is its own card (components/owner/
  * company-profit-card.tsx) with Today / Yesterday / Week / Month / dates.
+ *
+ * CH-433 (Sir's design, 30 Oct): the carriers are statements now - each
+ * carrier with its TFN codes, termination, monthly charges and TFN list, then
+ * merged (components/owner/carrier-statements.tsx). The profit, expenses and
+ * routing cards stay below; TFNs with no carrier are listed at the end.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronRight, Pencil, ShieldX } from "lucide-react";
+import { ShieldX } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeader } from "@/components/shared/page-header";
-import { MonthPicker } from "@/components/shared/month-picker";
+import { CarrierStatements, type StatementCode } from "@/components/owner/carrier-statements";
 import { CompanyProfitCard } from "@/components/owner/company-profit-card";
 import { ExpensesCard } from "@/components/owner/expenses-card";
-import { RoutingCostCard, routeNameLabel } from "@/components/owner/routing-cost-card";
+import { RoutingCostCard } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,9 +37,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
 import { http, ApiError } from "@/lib/api/http";
-import { formatLocalDate, formatTimer, uiLocaleTag } from "@/lib/format";
+import { formatLocalDate, formatTimer } from "@/lib/format";
 import { tFor } from "@/lib/i18n";
-import { LocalName, useLocalName } from "@/lib/i18n/local-name";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useLocaleStore } from "@/lib/store/locale-store";
 
@@ -135,6 +139,16 @@ interface CostsResponse {
   profit?: Profit;
 }
 
+/** The carrier whose rates are being edited (from a statement's code row). */
+interface EditTarget {
+  id: string;
+  name: string;
+  numberMonthlyCost: string;
+  portalMonthlyFee: string;
+  perMinuteCost: string;
+  billingIncrement: number;
+}
+
 const INCREMENTS = [1, 6, 30, 60] as const;
 
 /** Quick fills for the carriers Sir named; the owner can still type any value. */
@@ -159,12 +173,6 @@ function thisMonth(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit" })
     .format(new Date())
     .slice(0, 7);
-}
-
-function monthLabel(m: string): string {
-  const [y, mo] = m.split("-").map(Number);
-  if (!y || !mo) return m;
-  return new Date(Date.UTC(y, mo - 1, 15)).toLocaleString(uiLocaleTag(), { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function errText(e: unknown): string {
@@ -245,12 +253,12 @@ export default function CarrierCostsPage() {
   const localName = useLocalName();
   const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
 
-  const [month, setMonth] = useState(thisMonth());
+  const [month] = useState(thisMonth());
   const [data, setData] = useState<CostsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState<Set<string>>(new Set());
 
-  const [editing, setEditing] = useState<CarrierGroup | null>(null);
+  const [editing, setEditing] = useState<EditTarget | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [form, setForm] = useState({ numberMonthlyCost: "", portalMonthlyFee: "", perMinuteCost: "" });
   const [increment, setIncrement] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -287,16 +295,15 @@ export default function CarrierCostsPage() {
     );
   }
 
-  const toggleOpen = (id: string) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const openEdit = (c: StatementCode) => {
+    setEditing({
+      id: c.carrierId,
+      name: `${c.name} (${c.code})`,
+      numberMonthlyCost: c.numberMonthlyCost,
+      portalMonthlyFee: c.portalMonthlyFee,
+      perMinuteCost: c.perMinuteCost,
+      billingIncrement: c.billingIncrement,
     });
-
-  const openEdit = (c: CarrierGroup) => {
-    setEditing(c);
     setForm({
       numberMonthlyCost: c.numberMonthlyCost,
       portalMonthlyFee: c.portalMonthlyFee,
@@ -319,6 +326,7 @@ export default function CarrierCostsPage() {
       });
       toast.success(t("owner.costs.saved"));
       setEditing(null);
+      setRefreshKey((k) => k + 1);
       load(month);
     } catch (e) {
       toast.error(errText(e));
@@ -336,6 +344,7 @@ export default function CarrierCostsPage() {
       });
       toast.success(t("owner.costs.assigned").replace("{count}", String(r.updated)));
       setPicked(new Set());
+      setRefreshKey((k) => k + 1);
       load(month);
     } catch (e) {
       toast.error(errText(e));
@@ -363,158 +372,19 @@ export default function CarrierCostsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-6">
-      <PageHeader title={t("owner.costs.title")} description={t("owner.costs.description")} />
+      {/* CH-433: Sir's statements - Today / Yesterday / This week / This month / dates. */}
+      <CarrierStatements onEditRates={openEdit} refreshKey={refreshKey} />
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="costs-month">{t("owner.costs.month")}</Label>
-          <MonthPicker
-            id="costs-month"
-            value={month}
-            max={thisMonth()}
-            onChange={setMonth}
-          />
-        </div>
-        <div className="text-right">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("owner.costs.grandTotal")}</div>
-          <div className="text-2xl font-semibold tabular-nums">{money(data?.summary?.grandTotal ?? data?.grandTotal)}</div>
-        </div>
+      <div className="print:hidden space-y-6">
+        {/* Company profit before tax (CH-257/334), the day's expenses line by
+            line (CH-336) and routing on to buyers by day (CH-186). */}
+        <CompanyProfitCard />
+        <ExpensesCard />
+        <RoutingCostCard />
       </div>
 
-      {/* Company profit before tax (CH-257): what customers were charged,
-          minus what the carriers charge us. Today / Yesterday / Week / Month /
-          dates like the routing cost, opening on Today (CH-334). */}
-      <CompanyProfitCard />
-
-      {/* The day's expenses, line by line (CH-336): TFN cost, each carrier's
-          minutes and cost, routing, and the total. */}
-      <ExpensesCard />
-
-      {/* The month's whole bill in one place (CH-254): TFN carriers and routing. */}
-      {data?.summary && (
-        <Card>
-          <CardContent className="p-0">
-            <div className="px-5 py-4 text-base font-semibold">{t("owner.costs.sum.title")}</div>
-            <div className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm sm:grid-cols-3 lg:grid-cols-6">
-              {[
-                [t("owner.costs.sum.tfnFees"), data.summary.numberFees],
-                [t("owner.costs.sum.monthlyCharges"), data.summary.portalFees],
-                [t("owner.costs.sum.inboundMinutes"), data.summary.minuteCharges],
-                [t("owner.costs.sum.routingMinutes"), data.summary.routingMinutes],
-                [t("owner.costs.sum.routingFee"), data.summary.routingMonthlyFee],
-                [t("owner.costs.sum.total"), data.summary.grandTotal],
-              ].map(([label, value], i) => (
-                <div key={label} className="bg-card px-4 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-                  <div className={i === 5 ? "text-base font-semibold tabular-nums" : "tabular-nums"}>{money(value)}</div>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-border px-5 py-2 text-xs text-muted-foreground">
-              {t("owner.costs.sum.note")
-                .replace("{routing}", routeNameLabel(data.routing?.name, t, localName))
-                .replace("{month}", monthLabel(data.month))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* What would make the bill read low: missing rates, TFNs with no carrier. */}
-      {(data?.warnings ?? []).length > 0 && (
-        <div className="space-y-1.5 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
-          {(data?.warnings ?? []).map((w, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-              <span>
-                {(w.kind === "no_minute_rate"
-                  ? t("owner.costs.warn.noMinuteRate")
-                  : w.kind === "no_number_fee"
-                    ? t("owner.costs.warn.noNumberFee")
-                    : t("owner.costs.warn.noCarrier"))
-                  .replace("{carrier}", localName(w.carrier))
-                  .replace("{calls}", String(w.calls ?? 0))
-                  .replace("{numbers}", String(w.numbers ?? 0))}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* What it costs to route calls on to buyers (XOLO termination), by day (CH-186). */}
-      <RoutingCostCard />
-
-      {loading && !data && <p className="text-sm text-muted-foreground">{t("owner.costs.loading")}</p>}
-
-      {carriers.map((c) => {
-        const isOpen = open.has(c.id);
-        return (
-          <Card key={c.id}>
-            <CardContent className="p-0">
-              <div className="flex flex-wrap items-center gap-3 px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() => toggleOpen(c.id)}
-                  className="flex items-center gap-2 text-left"
-                  aria-expanded={isOpen}
-                >
-                  {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <LocalName name={c.name} className="text-base font-semibold" />
-                  <Badge variant="outline">{c.code}</Badge>
-                  <Badge variant="secondary">
-                    {c.risk === "high" ? t("owner.costs.riskHigh") : t("owner.costs.riskLow")}
-                  </Badge>
-                </button>
-                <LocalName name={c.organizationName} className="text-xs text-muted-foreground" />
-                <div className="ml-auto flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => openEdit(c)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                    {t("owner.costs.editRates")}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm sm:grid-cols-4 lg:grid-cols-8">
-                {[
-                  [t("owner.costs.sum.numbers"), `${c.totals.live} / ${c.totals.deleted}`],
-                  [t("owner.costs.col.calls"), String(c.totals.calls)],
-                  [t("owner.costs.col.tcl"), formatTimer(c.totals.tclSeconds)],
-                  [t("owner.costs.col.aht"), formatTimer(c.totals.ahtSeconds)],
-                  [t("owner.costs.sum.numberFees"), money(c.totals.numberFees)],
-                  [t("owner.costs.sum.portal"), money(c.totals.portalFee)],
-                  [t("owner.costs.sum.minutes"), money(c.totals.minuteCharges)],
-                  [t("owner.costs.sum.bill"), money(c.totals.monthlyBill)],
-                ].map(([label, value], i) => (
-                  <div key={label} className="bg-card px-4 py-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-                    <div className={i === 7 ? "text-base font-semibold tabular-nums" : "tabular-nums"}>{value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-border px-5 py-2 text-xs text-muted-foreground">
-                {t("owner.costs.rateLine")
-                  .replace("{fee}", money(c.numberMonthlyCost))
-                  .replace("{portal}", money(c.portalMonthlyFee))
-                  .replace("{perMin}", `$${Number(c.perMinuteCost).toFixed(4)}`)
-                  .replace("{rounding}", t(`owner.costs.rounding.${c.billingIncrement ?? 1}`))}
-              </div>
-
-              {isOpen && (
-                <div className="overflow-x-auto border-t border-border">
-                  <NumbersTable rows={c.numbers} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-
-      {data && carriers.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t("owner.costs.none")}</p>
-      )}
-
       {unassigned.length > 0 && (
-        <Card>
+        <Card className="print:hidden">
           <CardContent className="p-0">
             <div className="flex flex-wrap items-center gap-3 px-5 py-4">
               <span className="text-base font-semibold">{t("owner.costs.unassigned")}</span>
@@ -561,7 +431,7 @@ export default function CarrierCostsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {t("owner.costs.editRates")}: {localName(editing?.name)}
+              {t("owner.costs.editRates")}: {editing?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
