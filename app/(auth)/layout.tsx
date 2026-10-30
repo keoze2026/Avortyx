@@ -9,6 +9,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { formatBtcSpot, useBtcSpot } from "@/hooks/use-btc-spot";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { loginFont } from "../(login)/font";
 
 /**
  * Asymmetric split layout. The vortex spans the entire viewport — its centre
@@ -47,8 +48,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       : t("authUI.split.signals.marketsValue");
   const marketsDelta = btc.ready ? btc.change24h : null;
 
+  // CH-447 (Sir, 31 Oct: "Still old font coming on publisher and buyer
+  // invite"): the sign-in screen's font (Inter with its optical sizes,
+  // app/(login)/font.ts) on sign-up, the invite pages and password reset
+  // too. Only the font: colours and layout are unchanged.
   return (
-    <main className="dark site-surface relative isolate min-h-screen overflow-hidden">
+    <main className={cn("dark site-surface auth-font relative isolate min-h-screen overflow-hidden", loginFont.variable)}>
       {/* Vortex covers the full viewport behind the grid. */}
       <BrandVortex centerX={0.38} />
       <DocumentTitle />
