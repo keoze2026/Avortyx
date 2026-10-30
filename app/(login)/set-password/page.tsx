@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import { SetPasswordCard } from "@/components/auth/set-password-card";
+import { SetPasswordCard } from "@/components/auth/auth-cards";
 import { loginFont } from "../font";
 
 export const metadata: Metadata = {

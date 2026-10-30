@@ -2372,14 +2372,6 @@ html:has(.login-screen) body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv09";
 }
 
-/* CH-447: sign-up, invite and password pages use the sign-in screen's font (app/(auth)/layout.tsx) */
-.auth-font {
-  font-family: var(--font-login), var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
-  -moz-osx-font-smoothing: grayscale;
-  font-optical-sizing: auto;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv09";
-}
-
 /* browser autofill keeps the dark glass fields instead of painting them white or yellow */
 .login-screen input:-webkit-autofill,
 .login-screen input:-webkit-autofill:hover,

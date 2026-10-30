@@ -14,9 +14,8 @@ export const metadata: Metadata = {
  * The sign-in screen: Avortyx AI's 3D portrait between the intro and the
  * glass sign-in card (components/auth/auth-shell.tsx, login-card.tsx).
  *
- * It lives in its own route group, outside `(auth)`, because it is a full
- * screen of its own: the split layout in `app/(auth)/layout.tsx` stays with
- * sign-up, password reset and the invite pages.
+ * Set Your Password, Forgot and Reset password, Request access and the role
+ * invite sit beside it in the same frame (components/auth/auth-cards.tsx).
  */
 export default function LoginPage() {
   return (
