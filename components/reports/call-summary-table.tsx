@@ -1338,11 +1338,11 @@ export function CallSummaryTable({
   return (
     <Card className="overflow-hidden p-0">
       {/* Section title */}
-      {/* CH-428 (Sir's design): the title stays in capitals as we have it
-          (Sir: "Call Summary in caps the way we have"), with "By Publisher"
-          beside it naming the open tab. */}
+      {/* CH-428 (Sir's design): the title with "By Publisher" beside it
+          naming the open tab. CH-430 (Sir, 30 Oct: "Call Summary, not all in
+          caps"): written "Call Summary", capital first letters only. */}
       <div className="flex items-baseline gap-2 px-6 pt-5">
-        <span className="text-sm font-semibold uppercase tracking-wide text-foreground">{t("toolsUI.reports.summary.title")}</span>
+        <span className="text-sm font-semibold text-foreground">{t("toolsUI.reports.summary.title")}</span>
         <span className="text-xs text-muted-foreground">{t("x428.byGroup").replace("{name}", tabLabel)}</span>
       </div>
 
