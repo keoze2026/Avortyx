@@ -75,9 +75,9 @@ export function PublishersTable({
         <Table className="min-w-[960px] table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[22%] pl-4 text-left">{t("networkUI.common.name")}</TableHead>
+              <TableHead className="w-[22%] !pl-16 text-left">{t("networkUI.common.name")}</TableHead>
               {columns.hourly && <TableHead className="w-[13%] !text-left">{t("networkUI.common.hourly")}</TableHead>}
-              {columns.daily && <TableHead className="w-[13%] !text-left">{t("networkUI.common.daily")}</TableHead>}
+              {columns.daily && <TableHead className="w-[13%] !pl-14 !text-left">{t("networkUI.common.daily")}</TableHead>}
               {columns.monthly && <TableHead className="w-[13%] !text-left">{t("networkUI.common.monthly")}</TableHead>}
               {columns.global && <TableHead className="w-[13%] !text-left">{t("networkUI.common.global")}</TableHead>}
               {columns.status && <TableHead className="w-[13%] !text-left">{t("networkUI.common.status")}</TableHead>}
@@ -90,7 +90,7 @@ export function PublishersTable({
               const u = p.usage;
               return (
                 <TableRow key={p.id} className="cursor-pointer" onClick={() => open(p.id)}>
-                  <TableCell className="pl-4 text-left">
+                  <TableCell className="!pl-16 text-left">
                     <div className="flex items-center gap-3">
                       <span
                         className={cn(
@@ -132,7 +132,7 @@ export function PublishersTable({
                   )}
 
                   {columns.daily && (
-                    <TableCell className="!text-left">
+                    <TableCell className="!pl-14 !text-left">
                       {u ? <DailyCell usage={u} max={maxDaily} /> : <Dash />}
                     </TableCell>
                   )}
