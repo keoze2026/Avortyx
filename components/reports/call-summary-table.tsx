@@ -1665,7 +1665,11 @@ export function CallSummaryTable({
                       calls going on right now (ringing or talking). */}
                   {visible.live && (
                     <TotalsFilterCell
-                      count={LIVE_ATTRIBUTABLE.has(tab) ? Math.max(liveNow ?? 0, totals.live) : totals.live}
+                      // CH-437 (Sir, 30 Oct: "if someone clicks on a specific camp or
+                      // buyer, total shows according to their stats"): with a row
+                      // picked, Live is that row's own figure - the account-wide
+                      // live count is only the floor when nothing is picked.
+                      count={!drill && LIVE_ATTRIBUTABLE.has(tab) ? Math.max(liveNow ?? 0, totals.live) : totals.live}
                       tone="success"
                       active={activeStatusFilter === "live"}
                       onClick={
