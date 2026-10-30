@@ -1247,3 +1247,14 @@ now match his picture: Workspace (building), Dashboard (grid), IVR (phone),
 Call Queue (list), Buyers (briefcase), TCPA Shield (shield with tick), Blocked
 Numbers (circle with slash), Call Logs (document), AI Insights (sparkle),
 Settings (cog). Every other icon, label and colour is unchanged.
+
+## CH-420 - AI Insights: no invented confidence or trend chart
+**2026-10-30 - AI Insights**
+
+Sir: "Ensure everything is showing real data from backend, no mock data". The
+server sends each recommendation's title, message and action only. The cards
+also showed an "AI Confidence" of 85% on every card and a small before / after
+chart, both made up in the portal. Both are gone; they will show again only if
+the server sends real values. Full check of the portal: the Campaign Group page
+and every other page read the server; the remaining files under lib/mock are
+formatters, types, colours and fixed option lists, not figures.
