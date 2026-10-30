@@ -11,6 +11,7 @@
  * (the same ones the Destinations page shows and routing reads).
  */
 
+import type * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Layers, Pause, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -49,7 +50,21 @@ import { CampaignsBar, LineLabel, PriorityCell } from "./ui";
 
 type Tab = "destinations" | "campaigns" | "history";
 
-export function GroupDetail({ groupId }: { groupId: string }) {
+export function GroupDetail({
+  groupId,
+  switcher,
+  extraActions,
+  onChanged,
+}: {
+  groupId: string;
+  /** CH-421: on the Campaign Groups page itself, a group picker in place of
+   *  the breadcrumb (the page is the group list). */
+  switcher?: React.ReactNode;
+  /** CH-421: the list page's own buttons (New Group, Delete...). */
+  extraActions?: React.ReactNode;
+  /** Called after anything here changes the group (name, campaigns). */
+  onChanged?: () => void;
+}) {
   const { t } = useTranslation();
   const localName = useLocalName();
   const { isPartner } = usePartnerPermissions();
@@ -96,6 +111,17 @@ export function GroupDetail({ groupId }: { groupId: string }) {
   const reload = useCallback(async () => {
     await Promise.all([load(), fetchDestinations()]);
   }, [load, fetchDestinations]);
+
+  // CH-421: another group picked - never show the last group's rows under it.
+  useEffect(() => {
+    setGroup(undefined);
+    setLines(null);
+    setPicked(new Set());
+    setSearch("");
+    setBuyer("all");
+    setCampaign("all");
+    setKind("all");
+  }, [groupId]);
 
   useEffect(() => {
     if (isPartner) return;
@@ -189,11 +215,13 @@ export function GroupDetail({ groupId }: { groupId: string }) {
     <div className="space-y-5">
       {/* Header */}
       <div className="space-y-3">
-        <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Link href={`${ROUTES.campaigns}/groups`} className="text-accent hover:underline">{t("cg.title")}</Link>
-          <span>/</span>
-          <span>{group.name}</span>
-        </nav>
+        {switcher ?? (
+          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Link href={`${ROUTES.campaigns}/groups`} className="text-accent hover:underline">{t("cg.title")}</Link>
+            <span>/</span>
+            <span>{group.name}</span>
+          </nav>
+        )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
@@ -210,14 +238,19 @@ export function GroupDetail({ groupId }: { groupId: string }) {
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{group.description || t("x415.subtitle")}</p>
           </div>
-          {canEdit && (
-            <div className="flex items-center gap-2">
+          {(canEdit || extraActions) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {extraActions}
+              {canEdit && (
+              <>
               <Button size="sm" variant="outline" onClick={() => setEditorOpen(true)}>
                 <Pencil className="h-3.5 w-3.5" /> {t("x415.editGroup")}
               </Button>
               <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setAdding(true)} disabled={!group.campaigns.length}>
                 <Plus className="h-4 w-4" /> {t("x408.addDestination")}
               </Button>
+              </>
+              )}
             </div>
           )}
         </div>
@@ -481,7 +514,10 @@ export function GroupDetail({ groupId }: { groupId: string }) {
             group={group}
             groups={allGroups}
             campaigns={campaigns}
-            onSaved={() => void reload()}
+            onSaved={() => {
+              void reload();
+              onChanged?.();
+            }}
           />
           <AddDestinationDrawer
             open={adding}
