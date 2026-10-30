@@ -15,7 +15,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHART_TOOLTIP_PROPS } from "@/lib/chart-tooltip";
 import { bucketDaily, bucketHourly } from "@/lib/dashboard-buckets";
-import { LAST_14_DAYS, TODAY_HOURLY } from "@/lib/mock/timeseries";
 import { formatNumber } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -34,7 +33,7 @@ const RANGES: Array<{ id: Range; label: string }> = [
 const BAR_COLOR = "var(--accent)";
 
 interface CallsChartProps {
-  /** When provided, the chart buckets from these calls instead of TODAY_HOURLY/LAST_14_DAYS. */
+  /** The calls to chart. None = an empty chart (CH-414: never sample data). */
   calls?: Call[];
 }
 
@@ -42,11 +41,12 @@ export function CallsChart({ calls }: CallsChartProps = {}) {
   const { t } = useTranslation();
   const [range, setRange] = React.useState<Range>("24h");
   const hourly = React.useMemo(
-    () => (calls ? bucketHourly(calls) : TODAY_HOURLY),
+    // CH-414: real calls only - no calls handed in means an empty chart, never samples.
+    () => bucketHourly(calls ?? []),
     [calls],
   );
   const daily = React.useMemo(
-    () => (calls ? bucketDaily(calls, 14) : LAST_14_DAYS),
+    () => bucketDaily(calls ?? [], 14),
     [calls],
   );
   const data =

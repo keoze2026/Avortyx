@@ -50,7 +50,9 @@ interface BuyersTableProps {
 
 /** The buyer's own daily cap is full: routing sends it nothing more today. */
 export function buyerCapHit(b: Buyer): boolean {
-  return b.dailyCap > 0 && (b.capUsedToday ?? b.callsToday) >= b.dailyCap;
+  // CH-414: only the server's own count of cap calls (Eastern day, counted
+  // calls only). No guess from other figures, so "Cap Hit" is always real.
+  return b.dailyCap > 0 && typeof b.capUsedToday === "number" && b.capUsedToday >= b.dailyCap;
 }
 
 export function BuyersTable({
@@ -249,7 +251,9 @@ function CallsCell({ calls }: { calls: number }) {
 function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
   const { t } = useTranslation();
   if (!(b.dailyCap > 0)) return <span className="text-xs text-muted-foreground/70">{t("x405.noCap")}</span>;
-  const used = b.capUsedToday ?? b.callsToday;
+  // CH-414: the server's count only; "—" if it did not send one.
+  const known = typeof b.capUsedToday === "number";
+  const used = known ? (b.capUsedToday as number) : 0;
   const pct = Math.min(100, (used / b.dailyCap) * 100);
   const n = b.tfnCount ?? 0;
   const left = Math.max(0, b.dailyCap - used);
@@ -262,20 +266,20 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
           <span className="flex items-baseline justify-between gap-2 text-xs tabular-nums">
             <span>
               <span className={cn("font-semibold", hit ? "text-[color:var(--warning)]" : "text-foreground")}>
-                {formatCalls(used)}
+                {known ? formatCalls(used) : "—"}
               </span>
               <span className={hit ? "text-[color:var(--warning)]" : "text-muted-foreground"}> / {formatCalls(b.dailyCap)}</span>
             </span>
             {hit ? (
               <span className="font-semibold text-[color:var(--warning)]">{t("x412.full")}</span>
-            ) : (
+            ) : known ? (
               <span className="text-muted-foreground">{t("x412.nLeft").replace("{n}", formatCalls(left))}</span>
-            )}
+            ) : null}
           </span>
           <span className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
             <span
               className={cn("block h-full rounded-full", hit ? "bg-[color:var(--warning)]" : "bg-accent")}
-              style={{ width: `${Math.max(3, pct)}%` }}
+              style={{ width: known ? `${Math.max(3, pct)}%` : "0%" }}
             />
           </span>
         </span>
@@ -285,13 +289,15 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
         <dl className="space-y-1">
           {[
             [t("x405.capFunds"), t("x405.nCalls").replace("{n}", formatCalls(b.dailyCap))],
-            [t("x405.used"), formatCalls(used)],
-            [t("x405.left"), formatCalls(left)],
+            [t("x405.used"), known ? formatCalls(used) : "—"],
+            [t("x405.left"), known ? formatCalls(left) : "—"],
             [
               t("x405.tfnCaps").replace("{n}", String(n)),
-              (b.tfnUncapped ?? 0) > 0
-                ? `${formatCalls(b.tfnCapTotal ?? 0)} · ${t("x405.tfnNoCap").replace("{n}", String(b.tfnUncapped))}`
-                : formatCalls(b.tfnCapTotal ?? 0),
+              b.tfnCount == null
+                ? "—"
+                : (b.tfnUncapped ?? 0) > 0
+                  ? `${formatCalls(b.tfnCapTotal ?? 0)} · ${t("x405.tfnNoCap").replace("{n}", String(b.tfnUncapped))}`
+                  : formatCalls(b.tfnCapTotal ?? 0),
             ],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3">

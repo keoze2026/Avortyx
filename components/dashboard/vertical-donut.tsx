@@ -6,13 +6,12 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { matchesCallStatusFilter } from "@/lib/call-status";
-import { TODAY_HOURLY } from "@/lib/mock/timeseries";
 import { formatNumber } from "@/lib/format";
 import type { Call } from "@/lib/types";
 
 interface VerticalDonutProps {
   /** When provided, success vs drop is counted from these calls. Otherwise the
-   *  numbers come from TODAY_HOURLY (matching the default-mode KPI block). */
+   *  donut is empty (CH-414: never sample numbers). */
   calls?: Call[];
   /** Ready-made totals (e.g. from the dashboard snapshot). Used ahead of
    *  `calls` when passed. */
@@ -44,9 +43,8 @@ export function VerticalDonut({ calls, totals }: VerticalDonutProps = {}) {
       const ok = calls.filter((c) => matchesCallStatusFilter(c, "connected")).length;
       return { total: all, completed: ok, dropped: Math.max(0, all - ok) };
     }
-    const all = TODAY_HOURLY.reduce((s, p) => s + p.calls, 0);
-    const ok = TODAY_HOURLY.reduce((s, p) => s + p.conversions, 0);
-    return { total: all, completed: ok, dropped: Math.max(0, all - ok) };
+    // CH-414: no sample numbers - nothing handed in means nothing to show.
+    return { total: 0, completed: 0, dropped: 0 };
   }, [calls, totals]);
 
   const slices = [

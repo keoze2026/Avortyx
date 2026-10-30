@@ -7,7 +7,7 @@ import { NewsFeed } from "@/components/news/news-feed";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
-import { MOCK_DAILY_NEWS, type NewsCategory, type NewsItem } from "@/lib/mock/news";
+import { type NewsCategory, type NewsItem } from "@/lib/mock/news";
 import { readDailySnapshot, writeDailySnapshot } from "@/lib/news-snapshots";
 import { uiLocaleTag } from "@/lib/format";
 
@@ -62,15 +62,14 @@ export default function DailyNewsPage() {
         writeDailySnapshot({ items: data.items, fetchedAt: data.fetchedAt });
       } else {
         // Every source failed and the server had nothing cached — keep
-        // whatever is on screen, or the fixture so the page isn't empty.
-        setItems((prev) => (prev.length > 0 ? prev : MOCK_DAILY_NEWS));
+        // whatever real stories are on screen. CH-414: never sample stories.
+        setItems((prev) => prev);
       }
       // The server answered from a stale batch and is refreshing behind
       // it — pull again shortly so the fresh batch lands without a reload.
       if (data.stale) window.setTimeout(() => void load(), 8_000);
     } catch (err) {
       setError(String(err));
-      setItems((prev) => (prev.length > 0 ? prev : MOCK_DAILY_NEWS));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -107,7 +106,7 @@ export default function DailyNewsPage() {
         }
       />
 
-      {error && items.length > 0 && (
+      {error && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-xs text-destructive">
           {t("toolsUI.news.daily.fetchError")}
         </div>
