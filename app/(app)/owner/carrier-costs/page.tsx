@@ -24,7 +24,6 @@ import { ShieldX } from "lucide-react";
 import { toast } from "sonner";
 
 import { CarrierStatements, type StatementCode } from "@/components/owner/carrier-statements";
-import { CompanyProfitCard } from "@/components/owner/company-profit-card";
 import { ExpensesCard } from "@/components/owner/expenses-card";
 import { RoutingCostCard } from "@/components/owner/routing-cost-card";
 import { Badge } from "@/components/ui/badge";
@@ -376,9 +375,8 @@ export default function CarrierCostsPage() {
       <CarrierStatements onEditRates={openEdit} refreshKey={refreshKey} />
 
       <div className="print:hidden space-y-6">
-        {/* Company profit before tax (CH-257/334), the day's expenses line by
-            line (CH-336) and routing on to buyers by day (CH-186). */}
-        <CompanyProfitCard />
+        {/* The day's expenses line by line (CH-336) and routing on to buyers
+            by day (CH-186). Company profit has its own page (CH-434). */}
         <ExpensesCard />
         <RoutingCostCard />
       </div>

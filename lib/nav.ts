@@ -41,6 +41,7 @@ import {
   Gift,
   ScanFace,
   CirclePlay,
+  TrendingUp,
 } from "lucide-react";
 
 import { ROUTES } from "./constants";
@@ -151,6 +152,8 @@ export const NAV_GROUPS: NavGroup[] = [
       // CH-424 (Sir's sidebar design): the owner pages head Account.
       { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true },
       { label: "Carrier Costs", nameKey: "nav.carrierCosts", href: "/owner/carrier-costs", icon: Landmark, roles: ["admin"], superuserOnly: true },
+      // CH-434 (Sir's design): what customers paid us minus what carriers charge us.
+      { label: "Company Profit", nameKey: "nav.companyProfit", href: "/owner/company-profit", icon: TrendingUp, roles: ["admin"], superuserOnly: true },
       { label: "Referrals",    nameKey: "nav.referrals",    href: ROUTES.referrals,    icon: Gift,        roles: ALL_ROLES },
       { label: "Trust Engine", nameKey: "nav.trustEngine",  href: ROUTES.kyc,          icon: ScanFace,    roles: ALL_ROLES },
       { label: "Integrations", nameKey: "nav.integrations", href: ROUTES.integrations, icon: Plug,        roles: ["admin"] },

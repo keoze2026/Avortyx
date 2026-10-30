@@ -139,8 +139,8 @@ interface CdrRow {
 
 /* ─── Periods ──────────────────────────────────────────────────────── */
 
-type Preset = "today" | "yesterday" | "week" | "month" | "custom";
-type Range = { start: string; end: string };
+export type Preset = "today" | "yesterday" | "week" | "month" | "custom";
+export type Range = { start: string; end: string };
 
 function shift(iso: string, days: number) {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -148,7 +148,7 @@ function shift(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-function rangeOf(p: Exclude<Preset, "custom">): Range {
+export function rangeOf(p: Exclude<Preset, "custom">): Range {
   const today = easternToday();
   if (p === "today") return { start: today, end: today };
   if (p === "yesterday") return { start: shift(today, -1), end: shift(today, -1) };
@@ -166,7 +166,7 @@ function dayDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`);
 }
 
-function rangeLabel(r: Range): string {
+export function rangeLabel(r: Range): string {
   const tag = uiLocaleTag();
   const a = dayDate(r.start);
   const b = dayDate(r.end);
@@ -223,11 +223,6 @@ export function CarrierStatements({ onEditRates, refreshKey = 0 }: { onEditRates
   useEffect(() => {
     void load(range);
   }, [load, range, refreshKey]);
-
-  const pick = (p: Exclude<Preset, "custom">) => {
-    setPreset(p);
-    setRange(rangeOf(p));
-  };
 
   const exportCdrs = async () => {
     setExporting(true);
@@ -286,56 +281,7 @@ export function CarrierStatements({ onEditRates, refreshKey = 0 }: { onEditRates
           <p className="mt-1 text-sm text-muted-foreground">{t("x433.subtitle")}</p>
         </div>
         <div className="print-hide flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5" role="tablist">
-            {(["today", "yesterday", "week", "month"] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                role="tab"
-                aria-selected={preset === p}
-                onClick={() => pick(p)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                  preset === p ? "bg-accent/15 text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t(`x433.preset.${p}`)}
-              </button>
-            ))}
-          </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                <CalendarDays className="h-3.5 w-3.5" /> {label}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-auto space-y-2 p-3">
-              <div className="text-xs font-medium">{t("x433.pickDates")}</div>
-              <div className="flex items-center gap-2">
-                <DatePicker
-                  aria-label={t("routingCost.from")}
-                  value={range.start}
-                  max={today}
-                  today={today}
-                  onChange={(start) => {
-                    setPreset("custom");
-                    setRange((r) => ({ start, end: r.end < start ? start : r.end }));
-                  }}
-                />
-                <span className="text-muted-foreground">–</span>
-                <DatePicker
-                  aria-label={t("routingCost.to")}
-                  value={range.end}
-                  min={range.start}
-                  today={today}
-                  onChange={(end) => {
-                    setPreset("custom");
-                    setRange((r) => ({ ...r, end }));
-                  }}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
+          <PeriodBar preset={preset} range={range} onChange={(p, r) => { setPreset(p); setRange(r); }} />
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => void exportCdrs()} disabled={exporting}>
             {t("x433.exportCdrs")}
           </Button>
@@ -803,5 +749,68 @@ function Merged({ data, label }: { data: Statement; label: string }) {
         </table>
       </div>
     </section>
+  );
+}
+
+/** Today / Yesterday / This Week / This Month and a date range (CH-433/434). */
+export function PeriodBar({
+  preset,
+  range,
+  onChange,
+}: {
+  preset: Preset;
+  range: Range;
+  onChange: (preset: Preset, range: Range) => void;
+}) {
+  const { t } = useTranslation();
+  const today = easternToday();
+  const label = rangeLabel(range);
+  return (
+    <>
+    <div className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5" role="tablist">
+      {(["today", "yesterday", "week", "month"] as const).map((p) => (
+        <button
+          key={p}
+          type="button"
+          role="tab"
+          aria-selected={preset === p}
+          onClick={() => onChange(p, rangeOf(p))}
+          className={cn(
+            "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+            preset === p ? "bg-accent/15 text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {t(`x433.preset.${p}`)}
+        </button>
+      ))}
+    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+          <CalendarDays className="h-3.5 w-3.5" /> {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-auto space-y-2 p-3">
+        <div className="text-xs font-medium">{t("x433.pickDates")}</div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            aria-label={t("routingCost.from")}
+            value={range.start}
+            max={today}
+            today={today}
+            onChange={(start) => onChange("custom", { start, end: range.end < start ? start : range.end })}
+          />
+          <span className="text-muted-foreground">–</span>
+          <DatePicker
+            aria-label={t("routingCost.to")}
+            value={range.end}
+            min={range.start}
+            today={today}
+            onChange={(end) => onChange("custom", { ...range, end })}
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+    </>
   );
 }
