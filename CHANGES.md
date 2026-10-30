@@ -1383,3 +1383,12 @@ Sir's Call Summary design, with his notes kept:
   - kept as now (Sir): TCL / ACL in our current format (04:43), numbers
     centred under their headings (not pushed right), the Totals Live figure
     in white, not green
+
+## CH-429 - Call Summary: campaigns next to each publisher
+**2026-10-30 - Reports**
+
+Sir, 30 Oct: "Next to it camps name which was assigned to that publisher -
+very small in size just for quick view - arrow not needed". On the Publisher
+tab each publisher's name now carries, in small grey letters, the campaigns
+its tracking numbers are assigned to (from Phone Numbers; expired numbers
+left out). Up to three are shown, "+N" for more; hover shows all. No arrow.
