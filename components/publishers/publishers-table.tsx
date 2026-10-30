@@ -75,7 +75,7 @@ export function PublishersTable({
         <Table className="min-w-[960px] table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[22%] !pl-9 text-left">{t("networkUI.common.name")}</TableHead>
+              <TableHead className="w-[22%] !pl-[41px] text-left">{t("networkUI.common.name")}</TableHead>
               {columns.hourly && <TableHead className="w-[13%] !text-left">{t("networkUI.common.hourly")}</TableHead>}
               {columns.daily && <TableHead className="w-[13%] !pl-[30px] !text-left">{t("networkUI.common.daily")}</TableHead>}
               {columns.monthly && <TableHead className="w-[13%] !text-left">{t("networkUI.common.monthly")}</TableHead>}
@@ -149,7 +149,7 @@ export function PublishersTable({
                   )}
 
                   {columns.status && (
-                    <TableCell className="!text-left" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="!pl-[15px] !text-left" onClick={(e) => e.stopPropagation()}>
                       <span className="inline-flex items-center gap-2">
                         <Switch
                           checked={isActive}
