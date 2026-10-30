@@ -1475,3 +1475,17 @@ to show a cut on any screen. The figures over the candles lost their dark
 outline, which cut dark gaps into the green line and into the next figure
 (177 / 179); on a narrow chart the figures get smaller so they never run
 into each other. Colours, heights and the line are unchanged.
+
+## CH-436 - Names in the chosen language everywhere
+**2026-10-30 - Languages**
+
+"Please change everything to Chinese, even the names." Names were already
+shown in the chosen language's script in most places (campaign C-09 as
+西-09, publisher PDSO A as 皮迪艾斯欧埃), but 59 places still showed them as
+typed - the Phone Numbers Name column (PDSO A next to 皮迪艾斯欧埃), calls
+table, routing, IVR, shields, campaign groups, dashboard cards, team and
+settings lists, owner pages and drop-down lists. They now follow the same
+rule; hovering a name shows it as typed. Search, filters and exports keep
+the real names. Kept as typed on purpose: the name you must type to delete
+a workspace, integration brand names (Slack ...), TFNs and carrier codes
+(HYU, KMQ, XLR).
