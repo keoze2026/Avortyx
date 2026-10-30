@@ -1420,3 +1420,24 @@ Sir, 30 Oct, on the Call Summary:
     Profit is green above zero, red below, white at zero
   - "Capital letters call summary": the title is CALL SUMMARY again (CH-430
     is undone)
+
+## CH-433 - Carrier Costs as statements (Sir's design)
+**2026-10-30 - Owner**
+
+Sir, 30 Oct: Carrier Costs in his design, Today and Month, "make sure all
+metrics are 100% correct". Needs backend CH-433.
+  - Today / Yesterday / This Week / This Month (the whole calendar month) or
+    any dates; Export CDRs (every call with each leg's billed seconds and
+    cost, CSV); Audit PDF (prints the statements only, dark on white)
+  - cards: total cost, each carrier with its share, TFNs (live / deleted)
+  - one statement per carrier (XOLO: XLR, HYU, XHR and termination; Freedom:
+    KMQ): TFNs, TFN fees ("10 x $5.00 / 31"), calls, TCL, minutes, ACL,
+    minutes cost ("1,301.05 x $0.0150"), monthly charges ("$350 / 31"),
+    totals, the rate line and how minutes are billed
+  - TFN list per carrier: All / Live / Deleted, search, Export CSV, added and
+    deleted dates, rate and what each TFN is billed for the period
+  - the carriers merged: TFN fees, minutes, monthly charges, total, share
+  - warnings when a code has no rate or TFNs have no carrier
+  - every figure from the server, nothing estimated in the browser; edit
+    rates from the pencil by each code; profit, expenses, routing cost and
+    TFNs without a carrier stay below
