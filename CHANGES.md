@@ -1508,3 +1508,12 @@ column the count before "% connected" was as wide as its digits (265, 78,
 10), so the text started at a different place on each row. The count now
 sits in a fixed-width box, right-aligned, so every "% connected" starts at
 the same line.
+
+## CH-439 - Publishers: even header spacing
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: "Fix header spacing under publishers". The columns took
+whatever width the browser gave them, so there was a wide gap after Daily and
+Status sat right against Global. Hourly, Daily, Monthly, Global, Status and
+Actions now have set widths (10 / 24 / 10 / 10 / 12 / 8 % of the table, Name
+takes the rest), and Status starts a little further from Global.
