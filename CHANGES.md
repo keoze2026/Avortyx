@@ -1307,3 +1307,19 @@ comes from the server (needs backend CH-423):
   - the list loads every publisher, page by page
   - until the server sends the counts, the figures show a dash - never zeros or
     guesses
+
+## CH-424 - Sidebar in Sir's design
+**2026-10-30 - Sidebar**
+
+Sir's sidebar design. Our logo and the Avortyx name stay; from Workspace down:
+  - plain group headings: Overview, Traffic, Network, Suppression, Insights,
+    Markets, Account; Owner and Carrier Costs now head Account
+  - the open page is a soft rounded pill (no blue edge)
+  - Live Monitor shows a full green LIVE pill instead of the dot
+  - the foot shows the account: initials, My Account and the role (Owner,
+    Admin, Buyer, Publisher), with Profile, Settings and Sign Out
+  - the old foot numbers (247 active, 14 ms) were fixed, not live - removed
+  - the button beside the logo collapses it; the drag strip on the edge is gone
+  - collapsed: icons only, a line between groups, and the page name with its
+    shortcut on hover (G then a key: G R = Reports, G D = Dashboard ...)
+  - shortcuts work anywhere except while typing in a field
