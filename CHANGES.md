@@ -1539,3 +1539,10 @@ Daily, Monthly, Global, Status and Actions are now the same width (13% each,
 Name 22%), all read from the left, so every header starts the same distance
 from the one before. Daily shows the bar and count, with "% connected" under
 them (still in one straight line).
+
+## CH-443 - Publishers: Name and Daily moved right
+**2026-10-31 - Publishers**
+
+Sir, 31 Oct: "Move name and Daily like 1/2 inch to the right". The Name and
+Daily columns (header and contents) start about half an inch (48px) further
+right. Everything else is as in CH-441.
