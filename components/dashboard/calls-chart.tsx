@@ -134,7 +134,7 @@ export function CallsChart({ calls }: CallsChartProps = {}) {
               <Tooltip
                 {...CHART_TOOLTIP_PROPS}
                 cursor={false}
-                formatter={(value: number) => [formatNumber(value), "Calls"]}
+                formatter={(value: number) => [formatNumber(value), t("dashboard.calls")]}
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.full ?? ""}
               />
               <Bar

@@ -12,6 +12,7 @@ import { create } from "zustand";
 
 import { spamService, type Shield } from "@/lib/api/services/spam.service";
 import type { VoipShieldEntry } from "@/lib/mock/suppression";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface VoipShieldState {
   shields: VoipShieldEntry[];
@@ -161,6 +162,6 @@ export const useVoipShieldStore = create<VoipShieldState>()((set, get) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "VoIP shield request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

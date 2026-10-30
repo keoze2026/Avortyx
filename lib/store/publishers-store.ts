@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/services/publishers.service";
 import { forgetPartner, markInvited } from "@/lib/partner-access";
 import type { PayoutRecord, PayoutStatus, Publisher, PublishersSummary, PublisherStatus } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface PublishersState {
   publishers: Publisher[];
@@ -184,6 +185,6 @@ export const usePublishersStore = create<PublishersState>()((set, get) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Publishers request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

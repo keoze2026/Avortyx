@@ -25,6 +25,7 @@ import type {
   AnomalySeverity,
   RecommendationKind,
 } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface AiInsightsState {
   recommendations: AiRecommendation[];
@@ -220,6 +221,6 @@ export const useAiInsightsStore = create<AiInsightsState>()((set) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "AI Insights request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

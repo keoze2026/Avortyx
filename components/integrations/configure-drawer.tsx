@@ -301,7 +301,7 @@ export function ConfigureDrawer({ app, onOpenChange, onDisconnect }: Props) {
                 {hydrating && (
                   <div className="mb-4 flex items-center gap-2 text-[11px] text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Loading saved configuration…
+                    {t("x427.loadingConfig")}
                   </div>
                 )}
 

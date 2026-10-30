@@ -21,6 +21,7 @@ import {
   type TcpaProviderType,
   type TcpaShieldEntry,
 } from "@/lib/mock/suppression";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 const META_PREFIX = "__tcpa_meta__|";
 
@@ -245,6 +246,6 @@ export const useTcpaShieldStore = create<TcpaShieldState>()((set, get) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "TCPA shield request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

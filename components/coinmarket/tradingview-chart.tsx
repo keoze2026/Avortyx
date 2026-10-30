@@ -4,6 +4,7 @@ import * as React from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useTheme } from "next-themes";
 
+import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -34,6 +35,7 @@ const DEFAULT_HEIGHT = "clamp(540px, calc(100svh - 15rem), 1100px)";
  * toggle so the chart doesn't reload.
  */
 export function TradingViewChart({ symbol, interval = "60", height = DEFAULT_HEIGHT }: Props) {
+  const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme === "light" ? "light" : "dark";
   const [full, setFull] = React.useState(false);
@@ -105,8 +107,8 @@ export function TradingViewChart({ symbol, interval = "60", height = DEFAULT_HEI
       <button
         type="button"
         onClick={() => setFull((v) => !v)}
-        aria-label={full ? "Exit full screen" : "Full screen"}
-        title={full ? "Exit full screen (Esc)" : "Full screen"}
+        aria-label={full ? t("x427.exitFullScreen") : t("x427.fullScreen")}
+        title={full ? t("x427.exitFullScreenEsc") : t("x427.fullScreen")}
         className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
       >
         {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

@@ -31,6 +31,7 @@ import type {
   WebhookHeader,
   WebhookStatus,
 } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 const PER_WEBHOOK_DELIVERY_PAGE_SIZE = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -214,6 +215,6 @@ export const useWebhooksStore = create<WebhooksState>()((set, get) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Webhooks request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

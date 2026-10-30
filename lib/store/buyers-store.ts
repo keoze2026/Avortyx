@@ -14,6 +14,7 @@ import { buyersService } from "@/lib/api/services/buyers.service";
 import { forgetPartner, markInvited } from "@/lib/partner-access";
 import { createLocalSwitches, inBatches, type ManyResult } from "@/lib/store/local-switches";
 import type { Buyer, BuyerStatus } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 /**
  * Per-buyer /stats requests, a few at a time.
@@ -269,6 +270,6 @@ export const useBuyersStore = create<BuyersState>()((set, get) => ({
 const switches = createLocalSwitches();
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Buyers request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

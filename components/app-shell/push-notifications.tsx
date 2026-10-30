@@ -31,6 +31,7 @@ import {
 } from "@/lib/store/push-notifications-store";
 import { SEVERITY_DOT, type NotificationSeverity } from "@/lib/mock/notifications";
 import { cn } from "@/lib/utils";
+import { translateServerMessage } from "@/lib/i18n/server-messages";
 
 const DEFAULT_DURATION_MS = 6000;
 
@@ -67,7 +68,7 @@ export function PushNotifications() {
 }
 
 function BannerCard({ banner }: { banner: PushNotification }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const localName = useLocalName();
   const router = useRouter();
   const dismiss = usePushNotificationsStore((s) => s.dismiss);
@@ -116,7 +117,7 @@ function BannerCard({ banner }: { banner: PushNotification }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
           <h4 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
-            {banner.title}
+            {translateServerMessage(banner.title, locale)}
           </h4>
           <button
             type="button"
@@ -133,7 +134,7 @@ function BannerCard({ banner }: { banner: PushNotification }) {
           </div>
         )}
         <p className="mt-1 line-clamp-2 text-[12px] text-muted-foreground/90">
-          {banner.body}
+          {translateServerMessage(banner.body, locale)}
         </p>
         {banner.action && (
           <div className="mt-2 flex justify-end">

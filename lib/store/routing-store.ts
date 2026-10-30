@@ -14,6 +14,7 @@ import { routingService } from "@/lib/api/services/routing.service";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { flattenPlan, reconstructPlan } from "@/lib/routing-bridge";
 import type { RoutingEdge, RoutingNode, RoutingPlan, RoutingPlanStatus } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface RoutingState {
   plans: RoutingPlan[];
@@ -235,6 +236,6 @@ function destinationNumberForBuyer(buyerId: string): string | undefined {
 }
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Routing request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

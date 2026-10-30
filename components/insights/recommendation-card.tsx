@@ -39,6 +39,7 @@ import {
 import { formatRelativeTimeT } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { translateServerMessage } from "@/lib/i18n/server-messages";
 
 const KIND_META: Record<
   RecommendationKind,
@@ -107,7 +108,7 @@ interface Props {
 }
 
 export function RecommendationCard({ recommendation: r, onAction }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const meta = KIND_META[r.kind];
   const Icon = meta.icon;
   const [expanded, setExpanded] = useState(false);
@@ -120,11 +121,12 @@ export function RecommendationCard({ recommendation: r, onAction }: Props) {
   };
   const translatedTitle = translateOrFallback(
     `toolsUI.insights.recommendations.data.${r.id}.title`,
-    r.title,
+    // CH-427: the server's own sentences, in the chosen language.
+    translateServerMessage(r.title, locale),
   );
   const translatedBody = translateOrFallback(
     `toolsUI.insights.recommendations.data.${r.id}.body`,
-    r.body,
+    translateServerMessage(r.body, locale),
   );
   const translatedImpactLabel = r.impact.labelKey
     ? t(r.impact.labelKey)
@@ -244,7 +246,7 @@ export function RecommendationCard({ recommendation: r, onAction }: Props) {
               className="overflow-hidden"
             >
               <div className="mt-3 rounded-lg border border-border bg-secondary/30 p-3 text-xs text-foreground">
-                {r.rationale}
+                {translateServerMessage(r.rationale, locale)}
               </div>
             </motion.div>
           )}

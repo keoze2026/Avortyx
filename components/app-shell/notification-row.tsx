@@ -11,13 +11,14 @@ import {
   type NotificationItem,
 } from "@/lib/mock/notifications";
 import { cn } from "@/lib/utils";
+import { translateServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * One notification row — used both in the topbar dropdown list and on the
  * dedicated /notifications page. Layout is identical across both surfaces.
  */
 export function NotificationRow({ item }: { item: NotificationItem }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const localName = useLocalName();
   // "AI Insights" is the feed's own default source; anything else is a name the team typed.
   const sourceLabel = item.source === "AI Insights" ? t("nav.aiInsights") : localName(item.source);
@@ -60,7 +61,7 @@ export function NotificationRow({ item }: { item: NotificationItem }) {
               titleColorClass,
             )}
           >
-            {item.title}
+            {translateServerMessage(item.title, locale)}
           </h4>
           <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{item.time}</span>
         </div>
@@ -101,7 +102,7 @@ export function NotificationRow({ item }: { item: NotificationItem }) {
           </div>
         )}
 
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/90">{item.body}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/90">{translateServerMessage(item.body, locale)}</p>
 
         {(typeof item.delta === "number" || item.action) && (
           <div className="mt-2 flex items-center gap-2">

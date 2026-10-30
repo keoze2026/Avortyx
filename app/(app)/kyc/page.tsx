@@ -42,6 +42,7 @@ import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { cn } from "@/lib/utils";
 import { formatLocalDateTime } from "@/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
+import { countryLabel } from "@/components/numbers/country-label";
 import { tFor } from "@/lib/i18n";
 import { useLocaleStore } from "@/lib/store/locale-store";
 
@@ -350,7 +351,7 @@ export default function KycPage() {
                 label={t("trafficUI.common.country")}
                 value={country}
                 onChange={setCountry}
-                placeholder="United States"
+                placeholder={countryLabel("United States")}
                 required
               />
               <Field

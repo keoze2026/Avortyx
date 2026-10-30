@@ -33,6 +33,7 @@ import type {
   WorkspaceActivityEvent,
 } from "@/lib/mock/workspace-activity";
 import type { DeviceSession } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 export interface WorkspaceRole {
   id: string;
@@ -289,6 +290,6 @@ export const useWorkspaceMetaStore = create<WorkspaceMetaState>()((set, get) => 
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Workspace meta request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

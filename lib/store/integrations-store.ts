@@ -13,6 +13,7 @@ import { create } from "zustand";
 
 import { integrationsService } from "@/lib/api/services/integrations.service";
 import type { IntegrationApp } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface IntegrationsState {
   apps: IntegrationApp[];
@@ -88,6 +89,6 @@ export const useIntegrationsStore = create<IntegrationsState>()((set, get) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Integrations request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

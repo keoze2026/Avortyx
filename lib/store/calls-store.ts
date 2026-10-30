@@ -22,6 +22,7 @@ import {
   type TimeSeriesPoint,
 } from "@/lib/api/services/analytics.service";
 import type { Call } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface CallsState {
   /** Most recent N calls — used by the dashboard's chart components. */
@@ -144,6 +145,6 @@ export const useCallsStore = create<CallsState>()((set) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Calls request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

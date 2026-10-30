@@ -21,6 +21,7 @@ import {
   notificationsService,
   type NotificationRule,
 } from "@/lib/api/services/notifications.service";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 /** Delivery channels the backend accepts on a rule. `in_app` was rejected
  *  as of 2026-09-22 — in-app banners come from the pop-up alert
@@ -139,6 +140,6 @@ export const useNotificationsRulesStore = create<NotificationsRulesState>()(
 );
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Notification rules request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

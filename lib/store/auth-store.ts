@@ -17,6 +17,7 @@ import { authService } from "@/lib/api/services/auth.service";
 import { clearTokens, hasTokens } from "@/lib/api/tokens";
 import { useSecurityStore } from "@/lib/store/security-store";
 import type { Role, User } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface AuthState {
   user: User | null;
@@ -290,6 +291,6 @@ export const useAuthStore = create<AuthState>()(
 );
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Authentication failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

@@ -24,6 +24,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatRelativeTime } from "@/lib/format";
 import type { Anomaly, AnomalySeverity } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { translateServerMessage } from "@/lib/i18n/server-messages";
 
 const SEVERITY: Record<
   AnomalySeverity,
@@ -120,8 +121,8 @@ export function AnomalyStream() {
                       · {a.scope.name}
                     </span>
                   </div>
-                  <div className="mt-1 text-sm font-medium">{a.title}</div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{a.body}</p>
+                  <div className="mt-1 text-sm font-medium">{translateServerMessage(a.title, locale)}</div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{translateServerMessage(a.body, locale)}</p>
                 </div>
 
                 {/* Delta + relative time */}

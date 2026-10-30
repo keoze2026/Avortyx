@@ -11,6 +11,7 @@ import { create } from "zustand";
 
 import { numbersService, poolsService } from "@/lib/api/services/numbers.service";
 import type { NumberPool, NumberStatus, TrackingNumber } from "@/lib/types";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface NumbersState {
   numbers: TrackingNumber[];
@@ -258,6 +259,6 @@ export const useNumbersStore = create<NumbersState>()((set, get) => ({
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Numbers request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

@@ -26,6 +26,7 @@ import {
   type AlertEvent,
   type AlertPreferences,
 } from "@/lib/api/services/notifications.service";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface AlertPreferencesState {
   events: AlertEvent[];
@@ -46,7 +47,8 @@ interface AlertPreferencesState {
 }
 
 function messageFromError(e: unknown): string {
-  return e instanceof Error ? e.message : "Couldn't save alert preferences";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }
 
 export const useAlertPreferencesStore = create<AlertPreferencesState>()(

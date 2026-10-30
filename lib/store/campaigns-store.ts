@@ -14,6 +14,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { createLocalSwitches, inBatches, type ManyResult } from "@/lib/store/local-switches";
 import type { Campaign, CampaignStatus } from "@/lib/types";
 import { cloneName } from "../api/services/clone";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface CampaignsState {
   campaigns: Campaign[];
@@ -293,6 +294,6 @@ async function copyRouting(sourceCampaignId: string, targetCampaignId: string): 
 }
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Campaigns request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

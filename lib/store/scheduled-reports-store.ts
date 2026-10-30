@@ -34,6 +34,7 @@ import {
   type ReportFormat as WireFormat,
   type ScheduledReport as WireReport,
 } from "@/lib/api/services/scheduled-reports.service";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
@@ -364,6 +365,6 @@ export function dateToWeekday(d: Date): Weekday {
 }
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Scheduled reports request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }

@@ -16,6 +16,18 @@
  *   { "message": "...", "code": "..." }   (custom error handlers)
  */
 
+import { translateServerMessage } from "@/lib/i18n/server-messages";
+import { useLocaleStore } from "@/lib/store/locale-store";
+
+/** CH-427: a server or fallback message in the language chosen in the app. */
+function inLanguage(text: string): string {
+  try {
+    return translateServerMessage(text, useLocaleStore.getState().locale);
+  } catch {
+    return text;
+  }
+}
+
 export interface FieldError {
   field: string;
   message: string;
@@ -102,15 +114,16 @@ export class ApiError extends Error {
     const raw = (this.message ?? "").trim();
     // HTML page (e.g. Django's default 500 debug page) → never readable.
     if (!raw || looksLikeHtml(raw) || looksLikeTraceback(raw)) {
-      return fallbackForStatus(this.status);
+      return inLanguage(fallbackForStatus(this.status));
     }
     // Single long line with no spaces (e.g. base64 token, stack trace dump) →
     // unhelpful, fall back.
     if (raw.length > 240 && !raw.includes(" ")) {
-      return fallbackForStatus(this.status);
+      return inLanguage(fallbackForStatus(this.status));
     }
-    // Otherwise the backend's message is at least plausibly readable.
-    return raw;
+    // Otherwise the backend's message is at least plausibly readable - in
+    // the chosen language when it is one the portal knows (CH-427).
+    return inLanguage(raw);
   }
 }
 
@@ -206,11 +219,11 @@ export function isNetworkFailure(e: unknown): boolean {
 export function friendlyErrorMessage(e: unknown, fallback = "Something went wrong"): string {
   if (e instanceof ApiError) return e.friendlyMessage;
   // Say what happened instead of printing the browser's "Failed to fetch".
-  if (isNetworkFailure(e)) return "Couldn't reach the server. Check your internet connection and try again.";
+  if (isNetworkFailure(e)) return inLanguage("Couldn't reach the server. Check your internet connection and try again.");
   if (e instanceof Error) {
     const raw = e.message ?? "";
-    if (!raw || looksLikeHtml(raw) || looksLikeTraceback(raw)) return fallback;
-    return raw;
+    if (!raw || looksLikeHtml(raw) || looksLikeTraceback(raw)) return inLanguage(fallback);
+    return inLanguage(raw);
   }
-  return fallback;
+  return inLanguage(fallback);
 }

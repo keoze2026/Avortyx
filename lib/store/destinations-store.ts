@@ -18,6 +18,7 @@ import {
 import type { Destination } from "@/lib/types";
 import { useUIStore } from "@/lib/store/ui-store";
 import { cloneName } from "../api/services/clone";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 /** The time zone selected in the portal (same one Reports and the Dashboard
  *  use). Sent with the destinations list and stats so Daily and Monthly
@@ -129,8 +130,8 @@ function withEnabled(list: Destination[], changes: Map<string, boolean>): Destin
 }
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Destinations request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }
 
 export const useDestinationsStore = create<DestinationsState>()((set, get) => ({

@@ -23,6 +23,7 @@ import {
   type BlockedNumberEntry,
   type BlockedNumberScope,
 } from "@/lib/mock/suppression";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 interface BlockedNumbersState {
   numbers: BlockedNumberEntry[];
@@ -205,6 +206,6 @@ export const useBlockedNumbersStore = create<BlockedNumbersState>()((set, get) =
 }));
 
 function messageFromError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return "Blocked numbers request failed";
+  // CH-427: the server's message in the language chosen in the app.
+  return friendlyErrorMessage(e);
 }
