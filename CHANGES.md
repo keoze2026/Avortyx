@@ -1368,3 +1368,18 @@ the server. Now:
     saved configuration…", the Calls chart tooltip, the KYC country example
   - a server message the portal does not know yet is shown as sent, never
     blanked out; English is unchanged
+
+## CH-428 - Call Summary in Sir's design
+**2026-10-30 - Reports**
+
+Sir's Call Summary design, with his notes kept:
+  - CALL SUMMARY stays in capitals as we have it, with "By Campaign" /
+    "By Publisher" ... beside it naming the open tab
+  - tabs as plain words; the open one in white with a white line
+  - Calls / Performance / Money headings over their columns
+  - the sorted column is shaded from top to bottom
+  - zeros (0, 0.0%, 00:00, $0.00) show quieter than real figures; Profit is
+    green only above zero, red below
+  - kept as now (Sir): TCL / ACL in our current format (04:43), numbers
+    centred under their headings (not pushed right), the Totals Live figure
+    in white, not green
