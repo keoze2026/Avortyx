@@ -5,7 +5,7 @@
 
 import { http } from "@/lib/api/http";
 import type { Paginated } from "@/lib/api/types";
-import type { Publisher, PublisherStatus } from "@/lib/types";
+import type { Publisher, PublisherStatus, PublishersSummary } from "@/lib/types";
 
 /* ─── Wire shapes ─────────────────────────────────────────────────────── */
 
@@ -21,6 +21,24 @@ interface PublisherListWire {
    *  confirmed this field is returned (`organization_name`) and must NOT
    *  be sent in any create/update body. */
   organizationName?: string;
+  /* CH-423: its calls, counted by the server (publishers/usage.py). */
+  callsHour?: number;
+  payableToday?: number;
+  sentToday?: number;
+  answeredToday?: number;
+  payableMonth?: number;
+  payableGlobal?: number;
+  campaigns?: Array<{ id: string; name: string }> | Array<{ campaignId: string; campaignName?: string }>;
+  tfnCount?: number;
+}
+
+interface PublisherListPage extends Paginated<PublisherListWire> {
+  summary?: {
+    payableToday: number;
+    payableByHour: number[];
+    pendingPayouts: number;
+    pendingPayoutAmount: string | number;
+  };
 }
 
 interface PublisherWire extends PublisherListWire {
@@ -30,7 +48,6 @@ interface PublisherWire extends PublisherListWire {
   organizationId?: string;
   createdById?: string | null;
   cap?: { daily?: number; monthly?: number; concurrency?: number } | null;
-  campaigns?: Array<{ campaignId: string; campaignName?: string }>;
 }
 
 /* ─── Mappers ─────────────────────────────────────────────────────────── */
@@ -69,6 +86,22 @@ function listWireToPublisher(w: PublisherListWire): Publisher {
     numbersAssigned: 0,
     campaignIds: [],
     createdAt: Date.parse(w.createdAt) || Date.now(),
+    // CH-423: only when the server sent its counts.
+    usage:
+      typeof w.payableToday === "number"
+        ? {
+            callsHour: w.callsHour ?? 0,
+            payableToday: w.payableToday,
+            sentToday: w.sentToday ?? 0,
+            answeredToday: w.answeredToday ?? 0,
+            payableMonth: w.payableMonth ?? 0,
+            payableGlobal: w.payableGlobal ?? 0,
+            campaigns: ((w.campaigns ?? []) as Array<{ id?: string; name?: string }>)
+              .filter((c) => c.id)
+              .map((c) => ({ id: String(c.id), name: c.name ?? "" })),
+            tfnCount: w.tfnCount ?? 0,
+          }
+        : undefined,
   };
 }
 
@@ -78,16 +111,30 @@ function detailWireToPublisher(w: PublisherWire): Publisher {
     description: w.description,
     // Prefer human-readable name; fall back to the uuid for legacy responses.
     organization: w.organizationName ?? w.organizationId ?? "",
-    campaignIds: (w.campaigns ?? []).map((c) => c.campaignId),
+    campaignIds: ((w.campaigns ?? []) as Array<{ campaignId?: string }>).map((c) => c.campaignId ?? "").filter(Boolean),
   };
 }
 
 /* ─── Public service ──────────────────────────────────────────────────── */
 
 export const publishersService = {
-  async list(query: { page?: number; pageSize?: number } = {}): Promise<Paginated<Publisher>> {
-    const res = await http.get<Paginated<PublisherListWire>>("/api/publishers/", { query });
-    return { ...res, items: res.items.map(listWireToPublisher) };
+  async list(
+    query: { page?: number; pageSize?: number } = {},
+  ): Promise<Paginated<Publisher> & { summary?: PublishersSummary }> {
+    const res = await http.get<PublisherListPage>("/api/publishers/", { query });
+    const s = res.summary;
+    return {
+      ...res,
+      items: res.items.map(listWireToPublisher),
+      summary: s
+        ? {
+            payableToday: s.payableToday ?? 0,
+            payableByHour: Array.isArray(s.payableByHour) ? s.payableByHour : [],
+            pendingPayouts: s.pendingPayouts ?? 0,
+            pendingPayoutAmount: Number(s.pendingPayoutAmount) || 0,
+          }
+        : undefined,
+    };
   },
 
   async get(id: string): Promise<Publisher> {

@@ -78,11 +78,12 @@ import { buyerDashboard } from "./buyer-dashboard";
 import { buyersPage } from "./buyers-page";
 import { campaignPage } from "./campaign-page";
 import { campaignGroupPage } from "./campaign-group-page";
+import { publishersPage } from "./publishers-page";
 import { tfnEndToEnd } from "./tfn-end-to-end";
 import { expenses } from "./expenses";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod, expenses, tfnToday, tfnCheckToday, tfnTestRunner, teamReport, tfnEndToEnd, serverUpdate, tfnNotReady, carrierWatch, numberLifetime, tfnTestPassed, destinationColumns, buyerCapWarning, dashboardCards, buyersCard, buyerDashboard, buyersPage, campaignPage, campaignGroupPage];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod, expenses, tfnToday, tfnCheckToday, tfnTestRunner, teamReport, tfnEndToEnd, serverUpdate, tfnNotReady, carrierWatch, numberLifetime, tfnTestPassed, destinationColumns, buyerCapWarning, dashboardCards, buyersCard, buyerDashboard, buyersPage, campaignPage, campaignGroupPage, publishersPage];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {

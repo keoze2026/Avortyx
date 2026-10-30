@@ -16,10 +16,12 @@ import {
   type PayoutWire,
 } from "@/lib/api/services/publishers.service";
 import { forgetPartner, markInvited } from "@/lib/partner-access";
-import type { PayoutRecord, PayoutStatus, Publisher, PublisherStatus } from "@/lib/types";
+import type { PayoutRecord, PayoutStatus, Publisher, PublishersSummary, PublisherStatus } from "@/lib/types";
 
 interface PublishersState {
   publishers: Publisher[];
+  /** CH-423: the page's totals from the server; null until (or unless) sent. */
+  summary: PublishersSummary | null;
   /** Per-publisher payout cache. Empty until `fetchPayouts(id)` resolves. */
   payoutsByPublisher: Record<string, PayoutRecord[]>;
   loading: boolean;
@@ -84,6 +86,7 @@ function wireToPayout(w: PayoutWire, publisherId: string, idx: number): PayoutRe
 
 export const usePublishersStore = create<PublishersState>()((set, get) => ({
   publishers: [],
+  summary: null,
   payoutsByPublisher: {},
   loading: false,
   error: null,
@@ -92,8 +95,15 @@ export const usePublishersStore = create<PublishersState>()((set, get) => ({
   fetch: async () => {
     set({ loading: true, error: null });
     try {
-      const page = await publishersService.list({ page: 1, pageSize: 200 });
-      set({ publishers: page.items, loading: false, hydrated: true });
+      // CH-423: every publisher, page by page (the server's pages hold 200).
+      const first = await publishersService.list({ page: 1, pageSize: 200 });
+      const items = [...first.items];
+      for (let n = 2; items.length < (first.total ?? 0) && n <= 50; n++) {
+        const next = await publishersService.list({ page: n, pageSize: first.items.length || 200 });
+        if (!next.items.length) break;
+        items.push(...next.items);
+      }
+      set({ publishers: items, summary: first.summary ?? null, loading: false, hydrated: true });
     } catch (e) {
       set({ loading: false, error: messageFromError(e) });
     }
