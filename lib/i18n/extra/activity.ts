@@ -20,7 +20,7 @@ export const activity: ExtraTranslations = {
     "activity.detail.profileUpdated": "Profile updated",
     "activity.detail.workspaceCreated": "Workspace created",
     "activity.detail.recorded": "Recorded",
-    "activity.col.ip": "IP address",
+    "activity.col.ip": "IP Address",
     "activity.type.role": "role",
     "activity.type.workspace_role": "role",
     "activity.type.membership": "membership",

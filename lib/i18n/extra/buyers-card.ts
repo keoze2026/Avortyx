@@ -14,7 +14,7 @@ export const buyersCard: ExtraTranslations = {
     "x399.all": "All",
     "x399.live": "Live",
     "x399.idle": "Idle",
-    "x399.manage": "Manage buyers",
+    "x399.manage": "Manage Buyers",
     "x399.colBuyer": "Buyer",
     "x399.colConcurrency": "Concurrency",
     "x399.liveMax": "live / max",

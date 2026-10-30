@@ -168,7 +168,7 @@ export function TrackingNumbersSection({
       <div className="flex items-center justify-between gap-3 border-b border-border pr-5">
         <SectionTitle
           icon={Phone}
-          title={t("x408.trackingNumbers")}
+          title={t("x409.trackingTitle")}
           hint={t("x409.trackingHint")}
           className="pb-4"
         />

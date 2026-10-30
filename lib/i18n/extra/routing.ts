@@ -14,7 +14,7 @@ export const routing: ExtraTranslations = {
     "settings.rail.advancedRouting.eyebrow": "Call flows",
     "settings.rail.advancedRouting.intro":
       "Plans with conditions: time of day, caller location, caller ID, tags, overflow. For everyday setup (a campaign and the TFN its calls ring), use Routing in the menu.",
-    "settings.rail.advancedRouting.simpleLink": "Open simple Routing",
+    "settings.rail.advancedRouting.simpleLink": "Open Simple Routing",
   },
   ru: {
     "nav.advancedRouting": "Расширенная маршрутизация",

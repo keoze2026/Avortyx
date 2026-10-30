@@ -4,16 +4,16 @@ import type { ExtraTranslations } from "./types";
 
 export const loginForm: ExtraTranslations = {
   en: {
-    "login.welcomeBack": "Welcome back",
+    "login.welcomeBack": "Welcome Back",
     "login.password": "Password",
     "login.signIn": "Sign in",
     "login.signingIn": "Signing in…",
-    "login.twoFactor.title": "Two-factor required",
+    "login.twoFactor.title": "Two-Factor Required",
     "login.twoFactor.description": "Open Google Authenticator and enter the current 6-digit code for",
-    "login.twoFactor.label": "Authenticator code",
+    "login.twoFactor.label": "Authenticator Code",
     "login.twoFactor.hint": "Codes refresh every 30 seconds. Lost your device? Contact your admin.",
     "login.twoFactor.verify": "Verify and continue",
-    "login.twoFactor.back": "← Back to sign-in",
+    "login.twoFactor.back": "← Back to Sign-in",
     "login.intro.lead": "Pay-per-call",
     "login.intro.middle": " routing and live markets, in ",
     "login.intro.accent": "one workspace.",

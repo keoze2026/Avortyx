@@ -19,7 +19,7 @@ export const trafficUi: ExtraTranslations = {
     "trafficUi.numbers.provision.areaCode": "Area Code (optional)",
     "trafficUi.numbers.provision.tollFreeExample": "e.g. 844, 800, 888",
     "trafficUi.numbers.provision.areaCodeExample": "e.g. 512, 213",
-    "trafficUi.numbers.provision.resultsToFetch": "Results to fetch",
+    "trafficUi.numbers.provision.resultsToFetch": "Results to Fetch",
     "trafficUi.numbers.provision.perMonth": "${price}/mo",
     "trafficUi.numbers.provision.searching": "Searching…",
     "trafficUi.numbers.provision.searchNumbers": "Search Numbers",

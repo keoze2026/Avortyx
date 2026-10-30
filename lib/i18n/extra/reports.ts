@@ -65,7 +65,7 @@ export const reports: ExtraTranslations = {
     "toolsUI.reports.pinGate.tryAgainIn": "Too many wrong attempts. Try again in {time}.",
     "toolsUI.reports.pinGate.checkingShort": "Checking…",
     "toolsUI.reports.page.loadError": "Couldn't load calls for this range",
-    "toolsUI.reports.page.backToDashboard": "Back to dashboard",
+    "toolsUI.reports.page.backToDashboard": "Back to Dashboard",
     "toolsUI.reports.page.showDonut": "Show total calls donut",
     "toolsUI.reports.page.showHourly": "Show hourly distribution",
     // More fail reasons the backend writes (switch dial results, campaign limits, screening).

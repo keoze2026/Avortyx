@@ -5,8 +5,8 @@ export const lineSwitch: ExtraTranslations = {
   en: {
     "lineSwitch.offBy": "Switched off by {name}, {when}",
     "lineSwitch.onBy": "Switched on by {name}, {when}",
-    "lineSwitch.switchedOff": "Switched off",
-    "lineSwitch.switchedOn": "Switched on",
+    "lineSwitch.switchedOff": "Switched Off",
+    "lineSwitch.switchedOn": "Switched On",
   },
   ru: {
     "lineSwitch.offBy": "Выключил(а) {name}, {when}",

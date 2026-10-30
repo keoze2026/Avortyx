@@ -6,8 +6,8 @@ export const profitPeriod: ExtraTranslations = {
     "datePicker.today": "Today",
     "datePicker.prevMonth": "Previous month",
     "datePicker.nextMonth": "Next month",
-    "routingCost.aht": "Average call",
-    "routingCost.perCall": "Cost per call",
+    "routingCost.aht": "Average Call",
+    "routingCost.perCall": "Cost per Call",
     "routingCost.howCounted":
       "{minutes} minutes x {rate} a minute = {cost}. Every call we forwarded to a buyer, counted as in the reports; each call's seconds rounded as set under Edit rate. An estimate to check the carrier's invoice against; the monthly fee is billed separately.",
     "owner.profit.loadFailed": "Couldn't load the company profit. Try again.",

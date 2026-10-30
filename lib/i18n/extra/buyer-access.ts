@@ -6,7 +6,7 @@ export const buyerAccess: ExtraTranslations = {
     "partnerMoney.earnings": "Earnings",
     "partnerMoney.spend": "Spend",
     "partnerMoney.notShown": "Not shown for your account.",
-    "buyerAccess.sectionTitle": "Buyer access",
+    "buyerAccess.sectionTitle": "Buyer Access",
     "buyerAccess.manage": "Manage access for this buyer",
     "buyerAccess.timezone": "Buyer time zone",
     "buyerAccess.permissionsTitle": "Permissions",

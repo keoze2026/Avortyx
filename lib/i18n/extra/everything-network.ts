@@ -42,7 +42,7 @@ export const everythingNetwork: ExtraTranslations = {
     "x318.network.city.atlanta": "Atlanta",
     "x318.network.numbers.geo": "Geo",
     "x318.network.numbers.conv": "Conv.",
-    "x318.network.numbers.lastCall": "Last call",
+    "x318.network.numbers.lastCall": "Last Call",
     "x318.network.unit.minutes": "{n}m",
     "x318.network.unit.minSec": "{m}m {s}s",
   },

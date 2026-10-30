@@ -6,7 +6,7 @@ export const gettingStarted: ExtraTranslations = {
     "nav.gettingStarted": "Getting Started",
     "gettingStarted.title": "Getting Started",
     "gettingStarted.description": "Watch how to set up Avortyx and go live, step by step: from your first publisher to your first call.",
-    "gettingStarted.videoTitle": "Go live step by step",
+    "gettingStarted.videoTitle": "Go Live Step by Step",
     "gettingStarted.videoSubtitle": "Avortyx portal walkthrough",
     "gettingStarted.noVideo": "Your browser cannot play this video.",
     "gettingStarted.chapters": "Chapters",

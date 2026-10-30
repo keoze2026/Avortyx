@@ -3,7 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const buyerDashboard: ExtraTranslations = {
   en: {
-    "x404.topDest": "Top destinations",
+    "x404.topDest": "Top Destinations",
     "x404.topDestToday": "Calls today · share of the top 6",
     "x404.topDestOn": "Calls on {date} · share of the top 6",
     "x404.titleDest": "Destinations",

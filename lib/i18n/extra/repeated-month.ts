@@ -6,7 +6,7 @@ export const repeatedAndMonth: ExtraTranslations = {
     "toolsUI.reports.callLog.columns.repeated": "Repeated",
     "toolsUI.reports.callLog.repeatedYes": "Yes",
     "toolsUI.reports.callLog.repeatedNo": "No",
-    "monthPicker.thisMonth": "This month",
+    "monthPicker.thisMonth": "This Month",
     "monthPicker.prevYear": "Previous year",
     "monthPicker.nextYear": "Next year",
   },

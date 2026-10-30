@@ -3,7 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const tfnTestRunner: ExtraTranslations = {
   en: {
-    "x343.by.header": "Run by",
+    "x343.by.header": "Run By",
     "x343.by.main": "Main account",
     "x343.by.team": "Team",
     "x343.by.publisher": "Publisher",

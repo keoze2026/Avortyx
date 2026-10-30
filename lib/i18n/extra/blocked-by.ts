@@ -3,7 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const blockedBy: ExtraTranslations = {
   en: {
-    "blockedBy.column": "Blocked by",
+    "blockedBy.column": "Blocked By",
     "blockedBy.main": "Main account",
     "blockedBy.publisher": "Publisher",
     "blockedBy.buyer": "Buyer",

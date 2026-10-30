@@ -3,7 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const publisherBlocks: ExtraTranslations = {
   en: {
-    "publisherBlocks.title": "Blocked numbers",
+    "publisherBlocks.title": "Blocked Numbers",
     "publisherBlocks.description": "Callers blocked here are rejected on this publisher's numbers only. Other publishers still take them.",
     "publisherBlocks.placeholder": "Caller number, e.g. +15551234567",
     "publisherBlocks.block": "Block",
@@ -21,7 +21,7 @@ export const publisherBlocks: ExtraTranslations = {
     "publisherBlocks.recentLoading": "Loading recent callers...",
     "publisherBlocks.recentEmpty": "No recent callers match. You can still type the number.",
     "publisherBlocks.recentCalls": "{count} calls",
-    "publisherBlocks.recentCall": "1 call",
+    "publisherBlocks.recentCall": "1 Call",
     "publisherBlocks.pageDescription": "Block callers on your traffic. A blocked caller is rejected on your numbers only.",
     "publisherBlocks.notEnabled": "Blocking numbers is not turned on for your account. Ask your admin to enable Block Numbers.",
     "publisherBlocks.noPublisher": "Your publisher record could not be loaded. Please refresh the page.",

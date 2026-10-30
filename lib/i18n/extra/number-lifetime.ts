@@ -3,7 +3,7 @@ import type { ExtraTranslations } from "./types";
 
 export const numberLifetime: ExtraTranslations = {
   en: {
-    "x369.endsOn": "Stops taking calls on {date}",
+    "x369.endsOn": "Stops Taking Calls on {date}",
   },
   ru: {
     "x369.endsOn": "Перестаёт принимать звонки {date}",
