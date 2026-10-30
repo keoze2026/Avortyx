@@ -1599,3 +1599,16 @@ page's fields and button. The form works as before (token, password, signed
 in, on to the dashboard); a too-short or mismatched password now shows under
 its field. The page moved from app/(auth) to app/(login)/set-password; its
 address is unchanged.
+
+## CH-450 - Every page beside sign-in in the current design
+**2026-10-31 - Sign in / invites**
+
+Sir, 31 Oct: Forgot password still showed the old page with the rings. Forgot
+password, Reset password, Request access (/signup) and the role invite
+(/invite/<role>/<token>) now sit in the sign-in screen's frame, the same as
+/login and Set Your Password (CH-449): backdrop, Avortyx AI, intro, footer,
+font and the glass card. Forgot and Reset password use the sign-in page's
+fields and button; Forgot password fills in the email typed on /login. The
+old split layout (app/(auth)) is removed, so no page shows it any more, and
+CH-447's font rule with it. Addresses are unchanged, so links already emailed
+still work.
