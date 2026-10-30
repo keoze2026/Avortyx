@@ -1340,3 +1340,12 @@ Since CH-424 the sidebar has its own open/close button beside the logo, so the
 top bar showed a second one doing the same thing. On a computer the top bar's
 button is gone; on a phone it stays, because there the sidebar is hidden and
 that button is the only way to open it.
+
+## CH-427 - Sidebar: Coin Market and Daily News icons
+**2026-10-30 - Sidebar**
+
+Sir, 30 Oct: "These two icons are not same". Coin Market and Daily News did not
+match his picture: Coin Market was the tilted Bitcoin coin logo and Daily News a
+newspaper folded on the left. Now Coin Market is an upright B on a stem and
+Daily News a page of three lines folded on the right, the same size and line
+weight as every other sidebar icon. Nothing else changed.
