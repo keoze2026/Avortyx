@@ -1323,3 +1323,12 @@ Sir's sidebar design. Our logo and the Avortyx name stay; from Workspace down:
   - collapsed: icons only, a line between groups, and the page name with its
     shortcut on hover (G then a key: G R = Reports, G D = Dashboard ...)
   - shortcuts work anywhere except while typing in a field
+
+## CH-425 - Add Destination: bigger destination list
+**2026-10-30 - Campaign Groups**
+
+Sir, 30 Oct: "Destination put more down - Campaign, Routing and Limits can be
+in bottom". In Add Destination the destination list now grows to fill the
+drawer's spare height, so many more lines show at once, and Which Campaigns,
+Routing and Limits sit at the bottom above the buttons. On a short screen the
+list keeps its old height and the drawer scrolls as before.
