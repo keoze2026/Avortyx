@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 
 import { InvitePublisherDialog } from "@/components/publishers/invite-publisher-dialog";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { PublishersTable } from "@/components/publishers/publishers-table";
 import {
   ALL_PUBLISHER_COLUMNS,
@@ -85,6 +86,8 @@ export default function PublishersPage() {
   const { t } = useTranslation();
   const localName = useLocalName();
   const { can } = usePermissions();
+  // CH-448 (Sir, 31 Oct): a publisher or buyer login does not invite publishers.
+  const { isPartner } = usePartnerPermissions();
   const publishers = usePublishersStore((s) => s.publishers);
   const summary = usePublishersStore((s) => s.summary);
   const loading = usePublishersStore((s) => s.loading);
@@ -186,7 +189,7 @@ export default function PublishersPage() {
         title={t("networkUI.publishers.page.title")}
         description={t("networkUI.publishers.page.description")}
         actions={
-          can("traffic-sources", "edit") ? (
+          !isPartner && can("traffic-sources", "edit") ? (
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setInviteOpen(true)}>
               {t("x423.invite")}
             </Button>
@@ -346,7 +349,7 @@ export default function PublishersPage() {
         </>
       )}
 
-      <InvitePublisherDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      {!isPartner && <InvitePublisherDialog open={inviteOpen} onOpenChange={setInviteOpen} />}
     </>
   );
 }
