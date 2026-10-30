@@ -1,8 +1,11 @@
-/** CH-408: the campaign page's top and Routing rules in Sir's design. */
+/** CH-408: the campaign page's top and Routing rules in Sir's design.
+ *  CH-409: the Tracking numbers card title. */
 import type { ExtraTranslations } from "./types";
 
 export const campaignPage: ExtraTranslations = {
   en: {
+    "x409.trackingHint": "Numbers publishers send calls to.",
+    "x409.addNumber": "Add number",
     "x408.allCampaigns": "All campaigns",
     "x408.publisher": "Publisher",
     "x408.copyId": "Copy ID",
@@ -32,6 +35,8 @@ export const campaignPage: ExtraTranslations = {
     "x408.sumDiffNote": "never a line already reached",
   },
   ru: {
+    "x409.trackingHint": "Номера, на которые издатели отправляют звонки.",
+    "x409.addNumber": "Добавить номер",
     "x408.allCampaigns": "Все кампании",
     "x408.publisher": "Издатель",
     "x408.copyId": "Копировать ID",
@@ -61,6 +66,8 @@ export const campaignPage: ExtraTranslations = {
     "x408.sumDiffNote": "никогда на линию, где он уже был",
   },
   ja: {
+    "x409.trackingHint": "パブリッシャーが通話を送る番号。",
+    "x409.addNumber": "番号を追加",
     "x408.allCampaigns": "すべてのキャンペーン",
     "x408.publisher": "パブリッシャー",
     "x408.copyId": "IDをコピー",
@@ -90,6 +97,8 @@ export const campaignPage: ExtraTranslations = {
     "x408.sumDiffNote": "既に到達した回線には送らない",
   },
   zh: {
+    "x409.trackingHint": "发布商发送来电的号码。",
+    "x409.addNumber": "添加号码",
     "x408.allCampaigns": "所有活动",
     "x408.publisher": "发布商",
     "x408.copyId": "复制 ID",

@@ -48,6 +48,7 @@ import { useCampaignPageStore } from "@/lib/store/campaign-page-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LiveBadge } from "@/components/campaigns/settings/live-badge";
+import { SectionTitle } from "@/components/campaigns/settings/section-title";
 import { liveFor, useLiveCounts } from "@/lib/use-live-counts";
 
 type RoutingOption = "Standard" | "Menu" | "Call Flow" | "Revenue";
@@ -884,31 +885,6 @@ function ruleStatusLabel(t: (key: string) => string, status: string | null): str
   const value = status ?? "off";
   const key = RULE_STATUS_KEYS[value];
   return key ? t(key) : value;
-}
-
-/** A card's title in Sir's design: an icon tile, the title, one line under it. */
-function SectionTitle({
-  icon: Icon,
-  title,
-  hint,
-  className,
-}: {
-  icon: React.ElementType;
-  title: string;
-  hint: string;
-  className?: string;
-}) {
-  return (
-    <div className={cn("flex items-start gap-3 px-5 pb-3 pt-5", className)}>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div>
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      </div>
-    </div>
-  );
 }
 
 /**

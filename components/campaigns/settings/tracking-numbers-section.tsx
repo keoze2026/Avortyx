@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Hash, Pencil, Plus, Unlink } from "lucide-react";
+import { Hash, Pencil, Phone, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { AttachTrackingNumberDialog } from "@/components/campaigns/settings/attach-tracking-number-dialog";
@@ -31,6 +31,7 @@ import { useNumbersStore } from "@/lib/store/numbers-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LiveBadge } from "@/components/campaigns/settings/live-badge";
+import { SectionTitle } from "@/components/campaigns/settings/section-title";
 import { liveFor, useLiveCounts } from "@/lib/use-live-counts";
 
 export function TrackingNumbersSection({
@@ -160,14 +161,17 @@ export function TrackingNumbersSection({
   const payoutCh = longest(numbers.map((n) => formatCurrency(n.payoutPerCall ?? 0, true)));
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wider">{t("trafficUI.campaigns.settings.trackingNumbers.title")}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {t("trafficUI.campaigns.settings.trackingNumbers.description")}
-          </p>
-        </div>
+    <section>
+      {/* CH-409 (Sir): one card like Destinations - icon title on top, the
+          table under it. Column headings stay in capitals. */}
+      <Card className="overflow-hidden p-0">
+      <div className="flex items-center justify-between gap-3 border-b border-border pr-5">
+        <SectionTitle
+          icon={Phone}
+          title={t("x408.trackingNumbers")}
+          hint={t("x409.trackingHint")}
+          className="pb-4"
+        />
         {!readOnly && (
           <div className="flex items-center gap-2">
             {selectedIds.length > 0 && (
@@ -180,14 +184,15 @@ export function TrackingNumbersSection({
                 entity={t("campaignNumbers.bulk.entity")}
               />
             )}
-            <Button size="sm" onClick={() => setAttachOpen(true)}>
-              <Plus className="h-4 w-4" /> {t("trafficUI.campaigns.settings.trackingNumbers.add")}
+            <Button size="sm" variant="outline" onClick={() => setAttachOpen(true)}>
+              <Plus className="h-4 w-4" /> {t("x409.addNumber")}
             </Button>
           </div>
         )}
       </div>
 
       {numbers.length === 0 ? (
+        <div className="p-5">
         <EmptyState
           icon={Hash}
           tone="violet"
@@ -201,8 +206,9 @@ export function TrackingNumbersSection({
             )
           }
         />
+        </div>
       ) : (
-        <Card className="overflow-hidden p-0">
+        <>
           {/* Even columns (Sir, 23 Oct): a fixed layout with one width for every
               data column, and every heading and value centred under it. The
               widths used to follow each column's content, so the headings sat
@@ -246,8 +252,9 @@ export function TrackingNumbersSection({
                         />
                       </TableCell>
                     )}
-                    <TableCell className="text-center font-mono text-xs whitespace-nowrap">
-                      {e164}
+                    {/* Sir: digits only (18776691938), in JetBrains Mono like the design. */}
+                    <TableCell className="text-center font-mono text-[13px] font-medium tabular-nums tracking-wide text-foreground whitespace-nowrap">
+                      {e164.replace(/^\+/, "")}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className="capitalize">
@@ -351,8 +358,9 @@ export function TrackingNumbersSection({
               })}
             </TableBody>
           </Table>
-        </Card>
+        </>
       )}
+      </Card>
 
       {/* Edit dialog — opens when a row's pencil icon is clicked. */}
       {!readOnly && (
