@@ -38,14 +38,13 @@ import {
   ShieldCheck,
   Ban,
   FileText,
-  Bitcoin,
-  Newspaper,
   Gift,
   ScanFace,
   CirclePlay,
 } from "lucide-react";
 
 import { ROUTES } from "./constants";
+import { CoinMarketIcon, DailyNewsIcon } from "./nav-icons";
 import type { Role } from "./types/auth";
 import type { PartnerPermissionKey } from "@/hooks/use-partner-permissions";
 
@@ -141,8 +140,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Markets",
     labelKey: "x424.section.markets",
     items: [
-      { label: "Coin Market", nameKey: "nav.coinMarket", href: ROUTES.cryptoNews, icon: Bitcoin,   roles: ALL_ROLES },
-      { label: "Daily News",  nameKey: "nav.dailyNews",  href: ROUTES.dailyNews,  icon: Newspaper, roles: ALL_ROLES },
+      { label: "Coin Market", nameKey: "nav.coinMarket", href: ROUTES.cryptoNews, icon: CoinMarketIcon, roles: ALL_ROLES },
+      { label: "Daily News",  nameKey: "nav.dailyNews",  href: ROUTES.dailyNews,  icon: DailyNewsIcon, roles: ALL_ROLES },
     ],
   },
   {
