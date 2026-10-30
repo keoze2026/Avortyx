@@ -165,6 +165,8 @@ interface EntitySummaryWire {
   totalDurationSec?: number;
   totalCost?: number | string;
   billableMinutes?: number;
+  /** CH-408: callers counted once (campaign rows only). */
+  uniqueCallers?: number;
 }
 
 /** One chart point of /api/analytics/snapshot `time_series`. `period` carries
@@ -259,6 +261,8 @@ export interface EntitySummary {
   totalProfit?: number;
   totalCost?: number;
   billableMinutes?: number;
+  /** CH-408: callers counted once; undefined from a backend without it. */
+  uniqueCallers?: number;
 }
 
 export type SummaryEntity = "campaign" | "buyer" | "publisher" | "carrier";
@@ -523,6 +527,7 @@ function entitySummaryWireToSummary(w: EntitySummaryWire, entity: SummaryEntity)
     totalProfit: firstOf(w.totalProfit),
     totalCost: firstOf(w.totalCost),
     billableMinutes: firstOf(w.billableMinutes),
+    uniqueCallers: firstOf(w.uniqueCallers),
   };
 }
 

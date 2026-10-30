@@ -14,9 +14,11 @@ const VARIANT: Record<CampaignStatus, React.ComponentProps<typeof Badge>["varian
 interface Props {
   status: CampaignStatus;
   className?: string;
+  /** CH-408: a dot on every status, not only Active (the campaign page). */
+  dot?: boolean;
 }
 
-export function CampaignStatusBadge({ status, className }: Props) {
+export function CampaignStatusBadge({ status, className, dot = false }: Props) {
   const { t } = useTranslation();
   const LABEL: Record<CampaignStatus, string> = {
     active: t("trafficUI.campaigns.status.active"),
@@ -32,6 +34,7 @@ export function CampaignStatusBadge({ status, className }: Props) {
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
         </span>
       )}
+      {dot && status !== "active" && <span className="inline-flex h-1.5 w-1.5 rounded-full bg-current" />}
       {LABEL[status]}
     </Badge>
   );

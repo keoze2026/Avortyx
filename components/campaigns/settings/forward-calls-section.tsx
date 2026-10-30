@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, Pencil, Plus, Unlink } from "lucide-react";
+import { ArrowRight, CornerDownRight, ExternalLink, Loader2, Pencil, Plus, Share2, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
@@ -44,6 +44,7 @@ import { ROUTES } from "@/lib/constants";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
+import { useCampaignPageStore } from "@/lib/store/campaign-page-store";
 import { formatCurrency, toE164 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LiveBadge } from "@/components/campaigns/settings/live-badge";
@@ -302,6 +303,13 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     });
   }, [routed, allDestinations]);
 
+  // CH-408: the header's Destinations tile counts these lines.
+  const setRoutedCount = useCampaignPageStore((s) => s.setRouted);
+  useEffect(() => {
+    if (!routedLoaded) return;
+    setRoutedCount(campaignId, { total: destinations.length, on: destinations.filter((d) => d.enabled).length });
+  }, [routedLoaded, destinations, campaignId, setRoutedCount]);
+
   /** Switch the campaign's routing back on (a paused / draft rule drops every call). */
   const turnRoutingOn = async () => {
     if (!ruleId) return;
@@ -503,104 +511,122 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   };
 
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-[13px] font-semibold uppercase tracking-wider">{t("trafficUI.campaigns.settings.forward.title")}</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {t("trafficUI.campaigns.settings.forward.description")}
-        </p>
-      </div>
-
-      <Card className="space-y-5 p-5">
-        <ChoiceRow
-          label={t("trafficUI.campaigns.settings.forward.routingOption")}
-          description={t("trafficUI.campaigns.settings.forward.routingOptionHint")}
-          value={routing}
-          options={ROUTING_OPTIONS}
-          labels={routingLabel}
-          onChange={setRouting}
+    <section className="space-y-6">
+      {/* CH-408: Routing rules in Sir's design - two columns, and a line
+          saying where a repeat caller goes with the settings as they are. */}
+      <Card className="p-0">
+        <SectionTitle
+          icon={CornerDownRight}
+          title={t("x408.routingRules")}
+          hint={t("x408.routingRulesHint")}
         />
-        <ChoiceRow
-          label={t("trafficUI.campaigns.settings.forward.duplicateHandling")}
-          description={t("trafficUI.campaigns.settings.forward.duplicateHandlingHint")}
-          value={duplicate}
-          options={DUPLICATE_OPTIONS}
-          labels={duplicateLabel}
-          disabled={!dupRoutingLoaded}
-          onChange={(v) => {
-            const prev = duplicate;
-            setDuplicate(v);
-            void saveDuplicateHandling({ duplicateHandling: v.toLowerCase() }, () => setDuplicate(prev));
-          }}
-        />
-        <ChoiceRow
-          label={t("trafficUI.campaigns.settings.forward.directionScope")}
-          description={t("trafficUI.campaigns.settings.forward.directionScopeHint")}
-          value={direction}
-          options={DIRECTION_OPTIONS}
-          labels={directionLabel}
-          disabled={!dupRoutingLoaded}
-          onChange={(v) => {
-            const prev = direction;
-            setDirection(v);
-            void saveDuplicateHandling({ duplicateDirection: v.toLowerCase() }, () => setDirection(prev));
-          }}
-        />
-        <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
+        <div className="grid gap-x-10 px-5 lg:grid-cols-2">
           <div>
-            <div className="text-xs font-medium">{t("trafficUI.campaigns.settings.forward.strictMode")}</div>
-            <div className="text-[11px] text-muted-foreground">{t("trafficUI.campaigns.settings.forward.strictModeHint")}</div>
-          </div>
-          <Switch className="data-[state=checked]:bg-accent" checked={strict} disabled={!dupRoutingLoaded} onCheckedChange={(on) => { setStrict(on); void saveDuplicateHandling({ duplicateStrict: on }, () => setStrict(!on)); }} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
-        </div>
-        <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
-          <div>
-            <div className="text-xs font-medium">{t("y.fwd.blockDup")}</div>
-            <div className="text-[11px] text-muted-foreground">
-              {t("y.fwd.blockDupHint")}
-            </div>
-            {dupBlock && (
-              <div className="mt-2 flex items-center gap-2 text-[11px]">
-                <span className="text-muted-foreground">{t("y.fwd.blockRepeatFor")}</span>
-                <Input
-                  type="number"
-                  min={1}
-                  max={MAX_DUPLICATE_HOURS}
-                  value={dupHours}
-                  disabled={!dupLoaded || dupSaving}
-                  onChange={(e) => setDupHours(e.target.value)}
-                  onBlur={() => {
-                    // Only save when the number actually changed.
-                    const next = Math.min(MAX_DUPLICATE_HOURS, Math.max(1, Math.floor(Number(dupHours) || 24)));
-                    if (next !== dupSavedHours) void saveDuplicate(true, dupHours);
-                    else setDupHours(String(dupSavedHours));
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                  }}
-                  aria-label={t("y.fwd.dupWindowAria")}
-                  className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span className="text-muted-foreground">{t("y.fwd.hoursUpTo")}</span>
+            <ChoiceRow
+              label={t("trafficUI.campaigns.settings.forward.routingOption")}
+              description={t("trafficUI.campaigns.settings.forward.routingOptionHint")}
+              value={routing}
+              options={ROUTING_OPTIONS}
+              labels={routingLabel}
+              onChange={setRouting}
+            />
+            <ChoiceRow
+              label={t("trafficUI.campaigns.settings.forward.directionScope")}
+              description={t("trafficUI.campaigns.settings.forward.directionScopeHint")}
+              value={direction}
+              options={DIRECTION_OPTIONS}
+              labels={directionLabel}
+              disabled={!dupRoutingLoaded}
+              onChange={(v) => {
+                const prev = direction;
+                setDirection(v);
+                void saveDuplicateHandling({ duplicateDirection: v.toLowerCase() }, () => setDirection(prev));
+              }}
+            />
+            <div className="flex items-start justify-between gap-3 border-t border-border py-3.5">
+              <div>
+                <div className="text-[13px] font-medium">{t("y.fwd.blockDup")}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {t("y.fwd.blockDupHint")}
+                </div>
+              {dupBlock && (
+                <div className="mt-2 flex items-center gap-2 text-[11px]">
+                  <span className="text-muted-foreground">{t("y.fwd.blockRepeatFor")}</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={MAX_DUPLICATE_HOURS}
+                    value={dupHours}
+                    disabled={!dupLoaded || dupSaving}
+                    onChange={(e) => setDupHours(e.target.value)}
+                    onBlur={() => {
+                      // Only save when the number actually changed.
+                      const next = Math.min(MAX_DUPLICATE_HOURS, Math.max(1, Math.floor(Number(dupHours) || 24)));
+                      if (next !== dupSavedHours) void saveDuplicate(true, dupHours);
+                      else setDupHours(String(dupSavedHours));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                    aria-label={t("y.fwd.dupWindowAria")}
+                    className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="text-muted-foreground">{t("y.fwd.hoursUpTo")}</span>
+                </div>
+              )}
               </div>
-            )}
+              <Switch
+                className="data-[state=checked]:bg-accent"
+                checked={dupBlock}
+                disabled={!dupLoaded || dupSaving}
+                onCheckedChange={(on) => void saveDuplicate(on, dupHours)}
+                aria-label={t("y.fwd.blockDup")}
+              />
+            </div>
           </div>
-          <Switch
-            className="data-[state=checked]:bg-accent"
-            checked={dupBlock}
-            disabled={!dupLoaded || dupSaving}
-            onCheckedChange={(on) => void saveDuplicate(on, dupHours)}
-            aria-label={t("y.fwd.blockDup")}
-          />
+          <div>
+            <ChoiceRow
+              label={t("trafficUI.campaigns.settings.forward.duplicateHandling")}
+              description={t("trafficUI.campaigns.settings.forward.duplicateHandlingHint")}
+              value={duplicate}
+              options={DUPLICATE_OPTIONS}
+              labels={duplicateLabel}
+              disabled={!dupRoutingLoaded}
+              onChange={(v) => {
+                const prev = duplicate;
+                setDuplicate(v);
+                void saveDuplicateHandling({ duplicateHandling: v.toLowerCase() }, () => setDuplicate(prev));
+              }}
+            />
+            <div className="flex items-center justify-between gap-3 border-t border-border py-3.5">
+              <div>
+                <div className="text-[13px] font-medium">{t("trafficUI.campaigns.settings.forward.strictMode")}</div>
+                <div className="text-[11px] text-muted-foreground">{t("trafficUI.campaigns.settings.forward.strictModeHint")}</div>
+              </div>
+              <Switch className="data-[state=checked]:bg-accent" checked={strict} disabled={!dupRoutingLoaded} onCheckedChange={(on) => { setStrict(on); void saveDuplicateHandling({ duplicateStrict: on }, () => setStrict(!on)); }} aria-label={t("trafficUI.campaigns.settings.forward.toggleStrict")} />
+            </div>
+          </div>
         </div>
+        {dupRoutingLoaded && dupLoaded && (
+          <RepeatCallerSummary
+            t={t}
+            handling={duplicate}
+            direction={direction}
+            blockHours={dupBlock ? dupSavedHours : null}
+          />
+        )}
+        {!(dupRoutingLoaded && dupLoaded) && <div className="pb-5" />}
       </Card>
 
       {/* Destinations priority table */}
       <Card className="overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border px-6 py-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            {t("trafficUI.campaigns.settings.forward.routedDestinations")}
-          </div>
+        <div className="flex items-center justify-between gap-3 border-b border-border pr-5">
+          <SectionTitle
+            icon={Share2}
+            title={t("x408.destinations")}
+            hint={t("x408.destinationsHint")}
+            className="pb-4"
+          />
           <div className="flex items-center gap-2">
             {selectedRows.length > 0 && (
               <BulkActionsBar
@@ -612,9 +638,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                 entity={t("routedBulk.entity")}
               />
             )}
-            <Button size="sm" disabled={!routedLoaded} onClick={() => setAttachOpen(true)}>
+            <Button size="sm" variant="outline" disabled={!routedLoaded} onClick={() => setAttachOpen(true)}>
               {routedLoaded ? <Plus className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}{" "}
-              {t("trafficUI.common.add")}
+              {t("x408.addDestination")}
             </Button>
           </div>
         </div>
@@ -860,6 +886,82 @@ function ruleStatusLabel(t: (key: string) => string, status: string | null): str
   return key ? t(key) : value;
 }
 
+/** A card's title in Sir's design: an icon tile, the title, one line under it. */
+function SectionTitle({
+  icon: Icon,
+  title,
+  hint,
+  className,
+}: {
+  icon: React.ElementType;
+  title: string;
+  hint: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-start gap-3 px-5 pb-3 pt-5", className)}>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * CH-408: where a repeat caller goes, said in one line from the saved
+ * settings - the routing reads the same ones (routing/engine.py):
+ *   Block duplicates  → dropped within the window, first of all
+ *   Normal            → routed like any new call
+ *   Original          → back to the line that answered him first
+ *   Different         → never a line he already reached; by Buyer, never
+ *                       that buyer either. Nowhere new = a missed call.
+ * Duplicate scope only changes Different. Strict mode is saved but routing
+ * does not read it, so it is not described here.
+ */
+function RepeatCallerSummary({
+  t,
+  handling,
+  direction,
+  blockHours,
+}: {
+  t: (key: string) => string;
+  handling: DuplicateHandling;
+  direction: DirectionScope;
+  blockHours: number | null;
+}) {
+  const then: [string, string] =
+    handling === "Original"
+      ? [t("x408.sumOriginal"), t("x408.sumOriginalNote")]
+      : handling === "Different"
+        ? [direction === "Buyer" ? t("x408.sumDiffBuyer") : t("x408.sumDiffDest"), t("x408.sumDiffNote")]
+        : [t("x408.sumNormal"), t("x408.sumNormalNote")];
+  const chip = "rounded-md border border-border px-2 py-1";
+  return (
+    <div className="mx-5 mb-5 mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs">
+      <span className={cn(chip, "text-muted-foreground")}>{t("x408.repeatCaller")}</span>
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+      {blockHours !== null && (
+        <>
+          <span className={cn(chip, "bg-secondary/60")}>
+            <span className="font-semibold">{t("x408.sumBlocked")}</span>{" "}
+            <span className="text-muted-foreground">{t("x408.withinHours").replace("{h}", String(blockHours))}</span>
+          </span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-muted-foreground">{t("x408.afterHours").replace("{h}", String(blockHours))}</span>
+          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+        </>
+      )}
+      <span className={cn(chip, "bg-secondary/60")}>
+        <span className="font-semibold">{then[0]}</span> <span className="text-muted-foreground">{then[1]}</span>
+      </span>
+    </div>
+  );
+}
+
 function ChoiceRow<T extends string>({
   label,
   description,
@@ -879,12 +981,12 @@ function ChoiceRow<T extends string>({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-t border-border py-3.5 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <Label className="text-xs font-medium">{label}</Label>
+        <Label className="text-[13px] font-medium">{label}</Label>
         <div className="text-[11px] text-muted-foreground">{description}</div>
       </div>
-      <div className={cn("inline-flex rounded-md border border-border bg-muted p-0.5", disabled && "pointer-events-none opacity-50")} aria-busy={disabled}>
+      <div className={cn("inline-flex shrink-0 rounded-md border border-border bg-background/40 p-0.5", disabled && "pointer-events-none opacity-50")} aria-busy={disabled}>
         {options.map((opt) => (
           <button
             key={opt}
@@ -894,7 +996,7 @@ function ChoiceRow<T extends string>({
             className={cn(
               "rounded px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               value === opt
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-secondary font-medium text-foreground"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

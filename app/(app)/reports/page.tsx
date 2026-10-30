@@ -100,6 +100,11 @@ export default function ReportsPage() {
     setDateRange({ from, to: latestDay });
   }, [dateRange, latestKey, latestDay]);
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
+  // CH-408: "View report" on a campaign page opens this with ?campaign=<id>.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("campaign");
+    if (id) setFilters({ ...EMPTY_FILTERS, campaignIds: [id] });
+  }, []);
   // A row clicked in the Call Summary (any tab): the whole report - chart,
   // donut, Call Performance, summary and Call Log - shows only its calls.
   const [drill, setDrill] = useState<SummaryDrill | null>(null);

@@ -71,13 +71,14 @@ export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
               type="button"
               onClick={() => setTab(t.id)}
               className={cn(
-                "relative inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none",
+                // CH-408 (Sir's design): the open tab in white, underlined in blue.
+                "relative inline-flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium transition-colors focus-visible:outline-none",
                 active
-                  ? "text-accent"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="h-3 w-3" />
+              <Icon className="h-3.5 w-3.5" />
               {t.label}
               {active && (
                 <span

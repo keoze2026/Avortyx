@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, MoreVertical, Pause, Pencil, Play, Settings as SettingsIcon, Trash2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Check, Copy, Loader2, MoreVertical, Pause, Pencil, Play, Trash2 } from "lucide-react";
 
 import { CampaignStatusBadge } from "./campaign-status-badge";
 import { Button } from "@/components/ui/button";
@@ -36,27 +36,20 @@ import {
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
-import { VERTICAL_ACCENT, type Campaign } from "@/lib/types";
+import type { Campaign } from "@/lib/types";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { localizeName } from "@/lib/name-translation";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { VerticalLabel } from "@/components/campaigns/vertical-label";
+import { analyticsService, type EntitySummary } from "@/lib/api/services/analytics.service";
+import { todayScope } from "@/lib/reports-scope";
+import { useCampaignPageStore } from "@/lib/store/campaign-page-store";
+import { useNumbersStore } from "@/lib/store/numbers-store";
 import { cn } from "@/lib/utils";
 
-const DOT: Record<string, string> = {
-  cyan: "bg-accent",
-  emerald: "bg-[oklch(0.6_0.18_155)]",
-  violet: "bg-[oklch(0.6_0.2_290)]",
-  amber: "bg-[oklch(0.6_0.16_75)]",
-  rose: "bg-[oklch(0.6_0.2_10)]",
-};
-const GLOW: Record<string, string> = {
-  cyan: "rgba(59, 182, 255, 0.22)",
-  emerald: "rgba(40, 175, 110, 0.22)",
-  violet: "rgba(150, 95, 220, 0.22)",
-  amber: "rgba(220, 160, 60, 0.22)",
-  rose: "rgba(225, 90, 130, 0.22)",
-};
+/** How often the header's figures refresh while the page is open. */
+const STATS_REFRESH_MS = 30_000;
 
 export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
   const { t, locale } = useTranslation();
@@ -98,7 +91,6 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
     }
   };
 
-  const tone = VERTICAL_ACCENT[campaign.vertical] ?? "cyan";
   const isActive = campaign.status === "active";
 
   const onToggle = () => {
@@ -119,36 +111,107 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
     router.push(ROUTES.campaigns);
   };
 
+  // ─── CH-408: the figures strip (Sir's design) ──────────────────────────
+  // Calls today, Connected and Unique callers come from the same Reports
+  // summary for today (the report time zone), so the % is of the same calls.
+  // Without reporting access the summary is refused: Calls today then falls
+  // back to the campaign's own count and the other two show a dash.
+  const localName = useLocalName();
+  const canReport = can("reporting", "view");
+  const [today, setToday] = useState<EntitySummary | null | undefined>(undefined);
+  useEffect(() => {
+    if (isPartner || !canReport) return;
+    let cancelled = false;
+    const load = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      analyticsService
+        .campaignSummary(todayScope())
+        .then((rows) => {
+          if (!cancelled) setToday(rows.find((r) => r.entityId === campaign.id) ?? null);
+        })
+        .catch(() => {
+          if (!cancelled) setToday((prev) => prev ?? null);
+        });
+    };
+    load();
+    const timer = setInterval(load, STATS_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [campaign.id, isPartner, canReport]);
+
+  const allNumbers = useNumbersStore((s) => s.numbers);
+  const numbers = useMemo(
+    () => (allNumbers ?? []).filter((n) => n.campaignId === campaign.id),
+    [allNumbers, campaign.id],
+  );
+  const activeNumbers = numbers.filter((n) => n.status === "active").length;
+  // The publisher chip: the publisher the campaign's numbers belong to.
+  const publishers = useMemo(
+    () => Array.from(new Set(numbers.map((n) => n.publisherName).filter((p): p is string => !!p))),
+    [numbers],
+  );
+  const routed = useCampaignPageStore((s) => s.routed[campaign.id]);
+
+  const callsToday = today ? today.totalCalls : campaign.callsToday;
+  // A campaign with no calls today has no summary row: zero, not unknown.
+  const connected = today === null ? (canReport ? 0 : undefined) : today?.connectedCalls;
+  const unique = today === null ? (canReport ? 0 : undefined) : today?.uniqueCallers;
+  const connectedPct = connected !== undefined && callsToday > 0 ? Math.round((connected / callsToday) * 100) : null;
+  const fmt = (n: number) => n.toLocaleString(locale);
+
+  const [copied, setCopied] = useState(false);
+  const copyId = async () => {
+    try {
+      await navigator.clipboard.writeText(campaign.id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error(t("x408.copyFailed"));
+    }
+  };
+
+  const stats: Array<{ label: string; value: string; sub?: string }> = [
+    { label: t("x408.callsToday"), value: fmt(callsToday) },
+    {
+      label: t("x408.connected"),
+      value: connected === undefined ? "—" : fmt(connected),
+      sub: connectedPct === null ? undefined : `${connectedPct}%`,
+    },
+    { label: t("x408.uniqueCallers"), value: unique === undefined ? "—" : fmt(unique) },
+    {
+      label: t("x408.trackingNumbers"),
+      value: fmt(numbers.length),
+      sub: t("x408.nActive").replace("{n}", fmt(activeNumbers)),
+    },
+    {
+      label: t("x408.destinations"),
+      value: routed ? fmt(routed.total) : "—",
+      sub: routed ? t("x408.nOn").replace("{n}", fmt(routed.on)) : undefined,
+    },
+  ];
+
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl"
-        style={{ background: GLOW[tone] }}
-      />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-4">
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        onClick={() => router.push(ROUTES.campaigns)}
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> {t("x408.allCampaigns")}
+      </button>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-2 h-7 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => router.push(ROUTES.campaigns)}
-          >
-            <ArrowLeft className="h-3 w-3" /> {t("trafficUI.campaigns.detail.backToList")}
-          </Button>
-          <div className="mt-2 flex items-center gap-2 text-[11px]">
-            <span className={cn("inline-block h-1.5 w-1.5 rounded-full", DOT[tone])} />
-            <span className="font-mono text-muted-foreground"><VerticalLabel vertical={campaign.vertical} /></span>
-            <span className="text-muted-foreground/60">·</span>
-            <span className="font-mono text-muted-foreground">{campaign.id}</span>
-          </div>
-          <div className="mt-1 flex items-center gap-1.5">
+          <div className="flex items-center gap-2.5">
             <h1
-              className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg"
+              className="min-w-0 truncate text-2xl font-semibold tracking-tight"
               title={locale === "en" ? undefined : campaign.name}
             >
               {localizeName(campaign.name, locale)}
             </h1>
+            <CampaignStatusBadge status={campaign.status} dot />
             {canEdit && (
               <Button
                 variant="ghost"
@@ -162,17 +225,50 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
               </Button>
             )}
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+            {publishers.length > 0 && (
+              <span className="rounded-md border border-border px-2 py-0.5 text-muted-foreground">
+                {t("x408.publisher")} · <span className="font-medium text-foreground">
+                  {publishers.length === 1 ? localName(publishers[0]) : fmt(publishers.length)}
+                </span>
+              </span>
+            )}
+            <span className="rounded-md border border-border px-2 py-0.5 text-muted-foreground">
+              <VerticalLabel vertical={campaign.vertical} />
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 font-mono text-muted-foreground">
+              {campaign.id}
+              <button
+                type="button"
+                onClick={() => void copyId()}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={t("x408.copyId")}
+                title={t("x408.copyId")}
+              >
+                {copied ? <Check className="h-3 w-3 text-[color:var(--success)]" /> : <Copy className="h-3 w-3" />}
+              </button>
+            </span>
+          </div>
           {campaign.description && (
-            <p className="mt-1 max-w-2xl text-xs text-muted-foreground">{campaign.description}</p>
+            <p className="mt-2 max-w-2xl text-xs text-muted-foreground">{campaign.description}</p>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          <CampaignStatusBadge status={campaign.status} />
           {!isPartner && (
           <>
+          {canReport && (
+            <Button size="sm" variant="outline" onClick={() => router.push(`${ROUTES.reports}?campaign=${encodeURIComponent(campaign.id)}`)}>
+              <BarChart3 className="h-3.5 w-3.5" /> {t("x408.viewReport")}
+            </Button>
+          )}
           {can("campaigns", "edit-campaign") && (
-          <Button size="sm" variant={isActive ? "outline" : "default"} onClick={onToggle}>
+          <Button
+            size="sm"
+            variant={isActive ? "outline" : "default"}
+            className={isActive ? undefined : "bg-accent text-accent-foreground hover:bg-accent/90"}
+            onClick={onToggle}
+          >
             {isActive ? (
               <>
                 <Pause className="h-3.5 w-3.5" /> {t("trafficUI.campaigns.detail.pause")}
@@ -187,7 +283,7 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
           {can("campaigns", "delete") && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t("trafficUI.campaigns.detail.actionsMenu")}>
+              <Button variant="outline" size="icon" className="h-8 w-8" aria-label={t("trafficUI.campaigns.detail.actionsMenu")}>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -205,6 +301,24 @@ export function CampaignDetailHeader({ campaign }: { campaign: Campaign }) {
           )}
         </div>
       </div>
+
+      {!isPartner && (
+        // gap-px over the border colour draws the dividers on every layout.
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-5">
+          {stats.map((st, i) => (
+            <div
+              key={st.label}
+              className={cn("bg-card px-4 py-3", i === stats.length - 1 && "col-span-2 sm:col-span-1")}
+            >
+              <div className="text-[11px] text-muted-foreground">{st.label}</div>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-xl font-semibold tabular-nums tracking-tight">{st.value}</span>
+                {st.sub && <span className="text-[11px] text-muted-foreground">{st.sub}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
