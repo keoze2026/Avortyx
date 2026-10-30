@@ -72,16 +72,16 @@ export function PublishersTable({
   return (
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
-        <Table className="min-w-[960px]">
+        <Table className="min-w-[960px] table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-4 text-left">{t("networkUI.common.name")}</TableHead>
-              {columns.hourly && <TableHead className="w-[10%] !text-left">{t("networkUI.common.hourly")}</TableHead>}
-              {columns.daily && <TableHead className="w-[24%] !text-left">{t("networkUI.common.daily")}</TableHead>}
-              {columns.monthly && <TableHead className="w-[10%] !text-right">{t("networkUI.common.monthly")}</TableHead>}
-              {columns.global && <TableHead className="w-[10%] !text-right">{t("networkUI.common.global")}</TableHead>}
-              {columns.status && <TableHead className="w-[12%] !pl-10 !text-left">{t("networkUI.common.status")}</TableHead>}
-              <TableHead className="w-[8%] pr-4 !text-right">{t("networkUI.common.actions")}</TableHead>
+              <TableHead className="w-[22%] pl-4 text-left">{t("networkUI.common.name")}</TableHead>
+              {columns.hourly && <TableHead className="w-[13%] !text-left">{t("networkUI.common.hourly")}</TableHead>}
+              {columns.daily && <TableHead className="w-[13%] !text-left">{t("networkUI.common.daily")}</TableHead>}
+              {columns.monthly && <TableHead className="w-[13%] !text-left">{t("networkUI.common.monthly")}</TableHead>}
+              {columns.global && <TableHead className="w-[13%] !text-left">{t("networkUI.common.global")}</TableHead>}
+              {columns.status && <TableHead className="w-[13%] !text-left">{t("networkUI.common.status")}</TableHead>}
+              <TableHead className="w-[13%] pr-4 !text-right">{t("networkUI.common.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -138,18 +138,18 @@ export function PublishersTable({
                   )}
 
                   {columns.monthly && (
-                    <TableCell className="!text-right tabular-nums text-muted-foreground">
+                    <TableCell className="!text-left tabular-nums text-muted-foreground">
                       {u ? formatNumber(u.payableMonth) : <Dash />}
                     </TableCell>
                   )}
                   {columns.global && (
-                    <TableCell className="!text-right tabular-nums text-muted-foreground">
+                    <TableCell className="!text-left tabular-nums text-muted-foreground">
                       {u ? formatNumber(u.payableGlobal) : <Dash />}
                     </TableCell>
                   )}
 
                   {columns.status && (
-                    <TableCell className="!pl-10 !text-left" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="!text-left" onClick={(e) => e.stopPropagation()}>
                       <span className="inline-flex items-center gap-2">
                         <Switch
                           checked={isActive}
@@ -262,17 +262,19 @@ function DailyCell({ usage, max }: { usage: NonNullable<Publisher["usage"]>; max
   const low = pct !== null && pct < LOW_CONNECT;
   const width = max > 0 ? Math.max(usage.payableToday > 0 ? 4 : 0, (usage.payableToday / max) * 100) : 0;
   return (
-    <div className="flex min-w-[150px] items-center gap-2.5">
-      <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted/60">
-        <span
-          className={cn("block h-full rounded-full", low ? "bg-[color:var(--warning)]" : "bg-accent")}
-          style={{ width: `${width}%` }}
-        />
-      </span>
-      <span className="w-12 shrink-0 text-right tabular-nums font-medium text-foreground">{formatNumber(usage.payableToday)}</span>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2.5">
+        <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted/60">
+          <span
+            className={cn("block h-full rounded-full", low ? "bg-[color:var(--warning)]" : "bg-accent")}
+            style={{ width: `${width}%` }}
+          />
+        </span>
+        <span className="tabular-nums font-medium text-foreground">{formatNumber(usage.payableToday)}</span>
+      </div>
       {pct !== null && (
         <span
-          className={cn("text-[11px] tabular-nums", low ? "text-[color:var(--warning)]" : "text-muted-foreground")}
+          className={cn("text-[11px] leading-none tabular-nums", low ? "text-[color:var(--warning)]" : "text-muted-foreground")}
           title={t("x423.connectedHint")
             .replace("{a}", formatNumber(usage.answeredToday))
             .replace("{s}", formatNumber(usage.sentToday))}
