@@ -1349,3 +1349,22 @@ match his picture: Coin Market was the tilted Bitcoin coin logo and Daily News a
 newspaper folded on the left. Now Coin Market is an upright B on a stem and
 Daily News a page of three lines folded on the right, the same size and line
 weight as every other sidebar icon. Nothing else changed.
+
+## CH-427 - Full translation: server messages in the chosen language
+**2026-10-30 - Languages**
+
+Every text in the portal's own dictionaries was already in Russian, Japanese
+and Chinese (6,253 texts checked; only brand names, e-mail examples and codes
+such as API or SIP stay as they are). What still showed in English came from
+the server. Now:
+  - error and confirmation messages from the server (316 of them: "Buyer not
+    found", "Rate must be a number", "Too many login attempts" ...) show in
+    the chosen language in every toast and error line, including form errors
+    and the general "couldn't reach the server" / "something went wrong" ones
+  - every page's error line goes through the same translation (18 stores)
+  - AI Insights cards and anomalies ("Reduced Call Activity", "Buyer X has
+    high no-answer rate" ...) and alert titles in the bell and pop-ups
+  - the last fixed English texts: TradingView full-screen button, "Loading
+    saved configuration…", the Calls chart tooltip, the KYC country example
+  - a server message the portal does not know yet is shown as sent, never
+    blanked out; English is unchanged
