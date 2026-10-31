@@ -41,24 +41,47 @@ export function faviconSvg(theme: ColorTheme): string | null {
 </g></svg>`;
 }
 
-/** Point the tab-icon links at the coloured mark, or back to the files. */
+/** Point the tab-icon links at the coloured mark, or back to the files.
+ *  Only touches a link that is not already right, so it can run on every
+ *  change to the page head without looping. */
 export function applyAccentFavicon(theme: ColorTheme, isDefault: boolean) {
   if (typeof document === "undefined") return;
   const links = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'));
   const svg = isDefault ? null : faviconSvg(theme);
   const url = svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
   for (const link of links) {
-    if (!link.dataset.origHref) {
-      link.dataset.origHref = link.getAttribute("href") ?? "";
+    const href = link.getAttribute("href") ?? "";
+    if (!href.startsWith("data:")) {
+      // First sight, or Next.js put its own file back: remember the file.
+      link.dataset.origHref = href;
       link.dataset.origType = link.getAttribute("type") ?? "";
     }
-    if (url) {
-      link.setAttribute("href", url);
-      link.setAttribute("type", "image/svg+xml");
-    } else {
-      link.setAttribute("href", link.dataset.origHref);
-      if (link.dataset.origType) link.setAttribute("type", link.dataset.origType);
+    const wantHref = url ?? link.dataset.origHref ?? href;
+    if (href !== wantHref) link.setAttribute("href", wantHref);
+    const wantType = url ? "image/svg+xml" : link.dataset.origType ?? "";
+    if ((link.getAttribute("type") ?? "") !== wantType) {
+      if (wantType) link.setAttribute("type", wantType);
       else link.removeAttribute("type");
     }
   }
+}
+
+/** CH-459: Next.js rewrites the page head on every page change and puts the
+ *  blue icon files back, so the tab went blue again after a click in the
+ *  sidebar. Watch the head and re-apply the colour whenever it changes.
+ *  Returns the function that stops watching. */
+export function watchAccentFavicon(theme: ColorTheme, isDefault: boolean): () => void {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return () => {};
+  applyAccentFavicon(theme, isDefault);
+  let queued = false;
+  const observer = new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      applyAccentFavicon(theme, isDefault);
+    });
+  });
+  observer.observe(document.head, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+  return () => observer.disconnect();
 }

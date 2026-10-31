@@ -11,7 +11,7 @@
 
 import * as React from "react";
 
-import { applyAccentFavicon } from "@/lib/accent-favicon";
+import { watchAccentFavicon } from "@/lib/accent-favicon";
 import { ALL_THEME_CLASSES, DEFAULT_ACCENT_ID, findAccent } from "@/lib/accent-themes";
 import { useAccentStore } from "@/lib/store/accent-store";
 
@@ -41,8 +41,9 @@ export function AccentProvider() {
     for (const cls of ALL_THEME_CLASSES) root.classList.remove(cls);
     if (cfg.className) root.classList.add(cfg.className);
 
-    // CH-457: the browser-tab icon in the same colour.
-    applyAccentFavicon(cfg, cfg.id === DEFAULT_ACCENT_ID);
+    // CH-457: the browser-tab icon in the same colour; CH-459: kept that way
+    // when Next.js rewrites the head on a page change.
+    return watchAccentFavicon(cfg, cfg.id === DEFAULT_ACCENT_ID);
   }, [accent]);
 
   return null;
