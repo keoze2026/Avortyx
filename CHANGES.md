@@ -1664,3 +1664,13 @@ visitors, fallback number, advertisers only). With backend CH-456:
     the list before); a refused save says why (e.g. a TFN already in another
     pool). Idle time and the other number fields save when the field is left,
     not on every key.
+
+## CH-457 - Browser-tab icon follows the picked colour
+**2026-10-31 - Theme**
+
+Sir, 31 Oct: the logo follows the colour now (CH-455), but the icon on the
+browser tab stayed blue. The tab icon is a fixed file, so for any colour other
+than Blue the portal now draws the same Avortyx mark in that colour (the
+gradient colours for Aurora, Sunset, Ocean, Plasma, Ember) and puts it on the
+tab; picking Blue goes back to the original icon files. The home-screen icon
+(apple-touch) is unchanged.
