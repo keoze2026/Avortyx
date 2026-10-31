@@ -1612,3 +1612,13 @@ fields and button; Forgot password fills in the email typed on /login. The
 old split layout (app/(auth)) is removed, so no page shows it any more, and
 CH-447's font rule with it. Addresses are unchanged, so links already emailed
 still work.
+
+## CH-453 - Marketplace: logos for every service
+**2026-10-31 - Marketplace**
+
+Sir, 31 Oct: the logos are missing on the Marketplace services. Most services
+have no logo uploaded, so their cards showed a grey globe. A card now shows
+the uploaded logo when there is one; without one, the website's own icon
+(read from its address) with the name under it; the globe only when the site
+has no icon either. Nothing needs re-entering: every service already has its
+website address.
