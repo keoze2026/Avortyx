@@ -1633,3 +1633,13 @@ partner's own login, when its settings could not be read the portal fell back
 to defaults with Download Reports ON, so the download could come back. The
 fallback is now OFF, and the settings page's offline list shows it off by
 default too, matching the backend.
+
+## CH-455 - Avortyx logo follows the picked colour
+**2026-10-31 - Theme**
+
+Sir, 31 Oct: "With every color change Avortyx logo color should change too".
+The logo and the "Avortyx" word read the theme's brand colours, and every
+colour theme set them except the middle one (--vortyx-teal), which stayed on
+the default blue - so the logo stayed blue whatever colour was picked. That
+slot now takes the picked colour, in light and dark mode. Blue (default) is
+unchanged.
