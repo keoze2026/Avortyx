@@ -1011,6 +1011,10 @@
    Gradient themes below override these explicitly.
    ========================================================= */
 [class*="theme-"] {
+  /* CH-455 (Sir, 31 Oct): the logo's middle colour and the "Avortyx" word
+     read this slot; it was left on the default blue, so the logo stayed blue
+     whatever colour was picked. */
+  --vortyx-teal: var(--accent);
   --vortyx-bright: color-mix(in oklab, var(--accent) 60%, white 40%);
   --vortyx-cyan: color-mix(in oklab, var(--accent) 55%, white 45%);
   --vortyx-deep: color-mix(in oklab, var(--accent) 70%, black 30%);
@@ -1023,6 +1027,7 @@
   );
 }
 [class*="theme-"].dark {
+  --vortyx-teal: var(--accent);
   --vortyx-bright: color-mix(in oklab, var(--accent) 70%, white 30%);
   --vortyx-cyan: color-mix(in oklab, var(--accent) 65%, white 35%);
   --vortyx-deep: color-mix(in oklab, var(--accent) 60%, black 40%);
