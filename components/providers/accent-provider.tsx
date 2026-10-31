@@ -11,7 +11,8 @@
 
 import * as React from "react";
 
-import { ALL_THEME_CLASSES, findAccent } from "@/lib/accent-themes";
+import { applyAccentFavicon } from "@/lib/accent-favicon";
+import { ALL_THEME_CLASSES, DEFAULT_ACCENT_ID, findAccent } from "@/lib/accent-themes";
 import { useAccentStore } from "@/lib/store/accent-store";
 
 const LEGACY_INLINE_VARS = [
@@ -39,6 +40,9 @@ export function AccentProvider() {
     // Drop every other theme class, then add the selected one (if any).
     for (const cls of ALL_THEME_CLASSES) root.classList.remove(cls);
     if (cfg.className) root.classList.add(cfg.className);
+
+    // CH-457: the browser-tab icon in the same colour.
+    applyAccentFavicon(cfg, cfg.id === DEFAULT_ACCENT_ID);
   }, [accent]);
 
   return null;
