@@ -519,25 +519,55 @@ function FavoriteButton({
   );
 }
 
+/** The site's own icon, from its address, when no logo was uploaded (CH-453). */
+function siteIcon(websiteUrl: string): string | null {
+  const raw = (websiteUrl || "").trim();
+  if (!raw) return null;
+  try {
+    const host = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).hostname;
+    return host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128` : null;
+  } catch {
+    return null;
+  }
+}
+
 function Logo({ service, large }: { service: MarketplaceService; large?: boolean }) {
+  // CH-453 (Sir, 31 Oct: the logos are missing): an uploaded logo first; with
+  // none, the website's own icon with the name under it; the globe only when
+  // the site has no icon either.
   const [broken, setBroken] = useState(false);
-  if (!service.logoUrl || broken) {
+  const [iconBroken, setIconBroken] = useState(false);
+  if (service.logoUrl && !broken) {
     return (
-      <div className="flex flex-col items-center gap-1 text-neutral-500">
-        <Globe className={large ? "h-8 w-8" : "h-6 w-6"} />
-        <span className="max-w-full truncate text-xs font-semibold"><LocalName name={service.name} /></span>
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={service.logoUrl}
+        alt={service.name}
+        loading="lazy"
+        onError={() => setBroken(true)}
+        className="max-h-full max-w-full object-contain"
+      />
     );
   }
+  const icon = iconBroken ? null : siteIcon(service.websiteUrl);
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={service.logoUrl}
-      alt={service.name}
-      loading="lazy"
-      onError={() => setBroken(true)}
-      className="max-h-full max-w-full object-contain"
-    />
+    <div className="flex flex-col items-center gap-1.5 text-neutral-500">
+      {icon ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={icon}
+          alt=""
+          loading="lazy"
+          onError={() => setIconBroken(true)}
+          className={large ? "h-14 w-14 rounded-lg object-contain" : "h-10 w-10 rounded-md object-contain"}
+        />
+      ) : (
+        <Globe className={large ? "h-8 w-8" : "h-6 w-6"} />
+      )}
+      <span className={cn("max-w-full truncate font-semibold text-neutral-700", large ? "text-sm" : "text-xs")}>
+        <LocalName name={service.name} />
+      </span>
+    </div>
   );
 }
 
