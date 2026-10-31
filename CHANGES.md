@@ -1643,3 +1643,24 @@ colour theme set them except the middle one (--vortyx-teal), which stayed on
 the default blue - so the logo stayed blue whatever colour was picked. That
 slot now takes the picked colour, in light and dark mode. Blue (default) is
 unchanged.
+
+## CH-456 - Number pools work end to end (portal side)
+**2026-10-31 - Phone Numbers / Number pools**
+
+Sir, 31 Oct, what a number pool must do (pool of TFNs per advertiser, a number
+held per visitor, the call tied to the ad, cool-down, pool sized to peak
+visitors, fallback number, advertisers only). With backend CH-456:
+  - Number pools are for advertisers only: the Number pools tab and pool
+    pages are hidden from publisher and buyer logins, and they no longer ask
+    the server for pools.
+  - Pool Activity card on the pool page: numbers, in use now, cooling down,
+    free, peak visitors at once (7 days), fallback shown today, calls today,
+    and a "pool too small" warning with how many numbers to have.
+  - Fallback Number and Allowed Websites in Setup Number Pool.
+  - Integration code: the real script address for this pool (it pointed to
+    cdn.avortyx.io/track.js, which does not exist), and "Dialics" in the
+    text replaced with Avortyx in every language.
+  - Adding or removing TFNs on the pool page now saves (the server ignored
+    the list before); a refused save says why (e.g. a TFN already in another
+    pool). Idle time and the other number fields save when the field is left,
+    not on every key.
