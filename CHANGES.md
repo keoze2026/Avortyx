@@ -1674,3 +1674,13 @@ than Blue the portal now draws the same Avortyx mark in that colour (the
 gradient colours for Aurora, Sunset, Ocean, Plasma, Ember) and puts it on the
 tab; picking Blue goes back to the original icon files. The home-screen icon
 (apple-touch) is unchanged.
+
+## CH-459 - Tab icon keeps the picked colour on every page
+**2026-10-31 - Theme**
+
+After CH-457 the browser-tab icon took the picked colour, but went back to
+blue as soon as another page was opened from the sidebar: Next.js rewrites
+the page head on each page change and puts the blue icon files back. The
+portal now watches the head and puts the coloured icon back whenever that
+happens, so it stays in the picked colour on every page. Blue still uses the
+original icon files.
