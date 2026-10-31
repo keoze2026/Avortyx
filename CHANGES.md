@@ -1684,3 +1684,33 @@ the page head on each page change and puts the blue icon files back. The
 portal now watches the head and puts the coloured icon back whenever that
 happens, so it stays in the picked colour on every page. Blue still uses the
 original icon files.
+
+## CH-461 - Number pools: Sir's design - list, New pool wizard, pool page
+**2026-10-31 - Number Pools** (needs backend CH-460)
+
+Built from Sir's number pool design (list page, 5-step New pool, pool page).
+- List: name with the pool's public key, pool size bar "38/50 in use" (amber
+  when full), campaign, closed-browser delay, idle limit, impressions and
+  misses today (from the server, no longer blank), status Active / Attention
+  / Paused, and actions: copy website code, edit, more (pause / delete with a
+  confirm).
+- Create pool opens the new 5-step page (numbers/pools/new): 1 Lander - the
+  server reads the page and lists every phone number with where it sits,
+  tick the ones to swap, add more landers, choose URL parameters to capture;
+  2 Numbers - name, country, fallback number, TFNs from Phone Numbers (free
+  ones only); 3 Routing - campaign, idle limit, closed-browser delay,
+  cool-down, allowed websites (filled from the landers); 4 Protection - the
+  spam attack rules; 5 Install - review, create, then the website code with
+  live checks every 5 s (snippet seen, numbers in pool, fallback set).
+  "Save draft & exit" keeps the draft in this browser.
+- Pool page: header with status, campaign, country, idle, closed-browser
+  delay and cool-down, Pause pool and Edit settings; In use / Impressions /
+  Calls (attributed) / Misses; tabs Overview (numbers with In use /
+  Available / Cooling / Quarantined filters, who each number is shown to,
+  held for, calls today, Pull / Restore; install card with "Snippet seen on
+  ... ago"; calls by source today; spam protection), Landers (add & scan,
+  rescan, tick numbers, remove), Calls (each pool call, source, length,
+  refused calls with the reason) and Settings (the earlier cards plus
+  cool-down, captured parameters and spam rules).
+- The website code is the new avx-dni.js tag with the pool's key.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
