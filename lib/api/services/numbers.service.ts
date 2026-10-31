@@ -242,6 +242,16 @@ interface PoolWire {
   idleTimeSec?: number;
   autoBuy?: boolean;
   attachedNumberIds?: string[];
+  /* CH-456: fallback, websites and the pool's figures. */
+  fallbackNumber?: string;
+  allowedDomains?: string[];
+  numbersInUse?: number;
+  numbersCooling?: number;
+  numbersFree?: number;
+  peakVisitors7d?: number;
+  fallbackToday?: number;
+  cooldownMinutes?: number;
+  tooSmall?: boolean;
   /* Detail-page editable fields — round-tripped now that the backend
    * persists them on /api/dni/pools/{id}. */
   replacementNumber?: string | null;
@@ -287,6 +297,18 @@ function wireToPool(w: PoolWire): NumberPool {
     idleTimeSec: w.idleTimeSec,
     autoBuy: w.autoBuy,
     attachedNumberIds: w.attachedNumberIds,
+    fallbackNumber: w.fallbackNumber ?? "",
+    allowedDomains: w.allowedDomains ?? [],
+    stats: {
+      inUse: w.numbersInUse ?? 0,
+      cooling: w.numbersCooling ?? 0,
+      free: w.numbersFree ?? 0,
+      peakVisitors7d: w.peakVisitors7d ?? 0,
+      fallbackToday: w.fallbackToday ?? 0,
+      callsToday: w.callsToday ?? 0,
+      cooldownMinutes: w.cooldownMinutes ?? 10,
+      tooSmall: w.tooSmall ?? false,
+    },
     // Detail-page fields — round-tripped now that the backend persists them.
     replacementNumber: w.replacementNumber ?? undefined,
     phoneNumberFormat: normalizePhoneFormat(w.phoneNumberFormat),
@@ -479,7 +501,10 @@ export const poolsService = {
   },
 
   async update(id: string, patch: Partial<NumberPool>): Promise<NumberPool> {
-    return wireToPool(await http.patch<PoolWire>(`/api/dni/pools/${id}`, { body: patch }));
+    // The figures are the server's; never send them back (CH-456).
+    const { stats: _stats, ...body } = patch;
+    void _stats;
+    return wireToPool(await http.patch<PoolWire>(`/api/dni/pools/${id}`, { body }));
   },
 
   async remove(id: string): Promise<void> {

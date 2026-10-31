@@ -2367,7 +2367,7 @@ export const ja: TranslationShape = {
         integration: {
           title: "連携コード",
           row: "連携",
-          rowHint: "Dialics の通話トラッキングを有効化するには、サイトにスニペットを設置してください。",
+          rowHint: "Avortyx の通話トラッキングを有効化するには、サイトにスニペットを設置してください。",
           show: "連携コードを表示",
           dialogTitle: "連携コード",
           dialogDescription: "トラッキングしたい各ページの末尾にこのスニペットを貼り付けてください。",

@@ -9,6 +9,8 @@
 
 import { create } from "zustand";
 
+import { useAuthStore } from "@/lib/store/auth-store";
+
 import { numbersService, poolsService } from "@/lib/api/services/numbers.service";
 import type { NumberPool, NumberStatus, TrackingNumber } from "@/lib/types";
 import { friendlyErrorMessage } from "@/lib/api/errors";
@@ -82,9 +84,13 @@ export const useNumbersStore = create<NumbersState>()((set, get) => ({
     set({ loading: true, error: null });
     // Numbers and pools load independently: a failing pools call must not
     // blank every campaign's Tracking Numbers list.
+    // CH-456: number pools are for advertisers only; publisher and buyer
+    // logins do not ask for them.
+    const role = useAuthStore.getState().user?.role;
+    const partner = role === "publisher" || role === "buyer";
     const [numbers, pools] = await Promise.allSettled([
       fetchAllNumbers(),
-      poolsService.list({ page: 1, pageSize: 200 }),
+      partner ? Promise.resolve({ items: [] as NumberPool[] }) : poolsService.list({ page: 1, pageSize: 200 }),
     ]);
     set((s) => ({
       numbers: numbers.status === "fulfilled" ? numbers.value : s.numbers,

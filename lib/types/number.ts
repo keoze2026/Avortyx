@@ -113,6 +113,18 @@ export interface TrafficSourceEntry {
   conversions: number;
 }
 
+/** CH-456: how busy a number pool is (server figures). */
+export interface PoolStats {
+  inUse: number;
+  cooling: number;
+  free: number;
+  peakVisitors7d: number;
+  fallbackToday: number;
+  callsToday: number;
+  cooldownMinutes: number;
+  tooSmall: boolean;
+}
+
 export interface NumberPool {
   id: string;
   name: string;
@@ -138,6 +150,11 @@ export interface NumberPool {
   phoneNumberFormat?: PhoneNumberFormat;
   /** Ids of TrackingNumbers attached to this pool. */
   attachedNumberIds?: string[];
+  /** CH-456: shown when the pool runs out; allowed websites (empty = any). */
+  fallbackNumber?: string;
+  allowedDomains?: string[];
+  /** CH-456: the pool's figures, from the server. */
+  stats?: PoolStats;
   vendorEnabled?: boolean;
   vendorId?: string;
   trafficSourcesEnabled?: boolean;

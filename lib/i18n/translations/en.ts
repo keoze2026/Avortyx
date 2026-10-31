@@ -1803,7 +1803,7 @@ export const en = {
         integration: {
           title: "Integration Code",
           row: "Integration",
-          rowHint: "To Enable Dialics Call Tracking You Need to Place Code Snippets on Your Website.",
+          rowHint: "To Enable Avortyx Call Tracking You Need to Place Code Snippets on Your Website.",
           show: "Show Integration Code",
           dialogTitle: "Integration Code",
           dialogDescription: "Paste This Snippet at the Bottom of Every Page You Want to Track.",

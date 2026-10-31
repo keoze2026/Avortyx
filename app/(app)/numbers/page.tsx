@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { CreateNumberPoolDialog } from "@/components/numbers/create-number-pool-dialog";
 import { PoolsTable, POOL_COLUMNS } from "@/components/numbers/pools-table";
 import { ProvisionNumberDialog } from "@/components/numbers/provision-number-dialog";
@@ -84,6 +85,7 @@ export default function NumbersPage() {
   const [provisionOpen, setProvisionOpen] = React.useState(false);
   const [createPoolOpen, setCreatePoolOpen] = React.useState(false);
   const [tab, setTab] = React.useState<"all" | "pools">("all");
+  const { isPartner } = usePartnerPermissions();
 
   const onCreatePool = async (input: {
     name: string;
@@ -222,7 +224,8 @@ export default function NumbersPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="gap-4">
         <TabsList>
           <TabsTrigger value="all">{t("trafficUI.numbers.tabs.tracking")}</TabsTrigger>
-          <TabsTrigger value="pools">{t("trafficUI.numbers.tabs.pools")}</TabsTrigger>
+          {/* CH-456: number pools are for advertisers only. */}
+          {!isPartner && <TabsTrigger value="pools">{t("trafficUI.numbers.tabs.pools")}</TabsTrigger>}
         </TabsList>
 
         {/* ─── All numbers ─── */}
@@ -269,6 +272,7 @@ export default function NumbersPage() {
         </TabsContent>
 
         {/* ─── Pools ─── */}
+        {!isPartner && (
         <TabsContent value="pools" className="space-y-4">
           <TableToolbar
             query={poolsQuery}
@@ -310,6 +314,7 @@ export default function NumbersPage() {
             pageSizeOptions={[...PAGE_SIZE_OPTIONS]}
           />
         </TabsContent>
+        )}
 
       </Tabs>
 

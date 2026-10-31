@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   ChevronDown,
   ChevronRight,
@@ -70,6 +71,9 @@ import type {
 } from "@/lib/types";
 import { Can } from "@/components/shared/can";
 import { LocalName } from "@/lib/i18n/local-name";
+import { API_BASE_URL } from "@/lib/api/env";
+import { friendlyErrorMessage } from "@/lib/api/errors";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 
 const VENDOR_OPTIONS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
 const PHONE_FORMATS: { id: PhoneNumberFormat; label: string; labelKey?: string }[] = [
@@ -92,10 +96,15 @@ export default function NumberPoolDetailPage() {
   const id = params?.id ?? "";
 
   const pool = useNumbersStore((s) => s.pools.find((p) => p.id === id));
-  const updatePool = useNumbersStore((s) => s.updatePool);
+  const storeUpdatePool = useNumbersStore((s) => s.updatePool);
   const numbers = useNumbersStore((s) => s.numbers);
+  const { isPartner } = usePartnerPermissions();
+  // CH-456: a refused save (e.g. a TFN already in another pool) says why.
+  const updatePool = (poolId: string, patch: Partial<NumberPool>) =>
+    storeUpdatePool(poolId, patch).catch((e) => toast.error(friendlyErrorMessage(e)));
 
-  if (!pool) {
+  // CH-456: number pools are for advertisers only.
+  if (!pool || isPartner) {
     return (
       <>
         <Link
@@ -139,6 +148,7 @@ export default function NumberPoolDetailPage() {
         </p>
       </div>
 
+      <PoolHealthCard pool={pool} />
       <IntegrationCodeCard pool={pool} />
       <SetupNumberPoolCard pool={pool} onChange={(patch) => updatePool(pool.id, patch)} />
       <AttachNumbersCard pool={pool} allNumbers={numbers} onChange={(ids) => updatePool(pool.id, { attachedNumberIds: ids })} />
@@ -161,8 +171,11 @@ export default function NumberPoolDetailPage() {
 function IntegrationCodeCard({ pool }: { pool: NumberPool }) {
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
+  // CH-456: the script the server serves for this pool (the old address,
+  // cdn.avortyx.io/track.js, did not exist). It swaps any element with
+  // data-dni, .phone-number, .tracked-number or a tel: link.
   const snippet = `<!-- Avortyx number-pool tracker · ${pool.name} -->
-<script src="https://cdn.avortyx.io/track.js" data-pool="${pool.id}" defer></script>`;
+<script src="${API_BASE_URL}/api/dni/snippet/${pool.id}" async></script>`;
   return (
     <Card className="p-5">
       <h3 className="text-[11px] font-semibold uppercase tracking-wider text-foreground">
@@ -230,6 +243,35 @@ function SetupNumberPoolCard({
         {t("trafficUI.numbers.poolDetail.setup.title")}
       </h3>
       <div className="my-4 h-px w-full bg-border" />
+
+      {/* CH-456: Fallback number */}
+      <Row label={t("x456.fallback")} hint={t("x456.fallbackHint")}>
+        <CommitInput
+          value={pool.fallbackNumber ?? ""}
+          onCommit={(v) => onChange({ fallbackNumber: v.trim() })}
+          placeholder="+18005550000"
+        />
+      </Row>
+
+      <Divider />
+
+      {/* CH-456: Allowed websites */}
+      <Row label={t("x456.websites")} hint={t("x456.websitesHint")}>
+        <CommitInput
+          value={(pool.allowedDomains ?? []).join(", ")}
+          onCommit={(v) =>
+            onChange({
+              allowedDomains: v
+                .split(/[\s,]+/)
+                .map((d) => d.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "").toLowerCase())
+                .filter(Boolean),
+            })
+          }
+          placeholder="example.com, shop.example.com"
+        />
+      </Row>
+
+      <Divider />
 
       {/* Replacement Number */}
       <Row
@@ -700,6 +742,83 @@ function TrafficSourcesCard({
   );
 }
 
+/* ─── CH-456: Pool figures card ──────────────────────────────────────── */
+
+function PoolHealthCard({ pool }: { pool: NumberPool }) {
+  const { t } = useTranslation();
+  const s = pool.stats;
+  const total = pool.numberCount ?? 0;
+  if (!s) return null;
+  // Sir: size the pool by the most visitors at one time, with room to spare.
+  const recommended = Math.max(s.peakVisitors7d + Math.max(1, Math.ceil(s.peakVisitors7d * 0.2)), 1);
+  const figures: Array<[string, string | number]> = [
+    [t("x456.numbers"), total],
+    [t("x456.inUse"), s.inUse],
+    [t("x456.cooling"), s.cooling],
+    [t("x456.free"), s.free],
+    [t("x456.peak"), s.peakVisitors7d],
+    [t("x456.fallbackToday"), s.fallbackToday],
+    [t("x456.callsToday"), s.callsToday],
+  ];
+  return (
+    <Card className="p-5">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-foreground">{t("x456.title")}</h3>
+      <div className="my-4 h-px w-full bg-border" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {figures.map(([label, value]) => (
+          <div key={label} className="rounded-md border border-border px-3 py-2">
+            <div className="text-[11px] text-muted-foreground">{label}</div>
+            <div className="mt-0.5 text-lg font-semibold tabular-nums">{value}</div>
+          </div>
+        ))}
+      </div>
+      {s.tooSmall && (
+        <div className="mt-3 flex items-start gap-2 rounded-md border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-3 py-2 text-xs text-[color:var(--warning)]">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            {total === 0
+              ? t("x456.empty")
+              : t("x456.tooSmall")
+                  .replace("{peak}", String(s.peakVisitors7d))
+                  .replace("{total}", String(total))
+                  .replace("{fallback}", String(s.fallbackToday))
+                  .replace("{recommended}", String(recommended))}
+          </span>
+        </div>
+      )}
+      <p className="mt-3 text-[11px] text-muted-foreground">
+        {t("x456.cooldownNote").replace("{n}", String(s.cooldownMinutes))}
+      </p>
+    </Card>
+  );
+}
+
+/** A text field saved when it is left (or on Enter), not on every key. */
+function CommitInput({
+  value,
+  onCommit,
+  placeholder,
+}: {
+  value: string;
+  onCommit: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = React.useState(value);
+  React.useEffect(() => setDraft(value), [value]);
+  const commit = () => {
+    if (draft !== value) onCommit(draft);
+  };
+  return (
+    <Input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && commit()}
+      placeholder={placeholder}
+    />
+  );
+}
+
 /* ─── Shared sub-components ──────────────────────────────────────────── */
 
 function Row({
@@ -734,17 +853,24 @@ function SecondsInput({
   onChange: (n: number) => void;
 }) {
   const { t } = useTranslation();
+  // CH-456: saved when the field is left, not on every key.
+  const [draft, setDraft] = React.useState(String(value));
+  React.useEffect(() => setDraft(String(value)), [value]);
+  const commit = () => {
+    const n = Number(draft);
+    const next = Number.isFinite(n) ? n : 0;
+    if (next !== value) onChange(next);
+  };
   return (
     <div className="relative">
       <Input
         type="number"
         min={0}
         step={5}
-        value={value}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          onChange(Number.isFinite(n) ? n : 0);
-        }}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && commit()}
         className="pr-10 tabular-nums"
       />
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] uppercase tracking-wider text-muted-foreground">

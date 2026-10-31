@@ -1699,7 +1699,7 @@ export const zh: TranslationShape = {
         integration: {
           title: "集成代码",
           row: "集成",
-          rowHint: "要启用 Dialics 通话追踪,需要在网站上放置代码片段。",
+          rowHint: "要启用 Avortyx 通话追踪,需要在网站上放置代码片段。",
           show: "查看集成代码",
           dialogTitle: "集成代码",
           dialogDescription: "将此代码片段粘贴到您要追踪的每个页面底部。",
