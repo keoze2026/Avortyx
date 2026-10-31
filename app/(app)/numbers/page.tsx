@@ -2,10 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
-import { CreateNumberPoolDialog } from "@/components/numbers/create-number-pool-dialog";
 import { PoolsTable, POOL_COLUMNS } from "@/components/numbers/pools-table";
 import { ProvisionNumberDialog } from "@/components/numbers/provision-number-dialog";
 import {
@@ -80,42 +78,12 @@ export default function NumbersPage() {
   const NUMBER_SORT_OPTIONS: SortOption[] = NUMBER_SORT_KEYS.map((o) => ({ id: o.id, label: t(o.labelKey) }));
   const POOL_SORT_OPTIONS: SortOption[] = POOL_SORT_KEYS.map((o) => ({ id: o.id, label: t(o.labelKey) }));
   const pools = useNumbersStore((s) => s.pools);
-  const addPool = useNumbersStore((s) => s.addPool);
 
   const [provisionOpen, setProvisionOpen] = React.useState(false);
-  const [createPoolOpen, setCreatePoolOpen] = React.useState(false);
   const [tab, setTab] = React.useState<"all" | "pools">("all");
   const { isPartner } = usePartnerPermissions();
 
-  const onCreatePool = async (input: {
-    name: string;
-    country: string;
-    closedBrowserDelaySec: number;
-    idleTimeSec: number;
-    autoBuy: boolean;
-  }) => {
-    const created = await addPool({
-      name: input.name,
-      // We don't pick a campaign at create-time — that happens on the detail page.
-      campaignId: "",
-      campaignName: "",
-      rotationStrategy: "round-robin",
-      numberCount: 0,
-      callsToday: 0,
-      active: true,
-      country: input.country,
-      closedBrowserDelaySec: input.closedBrowserDelaySec,
-      idleTimeSec: input.idleTimeSec,
-      autoBuy: input.autoBuy,
-      phoneNumberFormat: "E164",
-      attachedNumberIds: [],
-      vendorEnabled: false,
-      trafficSourcesEnabled: false,
-      trafficSources: [],
-    });
-    toast.success(t("trafficUI.numbers.pools.toast.created").replace("{name}", input.name));
-    router.push(`${ROUTES.numbers}/pools/${created.id}`);
-  };
+  // CH-461: a new pool is made on the 5-step New pool page (Sir's design).
 
   /* ── All Numbers tab state ── */
   const [allQuery, setAllQuery] = React.useState("");
@@ -280,7 +248,7 @@ export default function NumbersPage() {
             pageSize={poolsPageSize}
             onPageSize={setPoolsPageSize}
             ctaLabel={can("number-pools", "edit") ? t("trafficUI.numbers.cta.create") : undefined}
-            onCta={can("number-pools", "edit") ? () => setCreatePoolOpen(true) : undefined}
+            onCta={can("number-pools", "edit") ? () => router.push(`${ROUTES.numbers}/pools/new`) : undefined}
             sort={{
               options: POOL_SORT_OPTIONS,
               value: poolsSortKey,
@@ -320,11 +288,6 @@ export default function NumbersPage() {
 
       <ProvisionNumberDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
 
-      <CreateNumberPoolDialog
-        open={createPoolOpen}
-        onOpenChange={setCreatePoolOpen}
-        onCreate={onCreatePool}
-      />
     </>
   );
 }

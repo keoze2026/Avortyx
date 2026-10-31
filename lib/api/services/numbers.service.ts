@@ -10,6 +10,11 @@
 import { http } from "@/lib/api/http";
 import type { Paginated } from "@/lib/api/types";
 import type {
+  FoundNumber,
+  PoolCall,
+  PoolDesign,
+  PoolLander,
+  PoolProtection,
   NumberPool,
   NumberStatus,
   NumberType,
@@ -266,6 +271,25 @@ interface PoolWire {
     events: number;
     conversions: number;
   }>;
+  /* CH-461: Sir's number pool design (CH-460 on the server). */
+  publicKey?: string;
+  statusLabel?: PoolDesign["statusLabel"];
+  cooldownSeconds?: number;
+  captureParams?: string[];
+  protection?: PoolProtection;
+  impressionsToday?: number;
+  missesToday?: number;
+  attributedToday?: number;
+  numbersQuarantined?: number;
+  snippetSeenAt?: string | null;
+  snippetSeenHost?: string;
+  landersCount?: number;
+  numberRows?: PoolDesign["numberRows"];
+  callsBySource?: PoolDesign["callsBySource"];
+  spam?: PoolDesign["spam"];
+  blockedToday?: number;
+  landers?: PoolLander[];
+  swapNumbers?: string[];
 }
 
 function normalizeRotation(raw?: string): RotationStrategy {
@@ -316,7 +340,55 @@ function wireToPool(w: PoolWire): NumberPool {
     vendorId: w.vendorId ?? undefined,
     trafficSourcesEnabled: w.trafficSourcesEnabled,
     trafficSources: w.trafficSources,
+    design: w.publicKey === undefined ? undefined : {
+      publicKey: w.publicKey ?? "",
+      statusLabel: w.statusLabel ?? (w.active === false ? "paused" : "active"),
+      cooldownSeconds: w.cooldownSeconds ?? 120,
+      captureParams: w.captureParams ?? [],
+      protection: w.protection ?? { ...DEFAULT_PROTECTION },
+      impressionsToday: w.impressionsToday ?? 0,
+      missesToday: w.missesToday ?? 0,
+      attributedToday: w.attributedToday ?? 0,
+      numbersQuarantined: w.numbersQuarantined ?? 0,
+      snippetSeenAt: w.snippetSeenAt ?? null,
+      snippetSeenHost: w.snippetSeenHost ?? "",
+      landersCount: w.landersCount ?? 0,
+      numberRows: w.numberRows,
+      callsBySource: w.callsBySource,
+      spam: w.spam,
+      blockedToday: w.blockedToday,
+      landers: w.landers,
+      swapNumbers: w.swapNumbers,
+    },
   };
+}
+
+/** CH-461: the server's defaults (dni/protection.py RULES). */
+export const DEFAULT_PROTECTION: PoolProtection = {
+  maxCallsPerCaller10m: 5,
+  numberFloodPerMin: 20,
+  shortCallSec: 4,
+  shortCallsPerCaller30m: 3,
+  blockAnonymous: false,
+  assignPerIp10m: 30,
+  callGraceSec: 600,
+  blockHours: 24,
+};
+
+/** CH-461: everything the New pool wizard sends in one go. */
+export interface NewPoolInput {
+  name: string;
+  campaignId?: string;
+  country: string;
+  fallbackNumber: string;
+  allowedDomains: string[];
+  attachedNumberIds: string[];
+  idleTimeSec: number;
+  closedBrowserDelaySeconds: number;
+  cooldownSeconds: number;
+  captureParams: string[];
+  protection: PoolProtection;
+  landers: Array<{ url: string; found: FoundNumber[]; swap: string[] }>;
 }
 
 /* ─── Public services ─────────────────────────────────────────────────── */
@@ -502,8 +574,9 @@ export const poolsService = {
 
   async update(id: string, patch: Partial<NumberPool>): Promise<NumberPool> {
     // The figures are the server's; never send them back (CH-456).
-    const { stats: _stats, ...body } = patch;
+    const { stats: _stats, design: _design, ...body } = patch;
     void _stats;
+    void _design;
     return wireToPool(await http.patch<PoolWire>(`/api/dni/pools/${id}`, { body }));
   },
 
@@ -517,6 +590,54 @@ export const poolsService = {
 
   async removeNumber(poolId: string, numberId: string): Promise<void> {
     await http.delete(`/api/dni/pools/${poolId}/numbers/${numberId}`);
+  },
+
+  /* ── CH-461: Sir's number pool design ── */
+
+  async createFull(input: NewPoolInput): Promise<NumberPool> {
+    return wireToPool(await http.post<PoolWire>("/api/dni/pools", { body: { ...input } }));
+  },
+
+  /** Cool-down, captured URL parameters and spam rules (CH-461). */
+  async updateDesign(
+    id: string,
+    patch: { cooldownSeconds?: number; captureParams?: string[]; protection?: PoolProtection },
+  ): Promise<NumberPool> {
+    return wireToPool(await http.patch<PoolWire>(`/api/dni/pools/${id}`, { body: patch }));
+  },
+
+  /** Read a landing page and list its phone numbers. */
+  async scan(url: string): Promise<{ url: string; found: FoundNumber[] }> {
+    return http.post("/api/dni/scan", { body: { url } });
+  },
+
+  async landers(poolId: string): Promise<PoolLander[]> {
+    return http.get(`/api/dni/pools/${poolId}/landers`);
+  },
+
+  async addLander(poolId: string, url: string): Promise<PoolLander> {
+    return http.post(`/api/dni/pools/${poolId}/landers`, { body: { url } });
+  },
+
+  async rescanLander(id: string): Promise<PoolLander> {
+    return http.post(`/api/dni/landers/${id}/rescan`, { body: {} });
+  },
+
+  async setLanderSwap(id: string, swap: string[]): Promise<PoolLander> {
+    return http.patch(`/api/dni/landers/${id}`, { body: { swap } });
+  },
+
+  async removeLander(id: string): Promise<void> {
+    await http.delete(`/api/dni/landers/${id}`);
+  },
+
+  /** Pull a number out of rotation ("quarantined") or put it back ("available"). */
+  async setNumberStatus(poolId: string, numberId: string, status: "quarantined" | "available", reason = ""): Promise<void> {
+    await http.post(`/api/dni/pools/${poolId}/numbers/${numberId}/status`, { body: { status, reason } });
+  },
+
+  async calls(poolId: string, limit = 100): Promise<PoolCall[]> {
+    return http.get(`/api/dni/pools/${poolId}/calls`, { query: { limit } });
   },
 };
 

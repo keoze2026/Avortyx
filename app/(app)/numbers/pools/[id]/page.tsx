@@ -74,6 +74,19 @@ import { LocalName } from "@/lib/i18n/local-name";
 import { API_BASE_URL } from "@/lib/api/env";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { poolsService } from "@/lib/api/services/numbers.service";
+import {
+  CallsBySourceCard,
+  CallsPanel,
+  DesignSettingsCard,
+  InstallCard,
+  LandersPanel,
+  PoolHeader,
+  PoolKpis,
+  PoolNumbersCard,
+  SpamCard,
+} from "@/components/numbers/pool-page";
+import { poolSnippet } from "@/components/numbers/pool-design";
 
 const VENDOR_OPTIONS = ["Bandwidth", "Twilio", "Inteliquent", "Telnyx", "Voxbone"];
 const PHONE_FORMATS: { id: PhoneNumberFormat; label: string; labelKey?: string }[] = [
@@ -95,13 +108,35 @@ export default function NumberPoolDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
 
-  const pool = useNumbersStore((s) => s.pools.find((p) => p.id === id));
+  const listed = useNumbersStore((s) => s.pools.find((p) => p.id === id));
   const storeUpdatePool = useNumbersStore((s) => s.updatePool);
+  const setPoolActive = useNumbersStore((s) => s.setPoolActive);
   const numbers = useNumbersStore((s) => s.numbers);
   const { isPartner } = usePartnerPermissions();
+  const [tab, setTab] = React.useState<"overview" | "landers" | "calls" | "settings">("overview");
+
+  // CH-461: the pool page's figures (numbers, calls by source, spam, landers)
+  // come from GET /api/dni/pools/{id}; refreshed every 30 s while open.
+  const [detail, setDetail] = React.useState<NumberPool | null>(null);
+  const refresh = React.useCallback(async () => {
+    if (!id || isPartner) return;
+    try {
+      setDetail(await poolsService.get(id));
+    } catch {
+      /* keep what is on screen */
+    }
+  }, [id, isPartner]);
+  React.useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 30000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  const pool = listed ? { ...listed, design: detail?.design ?? listed.design, stats: detail?.stats ?? listed.stats } : detail ?? undefined;
+
   // CH-456: a refused save (e.g. a TFN already in another pool) says why.
   const updatePool = (poolId: string, patch: Partial<NumberPool>) =>
-    storeUpdatePool(poolId, patch).catch((e) => toast.error(friendlyErrorMessage(e)));
+    storeUpdatePool(poolId, patch).then(refresh).catch((e) => toast.error(friendlyErrorMessage(e)));
 
   // CH-456: number pools are for advertisers only.
   if (!pool || isPartner) {
@@ -129,39 +164,88 @@ export default function NumberPoolDetailPage() {
     );
   }
 
+  const design = pool.design;
+  const tabs: Array<{ id: typeof tab; label: string; count?: number }> = [
+    { id: "overview", label: t("x461.tab.overview") },
+    { id: "landers", label: t("x461.tab.landers"), count: design?.landersCount },
+    { id: "calls", label: t("x461.tab.calls"), count: pool.stats?.callsToday },
+    { id: "settings", label: t("x461.tab.settings") },
+  ];
+
   return (
-    // Same content-width cap as Campaign Settings and the other edit pages
-    // — keeps the form readable instead of stretching across an ultrawide.
-    <div className="mx-auto w-full max-w-[928px] space-y-4">
+    <div className="mx-auto w-full max-w-[1240px] space-y-6">
       <Link
         href={ROUTES.numbers}
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        {t("trafficUI.numbers.poolDetail.back")}
+        {t("x461.numberPools")}
       </Link>
 
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight"><LocalName name={pool.name} /></h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("trafficUI.numbers.poolDetail.manageDescription")}
-        </p>
+      <PoolHeader
+        pool={pool}
+        onPause={async () => {
+          await setPoolActive(pool.id, !pool.active);
+          toast.success(
+            (!pool.active ? t("trafficUI.numbers.pools.toast.activated") : t("trafficUI.numbers.pools.toast.paused")).replace("{name}", pool.name),
+          );
+          void refresh();
+        }}
+        onEdit={() => setTab("settings")}
+      />
+
+      <PoolKpis pool={pool} />
+
+      <div className="flex gap-6 border-b border-border">
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            onClick={() => setTab(x.id)}
+            className={`-mb-px border-b-2 pb-2 text-sm transition-colors ${
+              tab === x.id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {x.label}
+            {x.count !== undefined && <span className="ml-1.5 text-[11px] text-muted-foreground">{x.count}</span>}
+          </button>
+        ))}
       </div>
 
-      <PoolHealthCard pool={pool} />
-      <IntegrationCodeCard pool={pool} />
-      <SetupNumberPoolCard pool={pool} onChange={(patch) => updatePool(pool.id, patch)} />
-      <AttachNumbersCard pool={pool} allNumbers={numbers} onChange={(ids) => updatePool(pool.id, { attachedNumberIds: ids })} />
-      <VendorCard
-        pool={pool}
-        onToggleEnabled={(enabled) => updatePool(pool.id, { vendorEnabled: enabled })}
-        onChangeVendor={(vendorId) => updatePool(pool.id, { vendorId })}
-      />
-      <TrafficSourcesCard
-        pool={pool}
-        onToggleEnabled={(enabled) => updatePool(pool.id, { trafficSourcesEnabled: enabled })}
-        onChangeSources={(sources) => updatePool(pool.id, { trafficSources: sources })}
-      />
+      {tab === "overview" && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          <PoolNumbersCard pool={pool} onChanged={refresh} />
+          <div className="space-y-4">
+            <InstallCard pool={pool} />
+            <CallsBySourceCard pool={pool} />
+            <SpamCard pool={pool} onEdit={() => setTab("settings")} />
+          </div>
+        </div>
+      )}
+
+      {tab === "landers" && <LandersPanel pool={pool} onChanged={refresh} />}
+
+      {tab === "calls" && <CallsPanel poolId={pool.id} />}
+
+      {tab === "settings" && (
+        <div className="mx-auto w-full max-w-[928px] space-y-4">
+          <PoolHealthCard pool={pool} />
+          <IntegrationCodeCard pool={pool} />
+          <SetupNumberPoolCard pool={pool} onChange={(patch) => updatePool(pool.id, patch)} />
+          <DesignSettingsCard pool={pool} onSaved={(p) => setDetail(p)} />
+          <AttachNumbersCard pool={pool} allNumbers={numbers} onChange={(ids) => updatePool(pool.id, { attachedNumberIds: ids })} />
+          <VendorCard
+            pool={pool}
+            onToggleEnabled={(enabled) => updatePool(pool.id, { vendorEnabled: enabled })}
+            onChangeVendor={(vendorId) => updatePool(pool.id, { vendorId })}
+          />
+          <TrafficSourcesCard
+            pool={pool}
+            onToggleEnabled={(enabled) => updatePool(pool.id, { trafficSourcesEnabled: enabled })}
+            onChangeSources={(sources) => updatePool(pool.id, { trafficSources: sources })}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -174,7 +258,11 @@ function IntegrationCodeCard({ pool }: { pool: NumberPool }) {
   // CH-456: the script the server serves for this pool (the old address,
   // cdn.avortyx.io/track.js, did not exist). It swaps any element with
   // data-dni, .phone-number, .tracked-number or a tel: link.
-  const snippet = `<!-- Avortyx number-pool tracker · ${pool.name} -->
+  // CH-461: the new website script (avx-dni.js, Sir's design) when the
+  // server has given the pool its key; otherwise the CH-456 script.
+  const snippet = pool.design?.publicKey
+    ? poolSnippet(pool.design.publicKey)
+    : `<!-- Avortyx number-pool tracker · ${pool.name} -->
 <script src="${API_BASE_URL}/api/dni/snippet/${pool.id}" async></script>`;
   return (
     <Card className="p-5">

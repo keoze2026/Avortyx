@@ -159,4 +159,88 @@ export interface NumberPool {
   vendorId?: string;
   trafficSourcesEnabled?: boolean;
   trafficSources?: TrafficSourceEntry[];
+  /** CH-460/461: Sir's number pool design. */
+  design?: PoolDesign;
+}
+
+/** CH-461: rules a pool applies to calls on its numbers (server defaults). */
+export interface PoolProtection {
+  maxCallsPerCaller10m: number;
+  numberFloodPerMin: number;
+  shortCallSec: number;
+  shortCallsPerCaller30m: number;
+  blockAnonymous: boolean;
+  assignPerIp10m: number;
+  callGraceSec: number;
+  blockHours: number;
+}
+
+export type PoolNumberState = "in_use" | "available" | "cooling" | "quarantined";
+
+export interface PoolNumberRow {
+  id: string;
+  number: string;
+  display: string;
+  phoneNumberId?: string | null;
+  state: PoolNumberState;
+  /** The visit's source while in use; the reason while pulled out. */
+  shownTo: string;
+  heldForSec: number | null;
+  callsToday: number;
+}
+
+export interface FoundNumber {
+  number: string;
+  display: string;
+  where: string;
+  label: string;
+}
+
+export interface PoolLander {
+  id: string;
+  url: string;
+  found: FoundNumber[];
+  swap: string[];
+  scanError: string;
+  lastScannedAt: string | null;
+  snippetSeenAt: string | null;
+}
+
+export interface PoolCall {
+  id: number;
+  startedAt: string;
+  caller: string;
+  number: string;
+  source: string;
+  durationSec: number | null;
+  blockedReason: string;
+  callLogId: string | null;
+}
+
+/** CH-461: what the server sends for the pool page (Sir's design). */
+export interface PoolDesign {
+  publicKey: string;
+  statusLabel: "active" | "attention" | "paused";
+  cooldownSeconds: number;
+  captureParams: string[];
+  protection: PoolProtection;
+  impressionsToday: number;
+  missesToday: number;
+  attributedToday: number;
+  numbersQuarantined: number;
+  snippetSeenAt: string | null;
+  snippetSeenHost: string;
+  landersCount: number;
+  /* Pool page only (GET /api/dni/pools/{id}). */
+  numberRows?: PoolNumberRow[];
+  callsBySource?: Array<{ source: string; calls: number }>;
+  spam?: {
+    repeatCallersBlocked: number;
+    silentCallersBlocked: number;
+    numbersPulledForFlooding: number;
+    complaints: number;
+  };
+  blockedToday?: number;
+  landers?: PoolLander[];
+  swapNumbers?: string[];
 }

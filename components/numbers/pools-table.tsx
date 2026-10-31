@@ -1,13 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Code2, MoreHorizontal, Pause, Pencil, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { poolSnippet, PoolStatusPill, shortKey } from "@/components/numbers/pool-design";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -20,7 +27,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { LocalName, useLocalName } from "@/lib/i18n/local-name";
 import { countryLabel } from "@/components/numbers/country-label";
 import { ROUTES } from "@/lib/constants";
-import { formatCompact, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import type { NumberPool } from "@/lib/types";
 import { Can } from "@/components/shared/can";
@@ -50,16 +57,15 @@ export function deriveIdleLimit(p: NumberPool): number | undefined {
   return typeof p.idleTimeSec === "number" ? p.idleTimeSec : undefined;
 }
 
-/* Impressions and missed calls have no field on NumberPool and nothing in the
- * backend counts them. They were callsToday * 30 plus a hash, and
- * callsToday * 0.04 plus a hash - arithmetic on an unrelated number dressed as
- * a measurement. Until something counts them, they are blank. */
-export function deriveImpressions(_p: NumberPool): number | undefined {
-  return undefined;
+/* CH-461: impressions (numbers asked for by the website script today) and
+ * misses (visitors shown the fallback because every number was busy) are
+ * counted by the server since CH-460. A pool from an older server shows a dash. */
+export function deriveImpressions(p: NumberPool): number | undefined {
+  return p.design?.impressionsToday;
 }
 
-export function deriveMisses(_p: NumberPool): number | undefined {
-  return undefined;
+export function deriveMisses(p: NumberPool): number | undefined {
+  return p.design?.missesToday;
 }
 
 function formatSeconds(s: number, t: (key: string) => string): string {
@@ -161,7 +167,12 @@ export function PoolsTable({
                     />
                   </TableCell>
                   {visibleColumns.has("name") && (
-                    <TableCell className="text-left font-medium"><LocalName name={p.name} /></TableCell>
+                    <TableCell className="text-left">
+                      <div className="font-medium"><LocalName name={p.name} /></div>
+                      {p.design?.publicKey && (
+                        <div className="font-mono text-[11px] text-muted-foreground">{shortKey(p.design.publicKey)}</div>
+                      )}
+                    </TableCell>
                   )}
                   {visibleColumns.has("country") && (
                     <TableCell className="text-muted-foreground">
@@ -169,8 +180,8 @@ export function PoolsTable({
                     </TableCell>
                   )}
                   {visibleColumns.has("poolSize") && (
-                    <TableCell className="tabular-nums">
-                      {formatNumber(p.numberCount)}
+                    <TableCell>
+                      <PoolSizeBar inUse={p.stats?.inUse ?? 0} total={p.numberCount} />
                     </TableCell>
                   )}
                   {visibleColumns.has("campaign") && (
@@ -190,33 +201,39 @@ export function PoolsTable({
                   )}
                   {visibleColumns.has("impressions") && (
                     <TableCell className="tabular-nums">
-                      {deriveImpressions(p) === undefined ? POOL_DASH : formatCompact(deriveImpressions(p)!)}
+                      {deriveImpressions(p) === undefined ? POOL_DASH : formatNumber(deriveImpressions(p)!)}
                     </TableCell>
                   )}
                   {visibleColumns.has("misses") && (
-                    <TableCell className="tabular-nums">
+                    <TableCell className={`tabular-nums ${(deriveMisses(p) ?? 0) > 0 ? "text-amber-500" : ""}`}>
                       {deriveMisses(p) === undefined ? POOL_DASH : formatNumber(deriveMisses(p)!)}
                     </TableCell>
                   )}
                   {visibleColumns.has("status") && (
                     <TableCell>
-                      <Switch
-                        checked={p.active}
-                        onCheckedChange={(v) => {
-                          setActive(p.id, Boolean(v));
-                          toast.success(
-                            (v
-                              ? t("trafficUI.numbers.pools.toast.activated")
-                              : t("trafficUI.numbers.pools.toast.paused")
-                            ).replace("{name}", localName(p.name)),
-                          );
-                        }}
-                        aria-label={t("trafficUI.numbers.pools.toggle").replace("{name}", p.name)}
-                      />
+                      <PoolStatusPill status={p.design?.statusLabel ?? (p.active ? "active" : "paused")} />
                     </TableCell>
                   )}
                   <TableCell className="pr-4">
                     <div className="inline-flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label={t("x461.copySnippet")}
+                        title={t("x461.copySnippet")}
+                        disabled={!p.design?.publicKey}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(poolSnippet(p.design?.publicKey ?? ""));
+                            toast.success(t("x461.snippetCopied"));
+                          } catch {
+                            toast.error(t("trafficUI.common.copyFailed"));
+                          }
+                        }}
+                      >
+                        <Code2 className="h-3.5 w-3.5" />
+                      </Button>
                       <Can area="number-pools" action="edit"><Button
                         variant="ghost"
                         size="icon"
@@ -226,18 +243,46 @@ export function PoolsTable({
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button></Can>
-                      <Can area="number-pools" action="delete"><Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        aria-label={t("trafficUI.numbers.pools.remove").replace("{name}", p.name)}
-                        onClick={() => {
-                          remove(p.id);
-                          toast.success(t("trafficUI.numbers.pools.removed").replace("{name}", localName(p.name)));
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button></Can>
+                      <Can area="number-pools" action="edit">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={t("x461.more")}>
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const v = !p.active;
+                                setActive(p.id, v);
+                                toast.success(
+                                  (v
+                                    ? t("trafficUI.numbers.pools.toast.activated")
+                                    : t("trafficUI.numbers.pools.toast.paused")
+                                  ).replace("{name}", localName(p.name)),
+                                );
+                              }}
+                            >
+                              {p.active ? <Pause className="mr-2 h-3.5 w-3.5" /> : <Play className="mr-2 h-3.5 w-3.5" />}
+                              {p.active ? t("x461.pausePool") : t("x461.activatePool")}
+                            </DropdownMenuItem>
+                            <Can area="number-pools" action="delete">
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  if (!window.confirm(t("x461.deleteConfirm").replace("{name}", localName(p.name)))) return;
+                                  remove(p.id);
+                                  toast.success(t("trafficUI.numbers.pools.removed").replace("{name}", localName(p.name)));
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                {t("x461.deletePool")}
+                              </DropdownMenuItem>
+                            </Can>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Can>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -247,5 +292,23 @@ export function PoolsTable({
         </Table>
       </div>
     </Card>
+  );
+}
+
+/** "38/50 in use" with a bar; amber when every number is busy (Sir's list). */
+function PoolSizeBar({ inUse, total }: { inUse: number; total: number }) {
+  const { t } = useTranslation();
+  const pct = total > 0 ? Math.min(100, Math.round((inUse / total) * 100)) : 0;
+  const full = total > 0 && inUse >= total;
+  return (
+    <div className="w-[88px]">
+      <div className="text-xs">
+        <span className="font-mono tabular-nums">{formatNumber(inUse)}/{formatNumber(total)}</span>{" "}
+        <span className="text-muted-foreground">{t("x461.inUse")}</span>
+      </div>
+      <div className="mt-1 h-1 w-full rounded-full bg-muted">
+        <div className={`h-1 rounded-full ${full ? "bg-amber-500" : "bg-foreground"}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
