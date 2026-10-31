@@ -16,7 +16,7 @@
  * Re-read each time a page using it opens (at most every 30 seconds), so a
  * toggle the admin changes shows without the partner logging out. While it is
  * loading nothing is allowed, so a switched-off button never flashes up. If it
- * can't be read at all, the backend's defaults apply (only Download Reports on).
+ * can't be read at all, the backend's defaults apply (Download Reports off, CH-454).
  */
 
 import * as React from "react";
@@ -35,13 +35,15 @@ export type PartnerPermissionKey =
 
 type Perms = Record<PartnerPermissionKey, boolean>;
 
-/** The backend's defaults (accounts/partner_permissions.py), used if the settings can't be read. */
+/** The backend's defaults (accounts/partner_permissions.py), used if the settings can't be read.
+ *  CH-454 (Sir, 31 Oct): Download Reports is off unless the main account switches it on, so a
+ *  login whose settings could not be read never gets the download. */
 const DEFAULTS: Perms = {
   manage_traffic: false,
   number_creation: false,
   audio_recording: false,
   block_numbers: false,
-  download_reports: true,
+  download_reports: false,
   tfn_test: false,
 };
 const NOTHING: Perms = {
