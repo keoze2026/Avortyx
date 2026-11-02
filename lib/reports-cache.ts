@@ -64,6 +64,12 @@ const MAX_AGE_MS = 6 * 60 * 60 * 1000;
  * jumped when the real one landed. Past days never change, so they are exempt.
  */
 export const TODAY_SHOW_MAX_AGE_MS = 30_000;
+/**
+ * Loading in advance waits this long after the report on screen is in (CH-462).
+ * Started at once, the past week's requests took the backend's few workers
+ * while the page's own requests and the app's first ones were still waiting.
+ */
+export const PREFETCH_START_DELAY_MS = 5_000;
 /** A prefetch is skipped if the saved copy is younger than this. */
 const PREFETCH_FRESH_MS = 60_000;
 /** Larger views stay in memory only (sessionStorage holds ~5 MB). */
@@ -295,6 +301,7 @@ export function prefetchRecentDays(timeZone: string): void {
   pastPrefetchRunning = true;
   void (async () => {
     try {
+      await new Promise((resolve) => setTimeout(resolve, PREFETCH_START_DELAY_MS));
       for (let back = 1; back <= PREFETCH_PAST_DAYS; back++) {
         if (!historyOpen()) return;
         const day = zonedDayKey(Date.now() - back * 24 * 60 * 60 * 1000, timeZone);

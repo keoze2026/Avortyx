@@ -41,6 +41,7 @@ import {
   loadReportShared,
   prefetchRecentDays,
   prefetchReport,
+  PREFETCH_START_DELAY_MS,
   reportKey,
   TODAY_SHOW_MAX_AGE_MS,
   todayAndYesterday,
@@ -257,11 +258,13 @@ export default function ReportsPage() {
         // Load the other of today / yesterday in advance - the switch people
         // make most - so it opens instantly too (skipped while history is
         // locked behind the reports PIN).
-        for (const other of todayAndYesterday(current.timeZone)) {
-          if (other.dateFrom !== current.dateFrom || other.dateTo !== current.dateTo) prefetchReport(other);
-        }
+        setTimeout(() => {
+          for (const other of todayAndYesterday(current.timeZone)) {
+            if (other.dateFrom !== current.dateFrom || other.dateTo !== current.dateTo) prefetchReport(other);
+          }
+        }, PREFETCH_START_DELAY_MS);
         // Then the rest of the past week, one day at a time, so opening any
-        // of those days is instant as well.
+        // of those days is instant as well. Both wait a few seconds (CH-462).
         prefetchRecentDays(current.timeZone);
       })
       .catch((e) => {

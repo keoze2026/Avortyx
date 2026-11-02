@@ -1714,3 +1714,13 @@ Built from Sir's number pool design (list page, 5-step New pool, pool page).
   cool-down, captured parameters and spam rules).
 - The website code is the new avx-dni.js tag with the pool's key.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+
+## CH-462 - Reports: loading in advance waits until the page is in
+**2026-11-02 - Reports / Performance** (with backend CH-462)
+
+- Yesterday / today and the past 7 days are loaded in advance 5 s after the
+  report on screen is in, not at once: started at once, they took the
+  backend's few workers while the app's first requests were still waiting.
+  Opening those days stays instant (lib/reports-cache.ts,
+  PREFETCH_START_DELAY_MS).
+- Type-check unchanged.
