@@ -59,6 +59,8 @@ interface Bot {
   keyPrefix: string | null;
   issuedAt: string | null;
   lastUsedAt: string | null;
+  /** CH-490: the live key can be copied again (issued here after CH-490). */
+  copyable?: boolean;
 }
 
 interface Payload {
@@ -70,6 +72,8 @@ interface Issued {
   buyerName: string;
   loginEmail: string;
   key: string;
+  /** CH-490: shown from "Copy key" rather than just issued. */
+  copied?: boolean;
 }
 
 const STATUS_VARIANT: Record<Status, React.ComponentProps<typeof Badge>["variant"]> = {
@@ -107,6 +111,20 @@ export default function ActiveBotsPage() {
   React.useEffect(() => {
     load();
   }, [load]);
+
+  // CH-490: the live key again, in full, to copy. Logged on the server.
+  const copyKey = async (b: Bot) => {
+    setBusy(b.buyerId);
+    try {
+      const r = await http.post<Issued>(`/api/active-bots/${b.buyerId}/copy`);
+      setIssued({ buyerName: r.buyerName, loginEmail: r.loginEmail, key: r.key, copied: true });
+      navigator.clipboard?.writeText(r.key).then(() => toast.success(t("activeBots.copied"))).catch(() => undefined);
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e, t("activeBots.actionFailed")));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const run = async (c: NonNullable<Confirm>) => {
     setConfirm(null);
@@ -221,6 +239,18 @@ export default function ActiveBotsPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={busy !== null || !b.copyable}
+                              title={b.copyable ? undefined : t("x490.notCopyable")}
+                              onClick={() => void copyKey(b)}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              {t("activeBots.copy")}
+                            </Button>
+                          )}
+                          {b.status === "active" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="text-destructive"
                               disabled={busy !== null}
                               onClick={() => setConfirm({ bot: b, action: "off" })}
@@ -276,8 +306,10 @@ export default function ActiveBotsPage() {
       <Dialog open={!!issued} onOpenChange={(o) => !o && setIssued(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("activeBots.issuedTitle").replace("{buyer}", issued?.buyerName ?? "")}</DialogTitle>
-            <DialogDescription>{t("activeBots.issuedBody")}</DialogDescription>
+            <DialogTitle>
+              {t(issued?.copied ? "x490.copiedTitle" : "activeBots.issuedTitle").replace("{buyer}", issued?.buyerName ?? "")}
+            </DialogTitle>
+            <DialogDescription>{t(issued?.copied ? "x490.copiedBody" : "x490.issuedBody")}</DialogDescription>
           </DialogHeader>
           {issued && (
             <div className="space-y-2 py-2">

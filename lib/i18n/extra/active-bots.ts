@@ -1,8 +1,12 @@
-/** Active Bots page (CH-477, Sir 3 Nov): each buyer's API key. */
+/** Active Bots page (CH-477, Sir 3 Nov): each buyer's API key. Copy key: CH-490. */
 import type { ExtraTranslations } from "./types";
 
 export const activeBots: ExtraTranslations = {
   en: {
+    "x490.notCopyable": "Issued before keys could be copied again. Issue a new key once to copy it later.",
+    "x490.copiedTitle": "API key for {buyer}",
+    "x490.copiedBody": "Copied to the clipboard. Send it only to this buyer.",
+    "x490.issuedBody": "Copy it and send it to the buyer. You can copy it again later with Copy key.",
     "nav.activeBots": "Active Bots",
     "activeBots.title": "Active Bots",
     "activeBots.subline": "Each Buyer's API Key: Who Has One, Whether It Works and When It Was Last Used.",
@@ -43,6 +47,10 @@ export const activeBots: ExtraTranslations = {
     "activeBots.actionFailed": "That did not work. Please try again.",
   },
   ru: {
+    "x490.notCopyable": "Ключ выдан до того, как ключи стало можно копировать повторно. Выдайте новый ключ, чтобы копировать его позже.",
+    "x490.copiedTitle": "API-ключ для {buyer}",
+    "x490.copiedBody": "Скопирован в буфер обмена. Отправьте его только этому покупателю.",
+    "x490.issuedBody": "Скопируйте и отправьте покупателю. Позже его можно скопировать снова кнопкой «Скопировать ключ».",
     "nav.activeBots": "Активные боты",
     "activeBots.title": "Активные боты",
     "activeBots.subline": "API-ключ каждого покупателя: у кого он есть, работает ли он и когда использовался.",
@@ -82,6 +90,10 @@ export const activeBots: ExtraTranslations = {
     "activeBots.actionFailed": "Не получилось. Попробуйте ещё раз.",
   },
   ja: {
+    "x490.notCopyable": "再コピー機能の前に発行されたキーです。後でコピーするには新しいキーを一度発行してください。",
+    "x490.copiedTitle": "{buyer} のAPIキー",
+    "x490.copiedBody": "クリップボードにコピーしました。このバイヤーにのみ送ってください。",
+    "x490.issuedBody": "コピーしてバイヤーに送ってください。後で「キーをコピー」から再度コピーできます。",
     "nav.activeBots": "アクティブボット",
     "activeBots.title": "アクティブボット",
     "activeBots.subline": "各バイヤーのAPIキー：保有状況、有効かどうか、最終使用日時。",
@@ -121,6 +133,10 @@ export const activeBots: ExtraTranslations = {
     "activeBots.actionFailed": "実行できませんでした。もう一度お試しください。",
   },
   zh: {
+    "x490.notCopyable": "此密钥在支持再次复制之前发放。请发放一次新密钥，以后即可复制。",
+    "x490.copiedTitle": "{buyer} 的 API 密钥",
+    "x490.copiedBody": "已复制到剪贴板。请只发送给该买家。",
+    "x490.issuedBody": "复制后发送给买家。之后可通过“复制密钥”再次复制。",
     "nav.activeBots": "活跃机器人",
     "activeBots.title": "活跃机器人",
     "activeBots.subline": "每个买家的 API 密钥：谁有、是否可用、最后使用时间。",

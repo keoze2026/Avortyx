@@ -1896,3 +1896,16 @@ like we had in Revo?"
   destination on the number.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
   No backend change.
+
+## CH-490 - Active Bots: Copy key (FRONTEND)
+
+Asked 3 Nov: "How can Sir copy the existing key? Please add that."
+
+- Each buyer with an active key has a **Copy key** button: it copies the key
+  to the clipboard and shows it in full. The main account only; every copy
+  is in the activity log (backend CH-490).
+- A key issued before this change was never kept, so its Copy key is greyed
+  out with the reason: issue a new key once, and from then on it can be
+  copied any time.
+- After Issue new key, the dialog now says the key can be copied again later.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
