@@ -98,6 +98,11 @@ interface ForwardCallsSectionProps {
 }
 
 /** One row of ROUTED DESTINATIONS: a number this campaign really sends calls to. */
+/** CH-493: live, then paused, then not on the Destinations page. */
+function rank(d: { enabled: boolean; orphan: boolean }): number {
+  return d.orphan ? 2 : d.enabled ? 0 : 1;
+}
+
 interface RoutedRow {
   /** The routing-rule destination id (priority / weight / unlink act on this). */
   id: string;
@@ -108,6 +113,10 @@ interface RoutedRow {
   /** The Destination record behind the number, when there is one. */
   destId?: string;
   enabled: boolean;
+  /** CH-493: no line for this buyer and number on the Destinations page
+   *  (deleted there, or never added). Routing still sends calls to it - it
+   *  has no switch or limits to honour - so it is marked, not shown as on. */
+  orphan: boolean;
   /** The destination's concurrency cap (0 = no cap), for the LIVE column. */
   concurrencyCap: number;
   /** Its own billing (CH-247): null rate / "" = the campaign's. */
@@ -284,13 +293,20 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   }, [loadRouted]);
 
   const destinations = useMemo<RoutedRow[]>(() => {
-    // CH-489: a routed line is matched to its own buyer's destination - one
-    // TFN can be live under several buyers (CH-392) - else to any on the number.
-    const byLine = new Map((allDestinations ?? []).map((d) => [`${toE164(d.tfn)}|${d.buyerId ?? ""}`, d]));
+    // CH-489 / CH-493: a routed line is matched to its own buyer's
+    // destination, as routing matches it - one TFN can be live under several
+    // buyers (CH-392). Another buyer's line on the number is not this one's.
+    // A paused row of the buyer's counts over a live one only if no live one.
+    const byLine = new Map<string, (typeof allDestinations)[number]>();
+    for (const d of allDestinations ?? []) {
+      const k = `${toE164(d.tfn)}|${d.buyerId ?? ""}`;
+      const had = byLine.get(k);
+      if (!had || (!had.enabled && d.enabled)) byLine.set(k, d);
+    }
     const byNumber = new Map((allDestinations ?? []).map((d) => [toE164(d.tfn), d]));
     return routed.map((r) => {
       const number = r.destination ?? "";
-      const dest = (r.buyerId ? byLine.get(`${toE164(number)}|${r.buyerId}`) : undefined) ?? byNumber.get(toE164(number));
+      const dest = r.buyerId ? byLine.get(`${toE164(number)}|${r.buyerId}`) : byNumber.get(toE164(number));
       return {
         id: r.id,
         name: dest?.name ?? toE164(number),
@@ -299,16 +315,18 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         buyerName: r.buyerName ?? dest?.buyerName,
         destId: dest?.id,
         enabled: dest ? dest.enabled : true,
+        orphan: !dest,
         concurrencyCap: dest?.concurrencyCap ?? 0,
         revenue: r.revenue != null && r.revenue !== "" ? Number(r.revenue) : null,
         convertOn: ((r.convertOn as ConvertKey) || "") as ConvertKey,
         convertSeconds: r.convertSeconds ?? 0,
       };
     })
-      // CH-411 (Sir): active TFNs always on top, then the switched-off ones.
-      // `routed` is already in priority order and the sort is stable, so each
-      // group stays in priority order (1, 2, 5, 10...).
-      .sort((a, b) => Number(b.enabled) - Number(a.enabled));
+      // CH-411 / CH-493 (Sir): active TFNs on top, then the switched-off
+      // ones, then lines missing from the Destinations page. `routed` is
+      // already in priority order and the sort is stable, so each group stays
+      // in priority order (1, 2, 5, 10...).
+      .sort((a, b) => rank(a) - rank(b));
   }, [routed, allDestinations]);
 
   // CH-408: the header's Destinations tile counts these lines.
@@ -789,6 +807,11 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                       <div className="mt-0.5 text-[10px] text-muted-foreground">
                         {buyer?.name ?? d.buyerName ? <LocalName name={buyer?.name ?? d.buyerName} /> : "—"}
                       </div>
+                      {d.orphan && (
+                        <div className="mt-0.5 text-[10px] text-[color:var(--warning)]" title={t("x493.orphanHint")}>
+                          {t("x493.orphan")}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-[9.5px] font-medium tabular-nums text-foreground">
                       {toE164(d.tfn)}
@@ -819,8 +842,11 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                     </TableCell>
                     <TableCell className="text-center">
                       <Switch className="data-[state=checked]:bg-accent"
-                        checked={d.enabled}
+                        // CH-493 (Sir): a line with no destination behind it is
+                        // never drawn as on (it was a pale "on").
+                        checked={d.enabled && !d.orphan}
                         disabled={!d.destId}
+                        title={d.orphan ? t("x493.orphanHint") : undefined}
                         onCheckedChange={(v) => {
                           if (!d.destId) return;
                           void setEnabled(d.destId, v);

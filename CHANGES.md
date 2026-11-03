@@ -1934,3 +1934,27 @@ publishers' TFNs so they can do that if permission granted."
   TFNs in the campaign view (where it only saw On / Off before). If the
   server refuses, the switch goes back and says so.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+
+## CH-493 - Campaign > Destinations: live on top, paused below, no pale switches (FRONTEND)
+
+Sir (3 Nov): "Inside campaign - only active TFNs should come on top and
+paused TFNs should be on bottom; and if a destination is paused it should
+not show light blue, it's just unchecked."
+
+Checked on Server B: the pale rows are campaign lines with no line for that
+buyer and number on the Destinations page - 89 across the active campaigns
+(deleted there or never added). They had no switch to show, so they were
+drawn as a locked "on" and sorted with the live ones. Routing still sends
+calls to such a line (it has no switch or limits to honour): in the last 24
+hours only +18446102198 (AAT, 8 calls) and +18332249507 (BHS, 1 call) took
+any.
+
+- Order: live lines first, then switched-off ones, then the lines missing
+  from the Destinations page, each group in priority order.
+- A missing line's switch is drawn off (never a pale "on") and the line says
+  "Not on Destinations page" in amber, with what to do on hover: add it on
+  Destinations, or remove it from the campaign.
+- A line is matched to its own buyer's destination only, as routing matches
+  it; another buyer's line on the same number is not used for it.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+  No backend change.
