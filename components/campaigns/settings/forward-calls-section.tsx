@@ -392,7 +392,11 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   const shownDestinations = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return destinations;
-    const qd = q.replace(/\D/g, "");
+    // CH-500: the TFN is matched only when what was typed is a number. "R48"
+    // used to be cut to "48" and matched every TFN with 48 in it (Q04, Q08,
+    // CRM, Q50 beside R48's own lines).
+    const isNumber = /^[\d\s()+\-.]+$/.test(q);
+    const qd = isNumber ? q.replace(/\D/g, "") : "";
     return destinations.filter(
       (d) =>
         (d.buyerName ?? "").toLowerCase().includes(q) ||

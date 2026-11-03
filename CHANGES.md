@@ -2049,3 +2049,14 @@ up/down arrows took half of it, so 10 read "1(".
 - The box is wider, the number centred and the arrows gone, as the Weight
   box beside it (typing and Enter work as before).
 - Type-check unchanged. No backend change.
+
+## CH-500 - Campaign Destinations search: "R48" finds R48 only (FRONTEND)
+
+Seen 3 Nov: on a campaign's Destinations list, searching "r48" also showed
+Q04, Q08, CRM and Q50 lines. The search took the digits out of anything typed
+and matched them against every TFN, so "r48" became "48" and caught
++18777489483, +18444832599, +18334882792 and the like.
+
+- Letters typed: the buyer name and the line name are searched, not the TFN.
+- Only a number typed ("4216", "+1 833 409 4216") is matched against the TFN.
+- Type-check unchanged. No backend change.
