@@ -2156,3 +2156,13 @@ to set Converted on and rate if anyone wants to go easy."
   (and seconds for Call Length) and "Apply to All". It fills every new line;
   any line can still be changed below it. "Copy the First to All" stays.
 - Type-check unchanged. No backend change.
+
+## CH-515 - Destinations page: TFNs with calls today first (FRONTEND)
+
+Sir, 4 Nov: "When you search any TFN by name, 0 calls should come after today's
+routed calls - 2599, 4105 first, then the 0-call TFNs."
+
+- The list (and every search or buyer filter of it) shows the TFNs that had
+  calls today first, most calls first, then those with 0 calls today. Within
+  each, switched-on before switched-off. Nothing is hidden.
+- Type-check unchanged. No backend change.

@@ -102,9 +102,16 @@ export default function DestinationsPage() {
       }
       return true;
     })
-      // Active destinations always first, disabled ones after; the existing
-      // order is kept within each group (the sort is stable).
-      .sort((a, b) => Number(b.enabled) - Number(a.enabled));
+      // CH-515 (Sir, 4 Nov): TFNs with calls today first, most calls first;
+      // then the ones with 0 calls today. Within each, active before
+      // disabled; the existing order is kept otherwise (the sort is stable).
+      .sort((a, b) => {
+        const ac = (a.dailyCalls ?? 0) + (a.liveCalls ?? 0);
+        const bc = (b.dailyCalls ?? 0) + (b.liveCalls ?? 0);
+        if ((ac > 0) !== (bc > 0)) return ac > 0 ? -1 : 1;
+        if (ac !== bc) return bc - ac;
+        return Number(b.enabled) - Number(a.enabled);
+      });
   }, [destinations, query, statusFilter, buyerFilter, buyers]);
 
   // Summary stats: prefer the dedicated /api/destinations/stats/ endpoint
