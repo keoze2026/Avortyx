@@ -62,7 +62,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Called after a successful attach so the parent can refetch its rows. */
   onAttached?: () => void;
-  /** Numbers (E.164) already routed to this campaign - not offered again. */
+  /** Lines already routed to this campaign - not offered again. Each is
+   *  "<E.164>|<buyer id>" (CH-485): one TFN can be live under several buyers
+   *  (CH-392), and another buyer's line on a routed number is still offered.
+   *  "<E.164>|" (a row with no buyer) holds the number for every buyer. */
   excludeNumbers?: ReadonlySet<string>;
   /** Priority for the first new destination (after the existing ones). */
   startPriority?: number;
@@ -116,7 +119,11 @@ export function AttachDestinationDialog({
   const available = useMemo(
     () =>
       destinations
-        .filter((d) => !excludeNumbers?.has(toE164(d.tfn)))
+        .filter(
+          (d) =>
+            !excludeNumbers?.has(`${toE164(d.tfn)}|${d.buyerId ?? ""}`) &&
+            !excludeNumbers?.has(`${toE164(d.tfn)}|`),
+        )
         .sort((a, b) => Number(b.enabled) - Number(a.enabled) || a.name.localeCompare(b.name)),
     [destinations, excludeNumbers],
   );

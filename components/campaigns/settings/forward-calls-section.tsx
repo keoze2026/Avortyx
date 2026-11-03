@@ -850,7 +850,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         campaignName={campaignName}
         open={attachOpen}
         onOpenChange={setAttachOpen}
-        excludeNumbers={new Set(routed.map((r) => toE164(r.destination ?? "")))}
+        excludeNumbers={new Set(routed.map((r) => `${toE164(r.destination ?? "")}|${r.buyerId ?? ""}`))}
         startPriority={routed.reduce((m, r) => Math.max(m, r.priority ?? 1), 0) + 1}
         onAttached={() => void loadRouted()}
       />

@@ -1831,3 +1831,17 @@ direct delete."
 - A buyer's own page: More > Remove buyer asks the same.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
   No backend change.
+
+## CH-485 - Campaign page: another buyer's line on a routed TFN can be added (FRONTEND)
+
+Campaign team (3 Nov): Q08's +18444832599 and +18445442126 could not be added
+"in camps groups or manually". Q50 already routes the same numbers, and the
+campaign page's Add Destination left out every destination whose number was
+already routed in the campaign, whichever buyer it belonged to. One TFN can
+be live under several buyers (CH-392); the group page was fixed in CH-483.
+
+- Campaign > Forward Calls To > Add Destination leaves out only the lines
+  already routed for the same buyer. Q08's +18444832599 is offered while Q50's
+  is routed; Q50's own is not offered twice.
+- Type-check unchanged. No backend change: the server already accepts a
+  second buyer on the same number.
