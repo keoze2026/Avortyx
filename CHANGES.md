@@ -2060,3 +2060,13 @@ and matched them against every TFN, so "r48" became "48" and caught
 - Letters typed: the buyer name and the line name are searched, not the TFN.
 - Only a number typed ("4216", "+1 833 409 4216") is matched against the TFN.
 - Type-check unchanged. No backend change.
+
+## CH-501 - Reports Call Summary: 50 rows a page by default (FRONTEND)
+
+Sir, 3 Nov: "the default page size to be 50". The Call Summary table (every
+tab: Campaign, Publisher, Buyer, ...) opened at 25 rows a page, so with 36
+buyers today RBC and others were on page 2 and looked missing.
+
+- Opens at 50 rows a page. 25, 100 and 250 can still be picked under the
+  table. The Call Log below keeps its own setting.
+- Type-check unchanged. No backend change.

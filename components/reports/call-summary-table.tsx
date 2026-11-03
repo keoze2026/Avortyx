@@ -1201,7 +1201,9 @@ export function CallSummaryTable({
       COLUMNS.filter((c) => (showLive || c.id !== "live") && !hiddenForRole.has(c.id)),
     [showLive, hiddenForRole],
   );
-  const [pageSize, setPageSize] = React.useState(25);
+  // CH-501 (Sir, 3 Nov): 50 rows a page to start with; 25 put buyers like RBC
+  // on a second page. 25 / 100 / 250 stay in the picker.
+  const [pageSize, setPageSize] = React.useState(50);
   const [page, setPage] = React.useState(0);
   // Default: sort by Incoming, biggest first — matches what operators expect
   // when they open the report (highest-volume campaigns at the top).
