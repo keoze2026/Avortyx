@@ -1232,14 +1232,18 @@ export function CallSummaryTable({
     // counter yet, while the totals row beside it still said 6.)
     // Skipped when Live isn't shown: these counters are today's, and must not
     // be mixed into a report for another date.
-    if (showLive) {
+    // CH-495: with a row picked on another tab (A49 on Buyer, then Campaign),
+    // the per-campaign / per-TFN counters count every buyer's calls - they
+    // showed the whole campaign's live calls instead of A49's 4. Then the
+    // rows keep their own count, from the picked calls only.
+    if (showLive && (!drill || drill.tab === tab)) {
       for (const row of grouped) {
         const live = liveForGroup(tab, row.key, campaignsById, destinations, liveNow ?? 0, timeZone);
         if (live !== undefined) row.live = Math.max(row.live, live);
       }
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive, isBuyerLogin]);
+  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive, isBuyerLogin, drill]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.

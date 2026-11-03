@@ -1972,3 +1972,16 @@ priority."
   distributed") is CH-493: live on top, paused below.
 - Backend CH-494: a deleted buyer's name can be used again.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+
+## CH-495 - Reports: a picked buyer's live calls by campaign (FRONTEND)
+
+3 Nov: "When you click on a buyer to see how many are live, then click back
+on Campaign, instead of showing from which campaign these 4 calls are live it
+shows the full report."
+
+- With a row picked on one tab (buyer A49, Live 4) and another tab opened
+  (Campaign), the Live column counted each campaign's live calls for every
+  buyer: the campaign-wide counters were laid over the picked calls. Now the
+  rows count only the picked calls, so Campaign shows which campaigns A49's
+  4 live calls are on. On the picked row's own tab, nothing changes.
+- Type-check unchanged. No backend change.
