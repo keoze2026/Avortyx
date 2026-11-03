@@ -1764,3 +1764,21 @@ and paused destinations."
   not activated).
 - Texts in English, Russian, Japanese and Chinese. No backend change.
   Type-check unchanged.
+
+## CH-480 - Campaign group: Type column, Rate and Convert ON to view and edit (FRONTEND)
+
+Sir (3 Nov): "Next to priority here as well give an option for rate and
+converted on, to edit and view. Like this under Type. Don't give revenue,
+just give type."
+
+- Campaign group > Destinations has a **Type** column next to Priority:
+  what the line converts on (Incoming Call / Call Connected / Call Length ·
+  Ns), as on the campaign page. "Mixed" when its campaigns differ. No
+  revenue in the table.
+- Clicking it shows the line's **Rate and Convert ON** to view and, with
+  campaign edit rights, change. Saving sets them in every campaign of the
+  group the line is in; an empty field is left as it is. Saved through the
+  group's line endpoint (`POST /api/campaign-groups/{id}/line`, which
+  already took Rate and Convert ON), so it shows in Change history.
+- Texts in English, Russian, Japanese and Chinese. No backend change.
+  Type-check unchanged.

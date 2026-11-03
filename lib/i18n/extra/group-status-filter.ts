@@ -1,8 +1,15 @@
-/** Campaign group: Active / Paused filters and bulk Activate (CH-479, Sir 3 Nov). */
+/** Campaign group: Active / Paused filters and bulk Activate (CH-479), and
+ *  the Type column with Rate and Convert ON to view and edit (CH-480). Sir, 3 Nov. */
 import type { ExtraTranslations } from "./types";
 
 export const groupStatusFilter: ExtraTranslations = {
   en: {
+    "x480.type": "Type",
+    "x480.title": "Rate and Convert ON",
+    "x480.viewEdit": "View or change Rate and Convert ON",
+    "x480.mixedNote": "Not the same in every campaign. Saving sets the value you enter in all of them.",
+    "x480.every": "Saved in all {n} campaigns of this group the destination is in. Leave a field empty to keep it as it is.",
+    "x480.saved": "Rate and Convert ON saved",
     "x479.fActive": "Active",
     "x479.fPaused": "Paused",
     "x479.activate": "Activate",
@@ -10,6 +17,12 @@ export const groupStatusFilter: ExtraTranslations = {
     "x479.activateFailed": "{n} could not be activated",
   },
   ru: {
+    "x480.type": "Тип",
+    "x480.title": "Ставка и конверсия",
+    "x480.viewEdit": "Посмотреть или изменить ставку и конверсию",
+    "x480.mixedNote": "Не одинаково во всех кампаниях. При сохранении введённое значение будет задано во всех.",
+    "x480.every": "Сохраняется во всех {n} кампаниях группы с этим направлением. Пустое поле остаётся без изменений.",
+    "x480.saved": "Ставка и конверсия сохранены",
     "x479.fActive": "Активные",
     "x479.fPaused": "На паузе",
     "x479.activate": "Включить",
@@ -17,6 +30,12 @@ export const groupStatusFilter: ExtraTranslations = {
     "x479.activateFailed": "Не удалось включить: {n}",
   },
   ja: {
+    "x480.type": "タイプ",
+    "x480.title": "料金とコンバージョン条件",
+    "x480.viewEdit": "料金とコンバージョン条件を表示・変更",
+    "x480.mixedNote": "キャンペーンごとに異なります。保存すると入力した値がすべてに設定されます。",
+    "x480.every": "この転送先を含むグループ内の全 {n} キャンペーンに保存されます。空欄の項目は変更されません。",
+    "x480.saved": "料金とコンバージョン条件を保存しました",
     "x479.fActive": "有効",
     "x479.fPaused": "一時停止中",
     "x479.activate": "有効にする",
@@ -24,6 +43,12 @@ export const groupStatusFilter: ExtraTranslations = {
     "x479.activateFailed": "{n}件を有効にできませんでした",
   },
   zh: {
+    "x480.type": "类型",
+    "x480.title": "费率和转化条件",
+    "x480.viewEdit": "查看或修改费率和转化条件",
+    "x480.mixedNote": "各广告系列不一致。保存后将在全部广告系列中设为您输入的值。",
+    "x480.every": "将保存到本组中包含此目的地的全部 {n} 个广告系列。留空的字段保持不变。",
+    "x480.saved": "费率和转化条件已保存",
     "x479.fActive": "启用中",
     "x479.fPaused": "已暂停",
     "x479.activate": "启用",

@@ -46,6 +46,7 @@ import { AddToCampaignsDialog, BulkEditDrawer } from "./bulk-drawer";
 import { LineDrawer } from "./line-drawer";
 import { buildRows, filterRows, sortRows, type GroupRow, type RowFilter } from "./model";
 import { RemoveDialog } from "./remove-dialog";
+import { TypeCell } from "./type-cell";
 import { CampaignsBar, LineLabel, PriorityCell } from "./ui";
 
 type Tab = "destinations" | "campaigns" | "history";
@@ -398,7 +399,7 @@ export function GroupDetail({
 
           {/* Table */}
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full min-w-[960px] text-sm">
+            <table className="w-full min-w-[1080px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                   {canEdit && (
@@ -418,6 +419,7 @@ export function GroupDetail({
                   )}
                   <th className="px-3 py-2.5 font-medium">{t("cg.col.destination")}</th>
                   <th className="px-3 py-2.5 font-medium">{t("cg.col.priority")}</th>
+                  <th className="px-3 py-2.5 font-medium">{t("x480.type")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{t("cg.col.weight")}</th>
                   <th className="px-3 py-2.5 font-medium">{t("x415.maxLive")}</th>
                   <th className="px-3 py-2.5 font-medium">{t("x415.dailyCap")}</th>
@@ -428,11 +430,11 @@ export function GroupDetail({
               </thead>
               <tbody>
                 {lines === null ? (
-                  <tr><td colSpan={9} className="px-4 py-6 text-xs text-muted-foreground">{t("cg.loading")}</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-6 text-xs text-muted-foreground">{t("cg.loading")}</td></tr>
                 ) : group.campaigns.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-6 text-xs text-muted-foreground">{t("cg.noCampaigns")}</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-6 text-xs text-muted-foreground">{t("cg.noCampaigns")}</td></tr>
                 ) : shown.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-6 text-xs text-muted-foreground">{rows.length ? t("x415.noMatch") : t("cg.noLines")}</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-6 text-xs text-muted-foreground">{rows.length ? t("x415.noMatch") : t("cg.noLines")}</td></tr>
                 ) : (
                   shown.map((r) => {
                     const sel = picked.has(r.number);
@@ -457,6 +459,9 @@ export function GroupDetail({
                         )}
                         <td className="px-3 py-2.5"><LineLabel buyer={r.buyerName} number={r.number} /></td>
                         <td className="px-3 py-2.5"><PriorityCell row={r} /></td>
+                        <td className="px-3 py-2.5">
+                          <TypeCell row={r} groupId={group.id} canEdit={canEdit} onSaved={() => void reload()} />
+                        </td>
                         <td className="px-3 py-2.5 text-right font-mono text-[13px] tabular-nums">{weight}</td>
                         <td className="px-3 py-2.5 text-xs">
                           {!r.dest ? (
