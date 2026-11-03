@@ -1749,3 +1749,18 @@ Sir (3 Nov): "Active Bots - where team can see each buyer's unique API."
   name is searched.
 - Texts in English, Russian, Japanese and Chinese. Backend: CH-477 BACKEND
   (`/api/active-bots/`). Type-check unchanged.
+
+## CH-479 - Campaign group: Active and Paused filters, bulk Activate (FRONTEND)
+
+Sir (3 Nov): "Under campaign group - give an option to see and edit active
+and paused destinations."
+
+- Campaign group > Destinations: two new filters next to All, **Active N**
+  and **Paused N**, so each set can be seen and edited on its own (edit,
+  limits, priority, remove, as before).
+- The bar for ticked destinations gains **Activate** beside Pause. Each
+  sends only the destinations not already in that state; the usual rules
+  still apply (a number live on another buyer is refused and counted as
+  not activated).
+- Texts in English, Russian, Japanese and Chinese. No backend change.
+  Type-check unchanged.

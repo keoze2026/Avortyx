@@ -14,7 +14,7 @@
 import type * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Layers, Pause, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Layers, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -168,6 +168,8 @@ export function GroupDetail({
   const buyers = [...new Set(rows.map((r) => r.buyerName).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
   );
+  const activeCount = rows.filter((r) => r.dest && r.enabled === true).length;
+  const pausedCount = rows.filter((r) => r.dest && r.enabled !== true).length;
   const mixedCount = rows.filter((r) => r.mixed).length;
   const checkCount = rows.filter((r) => r.check).length;
   const notAllCount = rows.filter((r) => r.inCount < r.ofCount).length;
@@ -183,18 +185,20 @@ export function GroupDetail({
     }
   };
 
-  const pauseMany = async (list: GroupRow[]) => {
-    const targets = list.filter((r) => r.dest && r.enabled);
+  // Pause or (CH-479) activate the ticked destinations; only those not
+  // already in that state are sent.
+  const setMany = async (list: GroupRow[], on: boolean) => {
+    const targets = list.filter((r) => r.dest && (r.enabled === true) !== on);
     let failed = 0;
     for (const r of targets) {
       try {
-        await setEnabled(r.dest!.id, false);
+        await setEnabled(r.dest!.id, on);
       } catch {
         failed += 1;
       }
     }
-    if (failed) toast.error(fill(t("x415.pauseFailed"), { n: failed }));
-    else toast.success(fill(t("x415.pausedN"), { n: targets.length }));
+    if (failed) toast.error(fill(t(on ? "x479.activateFailed" : "x415.pauseFailed"), { n: failed }));
+    else toast.success(fill(t(on ? "x479.activatedN" : "x415.pausedN"), { n: targets.length }));
   };
 
   const stats = [
@@ -346,6 +350,8 @@ export function GroupDetail({
               {(
                 [
                   ["all", t("x415.all"), null],
+                  ["active", t("x479.fActive"), activeCount],
+                  ["paused", t("x479.fPaused"), pausedCount],
                   ["mixed", t("x415.fMixed"), mixedCount],
                   ["notAll", t("x415.fNotAll"), notAllCount],
                   ["limits", t("x415.fLimits"), limitsCount],
@@ -376,7 +382,10 @@ export function GroupDetail({
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setBulk("routing")}>{t("x415.setRouting")}</Button>
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setBulk("limits")}>{t("x415.setLimits")}</Button>
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAddTo(true)}>{t("x415.addToCampaigns")}</Button>
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => void pauseMany(pickedRows)}>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => void setMany(pickedRows, true)}>
+                  <Play className="h-3 w-3" /> {t("x479.activate")}
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => void setMany(pickedRows, false)}>
                   <Pause className="h-3 w-3" /> {t("x415.pause")}
                 </Button>
                 <Button size="sm" variant="outline" className="h-7 text-xs text-red-400 hover:text-red-300" onClick={() => setRemoving(pickedRows)}>

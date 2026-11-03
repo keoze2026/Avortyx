@@ -93,7 +93,8 @@ export function sortRows(rows: GroupRow[]): GroupRow[] {
   });
 }
 
-export type RowFilter = "all" | "mixed" | "notAll" | "limits";
+// CH-479 (Sir, 3 Nov): Active and Paused, to see and change each set on its own.
+export type RowFilter = "all" | "active" | "paused" | "mixed" | "notAll" | "limits";
 
 export function filterRows(
   rows: GroupRow[],
@@ -105,6 +106,8 @@ export function filterRows(
     if (q && !(r.buyerName.toLowerCase().includes(q) || (qd && r.digits.includes(qd)))) return false;
     if (f.buyer !== "all" && r.buyerName !== f.buyer) return false;
     if (f.campaign !== "all" && !r.line.campaigns.some((c) => c.campaignId === f.campaign)) return false;
+    if (f.kind === "active" && !(r.dest && r.enabled === true)) return false;
+    if (f.kind === "paused" && !(r.dest && r.enabled !== true)) return false;
     if (f.kind === "mixed" && !r.mixed) return false;
     if (f.kind === "notAll" && r.inCount >= r.ofCount) return false;
     if (f.kind === "limits" && !r.hasLimits) return false;
