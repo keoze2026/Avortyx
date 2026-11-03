@@ -166,7 +166,7 @@ export function BuyersTable({
                   )}
                   {showCap && (
                     <TableCell className="!text-center" onClick={(e) => e.stopPropagation()}>
-                      <BuyerCapCell buyer={b} hit={capHit} />
+                      <BuyerCapCell buyer={b} hit={capHit} canEdit={can("buyers", "edit")} />
                     </TableCell>
                   )}
                   {columns.hourly && (
@@ -248,9 +248,14 @@ function CallsCell({ calls }: { calls: number }) {
  * The buyer's own daily cap: used / cap with a bar (amber when full), and on
  * hover the breakdown against its TFN caps. "No cap" when it has none.
  */
-function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
+function BuyerCapCell({ buyer: b, hit, canEdit }: { buyer: Buyer; hit: boolean; canEdit: boolean }) {
   const { t } = useTranslation();
-  if (!(b.dailyCap > 0)) return <span className="text-xs text-muted-foreground/70">{t("x405.noCap")}</span>;
+  if (!(b.dailyCap > 0))
+    return canEdit ? (
+      <DailyCapEdit buyer={b} />
+    ) : (
+      <span className="text-xs text-muted-foreground/70">{t("x405.noCap")}</span>
+    );
   // CH-414: the server's count only; "—" if it did not send one.
   const known = typeof b.capUsedToday === "number";
   const used = known ? (b.capUsedToday as number) : 0;
@@ -268,7 +273,10 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
               <span className={cn("font-semibold", hit ? "text-[color:var(--warning)]" : "text-foreground")}>
                 {known ? formatCalls(used) : "—"}
               </span>
-              <span className={hit ? "text-[color:var(--warning)]" : "text-muted-foreground"}> / {formatCalls(b.dailyCap)}</span>
+              <span className={hit ? "text-[color:var(--warning)]" : "text-muted-foreground"}>
+                {" / "}
+                {canEdit ? <DailyCapEdit buyer={b} /> : formatCalls(b.dailyCap)}
+              </span>
             </span>
             {hit ? (
               <span className="font-semibold text-[color:var(--warning)]">{t("x412.full")}</span>
@@ -311,6 +319,99 @@ function BuyerCapCell({ buyer: b, hit }: { buyer: Buyer; hit: boolean }) {
         </p>
       </HoverCardContent>
     </HoverCard>
+  );
+}
+
+/**
+ * CH-487 (3 Nov): the buyer's daily cap, typed in place like a destination's
+ * caps - click the number (or "No cap"), type, Enter or click away to save,
+ * Escape to cancel; 0 = no cap. Saved on the buyer's cap
+ * (PATCH /api/buyers/{id}/cap, `max_calls_daily`), the limit routing checks,
+ * so it replaces Buyer -> Caps -> Save.
+ */
+function DailyCapEdit({ buyer: b }: { buyer: Buyer }) {
+  const { t } = useTranslation();
+  const localName = useLocalName();
+  const updateCap = useBuyersStore((s) => s.updateCap);
+  const cap = b.dailyCap > 0 ? b.dailyCap : 0;
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(String(cap));
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+  React.useEffect(() => {
+    if (!editing) setDraft(String(cap));
+  }, [cap, editing]);
+
+  const commit = () => {
+    if (draft.trim() === "") {
+      setEditing(false);
+      setDraft(String(cap));
+      return;
+    }
+    const next = Math.max(0, Math.floor(Number(draft) || 0));
+    setEditing(false);
+    setDraft(String(next));
+    if (next === cap) return;
+    updateCap(b.id, { daily: next })
+      .then(() =>
+        toast.success(
+          t("x487.saved")
+            .replace("{name}", localName(b.name))
+            .replace("{cap}", next > 0 ? formatCalls(next) : t("x405.noCap")),
+        ),
+      )
+      .catch(() => toast.error(t("x487.error")));
+  };
+
+  if (editing)
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        inputMode="numeric"
+        min={0}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setDraft(String(cap));
+            setEditing(false);
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={t("x487.input")}
+        className="w-16 rounded border border-accent/50 bg-background px-1 py-0.5 text-center text-xs tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+      />
+    );
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setDraft(cap > 0 ? String(cap) : "");
+        setEditing(true);
+      }}
+      title={t("x487.edit")}
+      aria-label={t("x487.edit")}
+      className={cn(
+        "cursor-text rounded px-1 tabular-nums transition-colors hover:bg-accent/10 hover:ring-1 hover:ring-accent/40",
+        cap > 0 ? "" : "text-xs text-muted-foreground/70",
+      )}
+    >
+      {cap > 0 ? formatCalls(cap) : t("x405.noCap")}
+    </button>
   );
 }
 

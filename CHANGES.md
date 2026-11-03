@@ -1856,3 +1856,16 @@ Sir (3 Nov): "Make buyer list size big."
 - A buyer is in the Buyer list once it has a line in the group's campaigns:
   CRM shows there after its lines are added (CH-483).
 - Type-check unchanged. No backend change.
+
+## CH-487 - Buyers: daily Buyer Cap typed in place (FRONTEND)
+
+Asked 3 Nov: "Is there a way of editing buyers cap like the way we are doing
+it when adjusting call cap in destinations?"
+
+- Buyers list (Show Buyer Cap on): click the cap number in "used / cap" -
+  or "No cap" - type a number, Enter or click away to save, Escape to
+  cancel; 0 = no cap. Saved on the buyer's daily cap (`max_calls_daily`,
+  the limit routing checks), the same field as Buyer > Caps.
+- Needs Buyers (Edit); without it the cap shows as before.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+  No backend change: `PATCH /api/buyers/{id}/cap` already saves it.
