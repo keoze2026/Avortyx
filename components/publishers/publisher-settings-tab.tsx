@@ -171,6 +171,9 @@ export function PublisherSettingsTab({ publisher }: Props) {
       <PartnerPermissions
         kind="publisher"
         id={publisher.id}
+        // CH-476: the catalogue now also carries the buyer-only toggles
+        // (destinations, caps, hang up); a publisher keeps its own list.
+        only={["manage_traffic", "number_creation", "audio_recording", "block_numbers", "download_reports", "tfn_test"]}
         title={t("networkUI.publishers.settings.permissionsTitle")}
         description={t("networkUI.publishers.settings.permissionsDesc")}
         toggleAria={t("networkUI.publishers.settings.permToggle")}

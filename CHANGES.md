@@ -1714,3 +1714,21 @@ Built from Sir's number pool design (list page, 5-step New pool, pool page).
   cool-down, captured parameters and spam rules).
 - The website code is the new avx-dni.js tag with the pool's key.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+
+## CH-476 - Buyer access: the full permission list (FRONTEND)
+
+Sir (3 Nov): "Under Buyers access these permission add too, so admin from
+main account can do what he wants to give, other than viewing right."
+
+- The buyer's access page (Settings tab and the Edit buyer dialog) now lists,
+  one switch each, what the main account may allow that buyer's own login to
+  do. Viewing is always allowed:
+  - Create/Edit Destinations, Edit Number/SIP;
+  - Pause Destinations, Set Max Concurrency, Set Caps;
+  - Block Numbers, Hang Up Calls, Download Reports.
+- The labels come from the backend's list (backend CH-476), which also
+  enforces each switch, on the buyer's own lines and calls only.
+- The publisher page names its own switches. The new buyer-only ones never
+  show there.
+- Dispute Calls is not in the list: the portal has no dispute feature yet.
+- Type-check unchanged for these files.

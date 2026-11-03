@@ -7,7 +7,9 @@
  *   │ Buyer name               [Timezone select]   │
  *   │ Manage access for this buyer                 │
  *   ├──────────── MEMBERS ─────────────────────────┤
- *   ├──────────── PERMISSIONS ─────────────────────┤  Block Numbers, Download Reports
+ *   ├──────────── PERMISSIONS ─────────────────────┤  Create/Edit Destinations, Edit Number,
+ *   │                                             │  Pause, Max Concurrency, Caps, Block Numbers,
+ *   │                                             │  Hang Up Calls, Download Reports (CH-476)
  *   ├──────────── REPORTING VISIBILITY ────────────┤
  *   └─────────────────────────────────────────────┘
  *
@@ -121,13 +123,25 @@ export function BuyerAccessSettings({ buyer, embedded = false }: Props) {
       {/* Members (same table as publishers: Invited / Registered) */}
       <BuyerMembersCard buyer={buyer} />
 
-      {/* Permissions: Block Numbers, Download Reports. Saved through the
+      {/* Permissions (CH-476: the buyer list above). Saved through the
           partner settings endpoint - the one store the backend now enforces
           (the old Buyer booleans are only mirrors of it). */}
       <PartnerPermissions
         kind="buyer"
         id={buyer.id}
-        only={["block_numbers", "download_reports"]}
+        only={[
+          // CH-476 (Sir, 3 Nov): what the main account may switch on for this
+          // buyer's own login. Viewing is always allowed; the backend enforces
+          // each one, on the buyer's own lines and calls only.
+          "edit_destinations",
+          "edit_number",
+          "pause_destinations",
+          "set_concurrency",
+          "set_caps",
+          "block_numbers",
+          "hang_up_calls",
+          "download_reports",
+        ]}
         title={t("buyerAccess.permissionsTitle")}
         description={t("buyerAccess.permissionsDesc")}
         toggleAria="{label}"
