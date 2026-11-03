@@ -409,7 +409,7 @@ function deriveGroup(
     }
     case "destination": {
       const raw = c.destinationNumber?.trim();
-      if (!raw) return labelOf("Not forwarded");
+      if (!raw) return labelOf(NOT_FORWARDED);
       const v = toE164(raw);
       // The key stays the number (the Live column matches on it); the label is
       // the name the user set on the destination, or the number if it has none.
@@ -566,6 +566,9 @@ function rowCost(row: SummaryRow): number | undefined {
 function rowProfit(row: SummaryRow): number {
   return row.profit ?? row.revenue - row.payout;
 }
+
+/** The Destination tab's row for calls that never reached a destination. */
+const NOT_FORWARDED = "Not forwarded";
 
 function labelOf(value: string) {
   return { key: value, label: value };
@@ -1274,6 +1277,10 @@ export function CallSummaryTable({
   const allRows = React.useMemo(() => {
     const copy = [...groupedRows];
     copy.sort((a, b) => {
+      // CH-506 (Sir, 3 Nov): "Not forwarded" (calls that never reached a
+      // destination) always sits at the bottom, whatever the sort.
+      const an = a.key === NOT_FORWARDED, bn = b.key === NOT_FORWARDED;
+      if (an !== bn) return an ? 1 : -1;
       const av = sortValue(a, sortKey);
       const bv = sortValue(b, sortKey);
       let diff: number;

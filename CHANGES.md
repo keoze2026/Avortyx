@@ -2085,3 +2085,13 @@ Pasting the Caller ID in the new portal shows no recording."
   "No recording for this call." only when there is none.
 - Needs Reporting > Listen (the audit role has it since 3 Nov).
 - Type-check unchanged. No backend change.
+
+## CH-506 - Reports Destination tab: "Not forwarded" always at the bottom (FRONTEND)
+
+Sir, 3 Nov: "Not forwarded should come in bottom under destination."
+
+- The "Not forwarded" row (calls that never reached a destination) is kept
+  last on the Destination tab whatever column is sorted, ascending or
+  descending, so the buyers' TFNs are listed first. Its figures and the Totals
+  are unchanged.
+- Type-check unchanged. No backend change.
