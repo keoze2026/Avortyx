@@ -1922,3 +1922,15 @@ manually scrolling, just like Revo?"
 - `components/shared/searchable-select.tsx`: the picker, for any list.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
   No backend change.
+
+## CH-492 - Publisher access: Play/Pause TFNs (FRONTEND)
+
+Asked 3 Nov: "Under Publisher Permission give an option to play pause
+publishers' TFNs so they can do that if permission granted."
+
+- A publisher's access page lists **Play/Pause TFNs** after Manage Traffic,
+  off by default (backend CH-492).
+- With it on, the publisher's own login sees an on/off switch on each of its
+  TFNs in the campaign view (where it only saw On / Off before). If the
+  server refuses, the switch goes back and says so.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.

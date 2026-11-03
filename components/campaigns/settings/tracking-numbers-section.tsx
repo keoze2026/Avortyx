@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Hash, Pencil, Phone, Plus, Unlink } from "lucide-react";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/api/errors";
 
 import { AttachTrackingNumberDialog } from "@/components/campaigns/settings/attach-tracking-number-dialog";
 import { TrackingNumberEditDialog } from "@/components/campaigns/settings/tracking-number-edit-dialog";
@@ -37,8 +38,12 @@ import { liveFor, useLiveCounts } from "@/lib/use-live-counts";
 export function TrackingNumbersSection({
   campaignId,
   readOnly = false,
+  canPause = false,
 }: {
   campaignId: string;
+  /** CH-492: a publisher with Play/Pause TFNs on may switch its own numbers
+   *  off and on, even on the read-only view. */
+  canPause?: boolean;
   /** Publisher / buyer login: see the numbers, change nothing (no add, edit,
    *  detach, rename or on/off). The list itself only holds their own numbers -
    *  the server sends a publisher only the numbers allocated to them. */
@@ -314,7 +319,23 @@ export function TrackingNumbersSection({
                       <LiveBadge live={liveFor(live.tracking, n.number)} loaded={live.loaded} />
                     </TableCell>
                     <TableCell className="text-center">
-                      {readOnly ? (
+                      {readOnly && canPause ? (
+                        <Switch className="data-[state=checked]:bg-accent"
+                          checked={n.status === "active"}
+                          onCheckedChange={(v) => {
+                            setNumberStatus(n.id, v ? "active" : "paused")
+                              .then(() =>
+                                toast.success(
+                                  v
+                                    ? t("trafficUI.campaigns.settings.trackingNumbers.toast.activated").replace("{number}", e164)
+                                    : t("trafficUI.campaigns.settings.trackingNumbers.toast.paused").replace("{number}", e164),
+                                ),
+                              )
+                              .catch((e) => toast.error(friendlyErrorMessage(e, t("x492.failed"))));
+                          }}
+                          aria-label={t("trafficUI.numbers.pools.toggle").replace("{name}", e164)}
+                        />
+                      ) : readOnly ? (
                         <Badge variant={n.status === "active" ? "success" : "outline"}>
                           {t(n.status === "active" ? "partnerCampaign.numberOn" : "partnerCampaign.numberOff")}
                         </Badge>

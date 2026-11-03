@@ -40,7 +40,7 @@ const TAB_KEYS: Array<{ id: TabId; labelKey: string; icon: React.ComponentType<{
 
 export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
   const { t } = useTranslation();
-  const { isPartner } = usePartnerPermissions();
+  const { isPartner, can: partnerCan } = usePartnerPermissions();
   const { can } = usePermissions();
   const [tab, setTab] = React.useState<TabId>("general");
 
@@ -52,7 +52,7 @@ export function CampaignSettingsView({ campaign }: { campaign: Campaign }) {
         <p className="rounded-md border border-border bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
           {t("partnerCampaign.note")}
         </p>
-        <TrackingNumbersSection campaignId={campaign.id} readOnly />
+        <TrackingNumbersSection campaignId={campaign.id} readOnly canPause={partnerCan("pause_numbers")} />
       </div>
     );
   }

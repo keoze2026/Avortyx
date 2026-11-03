@@ -31,7 +31,9 @@ export type PartnerPermissionKey =
   | "audio_recording"
   | "block_numbers"
   | "download_reports"
-  | "tfn_test";
+  | "tfn_test"
+  /** CH-492: a publisher switches its own TFNs off and on. */
+  | "pause_numbers";
 
 type Perms = Record<PartnerPermissionKey, boolean>;
 
@@ -45,6 +47,7 @@ const DEFAULTS: Perms = {
   block_numbers: false,
   download_reports: false,
   tfn_test: false,
+  pause_numbers: false,
 };
 const NOTHING: Perms = {
   manage_traffic: false,
@@ -53,6 +56,7 @@ const NOTHING: Perms = {
   block_numbers: false,
   download_reports: false,
   tfn_test: false,
+  pause_numbers: false,
 };
 
 const REFRESH_MS = 30_000;
