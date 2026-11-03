@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Command, Search, Wallet } from "lucide-react";
 
 import { NotificationsMenu } from "./notifications-menu";
@@ -12,6 +12,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { prefetchDashboardSnapshot } from "@/lib/dashboard-snapshot";
 import { prefetchNewsPages } from "@/lib/news-snapshots";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { loadHeaderFigures, type HeaderFigures } from "@/lib/header-figures";
+import { todayScope } from "@/lib/reports-scope";
 import { startLiveCountSync } from "@/lib/live-count";
 import { prefetchReport, todayAndYesterday } from "@/lib/reports-cache";
 import { useCallsStore } from "@/lib/store/calls-store";
@@ -76,12 +78,19 @@ export function Topbar() {
   // /api/billing/account on mount + after a recharge) is the fallback until
   // the first poll lands. Renders 0 until either response arrives.
   const accountBalance = useOnboardingStore((s) => s.balance);
-  const balance = kpis?.balance ?? accountBalance;
+  // CH-497: the last figures this login saw, shown at once after a refresh
+  // until the fresh answer replaces them (lib/header-figures.ts).
+  const [saved, setSaved] = useState<HeaderFigures | null>(null);
+  const kpisError = useCallsStore((s) => s.kpisError);
+  useEffect(() => {
+    setSaved(loadHeaderFigures(todayScope(reportTimezone).dateFrom));
+  }, [reportTimezone]);
+  const balance = kpis?.balance ?? accountBalance ?? saved?.balance ?? null;
   // CH-482 (Sir, 3 Nov): never $0 or 0 when the figure is simply not known
   // yet or the server did not answer - "—" until the first real answer; after
   // that the last answer stays until a newer one arrives.
-  const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? null);
-  const totalCalls = kpis?.callsToday ?? null;
+  const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? saved?.liveCalls ?? null);
+  const totalCalls = kpis?.callsToday ?? saved?.callsToday ?? null;
   const balanceText = balance == null ? "—" : formatCurrency(balance);
   const liveText = liveCalls == null ? "—" : formatNumber(liveCalls);
   const totalText = totalCalls == null ? "—" : formatNumber(totalCalls);
@@ -164,6 +173,8 @@ export function Topbar() {
               every change leaves no old pixels to keep. */}
           <div
             key={`${balanceText}|${liveText}|${totalText}`}
+            // CH-497: when the figures could not load, hovering says why.
+            title={kpisError && (balance == null || totalCalls == null) ? kpisError : undefined}
             className="flex shrink-0 flex-col items-end gap-1 [backface-visibility:hidden] [transform:translateZ(0)] @3xl/topbar:flex-row @3xl/topbar:items-center @3xl/topbar:gap-6"
           >
             {/* Balance. A wallet rather than a "$" glyph — the figure already

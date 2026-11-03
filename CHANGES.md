@@ -2002,3 +2002,24 @@ CH-493 on the NOV 3 campaign.
 - CH-493's own build failed on Vercel (CH-494, built on it, is live and
   carries it). This change is built on CH-495.
 - Type-check unchanged. No backend change.
+
+## CH-497 - Header: last figures at once, always refreshed; CH-496's request change rolled back (FRONTEND)
+
+3 Nov: Balance and Total still showed "—" after a refresh. The server answers
+the header's request in 0.07 s (all-time too) with 200, so the wait was not
+the server.
+
+- Rolled back: CH-496's "today first" request. The header asks exactly as
+  before (all-time, today when the reports PIN is locked).
+- The last Balance / Total / Live this login saw are kept in this browser
+  (`lib/header-figures.ts`, per login) and shown the moment the page opens;
+  the fresh answer always replaces them. A Total from another day is not
+  shown.
+- "—" now only means the figures have never loaded in this browser and the
+  request has not answered yet or failed. On a failure the header tries again
+  after 3, 6 and 9 seconds (not only at the next 30-second poll), writes the
+  reason to the browser console ("[header] Balance / Total could not load"),
+  and hovering the figures shows it.
+- CH-496's campaign part (no line marked missing before the Destinations list
+  loads) stays.
+- Type-check unchanged. No backend change.

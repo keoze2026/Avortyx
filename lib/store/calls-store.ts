@@ -23,16 +23,19 @@ import {
 } from "@/lib/api/services/analytics.service";
 import type { Call } from "@/lib/types";
 import { friendlyErrorMessage } from "@/lib/api/errors";
+import { saveHeaderFigures } from "@/lib/header-figures";
 
-/** CH-496: the all-time totals behind Billing's usage, at most this often. */
-const ALL_TIME_EVERY_MS = 5 * 60_000;
-let lastAllTimeAt = 0;
+/** CH-497: header loads that failed in a row (retried after 3, 6, 9 s). */
+let kpiFailures = 0;
+
 
 interface CallsState {
   /** Most recent N calls — used by the dashboard's chart components. */
   recent: Call[];
   /** Headline KPIs from /api/analytics/dashboard. */
   kpis: DashboardKpis | null;
+  /** CH-497: why the header figures last failed to load; null once they load. */
+  kpisError: string | null;
   /** What `kpis` adds up: every call ("all"), or only today's ("today") - which is
    *  all the server gives out while the reports PIN is locked. Lets a screen that
    *  wants all-time totals (Billing) avoid showing today's as if they were. */
@@ -71,6 +74,7 @@ const RECENT_DEFAULT = 200;
 export const useCallsStore = create<CallsState>()((set) => ({
   recent: [],
   kpis: null,
+  kpisError: null,
   kpisScope: "all",
   timeSeries: [],
   liveCount: 0,
@@ -97,41 +101,41 @@ export const useCallsStore = create<CallsState>()((set) => ({
 
   fetchKpis: async () => {
     try {
-      // CH-496: the header's Live / Total / wallet come from this on every
-      // page. Today's figures are asked for first - they are all the header
-      // shows, and they come back at once. The whole history (the all-time
-      // total, for Billing's usage) took the longest and held the header on
-      // "—" after every refresh; it now follows, at most every 5 minutes.
-      const today = await analyticsService.dashboard(todayScope());
-      const prev = get().kpis;
-      set(
-        prev && get().kpisScope === "all"
-          ? { kpis: { ...prev, callsToday: today.callsToday, liveCalls: today.liveCalls, balance: today.balance } }
-          : { kpis: today, kpisScope: "today" },
+      // The header's Live / Total / wallet come from this on every page. With no
+      // dates it is all-time, which the server refuses while the reports PIN is
+      // locked - so ask for today, which is always allowed. (CH-497: as before
+      // CH-496 - the all-time answer is as fast as today's, 0.07 s.)
+      const { value: kpis, today } = await allOrToday(
+        () => analyticsService.dashboard(),
+        () => analyticsService.dashboard(todayScope()),
       );
+      kpiFailures = 0;
+      set({ kpis, kpisScope: today ? "today" : "all", kpisError: null });
       // The dashboard payload carries the account balance alongside the
       // call counters, and the topbar polls it every 30s — so it is the
       // freshest balance the app has. Mirror it into the onboarding store,
       // which the header wallet and the balance gate read, instead of
       // leaving those on the one-shot /api/billing/account fetch.
-      if (today.balance !== undefined) {
-        useOnboardingStore.getState().setBalance(today.balance);
+      if (kpis.balance !== undefined) {
+        useOnboardingStore.getState().setBalance(kpis.balance);
       }
-      if (Date.now() - lastAllTimeAt > ALL_TIME_EVERY_MS) {
-        lastAllTimeAt = Date.now();
-        // With no dates it is all-time, which the server refuses while the
-        // reports PIN is locked - then today's stays.
-        void allOrToday(
-          () => analyticsService.dashboard(),
-          async () => null,
-        )
-          .then(({ value }) => {
-            if (value) set({ kpis: { ...value, callsToday: today.callsToday, liveCalls: today.liveCalls }, kpisScope: "all" });
-          })
-          .catch(() => undefined);
-      }
+      // CH-497: shown at once on the next refresh, until the fresh answer.
+      saveHeaderFigures({
+        balance: kpis.balance,
+        callsToday: kpis.callsToday,
+        liveCalls: kpis.liveCalls,
+        day: todayScope().dateFrom,
+      });
     } catch (e) {
-      set({ error: messageFromError(e) });
+      const message = messageFromError(e);
+      set({ error: message, kpisError: message });
+      // CH-497: say it in the console, and try again in a few seconds
+      // instead of waiting for the next 30-second poll.
+      console.warn("[header] Balance / Total could not load:", e);
+      kpiFailures += 1;
+      if (kpiFailures <= 3) {
+        window.setTimeout(() => void get().fetchKpis(), 3000 * kpiFailures);
+      }
     }
   },
 
