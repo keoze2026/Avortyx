@@ -2117,3 +2117,12 @@ under balance."
   known and read "—". Those logins now read $0.00. Staff and admin logins are
   unchanged ("—" only until the first real answer, CH-482 / CH-497).
 - Type-check unchanged. No backend change.
+
+## CH-509 - Call Logs opens on today (FRONTEND)
+
+Sir, 4 Nov: "Under Call Log - instead of default 7 days data change it to
+today's data."
+
+- Insights > Call Logs opens on Today. 7 / 14 / 30 days are still one click
+  away in the same bar.
+- Type-check unchanged. No backend change.

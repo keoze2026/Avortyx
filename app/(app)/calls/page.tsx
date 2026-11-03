@@ -78,7 +78,8 @@ export default function CallsPage() {
   // built here in the browser, so the server-side block alone never stopped it.
   const canDownload = usePermissions().can("reporting", "download") && partnerCan("download_reports");
   const [query, setQuery] = useState("");
-  const [range, setRange] = useState<DateRange>("7d");
+  // CH-509 (Sir, 4 Nov): opens on today's calls; 7 / 14 / 30 days are a click away.
+  const [range, setRange] = useState<DateRange>("today");
   const [statuses, setStatuses] = useState<Set<CallStatus>>(new Set());
   const [campaignFilter, setCampaignFilter] = useState("all");
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(DEFAULT_VISIBLE);
