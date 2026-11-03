@@ -8,6 +8,7 @@ import { DestinationBuilder } from "@/components/destinations/destination-builde
 import { DestinationsTable } from "@/components/destinations/destinations-table";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { CloneDialog } from "@/components/shared/clone-dialog";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
@@ -183,15 +184,40 @@ export default function DestinationsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // CH-488 (3 Nov): deleting destinations - one, or several from the bulk
+  // bar - asks first, as Campaigns and Buyers do. It went at the first click.
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; names: string[] } | null>(null);
+
+  const handleDelete = (id: string) => {
     const d = destinations.find((x) => x.id === id);
     if (!d) return;
-    try {
-      await remove(id);
-      toast.success(t("networkUI.destinations.toast.removed").replace("{name}", localName(d.name)));
-    } catch (e) {
-      toast.error(friendlyErrorMessage(e, t("y.err.destDelete")));
+    setConfirmDelete({ ids: [d.id], names: [localName(d.name)] });
+  };
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    const { ids, names } = confirmDelete;
+    setConfirmDelete(null);
+    if (ids.length === 1) {
+      try {
+        await remove(ids[0]);
+        toast.success(t("networkUI.destinations.toast.removed").replace("{name}", names[0]));
+      } catch (e) {
+        toast.error(friendlyErrorMessage(e, t("y.err.destDelete")));
+      }
+    } else {
+      await Promise.allSettled(ids.map((id) => remove(id)));
+      toast.success(
+        t("common.bulk.toast.deleted")
+          .replace("{count}", String(ids.length))
+          .replace("{entity}", t("common.bulk.entities.destinations")),
+      );
     }
+    setSelectedIds((s) => {
+      const next = new Set(s);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
   };
 
   const handleClone = (id: string) => {
@@ -279,16 +305,12 @@ export default function DestinationsPage() {
   const onBulkPlay = () => runBulk(true);
   const onBulkPause = () => runBulk(false);
 
-  const onBulkDelete = async () => {
+  const onBulkDelete = () => {
     if (selectedDestinations.length === 0) return;
-    const targets = selectedDestinations;
-    await Promise.allSettled(targets.map((d) => remove(d.id)));
-    toast.success(
-      t("common.bulk.toast.deleted")
-        .replace("{count}", String(targets.length))
-        .replace("{entity}", t("common.bulk.entities.destinations")),
-    );
-    setSelectedIds(new Set());
+    setConfirmDelete({
+      ids: selectedDestinations.map((d) => d.id),
+      names: selectedDestinations.map((d) => localName(d.name)),
+    });
   };
 
   const handleUpdateCap = async (
@@ -433,6 +455,15 @@ export default function DestinationsPage() {
         sourceName={localName(cloneTarget?.name ?? "")}
         note={t("x302.destinations.cloneNote")}
         onConfirm={handleConfirmClone}
+      />
+      <ConfirmDeleteDialog
+        names={confirmDelete?.names ?? null}
+        title="ddel.title"
+        titleMany="ddel.titleMany"
+        desc="ddel.desc"
+        descMany="ddel.descMany"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => void doDelete()}
       />
     </>
   );

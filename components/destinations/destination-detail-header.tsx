@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -64,7 +67,10 @@ export function DestinationDetailHeader({
     }
   };
 
+  // CH-488: Remove destination asks first.
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const onRemove = async () => {
+    setConfirmRemove(false);
     try {
       await remove(destination.id);
       toast.success(t("networkUI.destinations.toast.removed").replace("{name}", localName(destination.name)));
@@ -151,7 +157,7 @@ export function DestinationDetailHeader({
               </DropdownMenuItem>
               <DropdownMenuSeparator /></>)}
               {can("destinations", "delete") && (<DropdownMenuItem
-                onSelect={onRemove}
+                onSelect={() => setConfirmRemove(true)}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="h-4 w-4" /> {t("networkUI.destinations.detail.removeDestination")}
@@ -160,6 +166,15 @@ export function DestinationDetailHeader({
           </DropdownMenu>
         </div>
       </div>
+      <ConfirmDeleteDialog
+        names={confirmRemove ? [localName(destination.name)] : null}
+        title="ddel.title"
+        titleMany="ddel.titleMany"
+        desc="ddel.desc"
+        descMany="ddel.descMany"
+        onCancel={() => setConfirmRemove(false)}
+        onConfirm={() => void onRemove()}
+      />
     </div>
   );
 }

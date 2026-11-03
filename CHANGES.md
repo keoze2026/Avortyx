@@ -1869,3 +1869,16 @@ it when adjusting call cap in destinations?"
 - Needs Buyers (Edit); without it the cap shows as before.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
   No backend change: `PATCH /api/buyers/{id}/cap` already saves it.
+
+## CH-488 - Destinations: delete asks first (FRONTEND)
+
+Asked 3 Nov: delete on Destinations should ask for confirmation, as Buyers
+now does (CH-484).
+
+- Destinations list: the bin on a row and "Delete N selected destinations"
+  in the bulk bar open "Delete this destination?" / "Delete N destinations?"
+  with the names, Cancel and Confirm. Nothing is deleted until Confirm.
+- A destination's own page: Remove destination asks the same.
+- `components/shared/confirm-delete-dialog.tsx`: the dialog, for any list.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+  No backend change.
