@@ -16,6 +16,7 @@ import { loadHeaderFigures, type HeaderFigures } from "@/lib/header-figures";
 import { todayScope } from "@/lib/reports-scope";
 import { startLiveCountSync } from "@/lib/live-count";
 import { prefetchReport, todayAndYesterday } from "@/lib/reports-cache";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useCallsStore } from "@/lib/store/calls-store";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -91,7 +92,11 @@ export function Topbar() {
   // that the last answer stays until a newer one arrives.
   const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? saved?.liveCalls ?? null);
   const totalCalls = kpis?.callsToday ?? saved?.callsToday ?? null;
-  const balanceText = balance == null ? "—" : formatCurrency(balance);
+  // CH-508 (Sir, 4 Nov): a buyer or publisher login has no wallet of its own,
+  // so its balance is never "known" and the header read "—". "$0" there.
+  const role = useAuthStore((st) => st.user?.role);
+  const partner = role === "buyer" || role === "publisher";
+  const balanceText = balance == null ? (partner ? formatCurrency(0) : "—") : formatCurrency(balance);
   const liveText = liveCalls == null ? "—" : formatNumber(liveCalls);
   const totalText = totalCalls == null ? "—" : formatNumber(totalCalls);
 

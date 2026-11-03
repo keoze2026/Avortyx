@@ -2107,3 +2107,13 @@ MTG" (and TBLA). They all have rows; the page never received them.
   the page, its search, its buyer filter and the Destination names in Reports.
 - The page now reads every page (200 each, side by side) and shows them all.
 - Type-check unchanged. No backend change.
+
+## CH-508 - Header: buyer and publisher logins show $0 balance, not "—" (FRONTEND)
+
+Sir, 4 Nov: "On buyer and publisher access, instead of the line, $0 is fine
+under balance."
+
+- A buyer or publisher login has no wallet, so the header's balance was never
+  known and read "—". Those logins now read $0.00. Staff and admin logins are
+  unchanged ("—" only until the first real answer, CH-482 / CH-497).
+- Type-check unchanged. No backend change.
