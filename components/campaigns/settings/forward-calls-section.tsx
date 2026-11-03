@@ -246,6 +246,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   };
 
   const allDestinations = useDestinationsStore((s) => s.destinations);
+  // CH-496: until the Destinations list has loaded, no line is "missing" from
+  // it - right after a refresh every line looked switched off for a moment.
+  const destinationsLoaded = useDestinationsStore((s) => s.hydrated);
   // Calls up right now on each destination, for the LIVE column (Sir, CH-212).
   const live = useLiveCounts();
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
@@ -315,7 +318,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
         buyerName: r.buyerName ?? dest?.buyerName,
         destId: dest?.id,
         enabled: dest ? dest.enabled : true,
-        orphan: !dest,
+        orphan: destinationsLoaded && !dest,
         concurrencyCap: dest?.concurrencyCap ?? 0,
         revenue: r.revenue != null && r.revenue !== "" ? Number(r.revenue) : null,
         convertOn: ((r.convertOn as ConvertKey) || "") as ConvertKey,
@@ -327,7 +330,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
       // already in priority order and the sort is stable, so each group stays
       // in priority order (1, 2, 5, 10...).
       .sort((a, b) => rank(a) - rank(b));
-  }, [routed, allDestinations]);
+  }, [routed, allDestinations, destinationsLoaded]);
 
   // CH-408: the header's Destinations tile counts these lines.
   const setRoutedCount = useCampaignPageStore((s) => s.setRouted);

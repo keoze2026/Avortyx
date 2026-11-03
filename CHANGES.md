@@ -1985,3 +1985,20 @@ shows the full report."
   rows count only the picked calls, so Campaign shows which campaigns A49's
   4 live calls are on. On the picked row's own tab, nothing changes.
 - Type-check unchanged. No backend change.
+
+## CH-496 - Header figures at once after a refresh; campaign lines never all "off" while loading (FRONTEND)
+
+3 Nov: "Only facing when refreshing the page: on refresh those figures should
+be seen" (the header showed "—" for Balance and Total), and Sir did not see
+CH-493 on the NOV 3 campaign.
+
+- Header: asks for today's figures first - all it shows - so Balance, Live
+  and Total fill in straight after a refresh. The whole-history totals
+  (Billing's usage) took the longest and held the header on "—"; they now
+  follow on their own, at most every 5 minutes.
+- Campaign > Destinations (CH-493): until the Destinations list has loaded, no
+  line is treated as missing from it. Right after a refresh every line was
+  drawn off and marked for a moment, until the list arrived.
+- CH-493's own build failed on Vercel (CH-494, built on it, is live and
+  carries it). This change is built on CH-495.
+- Type-check unchanged. No backend change.

@@ -24,6 +24,10 @@ import {
 import type { Call } from "@/lib/types";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 
+/** CH-496: the all-time totals behind Billing's usage, at most this often. */
+const ALL_TIME_EVERY_MS = 5 * 60_000;
+let lastAllTimeAt = 0;
+
 interface CallsState {
   /** Most recent N calls — used by the dashboard's chart components. */
   recent: Call[];
@@ -93,21 +97,38 @@ export const useCallsStore = create<CallsState>()((set) => ({
 
   fetchKpis: async () => {
     try {
-      // The header's Live / Total / wallet come from this on every page. With no
-      // dates it is all-time, which the server refuses while the reports PIN is
-      // locked - so ask for today, which is always allowed.
-      const { value: kpis, today } = await allOrToday(
-        () => analyticsService.dashboard(),
-        () => analyticsService.dashboard(todayScope()),
+      // CH-496: the header's Live / Total / wallet come from this on every
+      // page. Today's figures are asked for first - they are all the header
+      // shows, and they come back at once. The whole history (the all-time
+      // total, for Billing's usage) took the longest and held the header on
+      // "—" after every refresh; it now follows, at most every 5 minutes.
+      const today = await analyticsService.dashboard(todayScope());
+      const prev = get().kpis;
+      set(
+        prev && get().kpisScope === "all"
+          ? { kpis: { ...prev, callsToday: today.callsToday, liveCalls: today.liveCalls, balance: today.balance } }
+          : { kpis: today, kpisScope: "today" },
       );
-      set({ kpis, kpisScope: today ? "today" : "all" });
       // The dashboard payload carries the account balance alongside the
-      // call counters, and the topbar polls it every 15s — so it is the
+      // call counters, and the topbar polls it every 30s — so it is the
       // freshest balance the app has. Mirror it into the onboarding store,
       // which the header wallet and the balance gate read, instead of
       // leaving those on the one-shot /api/billing/account fetch.
-      if (kpis.balance !== undefined) {
-        useOnboardingStore.getState().setBalance(kpis.balance);
+      if (today.balance !== undefined) {
+        useOnboardingStore.getState().setBalance(today.balance);
+      }
+      if (Date.now() - lastAllTimeAt > ALL_TIME_EVERY_MS) {
+        lastAllTimeAt = Date.now();
+        // With no dates it is all-time, which the server refuses while the
+        // reports PIN is locked - then today's stays.
+        void allOrToday(
+          () => analyticsService.dashboard(),
+          async () => null,
+        )
+          .then(({ value }) => {
+            if (value) set({ kpis: { ...value, callsToday: today.callsToday, liveCalls: today.liveCalls }, kpisScope: "all" });
+          })
+          .catch(() => undefined);
       }
     } catch (e) {
       set({ error: messageFromError(e) });
