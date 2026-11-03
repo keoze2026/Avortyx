@@ -329,7 +329,7 @@ export function GroupDetail({
               <SelectTrigger size="sm" className="h-8 w-auto gap-1 text-xs">
                 <span className="text-muted-foreground">{t("x415.buyer")}</span> <SelectValue />
               </SelectTrigger>
-              <SelectContent className="max-h-72">
+              <SelectContent position="popper" align="start" className="max-h-[min(70vh,var(--radix-select-content-available-height))] min-w-[16rem]">
                 <SelectItem value="all">{t("x415.all")}</SelectItem>
                 {buyers.map((b) => (
                   <SelectItem key={b} value={b}>{localName(b)}</SelectItem>
@@ -340,7 +340,7 @@ export function GroupDetail({
               <SelectTrigger size="sm" className="h-8 w-auto gap-1 text-xs">
                 <span className="text-muted-foreground">{t("x415.campaign")}</span> <SelectValue />
               </SelectTrigger>
-              <SelectContent className="max-h-72">
+              <SelectContent position="popper" align="start" className="max-h-[min(70vh,var(--radix-select-content-available-height))] min-w-[16rem]">
                 <SelectItem value="all">{fill(t("x415.allN"), { n: group.campaigns.length })}</SelectItem>
                 {group.campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{localName(c.name)}</SelectItem>

@@ -1845,3 +1845,14 @@ be live under several buyers (CH-392); the group page was fixed in CH-483.
   is routed; Q50's own is not offered twice.
 - Type-check unchanged. No backend change: the server already accepts a
   second buyer on the same number.
+
+## CH-486 - Campaign group: bigger Buyer and Campaign lists (FRONTEND)
+
+Sir (3 Nov): "Make buyer list size big."
+
+- Campaign group > Destinations: the Buyer and Campaign filters open as a
+  list below the button, up to 70% of the screen tall (it showed about seven
+  buyers and scrolled with small arrows) and wider.
+- A buyer is in the Buyer list once it has a line in the group's campaigns:
+  CRM shows there after its lines are added (CH-483).
+- Type-check unchanged. No backend change.
