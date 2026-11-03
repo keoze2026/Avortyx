@@ -1818,3 +1818,16 @@ treated a line as its number alone.
 - Edit, Set Priority & Weight and Remove change only the line picked, never
   the other buyer's line on the same number.
 - Type-check unchanged. Backend: CH-483 BACKEND.
+
+## CH-484 - Buyers: delete asks first (FRONTEND)
+
+Sir (3 Nov): "Give confirmation delete option under Buyers section too, not
+direct delete."
+
+- Buyers list: the bin on a row and "Delete N selected buyers" in the bulk
+  bar now open "Delete this buyer?" / "Delete N buyers?" with the names,
+  Cancel and Confirm - as campaigns do (CH-331). Nothing is deleted until
+  Confirm.
+- A buyer's own page: More > Remove buyer asks the same.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+  No backend change.

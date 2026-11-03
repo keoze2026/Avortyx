@@ -20,6 +20,16 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ListLoading } from "@/components/shared/list-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/hooks/use-translation";
 import { useLocalName } from "@/lib/i18n/local-name";
@@ -151,11 +161,35 @@ export default function BuyersPage() {
     );
   };
 
+  // CH-484 (Sir, 3 Nov): deleting a buyer - one, or several from the bulk
+  // bar - asks first, as campaigns do (CH-331). It went at the first click.
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; names: string[] } | null>(null);
+
   const onArchive = (id: string) => {
     const b = buyers.find((x) => x.id === id);
     if (!b) return;
-    remove(id);
-    toast.success(t("networkUI.buyers.toast.removed").replace("{name}", localName(b.name)));
+    setConfirmDelete({ ids: [b.id], names: [b.name] });
+  };
+
+  const doDelete = () => {
+    if (!confirmDelete) return;
+    const { ids, names } = confirmDelete;
+    setConfirmDelete(null);
+    for (const id of ids) remove(id);
+    if (ids.length === 1) {
+      toast.success(t("networkUI.buyers.toast.removed").replace("{name}", localName(names[0])));
+    } else {
+      toast.success(
+        t("common.bulk.toast.deleted")
+          .replace("{count}", String(ids.length))
+          .replace("{entity}", t("common.bulk.entities.buyers")),
+      );
+    }
+    setSelectedIds((s) => {
+      const next = new Set(s);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
   };
 
   const selectedBuyers = useMemo(
@@ -212,13 +246,7 @@ export default function BuyersPage() {
 
   const onBulkDelete = () => {
     if (selectedBuyers.length === 0) return;
-    for (const b of selectedBuyers) remove(b.id);
-    toast.success(
-      t("common.bulk.toast.deleted")
-        .replace("{count}", String(selectedBuyers.length))
-        .replace("{entity}", t("common.bulk.entities.buyers")),
-    );
-    setSelectedIds(new Set());
+    setConfirmDelete({ ids: selectedBuyers.map((b) => b.id), names: selectedBuyers.map((b) => b.name) });
   };
 
   return (
@@ -350,6 +378,33 @@ export default function BuyersPage() {
         buyerId={editId}
         onOpenChange={(open) => !open && setEditId(null)}
       />
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDelete && confirmDelete.ids.length > 1
+                ? t("bdel.titleMany").replace("{count}", String(confirmDelete.ids.length))
+                : t("bdel.title")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete && confirmDelete.ids.length > 1
+                ? t("bdel.descMany")
+                : t("bdel.desc").replace("{name}", localName(confirmDelete?.names[0] ?? ""))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {confirmDelete && confirmDelete.ids.length > 1 && (
+            <p className="max-h-32 overflow-y-auto text-sm font-medium">
+              {confirmDelete.names.map((n) => localName(n)).join(", ")}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cdel.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={doDelete} className="bg-destructive text-white hover:bg-destructive/90">
+              {t("cdel.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

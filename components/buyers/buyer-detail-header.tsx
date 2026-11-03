@@ -8,6 +8,16 @@ import { ArrowLeft, Building2, Mail, MoreVertical, Pause, Play, Send, Trash2 } f
 import { BuyerInviteDialog } from "@/components/buyers/buyer-invite-dialog";
 import { BuyerStatsRow } from "@/components/buyers/buyer-stats-row";
 import { PartnerStatusBadge } from "@/components/network/partner-status-badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,6 +41,8 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
   const setStatus = useBuyersStore((s) => s.setStatus);
   const remove = useBuyersStore((s) => s.remove);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // CH-484: Remove buyer asks first.
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   const isActive = buyer.status === "active";
 
@@ -118,7 +130,7 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onSelect={() => setConfirmRemove(true)} className="text-destructive focus:text-destructive">
                 <Trash2 className="h-4 w-4" /> {t("networkUI.buyers.detail.removeBuyer")}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -137,6 +149,20 @@ export function BuyerDetailHeader({ buyer }: { buyer: Buyer }) {
       <div className="relative border-t border-border/60">
         <BuyerStatsRow buyer={buyer} />
       </div>
+      <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("bdel.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("bdel.desc").replace("{name}", localName(buyer.name))}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cdel.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onRemove} className="bg-destructive text-white hover:bg-destructive/90">
+              {t("cdel.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
