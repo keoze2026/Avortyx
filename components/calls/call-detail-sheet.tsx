@@ -32,6 +32,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { analyticsService } from "@/lib/api/services/analytics.service";
 import { callsService, type CallDetail } from "@/lib/api/services/calls.service";
 import { ROUTES } from "@/lib/constants";
 import { formatCallerId, formatCurrency, formatDuration, formatLocalDateTime, formatRelativeTime, toE164, uiLocaleTag } from "@/lib/format";
@@ -145,6 +146,32 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
       cancelled = true;
     };
   }, [call]);
+
+  // CH-505 (audit team, 3 Nov: "pasting the caller ID in the new portal shows
+  // no recording"): most calls carry no recording link in the list - the
+  // Reports log asks the server for it when Play is pressed, this sheet never
+  // did and said playback would come "in a later phase". Now it asks too.
+  const [asked, setAsked] = useState<{ id: string; url: string | null } | null>(null);
+  const knownUrl = detail?.recordingUrl || call?.recordingUrl || null;
+  useEffect(() => {
+    if (!call || !canListen || call.recordingUrl) return;
+    let cancelled = false;
+    analyticsService
+      .recordingUrl(call.id)
+      .then((res) => {
+        const url = ("url" in res && res.url) || ("recordingUrl" in res && res.recordingUrl) || null;
+        if (!cancelled) setAsked({ id: call.id, url });
+      })
+      .catch(() => {
+        if (!cancelled) setAsked({ id: call.id, url: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [call, canListen]);
+  const askedHere = call && asked?.id === call.id ? asked : null;
+  const recordingUrl = knownUrl || askedHere?.url || null;
+  const recordingLoading = !!call && !knownUrl && !askedHere;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
@@ -310,24 +337,29 @@ export function CallDetailSheet({ call, onOpenChange }: Props) {
 
               {/* Recording — render the player when the backend exposes a URL,
                   otherwise show the legacy placeholder. */}
-              {!canListen ? null : (detail?.recordingUrl || call.recordingUrl) ? (
+              {!canListen ? null : recordingUrl ? (
                 <section className="mt-6 rounded-lg border border-border bg-card p-4">
-                  <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                    <PlayCircle className="h-3.5 w-3.5 text-accent" />
-                    {t("y.call.recording")}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                      <PlayCircle className="h-3.5 w-3.5 text-accent" />
+                      {t("y.call.recording")}
+                    </span>
+                    <a
+                      href={recordingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-medium text-accent hover:underline"
+                    >
+                      {t("x505.open")}
+                    </a>
                   </div>
-                  <audio
-                    src={detail?.recordingUrl ?? call.recordingUrl}
-                    controls
-                    preload="none"
-                    className="w-full"
-                  />
+                  <audio src={recordingUrl} controls preload="none" className="w-full" />
                 </section>
               ) : (
                 <section className="mt-6 rounded-lg border border-dashed border-border/60 bg-secondary/30 p-4 text-center">
                   <PlayCircle className="mx-auto h-6 w-6 text-accent" />
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {t("toolsUI.callLogs.detail.recordingNote")}
+                    {t(recordingLoading ? "x505.loading" : "x505.none")}
                   </p>
                 </section>
               )}

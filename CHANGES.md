@@ -2070,3 +2070,18 @@ buyers today RBC and others were on page 2 and looked missing.
 - Opens at 50 rows a page. 25, 100 and 250 can still be picked under the
   table. The Call Log below keeps its own setting.
 - Type-check unchanged. No backend change.
+
+## CH-505 - Call Logs: the call's recording plays (FRONTEND)
+
+Audit team, 3 Nov: "We can only listen to the call via the recording link.
+Pasting the Caller ID in the new portal shows no recording."
+
+- On Insights > Call Logs, opening a call (after searching its caller ID)
+  showed the recording only when the list already carried its link - most
+  calls do not - and otherwise said "Recording playback ships with the call
+  recording feature in a later phase."
+- Now the call's sheet asks the server for the recording, as the Reports log
+  does when Play is pressed: the player and an "Open recording link" appear;
+  "No recording for this call." only when there is none.
+- Needs Reporting > Listen (the audit role has it since 3 Nov).
+- Type-check unchanged. No backend change.
