@@ -1958,3 +1958,17 @@ any.
   it; another buyer's line on the same number is not used for it.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
   No backend change.
+
+## CH-494 - Campaign > Add Destination: set the priority (FRONTEND)
+
+Campaign team (3 Nov): "When I add TFNs there is no option to set the
+priority."
+
+- The second step of Add Destination (Rate and Convert ON) now starts with
+  **Priority**: every destination added gets it (1 = first). It used to give
+  each the next number after the last one, without asking. Each can still be
+  changed in the table afterwards.
+- The other half of the message ("live and paused TFNs are randomly
+  distributed") is CH-493: live on top, paused below.
+- Backend CH-494: a deleted buyer's name can be used again.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.

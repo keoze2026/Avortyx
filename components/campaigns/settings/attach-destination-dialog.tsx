@@ -96,6 +96,9 @@ export function AttachDestinationDialog({
   const [rate, setRate] = useState("");
   const [convertOn, setConvertOn] = useState<"" | "incoming" | "connected" | "length">("");
   const [seconds, setSeconds] = useState("");
+  // CH-494 (campaign team, 3 Nov: "when I add TFNs there is no option to set
+  // the priority"): one priority for the destinations being added.
+  const [priorityText, setPriorityText] = useState(String(startPriority));
 
   useEffect(() => {
     if (!open) return;
@@ -105,13 +108,16 @@ export function AttachDestinationDialog({
     setRate("");
     setConvertOn("");
     setSeconds("");
+    setPriorityText(String(startPriority));
     void fetchDestinations();
-  }, [open, fetchDestinations]);
+  }, [open, fetchDestinations, startPriority]);
 
   const rateValue = rate.trim() === "" ? NaN : Number(rate);
+  const priorityValue = Math.floor(Number(priorityText));
+  const priorityOk = priorityText.trim() !== "" && Number.isFinite(priorityValue) && priorityValue >= 1 && priorityValue <= 999;
   const secondsValue = Math.floor(Number(seconds) || 0);
   const billingReady =
-    Number.isFinite(rateValue) && rateValue >= 0 && convertOn !== "" &&
+    priorityOk && Number.isFinite(rateValue) && rateValue >= 0 && convertOn !== "" &&
     (convertOn !== "length" || secondsValue > 0);
 
   // Every destination not already routed here, switched-on ones first. A
@@ -181,12 +187,11 @@ export function AttachDestinationDialog({
       const attached: string[] = [];
       try {
         // Sequential so a failure half way names what already landed.
-        let priority = startPriority;
         for (const d of chosen) {
           await routingService.addDestination(ruleId, {
             destination: toE164(d.tfn),
             buyerId: d.buyerId || undefined,
-            priority: priority++,
+            priority: priorityValue,
             revenue: rateValue,
             convertOn: convertOn || undefined,
             convertSeconds: convertOn === "length" ? secondsValue : 0,
@@ -243,6 +248,23 @@ export function AttachDestinationDialog({
               <p className="mt-1 text-xs text-muted-foreground">
                 {t("y.attDest.billing.desc").replace("{count}", String(selected.size))}
               </p>
+            </div>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <Label htmlFor="att-priority" className="text-xs font-medium">
+                  {t("x494.priority")} <span className="text-destructive">*</span>
+                </Label>
+                <p className="text-[11px] text-muted-foreground">{t("x494.priorityHint")}</p>
+              </div>
+              <Input
+                id="att-priority"
+                type="number"
+                min={1}
+                max={999}
+                value={priorityText}
+                onChange={(e) => setPriorityText(e.target.value)}
+                className="w-28 text-right font-mono tabular-nums"
+              />
             </div>
             <div className="flex items-end justify-between gap-3">
               <div>
