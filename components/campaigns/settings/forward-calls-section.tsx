@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CornerDownRight, ExternalLink, Loader2, Pencil, Plus, Share2, Unlink } from "lucide-react";
+import { ArrowRight, CornerDownRight, ExternalLink, Loader2, Pencil, Plus, Search, Share2, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
@@ -284,10 +284,13 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   }, [loadRouted]);
 
   const destinations = useMemo<RoutedRow[]>(() => {
+    // CH-489: a routed line is matched to its own buyer's destination - one
+    // TFN can be live under several buyers (CH-392) - else to any on the number.
+    const byLine = new Map((allDestinations ?? []).map((d) => [`${toE164(d.tfn)}|${d.buyerId ?? ""}`, d]));
     const byNumber = new Map((allDestinations ?? []).map((d) => [toE164(d.tfn), d]));
     return routed.map((r) => {
       const number = r.destination ?? "";
-      const dest = byNumber.get(toE164(number));
+      const dest = (r.buyerId ? byLine.get(`${toE164(number)}|${r.buyerId}`) : undefined) ?? byNumber.get(toE164(number));
       return {
         id: r.id,
         name: dest?.name ?? toE164(number),
@@ -363,15 +366,28 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
   // chunks. Options step up to 400 for ops teams running 200+ destinations.
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(100);
+  // CH-489 (3 Nov, "like we had in Revo"): find a line by buyer, name or TFN.
+  const [search, setSearch] = useState("");
+  const shownDestinations = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return destinations;
+    const qd = q.replace(/\D/g, "");
+    return destinations.filter(
+      (d) =>
+        (d.buyerName ?? "").toLowerCase().includes(q) ||
+        d.name.toLowerCase().includes(q) ||
+        (qd.length > 0 && d.tfn.replace(/\D/g, "").includes(qd)),
+    );
+  }, [destinations, search]);
   const pageStart = page * pageSize;
   const pageEnd = pageStart + pageSize;
   const pagedDestinations = useMemo(
-    () => destinations.slice(pageStart, pageEnd),
-    [destinations, pageStart, pageEnd],
+    () => shownDestinations.slice(pageStart, pageEnd),
+    [shownDestinations, pageStart, pageEnd],
   );
   // Reset to page 0 when the underlying list shrinks (e.g. a destination is
-  // detached) so we never strand the user on an empty page.
-  if (page > 0 && pageStart >= destinations.length) {
+  // detached, or a search narrows it) so we never strand the user on an empty page.
+  if (page > 0 && pageStart >= shownDestinations.length) {
     setPage(0);
   }
 
@@ -632,7 +648,17 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             hint={t("x408.destinationsHint")}
             className="pb-4"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="relative w-56">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("x489.search")}
+                aria-label={t("x489.search")}
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
             {selectedRows.length > 0 && (
               <BulkActionsBar
                 count={bulkBusy ? 0 : selectedRows.length}
@@ -701,6 +727,12 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={10} className="pl-6 py-6 text-xs text-muted-foreground">
                   {routedLoaded ? t("trafficUI.campaigns.settings.forward.empty") : t("y.fwd.loading")}
+                </TableCell>
+              </TableRow>
+            ) : shownDestinations.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={10} className="pl-6 py-6 text-xs text-muted-foreground">
+                  {t("x489.noMatch")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -832,7 +864,7 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
             <Pagination
               page={page}
               pageSize={pageSize}
-              total={destinations.length}
+              total={shownDestinations.length}
               onPage={setPage}
               onPageSize={(n) => {
                 setPageSize(n);

@@ -1882,3 +1882,17 @@ now does (CH-484).
 - `components/shared/confirm-delete-dialog.tsx`: the dialog, for any list.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
   No backend change.
+
+## CH-489 - Campaign > Destinations: search by buyer or TFN (FRONTEND)
+
+Asked 3 Nov: "Don't we have any option here to search buyer or TFN in camps
+like we had in Revo?"
+
+- A search box beside Add Destination on the campaign's Destinations table:
+  type a buyer (Q08), a line name (Q08|2599) or any part of a TFN (2599,
+  844483); the table shows only the matching lines. Clearing it shows all.
+- A routed line now shows its own buyer's destination (name, switch, live
+  limit) when one TFN is live under two buyers (CH-392); it took the first
+  destination on the number.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+  No backend change.
