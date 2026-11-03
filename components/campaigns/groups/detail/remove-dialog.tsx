@@ -83,6 +83,7 @@ export function RemoveDialog({
           groupIds: [group.id],
           action: "remove",
           number: rows[0].number,
+          buyerId: rows[0].buyerId ?? undefined,
           numbers: rows.length > 1 ? rows.map((r) => ({ number: r.number, buyerId: r.buyerId ?? undefined })) : undefined,
         });
         toast.success(fill(t("x415.removedFrom"), { n: res.changed }));

@@ -123,17 +123,25 @@ export function AddDestinationDrawer({
   const dest = source === "existing" && pickedDests.length === 1 ? pickedDests[0] : null;
   useEffect(() => setLimits(limitsOf(dest)), [dest]);
 
-  const rowOf = (tfn: string) => rows.find((r) => r.digits === digits10(tfn)) ?? null;
-  const alreadyOf = (tfn: string) => new Set(rowOf(tfn)?.line.campaigns.map((c) => c.campaignId) ?? []);
-  const targetsOf = (tfn: string) => {
-    const has = alreadyOf(tfn);
+  // CH-483: a line is a number AND its buyer - one TFN can be live under
+  // several buyers (CH-392), each its own line in the group.
+  const rowOf = (tfn: string, buyerId?: string | null) =>
+    rows.find((r) => r.digits === digits10(tfn) && (r.buyerId ?? "") === (buyerId ?? "")) ?? null;
+  const alreadyOf = (tfn: string, buyerId?: string | null) =>
+    new Set(rowOf(tfn, buyerId)?.line.campaigns.map((c) => c.campaignId) ?? []);
+  const targetsOf = (tfn: string, buyerId?: string | null) => {
+    const has = alreadyOf(tfn, buyerId);
     return group.campaigns.filter((c) => !has.has(c.id) && (scope === "all" || some.has(c.id)));
   };
 
   // The one line the steps describe: the single pick, or the new number.
   const number = source === "existing" ? pickedDests[0]?.tfn ?? "" : toE164(newNumber);
   const key = digits10(number);
-  const row = useMemo(() => (key.length === 10 ? rows.find((r) => r.digits === key) ?? null : null), [rows, key]);
+  const lineBuyer = source === "existing" ? pickedDests[0]?.buyerId ?? "" : newBuyer;
+  const row = useMemo(
+    () => (key.length === 10 ? rows.find((r) => r.digits === key && (r.buyerId ?? "") === (lineBuyer ?? "")) ?? null : null),
+    [rows, key, lineBuyer],
+  );
   const already = source === "existing" && pickedDests.length > 1 ? new Set<string>() : new Set(row?.line.campaigns.map((c) => c.campaignId) ?? []);
   const targets = group.campaigns.filter((c) => !already.has(c.id) && (scope === "all" || some.has(c.id)));
   const needsBilling = source === "new" ? !row : false;
@@ -141,14 +149,14 @@ export function AddDestinationDrawer({
     source === "existing" ? pickedDests[0]?.buyerName ?? "" : buyers.find((b) => b.id === newBuyer)?.name ?? "";
 
   // Existing picks: what each adds, and which are new to the group (own billing).
-  const plan = pickedDests.map((d) => ({ d, targets: targetsOf(d.tfn), isNew: !rowOf(d.tfn) }));
+  const plan = pickedDests.map((d) => ({ d, targets: targetsOf(d.tfn, d.buyerId), isNew: !rowOf(d.tfn, d.buyerId) }));
   const adding = plan.filter((x) => x.targets.length > 0);
   const newOnes = plan.filter((x) => x.isNew);
   const rowsAdded = adding.reduce((s, x) => s + x.targets.length, 0);
 
   // Already in every campaign of the group: nothing left to add.
   const fullIn = (d: Destination) => {
-    const r = rows.find((x) => x.digits === digits10(d.tfn));
+    const r = rowOf(d.tfn, d.buyerId);
     return !!r && r.inCount >= r.ofCount;
   };
 
@@ -168,7 +176,7 @@ export function AddDestinationDrawer({
   }, [destinations, search, rows]);
 
   const inAll = (d: Destination) => {
-    const r = rowOf(d.tfn);
+    const r = rowOf(d.tfn, d.buyerId);
     return !!r && r.inCount >= r.ofCount;
   };
 
@@ -209,14 +217,14 @@ export function AddDestinationDrawer({
       // A server not updated yet has no /line: every missing campaign still
       // goes through /apply, with the billing given or the one the line has.
       const status = (e as { status?: number }).status;
-      const r = rowOf(d.tfn);
+      const r = rowOf(d.tfn, d.buyerId);
       const known = r?.line.campaigns.find((c) => c.revenue != null && c.convertOn);
       const bill = isNew
         ? billing
         : known
           ? { revenue: Number(known.revenue), convertOn: known.convertOn as "incoming" | "connected" | "length", convertSeconds: known.convertSeconds }
           : null;
-      const everyMissing = camps.length === group.campaigns.length - alreadyOf(d.tfn).size;
+      const everyMissing = camps.length === group.campaigns.length - alreadyOf(d.tfn, d.buyerId).size;
       if ((status === 404 || status === 405) && everyMissing && bill) {
         await campaignGroups.apply({ groupIds: [group.id], action: "add", number: d.tfn, buyerId: d.buyerId || undefined, priority: p, weight: w, ...bill });
       } else throw e;
@@ -375,7 +383,7 @@ export function AddDestinationDrawer({
                     <p className="p-4 text-xs text-muted-foreground">{t("x415.noMatch")}</p>
                   ) : (
                     pool.map((d) => {
-                      const r = rowOf(d.tfn);
+                      const r = rowOf(d.tfn, d.buyerId);
                       const full = inAll(d);
                       const on = picked.includes(d.id);
                       return (

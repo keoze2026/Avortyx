@@ -133,12 +133,12 @@ export function GroupDetail({
 
   const rows = useMemo(() => sortRows(buildRows(lines ?? [], destinations)), [lines, destinations]);
   const shown = useMemo(() => filterRows(rows, { search, buyer, campaign, kind }), [rows, search, buyer, campaign, kind]);
-  const pickedRows = useMemo(() => rows.filter((r) => picked.has(r.number)), [rows, picked]);
+  const pickedRows = useMemo(() => rows.filter((r) => picked.has(r.key)), [rows, picked]);
 
   // Drop picks that left the list (removed, filtered out by a reload).
   useEffect(() => {
     setPicked((p) => {
-      const keep = new Set([...p].filter((n) => rows.some((r) => r.number === n)));
+      const keep = new Set([...p].filter((n) => rows.some((r) => r.key === n)));
       return keep.size === p.size ? p : keep;
     });
   }, [rows]);
@@ -175,7 +175,7 @@ export function GroupDetail({
   const checkCount = rows.filter((r) => r.check).length;
   const notAllCount = rows.filter((r) => r.inCount < r.ofCount).length;
   const limitsCount = rows.filter((r) => r.hasLimits).length;
-  const allShownPicked = shown.length > 0 && shown.every((r) => picked.has(r.number));
+  const allShownPicked = shown.length > 0 && shown.every((r) => picked.has(r.key));
 
   const toggle = async (r: GroupRow, on: boolean) => {
     if (!r.dest) return;
@@ -409,7 +409,7 @@ export function GroupDetail({
                         onCheckedChange={(v) =>
                           setPicked((p) => {
                             const next = new Set(p);
-                            shown.forEach((r) => (v ? next.add(r.number) : next.delete(r.number)));
+                            shown.forEach((r) => (v ? next.add(r.key) : next.delete(r.key)));
                             return next;
                           })
                         }
@@ -437,10 +437,10 @@ export function GroupDetail({
                   <tr><td colSpan={10} className="px-4 py-6 text-xs text-muted-foreground">{rows.length ? t("x415.noMatch") : t("cg.noLines")}</td></tr>
                 ) : (
                   shown.map((r) => {
-                    const sel = picked.has(r.number);
+                    const sel = picked.has(r.key);
                     const weight = r.weights.length === 1 ? String(r.weights[0]) : `${r.weights[0]}–${r.weights[r.weights.length - 1]}`;
                     return (
-                      <tr key={r.number} className={cn("border-b border-border last:border-b-0", sel && "bg-accent/5")}>
+                      <tr key={r.key} className={cn("border-b border-border last:border-b-0", sel && "bg-accent/5")}>
                         {canEdit && (
                           <td className="py-2.5 pl-4">
                             <Checkbox
@@ -448,8 +448,8 @@ export function GroupDetail({
                               onCheckedChange={(v) =>
                                 setPicked((p) => {
                                   const next = new Set(p);
-                                  if (v) next.add(r.number);
-                                  else next.delete(r.number);
+                                  if (v) next.add(r.key);
+                                  else next.delete(r.key);
                                   return next;
                                 })
                               }

@@ -229,6 +229,7 @@ export function LineDrawer({
               groupIds: [group.id],
               action: "update",
               number: row.number,
+              buyerId: row.buyerId ?? undefined,
               priority: campaignChanges[0].priority,
               weight: campaignChanges[0].weight,
             });

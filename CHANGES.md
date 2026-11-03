@@ -1802,3 +1802,19 @@ few seconds every request was cut (502) and the portal never tried again.
   until a newer one arrives.
 - Type-check unchanged. Backend: CH-482 BACKEND shares the header figures
   for 4 seconds.
+
+## CH-483 - Campaign group: the same TFN under two buyers is two lines (FRONTEND)
+
+Campaign team (3 Nov): CRM's +18444974105 and +18444832599 could not be added
+to the group - Q08 / Q50 already had the same numbers there, and the page
+treated a line as its number alone.
+
+- Each line in Campaign group > Destinations is the number and its buyer:
+  CRM's +18444974105 shows beside Q08's, each with its own priority, weight,
+  Type, limits and switch.
+- Add Destination: a buyer's line on a number another buyer already has in
+  the campaigns can be picked and added (Rate and Convert ON asked for it,
+  as for any new line).
+- Edit, Set Priority & Weight and Remove change only the line picked, never
+  the other buyer's line on the same number.
+- Type-check unchanged. Backend: CH-483 BACKEND.

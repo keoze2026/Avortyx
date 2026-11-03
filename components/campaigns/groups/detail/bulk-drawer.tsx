@@ -191,7 +191,8 @@ export function BulkEditDrawer({
             groupIds: [group.id],
             action: "update",
             number: rows[0].number,
-            numbers: rows.length > 1 ? rows.map((r) => ({ number: r.number })) : undefined,
+            buyerId: rows[0].buyerId ?? undefined,
+            numbers: rows.length > 1 ? rows.map((r) => ({ number: r.number, buyerId: r.buyerId ?? undefined })) : undefined,
             priority,
             weight,
           });
@@ -238,7 +239,7 @@ export function BulkEditDrawer({
           <SheetDescription className="text-xs">{t("x415.editNSub")}</SheetDescription>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {rows.map((r) => (
-              <span key={r.number} className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px]">
+              <span key={r.key} className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px]">
                 <span className="font-semibold">{localName(r.buyerName)}</span>
                 <span className="font-mono tabular-nums">{formatUs(r.number)}</span>
               </span>

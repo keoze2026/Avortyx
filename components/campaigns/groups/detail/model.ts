@@ -20,6 +20,9 @@ export function formatUs(number: string): string {
 }
 
 export interface GroupRow {
+  /** CH-483: the line's identity - its number AND its buyer. One TFN can be
+   *  live under several buyers (CH-392), each a line of its own. */
+  key: string;
   /** The line's number as the server keys it (E.164). */
   number: string;
   digits: string;
@@ -62,6 +65,7 @@ export function buildRows(lines: GroupLine[], destinations: Destination[]): Grou
       ? (dest.concurrencyCap ?? 0) > 0 || (dest.hourlyCap ?? 0) > 0 || (dest.dailyCap ?? 0) > 0 || (dest.monthlyCap ?? 0) > 0
       : false;
     return {
+      key: `${digits10(line.number)}|${line.buyerId ?? ""}`,
       number: line.number,
       digits: digits10(line.number),
       buyerId: line.buyerId,
