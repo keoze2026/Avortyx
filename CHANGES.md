@@ -2126,3 +2126,22 @@ today's data."
 - Insights > Call Logs opens on Today. 7 / 14 / 30 days are still one click
   away in the same bar.
 - Type-check unchanged. No backend change.
+
+## CH-510 - Reports Destination tab: a buyer's calls under its own destination name only (FRONTEND)
+
+Sir, 4 Nov: "When you check destination after clicking on R48 - Q50 and other
+buyers' data are showing ... All reports should only be visible to assigned
+buyers - to their destinations only."
+
+- One TFN can be on several buyers (CH-392): +18444832599 is Q08|2599|,
+  Q50|2599| and CRM|2599|; +18334882792 is R-2792 (R48), Q50|2792| and
+  Q08|2792|. The Destination tab grouped calls by the number alone and named
+  the row after whichever buyer's destination came last, so R48's own calls
+  read "Q50|2599|", "Q08|4105|", "Q50|2792|".
+- Rows are now the number AND the call's buyer, named from that buyer's own
+  destination (the number when it has none). Live on the row counts that
+  buyer's line only. The Call Log's Destination Name and its exports follow
+  the same rule: never another buyer's name.
+- The calls themselves were always R48's: only the names were wrong. A buyer
+  login only ever receives its own calls and destinations (server side).
+- Type-check unchanged. No backend change.

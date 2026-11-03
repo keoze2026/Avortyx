@@ -75,8 +75,10 @@ export function destinationOf(
   const raw = call?.destinationNumber?.trim() ?? "";
   if (!raw) return { name: "", number: "" };
   const e164 = toE164(raw);
-  const own = call?.buyerId ? names.get(`${call.buyerId}|${e164}`) : undefined;
-  return { name: own ?? names.get(e164) ?? "", number: exportNumber(raw) };
+  // CH-510: a call with a buyer is named from that buyer's own destination
+  // only; borrowing the number's name could show another buyer's.
+  if (call?.buyerId) return { name: names.get(`${call.buyerId}|${e164}`) ?? "", number: exportNumber(raw) };
+  return { name: names.get(e164) ?? "", number: exportNumber(raw) };
 }
 
 const norm = (h: string) => h.trim().toLowerCase();

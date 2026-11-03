@@ -34,6 +34,7 @@ import type { EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
 import { formatCallerId, formatCurrency, formatNumber, formatPercent, formatTimer, toE164, zonedDayKey, zonedParts } from "@/lib/format";
+import { destinationNameMap } from "@/lib/call-log-export";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
@@ -411,8 +412,14 @@ function deriveGroup(
       const raw = c.destinationNumber?.trim();
       if (!raw) return labelOf(NOT_FORWARDED);
       const v = toE164(raw);
-      // The key stays the number (the Live column matches on it); the label is
-      // the name the user set on the destination, or the number if it has none.
+      // CH-510 (Sir, 4 Nov): one TFN can be on several buyers (CH-392), each
+      // with its own destination name. The row is the number AND the call's
+      // buyer, named from THAT buyer's destination - never another buyer's.
+      // Keyed by number alone, R48's calls on +18444832599 were shown as
+      // "Q50|2599|", another buyer's name, in R48's report.
+      if (c.buyerId) {
+        return { key: `${v}|${c.buyerId}`, label: destinationNames?.get(`${c.buyerId}|${v}`) ?? v };
+      }
       return { key: v, label: destinationNames?.get(v) ?? v };
     }
     case "numberPool": {
@@ -944,8 +951,12 @@ function liveForGroup(
     case "campaign":
       return campaignsById.get(key)?.liveCalls;
     case "dialed":
-    case "destination":
       return destinations.find((d) => toE164(d.tfn) === key)?.liveCalls;
+    case "destination": {
+      // CH-510: the row is "number|buyer"; its own buyer's line only.
+      const [num, buyerId] = key.split("|");
+      return destinations.find((d) => toE164(d.tfn) === num && (!buyerId || d.buyerId === buyerId))?.liveCalls;
+    }
     case "buyer":
       // Counted from the buyer's own live calls (the rows "Live" filters the
       // Call Log to). The destination counters kept calls whose hang-up never
@@ -1222,17 +1233,9 @@ export function CallSummaryTable({
 
   const timeZone = useUIStore((s) => s.reportTimezone);
 
-  // number -> destination name, so the Destination tab shows the name the user
-  // gave each destination instead of its phone number. A disabled copy can share
-  // a number with a live destination, so live ones are written last and win.
-  const destinationNames = React.useMemo(() => {
-    const names = new Map<string, string>();
-    for (const d of [...destinations].sort((a, b) => Number(a.enabled) - Number(b.enabled))) {
-      const name = d.name?.trim();
-      if (name && name !== d.tfn) names.set(toE164(d.tfn), name);
-    }
-    return names;
-  }, [destinations]);
+  // Destination names by number and by buyer + number (CH-510: the call's own
+  // buyer's name; the number alone only for a call with no buyer).
+  const destinationNames = React.useMemo(() => destinationNameMap(destinations), [destinations]);
 
   const groupedRows = React.useMemo(() => {
     const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
