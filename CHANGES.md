@@ -2145,3 +2145,14 @@ buyers - to their destinations only."
 - The calls themselves were always R48's: only the names were wrong. A buyer
   login only ever receives its own calls and destinations (server side).
 - Type-check unchanged. No backend change.
+
+## CH-512 - Campaign Group > Add Destination: one rate and Convert ON for all lines (FRONTEND)
+
+Sir, 4 Nov: "Under Campaign Group - Rate and Converted on, give a bulk option
+to set Converted on and rate if anyone wants to go easy."
+
+- Above the per-line list in step "Rate and Convert ON" (shown when more than
+  one new line is added): "Set all lines at once" - a Rate, a Convert ON
+  (and seconds for Call Length) and "Apply to All". It fills every new line;
+  any line can still be changed below it. "Copy the First to All" stays.
+- Type-check unchanged. No backend change.

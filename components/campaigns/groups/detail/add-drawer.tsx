@@ -197,6 +197,13 @@ export function AddDestinationDrawer({
     setPicked((p) => (on ? (p.includes(id) ? p : [...p, id]) : p.filter((x) => x !== id)));
   const setBill = (id: string, patch: Partial<Bill>) =>
     setBills((b) => ({ ...b, [id]: { ...(b[id] ?? EMPTY_BILL), ...patch } }));
+  // CH-512 (Sir, 4 Nov): one rate and Convert ON for every new line at once.
+  const [allBill, setAllBill] = useState<Bill>(EMPTY_BILL);
+  const [allApplied, setAllApplied] = useState(0);
+  const applyAllBill = () => {
+    setBills((b) => ({ ...b, ...Object.fromEntries(newOnes.map((x) => [x.d.id, { ...allBill }])) }));
+    setAllApplied(newOnes.length);
+  };
   const copyFirstBill = () => {
     const first = newOnes[0] && bills[newOnes[0].d.id];
     if (!first) return;
@@ -534,6 +541,33 @@ export function AddDestinationDrawer({
           {source === "existing" && newOnes.length > 0 && (
             <Step n={++n} title={t("x415.billing")} aside={t("x422.billingEach")}>
               <div className="space-y-2">
+                {newOnes.length > 1 && (
+                  <div className="space-y-2 rounded-lg border border-accent/30 bg-accent/5 p-2.5">
+                    <div className="text-[11px] font-semibold">{t("x512.title")}</div>
+                    <div className="grid grid-cols-[6rem_minmax(0,1fr)_auto] items-center gap-2">
+                      <Input type="number" min={0} step="0.01" value={allBill.rate} onChange={(e) => setAllBill((a) => ({ ...a, rate: e.target.value }))} placeholder={t("cg.apply.rate")} className="h-8 font-mono" />
+                      <div className="flex gap-1">
+                        <Select value={allBill.convertOn || undefined} onValueChange={(v) => setAllBill((a) => ({ ...a, convertOn: v as ConvertOn }))}>
+                          <SelectTrigger className="h-8 w-full text-xs"><SelectValue placeholder={t("cg.apply.convertOn")} /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="incoming">{t("cg.apply.incoming")}</SelectItem>
+                            <SelectItem value="connected">{t("cg.apply.connected")}</SelectItem>
+                            <SelectItem value="length">{t("cg.apply.length")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {allBill.convertOn === "length" && (
+                          <Input type="number" min={1} value={allBill.seconds} onChange={(e) => setAllBill((a) => ({ ...a, seconds: e.target.value }))} placeholder={t("cg.apply.secondsShort")} className="h-8 w-16 font-mono" />
+                        )}
+                      </div>
+                      <Button type="button" size="sm" className="h-8" disabled={!billDone(allBill)} onClick={applyAllBill}>
+                        {t("x512.apply")}
+                      </Button>
+                    </div>
+                    {allApplied > 0 && (
+                      <p className="text-[11px] text-muted-foreground">{t("x512.applied").replace("{n}", String(allApplied))}</p>
+                    )}
+                  </div>
+                )}
                 {newOnes.map((x, i) => {
                   const b = bills[x.d.id] ?? EMPTY_BILL;
                   return (
