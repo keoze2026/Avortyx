@@ -2023,3 +2023,19 @@ the server.
 - CH-496's campaign part (no line marked missing before the Destinations list
   loads) stays.
 - Type-check unchanged. No backend change.
+
+## CH-498 - Reports: two summary entries for one row add up (FRONTEND)
+
+Sir, 3 Nov: "Nov 3 data is missing under reporting" and, filtered by OLDC11,
+Live 0 / Incoming 1 / Connected 1 while five of its calls were live. The
+backend sent OLDC11 twice (its calls under the current name, and 1 call
+saved when it was still called "Test"); the Campaign, Publisher and Buyer
+tabs put the second over the first.
+
+- When two entries land on the same row, their figures are now added
+  (Incoming, Live, Connected, Not Connected, Qualified, Paid, Converted,
+  Repeated, TCL, Payout, Revenue, Profit, Cost); Conv. rate and ACL are
+  worked out again from the sums.
+- CH-498 BACKEND sends one entry per publisher, campaign and buyer; this keeps
+  the page right with an older backend too.
+- Type-check unchanged.

@@ -852,6 +852,28 @@ function applyEntitySummary(
       byId.set(row.key, row);
       rows.push(row);
     }
+    if (kept.has(row)) {
+      // CH-498: a second entry for the same row (e.g. a publisher renamed
+      // during the range came back under both names) adds to it; it used to
+      // replace it, so OLDC11's 92 calls showed as the 1 under its old name.
+      row.incoming += c.totalCalls;
+      row.qualified += c.qualifiedCalls;
+      row.converted += c.convertedCalls;
+      row.dupe += c.duplicateCalls;
+      row.revenue += c.revenue;
+      row.payout += c.payout;
+      row.conversionRate = row.incoming > 0 ? row.converted / row.incoming : 0;
+      if (c.connectedCalls !== undefined) row.connected += c.connectedCalls;
+      if (c.paidCalls !== undefined) row.paid += c.paidCalls;
+      if (c.notConnectedCalls !== undefined) row.noConnect += c.notConnectedCalls;
+      if (c.liveCalls !== undefined) row.live += c.liveCalls;
+      if (c.totalDurationSec !== undefined) row.tcl += c.totalDurationSec;
+      if (c.totalProfit !== undefined) row.profit = (row.profit ?? 0) + c.totalProfit;
+      if (c.totalCost !== undefined) row.cost = (row.cost ?? 0) + c.totalCost;
+      if (c.billableMinutes !== undefined) row.billableMinutes = (row.billableMinutes ?? 0) + c.billableMinutes;
+      row.acl = row.connected > 0 ? Math.round(row.tcl / row.connected) : 0;
+      continue;
+    }
     row.incoming = c.totalCalls;
     row.qualified = c.qualifiedCalls;
     row.converted = c.convertedCalls;
