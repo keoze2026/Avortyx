@@ -13,9 +13,11 @@
  *     Concurrent 401s coalesce into a single refresh call.
  *   - While a refresh is in flight, new requests wait for it and go out
  *     with the new token instead of the expired one.
- *   - A GET throttled by the server (429, or the network error the browser
- *     reports when the throttle reply carries no CORS header) waits briefly
- *     and is retried once.
+ *   - A GET throttled by the server (429) waits briefly and is retried once.
+ *   - CH-482: a GET that cannot reach the server or gets 502/503/504 (a
+ *     portal restart) is retried after 1, 2, 3 and 5 s; every request gives
+ *     up after 15 s (reads) / 30 s (changes) with a "took too long" error,
+ *     so no screen waits forever.
  *   - Normalize non-2xx into `ApiError`
  *
  * Phase 0 lays the plumbing. Stores will adopt it during Phase 1.
@@ -174,6 +176,29 @@ interface DoRequestArgs {
   alreadyRetried?: boolean;
   /** Internal — set after a throttled / network-failed GET was retried once. */
   throttleRetried?: boolean;
+  /** Internal (CH-482) — how many times this GET was retried after the server
+   *  could not be reached or answered 502/503/504. */
+  gatewayTry?: number;
+}
+
+/** CH-482: a read that hits a portal restart (the server answers 502 or drops
+ *  the connection for a few seconds) is tried again after 1, 2, 3 and 5 s,
+ *  instead of leaving the screen on "Loading..." or showing $0. */
+const GATEWAY_RETRY_MS = [1000, 2000, 3000, 5000];
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
+function defaultTimeoutMs(method: HttpMethod, options: RequestOptions): number {
+  if (options.timeoutMs !== undefined) return options.timeoutMs;
+  if (options.rawResponse) return 0;
+  return method === "GET" ? 15_000 : 30_000;
+}
+
+function timedOutError(): ApiError {
+  return new ApiError({
+    status: 408,
+    code: "timeout",
+    message: "The server took too long to answer. Please try again.",
+  });
 }
 
 /** Wait before retrying a throttled GET: the server's Retry-After when it is
@@ -229,6 +254,7 @@ async function doRequest<T>({
   options = {},
   alreadyRetried = false,
   throttleRetried = false,
+  gatewayTry = 0,
 }: DoRequestArgs): Promise<T> {
   // Demo mode — route every request through the in-memory mock router and
   // never touch the network. The router returns snake_case wire shapes;
@@ -281,16 +307,45 @@ async function doRequest<T>({
     }
   }
 
+  // CH-482: every request ends - with an answer, or a clear "took too long".
+  const timeoutMs = defaultTimeoutMs(method, options);
+  const controller = new AbortController();
+  let timedOut = false;
+  const onCallerAbort = () => controller.abort();
+  if (options.signal) {
+    if (options.signal.aborted) controller.abort();
+    else options.signal.addEventListener("abort", onCallerAbort, { once: true });
+  }
+  const timer =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, timeoutMs)
+      : null;
+  const done = () => {
+    if (timer) clearTimeout(timer);
+    options.signal?.removeEventListener("abort", onCallerAbort);
+  };
+  const canRetryGateway =
+    method === "GET" && gatewayTry < GATEWAY_RETRY_MS.length && !options.signal?.aborted;
+  const retryGateway = async () => {
+    await sleep(GATEWAY_RETRY_MS[gatewayTry], options.signal);
+    return doRequest<T>({ method, path, options, alreadyRetried, throttleRetried, gatewayTry: gatewayTry + 1 });
+  };
+
   let res: Response;
   try {
     res = await fetch(buildUrl(path, options.query), {
       method,
       headers,
       body,
-      signal: options.signal,
+      signal: controller.signal,
       credentials: "omit",
     });
   } catch (err) {
+    done();
+    if (timedOut && !options.signal?.aborted) throw timedOutError();
     // A 401 sent without CORS headers reaches the browser as a network error
     // ("Failed to fetch"), not as a 401. If the token we sent had expired,
     // treat it the same way: refresh once and retry.
@@ -302,17 +357,21 @@ async function doRequest<T>({
         return doRequest<T>({ method, path, options, alreadyRetried: true, throttleRetried });
       }
     }
-    // A throttle reply (429) from the server's front proxy carries no CORS
-    // header, so the browser reports it as a network error. GETs are safe to
-    // repeat, so wait a moment and try once more.
-    if (method === "GET" && !throttleRetried && !options.signal?.aborted) {
-      await sleep(throttleDelayMs(), options.signal);
-      return doRequest<T>({ method, path, options, alreadyRetried, throttleRetried: true });
-    }
+    // The server could not be reached (a restart, a dropped connection) - or
+    // a throttle reply (429) from the front proxy, which carries no CORS
+    // header and so also reads as a network error. GETs are safe to repeat:
+    // try again after 1, 2, 3 and 5 s (CH-482; it was once, after ~1.5 s).
+    if (canRetryGateway && !options.signal?.aborted) return retryGateway();
     throw err;
   }
 
+  if (GATEWAY_STATUSES.has(res.status) && canRetryGateway) {
+    done();
+    return retryGateway();
+  }
+
   if (res.status === 429 && method === "GET" && !throttleRetried) {
+    done();
     await sleep(throttleDelayMs(res), options.signal);
     return doRequest<T>({ method, path, options, alreadyRetried, throttleRetried: true });
   }
@@ -325,6 +384,7 @@ async function doRequest<T>({
   ) {
     // Another request may already have refreshed while this one was on the
     // wire — then just retry with the new token instead of refreshing again.
+    done();
     const current = getAccessToken();
     const newAccess = current && current !== sentToken ? current : await refreshOnce();
     if (newAccess) {
@@ -333,7 +393,12 @@ async function doRequest<T>({
   }
 
   if (!res.ok) {
-    const errBody = await parseBody(res, true); // raw — preserve original snake_case for error parsing
+    let errBody: unknown;
+    try {
+      errBody = await parseBody(res, true); // raw — preserve original snake_case for error parsing
+    } finally {
+      done();
+    }
     // 423 + `reports_pin_required`: the backend is holding back history until
     // the reports PIN is entered. Tell the whole app so every screen locks,
     // not only the one that happened to make this request.
@@ -344,8 +409,15 @@ async function doRequest<T>({
     throw normalizeErrorBody(res.status, res.statusText, errBody);
   }
 
-  const parsed = await parseBody(res, Boolean(options.rawResponse));
-  return parsed as T;
+  try {
+    const parsed = await parseBody(res, Boolean(options.rawResponse));
+    return parsed as T;
+  } catch (err) {
+    if (timedOut && !options.signal?.aborted) throw timedOutError();
+    throw err;
+  } finally {
+    done();
+  }
 }
 
 export const http = {

@@ -37,4 +37,8 @@ export interface RequestOptions {
   rawResponse?: boolean;
   /** AbortSignal for cancellation. */
   signal?: AbortSignal;
+  /** CH-482: give up after this many ms with a "took too long" error, so no
+   *  screen waits forever. Default 15 s for reads, 30 s for changes, none for
+   *  file downloads (rawResponse). 0 = no limit. */
+  timeoutMs?: number;
 }

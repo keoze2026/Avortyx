@@ -1782,3 +1782,23 @@ just give type."
   already took Rate and Convert ON), so it shows in Change history.
 - Texts in English, Russian, Japanese and Chinese. No backend change.
   Type-check unchanged.
+
+## CH-482 - No more endless "Loading..." or $0 when the server is restarting (FRONTEND)
+
+Sir (3 Nov): pages stuck on "Loading...", the header showing $0 and Total 0
+while calls were live. On Server B the data and every page's API were fine
+(all under 0.2 s); the moment was a portal restart for a deploy, when for a
+few seconds every request was cut (502) and the portal never tried again.
+
+- `lib/api/http.ts`: a read (GET) that cannot reach the server, or gets
+  502 / 503 / 504, is tried again after 1, 2, 3 and 5 s - a restart is
+  ridden out without the user noticing.
+- Every request now ends: after 15 s for reads, 30 s for changes, with
+  "The server took too long to answer. Please try again." Screens that show
+  errors with a Retry button (Campaign Groups and others) then show it
+  instead of "Loading..." forever. File downloads have no limit.
+- Header: Balance, Live and Total show "—" until the first real answer,
+  never $0 or 0 for "not known". After that the last answer stays on screen
+  until a newer one arrives.
+- Type-check unchanged. Backend: CH-482 BACKEND shares the header figures
+  for 4 seconds.

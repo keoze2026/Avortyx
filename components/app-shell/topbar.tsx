@@ -77,11 +77,14 @@ export function Topbar() {
   // the first poll lands. Renders 0 until either response arrives.
   const accountBalance = useOnboardingStore((s) => s.balance);
   const balance = kpis?.balance ?? accountBalance;
-  const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? 0);
-  const totalCalls = kpis?.callsToday ?? 0;
-  const balanceText = formatCurrency(balance ?? 0);
-  const liveText = formatNumber(liveCalls);
-  const totalText = formatNumber(totalCalls);
+  // CH-482 (Sir, 3 Nov): never $0 or 0 when the figure is simply not known
+  // yet or the server did not answer - "—" until the first real answer; after
+  // that the last answer stays until a newer one arrives.
+  const liveCalls = liveCountAt !== null ? liveCount : (kpis?.liveCalls ?? null);
+  const totalCalls = kpis?.callsToday ?? null;
+  const balanceText = balance == null ? "—" : formatCurrency(balance);
+  const liveText = liveCalls == null ? "—" : formatNumber(liveCalls);
+  const totalText = totalCalls == null ? "—" : formatNumber(totalCalls);
 
   return (
     // Solid on every screen (CH-271). The glass bar (85% opaque + blur) let
