@@ -775,7 +775,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                       <Input
                         type="number"
                         min={1}
-                        className="h-6 w-14 text-[11px]"
+                        // CH-499: wide enough for two and three digits ("10" was cut
+                        // to "1("), centred, without the browser's up/down arrows.
+                        className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         value={priorities[d.id] ?? i + 1}
                         onChange={(e) =>
                           setPriorities((p) => ({ ...p, [d.id]: Number(e.target.value) }))

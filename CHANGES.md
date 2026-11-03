@@ -2039,3 +2039,13 @@ tabs put the second over the first.
 - CH-498 BACKEND sends one entry per publisher, campaign and buyer; this keeps
   the page right with an older backend too.
 - Type-check unchanged.
+
+## CH-499 - Campaign Destinations: Priority box shows the full number (FRONTEND)
+
+Sir, 3 Nov: "Priority box can be larger to see the full priority set." On a
+campaign's Destinations list the Priority box was narrow and the browser's
+up/down arrows took half of it, so 10 read "1(".
+
+- The box is wider, the number centred and the arrows gone, as the Weight
+  box beside it (typing and Enter work as before).
+- Type-check unchanged. No backend change.
