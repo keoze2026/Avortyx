@@ -2095,3 +2095,15 @@ Sir, 3 Nov: "Not forwarded should come in bottom under destination."
   descending, so the buyers' TFNs are listed first. Its figures and the Totals
   are unchanged.
 - Type-check unchanged. No backend change.
+
+## CH-507 - Destinations page: every destination, not only the newest 200 (FRONTEND)
+
+Sir, 3 Nov: "These buyers missing from destination: YNA, Crug, Bing, PDSO,
+MTG" (and TBLA). They all have rows; the page never received them.
+
+- The page asked the server for 500 destinations at once, but the server
+  gives at most 200 a page. With the 89 rows added on 3 Nov (CH-503) the
+  workspace passed 200, and the oldest rows - these buyers' - were cut from
+  the page, its search, its buyer filter and the Destination names in Reports.
+- The page now reads every page (200 each, side by side) and shows them all.
+- Type-check unchanged. No backend change.

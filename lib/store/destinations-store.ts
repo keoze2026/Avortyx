@@ -149,11 +149,25 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       // blocked-numbers). For tenants with > 500 destinations we'll need to
       // teach the page to ask the backend for filters; not yet a problem.
       const startedAt = Date.now();
-      const page = await destinationsService.list({ page: 1, pageSize: 500, timezone: portalTimezone() });
+      // CH-507: every page. The server gives at most 200 a page, so asking for
+      // 500 once got only the newest 200: on 3 Nov, past 200 destinations,
+      // YNA, Crug, Bing, PDSO, MTG and TBLA (the oldest rows) vanished from
+      // the page, its search and its buyer filter.
+      const PAGE = 200;
+      const tz = portalTimezone();
+      const first = await destinationsService.list({ page: 1, pageSize: PAGE, timezone: tz });
+      const pages = Math.min(50, Math.ceil((first.total ?? first.items.length) / PAGE));
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(0, pages - 1) }, (_, i) =>
+          destinationsService.list({ page: i + 2, pageSize: PAGE, timezone: tz }),
+        ),
+      );
+      const seen = new Set<string>();
+      const all = [first, ...rest].flatMap((p) => p.items).filter((d) => !seen.has(d.id) && !!seen.add(d.id));
       // Keep the on / off of rows switched here while this load was running:
       // the list can be older than the click.
       const onScreen = new Map(get().destinations.map((d) => [d.id, d.enabled] as const));
-      const items = page.items.map((d) =>
+      const items = all.map((d) =>
         changedLocallySince(d.id, startedAt) && onScreen.has(d.id) ? { ...d, enabled: onScreen.get(d.id)! } : d,
       );
       set({ destinations: items, loading: false, hydrated: true });
