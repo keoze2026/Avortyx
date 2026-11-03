@@ -42,6 +42,7 @@ import {
   ScanFace,
   CirclePlay,
   TrendingUp,
+  Bot,
 } from "lucide-react";
 
 import { ROUTES } from "./constants";
@@ -52,6 +53,8 @@ import type { PartnerPermissionKey } from "@/hooks/use-partner-permissions";
 export interface NavItem {
   /** Shown only to the system owner (is_superuser), whatever the role says. */
   superuserOnly?: boolean;
+  /** Shown only to the workspace's main account (CH-477; API keys, CH-243). */
+  mainUserOnly?: boolean;
   /** English fallback used by code that runs outside React (breadcrumbs etc.). */
   label: string;
   /** Dotted translation key under `nav.*`. */
@@ -117,6 +120,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Buyers",       nameKey: "nav.buyers",       href: ROUTES.buyers,       icon: Briefcase, roles: ["admin", "buyer"], shortcut: "B" },
       { label: "Destinations", nameKey: "nav.destinations", href: ROUTES.destinations, icon: Target,    roles: ["admin", "buyer"], shortcut: "E" },
       { label: "Publishers",   nameKey: "nav.publishers",   href: ROUTES.publishers,   icon: Users,     roles: ["admin", "publisher"], shortcut: "P" },
+      // CH-477 (Sir, 3 Nov): each buyer's API key; the main account only, as every key.
+      { label: "Active Bots",  nameKey: "nav.activeBots",   href: ROUTES.activeBots,   icon: Bot,       roles: ["admin"], mainUserOnly: true },
     ],
   },
   {

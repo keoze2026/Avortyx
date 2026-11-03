@@ -1732,3 +1732,20 @@ main account can do what he wants to give, other than viewing right."
   show there.
 - Dispute Calls is not in the list: the portal has no dispute feature yet.
 - Type-check unchanged for these files.
+
+## CH-477 - Active Bots page: each buyer's API key (FRONTEND)
+
+Sir (3 Nov): "Active Bots - where team can see each buyer's unique API."
+
+- New page **Active Bots** in the menu under Network, after Publishers. Only
+  the workspace's main account sees it, as every API key (CH-243).
+- One row per buyer: Buyer, API login, Key (first characters only), Status
+  (Active / Off / No key), Issued, Last used.
+- **Issue new key**: asks first, then shows the new key once, in full, with a
+  Copy button. If the buyer had a key, the old one stops working at once.
+  After the dialog closes only the first characters are shown again.
+- **Switch off**: asks first; the buyer's key stops working at once.
+- Buyers without a key are hidden until "Show all buyers" is pressed or a
+  name is searched.
+- Texts in English, Russian, Japanese and Chinese. Backend: CH-477 BACKEND
+  (`/api/active-bots/`). Type-check unchanged.

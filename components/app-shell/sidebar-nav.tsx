@@ -49,11 +49,13 @@ import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LocalName } from "@/lib/i18n/local-name";
 
-function isVisibleForRole(item: NavItem, role: Role | undefined, isSuperuser: boolean) {
+function isVisibleForRole(item: NavItem, role: Role | undefined, isSuperuser: boolean, isMainUser = false) {
   if (!role) return false;
   // Owner-only entries never render for anyone else - the item simply does
   // not exist in a workspace admin's sidebar, same as partner-hidden pages.
   if (item.superuserOnly && !isSuperuser) return false;
+  // CH-477: API keys belong to the main account only (CH-243).
+  if (item.mainUserOnly && !isMainUser && !isSuperuser) return false;
   return item.roles.includes(role);
 }
 
@@ -70,6 +72,7 @@ export function AppSidebar() {
   const router = useRouter();
   const role = useAuthStore((s) => s.user?.role);
   const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
+  const isMainUser = useAuthStore((s) => s.user?.isMainUser === true);
   // Workspace role permissions (employees only): an area with nothing ticked
   // is left out of the menu, and opening its page directly goes back to the
   // Dashboard. Until the backend sends permissions, nothing changes.
@@ -96,7 +99,7 @@ export function AppSidebar() {
     group,
     visible: group.items.filter(
       (i) =>
-        isVisibleForRole(i, role, isSuperuser) &&
+        isVisibleForRole(i, role, isSuperuser, isMainUser) &&
         canSeePath(i.href) &&
         (!i.partnerPermission || !partner.isPartner || partner.can(i.partnerPermission)),
     ),
