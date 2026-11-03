@@ -15,16 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import { useTranslation } from "@/hooks/use-translation";
-import { LocalName, useLocalName } from "@/lib/i18n/local-name";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { toE164 } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -214,21 +208,17 @@ export function DestinationBuilder({
               {t("networkUI.destinations.builder.buyer")}{" "}
               <span className="text-destructive" aria-hidden>*</span>
             </Label>
-            <Select
-              value={form.buyerId || undefined}
-              onValueChange={(v) => setForm((f) => ({ ...f, buyerId: v }))}
-            >
-              <SelectTrigger id="dest-buyer" aria-required>
-                <SelectValue placeholder={t("networkUI.destinations.builder.pickBuyer")} />
-              </SelectTrigger>
-              <SelectContent>
-                {buyers.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    <LocalName name={b.name} />
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* CH-491: type to find the buyer, as on Revo. */}
+            <SearchableSelect
+              id="dest-buyer"
+              value={form.buyerId}
+              onChange={(v) => setForm((f) => ({ ...f, buyerId: v }))}
+              options={buyers.map((b) => ({ value: b.id, label: localName(b.name) }))}
+              placeholder={t("networkUI.destinations.builder.pickBuyer")}
+              searchPlaceholder={t("x491.searchBuyer")}
+              emptyText={t("x491.noBuyer")}
+              className="w-full"
+            />
             {buyers.length === 0 && (
               <p className="text-[10px] text-destructive">
                 {t("networkUI.destinations.builder.noBuyers")}

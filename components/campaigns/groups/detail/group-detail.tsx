@@ -18,6 +18,7 @@ import { Layers, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react"
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -325,17 +326,20 @@ export function GroupDetail({
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("x415.search")} className="h-8 pl-8 text-xs" />
             </div>
-            <Select value={buyer} onValueChange={setBuyer}>
-              <SelectTrigger size="sm" className="h-8 w-auto gap-1 text-xs">
-                <span className="text-muted-foreground">{t("x415.buyer")}</span> <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper" align="start" className="max-h-[min(70vh,var(--radix-select-content-available-height))] min-w-[16rem]">
-                <SelectItem value="all">{t("x415.all")}</SelectItem>
-                {buyers.map((b) => (
-                  <SelectItem key={b} value={b}>{localName(b)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* CH-491: type to find the buyer. */}
+            <SearchableSelect
+              value={buyer}
+              onChange={setBuyer}
+              options={[
+                { value: "all", label: `${t("x415.buyer")}: ${t("x415.all")}` },
+                ...buyers.map((b) => ({ value: b, label: localName(b) })),
+              ]}
+              placeholder={`${t("x415.buyer")}: ${t("x415.all")}`}
+              searchPlaceholder={t("x491.searchBuyer")}
+              emptyText={t("x491.noBuyer")}
+              size="sm"
+              className="h-8 w-auto min-w-[9rem] text-xs"
+            />
             <Select value={campaign} onValueChange={setCampaign}>
               <SelectTrigger size="sm" className="h-8 w-auto gap-1 text-xs">
                 <span className="text-muted-foreground">{t("x415.campaign")}</span> <SelectValue />

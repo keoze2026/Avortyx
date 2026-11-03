@@ -9,6 +9,7 @@ import { DestinationsTable } from "@/components/destinations/destinations-table"
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { CloneDialog } from "@/components/shared/clone-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
-import { LocalName, useLocalName } from "@/lib/i18n/local-name";
+import { useLocalName } from "@/lib/i18n/local-name";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { formatCompact } from "@/lib/format";
 import { useBuyersStore } from "@/lib/store/buyers-store";
@@ -367,19 +368,20 @@ export default function DestinationsPage() {
             <SelectItem value="disabled">{t("networkUI.destinations.page.disabled")}</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={buyerFilter} onValueChange={setBuyerFilter}>
-          <SelectTrigger size="sm" className="w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("networkUI.destinations.page.allBuyers")}</SelectItem>
-            {buyers.map((b) => (
-              <SelectItem key={b.id} value={b.id}>
-                <LocalName name={b.name} />
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* CH-491: type to find the buyer. */}
+        <SearchableSelect
+          value={buyerFilter}
+          onChange={setBuyerFilter}
+          options={[
+            { value: "all", label: t("networkUI.destinations.page.allBuyers") },
+            ...buyers.map((b) => ({ value: b.id, label: localName(b.name) })),
+          ]}
+          placeholder={t("networkUI.destinations.page.allBuyers")}
+          searchPlaceholder={t("x491.searchBuyer")}
+          emptyText={t("x491.noBuyer")}
+          size="sm"
+          className="w-56"
+        />
 
         {/* Inline summary stats — one bordered card, all 5 stats split by hairlines */}
         <div className="ml-auto inline-flex h-9 items-stretch divide-x divide-border overflow-hidden rounded-md border border-border bg-card">

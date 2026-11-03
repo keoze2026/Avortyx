@@ -1909,3 +1909,16 @@ Asked 3 Nov: "How can Sir copy the existing key? Please add that."
   copied any time.
 - After Issue new key, the dialog now says the key can be copied again later.
 - Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+
+## CH-491 - Type to find a buyer (FRONTEND)
+
+Asked 3 Nov: "Possible to search for a certain buyer by typing and not
+manually scrolling, just like Revo?"
+
+- New Destination / Edit destination: the Buyer field is a box you type
+  into - "q0" shows Q04, Q05, Q06, Q08; Enter or click picks it.
+- Destinations page: the "All Buyers" filter works the same way.
+- Campaign group > Destinations: the Buyer filter too.
+- `components/shared/searchable-select.tsx`: the picker, for any list.
+- Texts in English, Russian, Japanese and Chinese. Type-check unchanged.
+  No backend change.
