@@ -59,6 +59,12 @@ const STATUS_KEYS: Record<string, string> = {
   "missed with conversion": "status.missedWithConversion",
   // CH-529: a TFN test call (CH-378).
   passed: "x378.passed",
+  // CH-533: the statuses a call still connecting, or a voicemail, can carry.
+  voicemail: "x533.status.voicemail",
+  initiated: "x533.status.initiated",
+  queued: "x533.status.queued",
+  canceled: "x533.status.canceled",
+  cancelled: "x533.status.canceled",
 };
 
 const HANG_UP_KEYS: Record<string, string> = {
@@ -106,7 +112,16 @@ export function exportLocalizer(t: T, locale: string): ExportLocalizer {
     const word = cell.trim().toLowerCase();
     if (col === "STATUS") return STATUS_KEYS[word] ? translated(t, STATUS_KEYS[word], cell) : cell;
     if (col === "HANG UP") return HANG_UP_KEYS[word] ? translated(t, HANG_UP_KEYS[word], cell) : cell;
-    if (col === "FAIL REASON") return localizeFailReason(cell, locale, t) || cell;
+    if (col === "FAIL REASON") {
+      // CH-533: a TFN test reads "TFN Test" whatever followed it (as on screen,
+      // CH-378) - the part after "failed:" is the system's own English.
+      if (/^tfn\s*test\b/i.test(cell.trim())) return localizeFailReason("TFN Test", locale, t) || cell;
+      // Two wordings the screen does not know: "Call Not Connected" is
+      // "Not Connected"; "Caller Abandoned" has its own words.
+      if (/^call not connected$/i.test(cell.trim())) return localizeFailReason("Not Connected", locale, t) || cell;
+      if (/^caller abandoned$/i.test(cell.trim())) return translated(t, "x533.reason.callerAbandoned", cell);
+      return localizeFailReason(cell, locale, t) || cell;
+    }
     // CH-530: a TFN test call's caller ID is the words "TFN Test" (CH-344),
     // written the same as its Fail Reason ("Тест бесплатного номера"). A real
     // caller ID is a number and is never touched.

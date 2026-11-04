@@ -2261,3 +2261,18 @@ file built in the browser ("No voice (0s)" / "Voice (12s)", translated).
 - English, Russian, Japanese and Chinese (lib/i18n/extra/voice-check.ts).
 - Type-check clean on the files touched. Needs backend CH-531 to show data;
   before it, the column just reads "—".
+
+## CH-533 - Call log files: every remaining English word translated (FRONTEND)
+
+Every heading and value a call-log file can carry - the server's 24
+columns, the browser's columns, Hang Up, Voice, every status the backend
+writes and every fail-reason wording in the backend's code - was run through
+the file translator in Russian, Japanese and Chinese (282 values). Left in
+English before this change:
+- Status: Voicemail, Initiated, Queued, Canceled (a call still connecting at
+  the moment of export, or a voicemail) - now translated.
+- Fail Reason: "Call Not Connected" (now written like "Not Connected"),
+  "Caller Abandoned" (own words), and the system's English after "TFN Test
+  failed:" (now just "TFN Test", as on screen - CH-378).
+After the change: 282 of 282 translated; English files unchanged; real
+caller numbers untouched. New words: lib/i18n/extra/export-words.ts.
