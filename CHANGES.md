@@ -2311,3 +2311,20 @@ Reports and Call Log within 2 seconds." Goes with backend CH-538.
 - Header: Live and Total refresh at that moment.
 - The timed checks (Reports 10 s, header 30 s / Live 20 s) stay as the
   fallback for when the connection is down.
+
+## CH-542 - Caps and lines update on every screen without refresh (FRONTEND)
+
+Camp team (Sergio), 4 Nov: "when you set a buyer's cap I don't have to
+refresh Destinations for it to reflect ... when one member sets a buyer's
+cap, I have to refresh so that it can reflect on my side." Goes with
+backend CH-542; uses the live connection of CH-538.
+
+- The server pushes "config.changed" when a buyer, buyer cap, destination
+  line, campaign routed line, campaign cap or publisher cap is saved or
+  deleted - by this member or any other.
+- lib/config-sync.ts: the Destinations list and its header figures, Buyers
+  and Campaigns already loaded in the tab reload quietly (rows stay on
+  screen); changes within 0.6 s are one reload; a hidden tab catches up
+  once when looked at again.
+- The live connection now tells each page which events came; the header's
+  Live / Total ignore a settings change.

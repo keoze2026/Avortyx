@@ -15,7 +15,8 @@ import { formatCurrency, formatNumber } from "@/lib/format";
 import { loadHeaderFigures, type HeaderFigures } from "@/lib/header-figures";
 import { todayScope } from "@/lib/reports-scope";
 import { refreshLiveCountNow, startLiveCountSync } from "@/lib/live-count";
-import { onReportChanged } from "@/lib/report-events";
+import { CONFIG_CHANGED, onReportChanged } from "@/lib/report-events";
+import { startConfigSync } from "@/lib/config-sync";
 import { prefetchReport, todayAndYesterday } from "@/lib/reports-cache";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useCallsStore } from "@/lib/store/calls-store";
@@ -55,11 +56,15 @@ export function Topbar() {
   }, []);
   // Keep the header's Live figure right on every page.
   useEffect(() => startLiveCountSync(), []);
+  // CH-542: caps, lines and buyers changed by anyone show on this screen too.
+  useEffect(() => startConfigSync(), []);
   // CH-538: Live and Total move the moment a call starts, is answered or
   // ends (pushed by the server); the timers above are the fallback.
   useEffect(
     () =>
-      onReportChanged(() => {
+      onReportChanged((events) => {
+        // CH-542: a settings change alone is not a call - Live and Total stay.
+        if (events.size === 1 && events.has(CONFIG_CHANGED)) return;
         refreshLiveCountNow();
         if (useCallsStore.getState().snapshotDrivesKpis) return;
         if (document.visibilityState !== "visible") return;

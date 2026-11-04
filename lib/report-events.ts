@@ -19,20 +19,29 @@ import { createCallSocket, type CallSocket } from "@/lib/api/socket";
 
 const BURST_MS = 250;
 
-type Listener = () => void;
+/** CH-542: settings (a cap, a line, a buyer) were changed by someone. */
+export const CONFIG_CHANGED = "config.changed";
+
+/** Gets the event names of the burst ("call.created", "call.ended", CONFIG_CHANGED...). */
+type Listener = (events: ReadonlySet<string>) => void;
 
 const listeners = new Set<Listener>();
 let socket: CallSocket | null = null;
 let stopSocket: (() => void) | null = null;
 let burst: ReturnType<typeof setTimeout> | undefined;
+let pending = new Set<string>();
 
-function notify(): void {
+function notify(data?: unknown): void {
+  const name = (data as { event?: unknown } | undefined)?.event;
+  pending.add(typeof name === "string" && name ? name : "call.updated");
   if (burst) return;
   burst = setTimeout(() => {
     burst = undefined;
+    const events: ReadonlySet<string> = pending;
+    pending = new Set();
     for (const l of Array.from(listeners)) {
       try {
-        l();
+        l(events);
       } catch {
         // One page failing to reload never stops the others.
       }
@@ -40,7 +49,8 @@ function notify(): void {
   }, BURST_MS);
 }
 
-/** Call `listener` after every call event of this workspace. Returns the unsubscribe. */
+/** Call `listener` after every call event (and, CH-542, every settings change)
+ *  of this workspace. Returns the unsubscribe. */
 export function onReportChanged(listener: Listener): () => void {
   if (typeof window === "undefined") return () => {};
   listeners.add(listener);
@@ -61,6 +71,7 @@ export function onReportChanged(listener: Listener): () => void {
       stopSocket = null;
       if (burst) clearTimeout(burst);
       burst = undefined;
+      pending = new Set();
     }
   };
 }
