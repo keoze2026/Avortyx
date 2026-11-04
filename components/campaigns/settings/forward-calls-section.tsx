@@ -271,6 +271,10 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
 
   const [priorities, setPriorities] = useState<Record<string, number>>({});
   const [weights, setWeights] = useState<Record<string, number>>({});
+  // CH-560 (Sergio, 5 Nov: "If the priority was 1 it's difficult to delete
+  // 1"): what is being typed in a row's Priority / Weight box, as typed - the
+  // box can be emptied and a new number typed. Saved when the box is left.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const loadRouted = useCallback(async () => {
     try {
@@ -360,7 +364,17 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
     const before = routed.find((r) => r.id === rowId);
     if (!before) return;
     const old = field === "priority" ? before.priority ?? 1 : before.weight ?? 100;
-    const typed = field === "priority" ? priorities[rowId] : weights[rowId];
+    const key = `${field}:${rowId}`;
+    const draft = drafts[key];
+    setDrafts((d) => {
+      if (!(key in d)) return d;
+      const next = { ...d };
+      delete next[key];
+      return next;
+    });
+    // An emptied box keeps the number it had.
+    const typedDraft = draft !== undefined && draft.trim() !== "" && Number.isFinite(Number(draft)) ? Number(draft) : undefined;
+    const typed = typedDraft ?? (field === "priority" ? priorities[rowId] : weights[rowId]);
     const value =
       field === "priority"
         ? Math.max(1, Math.floor(typed ?? old))
@@ -782,10 +796,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         // CH-499: wide enough for two and three digits ("10" was cut
                         // to "1("), centred, without the browser's up/down arrows.
                         className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        value={priorities[d.id] ?? i + 1}
-                        onChange={(e) =>
-                          setPriorities((p) => ({ ...p, [d.id]: Number(e.target.value) }))
-                        }
+                        value={drafts[`priority:${d.id}`] ?? String(priorities[d.id] ?? i + 1)}
+                        onChange={(e) => setDrafts((p) => ({ ...p, [`priority:${d.id}`]: e.target.value }))}
+                        onFocus={(e) => e.target.select()}
                         onBlur={() => void saveRow(d.id, "priority")}
                         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                       />
@@ -798,10 +811,9 @@ export function ForwardCallsSection({ campaignId }: ForwardCallsSectionProps) {
                         // Wide enough for "100", centred, without the browser's
                         // up/down arrows (which took the space and cut it to "10").
                         className="h-6 w-20 px-2 text-center text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        value={weights[d.id] ?? 100}
-                        onChange={(e) =>
-                          setWeights((p) => ({ ...p, [d.id]: Number(e.target.value) }))
-                        }
+                        value={drafts[`weight:${d.id}`] ?? String(weights[d.id] ?? 100)}
+                        onChange={(e) => setDrafts((p) => ({ ...p, [`weight:${d.id}`]: e.target.value }))}
+                        onFocus={(e) => e.target.select()}
                         onBlur={() => void saveRow(d.id, "weight")}
                         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                       />
@@ -1133,8 +1145,9 @@ function ConversionSettingsDialog({
   const [rate, setRate] = useState<number>(initial.rate);
   const [convertOn, setConvertOn] = useState<ConvertEvent>(initial.convertOn);
   const [lengthSec, setLengthSec] = useState<number>(initial.lengthSec);
-  const [priority, setPriority] = useState<number>(initial.priority);
-  const [weight, setWeight] = useState<number>(initial.weight);
+  // CH-560: kept as typed, so the box can be emptied and a new number typed.
+  const [priority, setPriority] = useState<string>(String(initial.priority));
+  const [weight, setWeight] = useState<string>(String(initial.weight));
   const followsCampaign = convertOn === "Campaign default";
 
   // Call Length needs a positive duration.
@@ -1146,8 +1159,8 @@ function ConversionSettingsDialog({
       rate: followsCampaign ? campaignRate : rate,
       convertOn,
       lengthSec: Math.max(1, lengthSec || 1),
-      priority: Math.max(1, priority || 1),
-      weight: Math.max(0, Math.min(100, weight || 0)),
+      priority: Math.max(1, Math.floor(Number(priority)) || initial.priority || 1),
+      weight: weight.trim() === "" ? initial.weight : Math.max(0, Math.min(100, Math.floor(Number(weight)) || 0)),
     });
   };
 
@@ -1249,7 +1262,8 @@ function ConversionSettingsDialog({
                 type="number"
                 min={1}
                 value={priority}
-                onChange={(e) => setPriority(Number(e.target.value) || 1)}
+                onChange={(e) => setPriority(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="text-center font-mono tabular-nums"
               />
             </div>
@@ -1263,7 +1277,8 @@ function ConversionSettingsDialog({
                 min={0}
                 max={100}
                 value={weight}
-                onChange={(e) => setWeight(Number(e.target.value) || 0)}
+                onChange={(e) => setWeight(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="text-center font-mono tabular-nums"
               />
             </div>

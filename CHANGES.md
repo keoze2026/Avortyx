@@ -2512,3 +2512,19 @@ set in text widths (20 em), so every label - Valid Call and the longest No
 Voice ones alike - is the same size and shows in full at any text size.
 
 Commit: see git log --grep CH-561
+
+## CH-560 - Campaign page: Priority / Weight boxes can be cleared and retyped (FRONTEND)
+
+Sergio, 5 Nov: "If the priority was 1 it's difficult to delete 1, I am forced
+to double click the 1 and set the priority I want." The boxes turned what was
+typed into a number at every key: emptying a Priority box gave 0 (in the
+destinations table) or jumped back to 1 (in the destination's edit window).
+
+- Campaign page, destinations table: Priority and Weight keep what is typed;
+  the box can be emptied and a new number typed; saved when the box is left
+  or Enter is pressed, exactly as before. An emptied box keeps its old number.
+  Clicking into a box selects the number, so typing replaces it.
+- The destination's edit window (pencil): the same for Priority and Weight.
+- Campaign Groups boxes already worked this way.
+
+Commit: see git log --grep CH-560
