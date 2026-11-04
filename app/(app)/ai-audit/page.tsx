@@ -233,7 +233,7 @@ function RepeatCallers({ date }: { date: string }) {
       <CardContent className="p-0">
         <div className="border-b px-4 py-3">
           <div className="text-sm font-semibold">{t("x546.repeatTitle")}</div>
-          <div className="text-xs text-muted-foreground">{t("x546.repeatDesc")}</div>
+          <div className="text-[13px] text-muted-foreground">{t("x546.repeatDesc")}</div>
         </div>
         {items === null ? (
           <div className="p-4">
@@ -243,7 +243,7 @@ function RepeatCallers({ date }: { date: string }) {
           <div className="px-4 py-6 text-center text-sm text-muted-foreground">{t("x546.repeatNone")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-4">{t("x543.col.caller")}</TableHead>
@@ -263,6 +263,101 @@ function RepeatCallers({ date }: { date: string }) {
                     <TableCell>{r.publishers.join(", ")}</TableCell>
                     <TableCell>{r.campaigns.join(", ")}</TableCell>
                     <TableCell className="pr-4 tabular-nums">{r.lastCall ? timeEst(r.lastCall) : "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface BreakdownRow {
+  name: string;
+  checked: number;
+  noVoice: number;
+  noVoicePct: number | null;
+  deadCaller: number;
+  agentOnly: number;
+  agentBeep: number;
+  ivr: number;
+  valid: number;
+}
+type BreakdownBy = "publisher" | "campaign" | "buyer";
+
+/** CH-557 (Sir, 5 Nov: "put this under AI audit report"): the No Voice / No
+ *  Voice % that were Call Summary columns on Reports - per publisher, campaign
+ *  or buyer, for the day on screen. Highest No Voice % first. */
+function NoVoiceBreakdown({ date }: { date: string }) {
+  const { t } = useTranslation();
+  const [by, setBy] = React.useState<BreakdownBy>("publisher");
+  const [items, setItems] = React.useState<BreakdownRow[] | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    setItems(null);
+    http
+      .get<{ items: BreakdownRow[] }>("/api/ai-audit/breakdown", { query: { dateFrom: date, dateTo: date, by } })
+      .then((r) => !cancelled && setItems(r.items))
+      .catch(() => !cancelled && setItems([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [date, by]);
+  const pct = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)}%`);
+  return (
+    <Card className="mt-4">
+      <CardContent className="p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <div>
+            <div className="text-sm font-semibold">{t("x557.title")}</div>
+            <div className="text-[13px] text-muted-foreground">{t("x557.desc")}</div>
+          </div>
+          <div className="flex gap-1">
+            {(["publisher", "campaign", "buyer"] as const).map((b) => (
+              <Button key={b} size="sm" variant={by === b ? "default" : "outline"} onClick={() => setBy(b)}>
+                {t(`x557.by.${b}`)}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {items === null ? (
+          <div className="p-4">
+            <Skeleton className="h-5 w-full" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">{t("x557.none")}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table className="text-sm">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-4">{t(`x557.by.${by}`)}</TableHead>
+                  <TableHead className="text-right">{t("x557.checked")}</TableHead>
+                  <TableHead className="text-right">{t("x546.noVoice")}</TableHead>
+                  <TableHead className="text-right">{t("x546.noVoicePct")}</TableHead>
+                  <TableHead className="text-right">{t("x543.label.dead_caller")}</TableHead>
+                  <TableHead className="text-right">{t("x543.label.agent_only")}</TableHead>
+                  <TableHead className="text-right">{t("x543.label.agent_beep")}</TableHead>
+                  <TableHead className="text-right">{t("x543.label.ivr")}</TableHead>
+                  <TableHead className="pr-4 text-right">{t("x543.label.valid")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((r) => (
+                  <TableRow key={r.name}>
+                    <TableCell className="pl-4 font-medium">{r.name}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.checked}</TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
+                    <TableCell className={cn("text-right font-semibold tabular-nums", (r.noVoicePct ?? 0) > 15 && "text-destructive")}>
+                      {pct(r.noVoicePct)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{r.deadCaller}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.agentOnly}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.agentBeep}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.ivr}</TableCell>
+                    <TableCell className="pr-4 text-right tabular-nums">{r.valid}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -312,10 +407,10 @@ function EvidenceExport({ date }: { date: string }) {
       <CardContent className="flex flex-wrap items-end gap-3 py-4 text-sm">
         <div className="mr-auto">
           <div className="font-semibold">{t("x546.evidenceTitle")}</div>
-          <div className="text-xs text-muted-foreground">{t("x546.evidenceDesc")}</div>
+          <div className="text-[13px] text-muted-foreground">{t("x546.evidenceDesc")}</div>
         </div>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">{t("x546.publisher")}</span>
+          <span className="text-[13px] text-muted-foreground">{t("x546.publisher")}</span>
           <select
             value={publisherId}
             onChange={(e) => setPublisherId(e.target.value)}
@@ -330,11 +425,11 @@ function EvidenceExport({ date }: { date: string }) {
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">{t("x546.from")}</span>
+          <span className="text-[13px] text-muted-foreground">{t("x546.from")}</span>
           <Input type="date" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="h-8 w-40" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">{t("x546.to")}</span>
+          <span className="text-[13px] text-muted-foreground">{t("x546.to")}</span>
           <Input type="date" value={to} min={from} max={todayEst()} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-8 w-40" />
         </label>
         <Button size="sm" onClick={() => void run()} disabled={busy}>
@@ -446,11 +541,11 @@ export default function AiAuditPage() {
           {status ? (
             <>
               <div>
-                <div className="text-xs text-muted-foreground">{t("x543.accuracy")}</div>
+                <div className="text-[13px] text-muted-foreground">{t("x543.accuracy")}</div>
                 <div className="text-lg font-semibold tabular-nums">
                   {acc?.percent != null ? `${acc.percent}%` : "—"}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-[13px] text-muted-foreground">
                   {t("x543.accuracyBase")
                     .replace("{correct}", String(acc?.correct ?? 0))
                     .replace("{reviewed}", String(acc?.reviewed ?? 0))
@@ -458,10 +553,10 @@ export default function AiAuditPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">{t("x543.pendingNow")}</div>
+                <div className="text-[13px] text-muted-foreground">{t("x543.pendingNow")}</div>
                 <div className="text-lg font-semibold tabular-nums">{status.pending}</div>
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-[13px] text-muted-foreground">
                 {t("x543.rules")
                   .replace("{speech}", String(status.minSpeechSeconds))
                   .replace("{beep}", String(status.minBeepSeconds))}
@@ -489,27 +584,33 @@ export default function AiAuditPage() {
         </CardContent>
       </Card>
 
-      <div className="mb-3 flex flex-wrap gap-2">
+      {/* CH-557 (Sir, 5 Nov): the filter boxes all the same size, in an even grid. */}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
         {FILTERS.map((f) => (
-          <Button
+          <button
             key={f || "all"}
-            size="sm"
-            variant={filter === f ? "default" : "outline"}
+            type="button"
+            aria-pressed={filter === f}
             onClick={() => {
               setFilter(f);
               setPage(1);
             }}
+            className={cn(
+              "flex min-h-[68px] flex-col items-start justify-between gap-1 rounded-lg border px-3 py-2 text-left transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              filter === f ? "border-accent bg-accent/10" : "border-border bg-card hover:bg-muted/50",
+            )}
           >
-            {t(`x543.f.${f || "all"}`)}
-            {data && <span className="ml-1.5 tabular-nums opacity-70">{data.counts[FILTER_COUNT[f]]}</span>}
-          </Button>
+            <span className="text-[13px] font-medium leading-tight text-muted-foreground">{t(`x543.f.${f || "all"}`)}</span>
+            <span className="text-xl font-semibold tabular-nums">{data ? data.counts[FILTER_COUNT[f]] ?? 0 : "—"}</span>
+          </button>
         ))}
       </div>
 
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-4">{t("x543.col.time")}</TableHead>
@@ -536,7 +637,7 @@ export default function AiAuditPage() {
                         <TableCell className="whitespace-nowrap tabular-nums">{r.caller}</TableCell>
                         <TableCell className="whitespace-nowrap">
                           {r.campaign || "—"} · {r.publisher || "—"} &gt; {r.buyer || "—"}
-                          <div className="text-xs text-muted-foreground tabular-nums">{r.destination}</div>
+                          <div className="text-[13px] text-muted-foreground tabular-nums">{r.destination}</div>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{mmss(r.duration)}</TableCell>
                         <TableCell className="min-w-[220px]">
@@ -551,22 +652,22 @@ export default function AiAuditPage() {
                             <>
                               <Badge variant={labelVariant(r.aiLabel)}>{labelText(r.aiLabel)}</Badge>
                               {r.aiConfidence != null && (
-                                <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
+                                <span className="ml-1.5 text-[13px] text-muted-foreground tabular-nums">
                                   {r.aiConfidence}%
                                 </span>
                               )}
                               {r.summary && (
-                                <div className="mt-1 max-w-[18rem] whitespace-normal text-xs text-muted-foreground" title={r.transcript || undefined}>
+                                <div className="mt-1 max-w-[18rem] whitespace-normal text-[13px] text-muted-foreground" title={r.transcript || undefined}>
                                   {r.summary}
                                 </div>
                               )}
                               {r.audioFault && (
-                                <div className="mt-1 text-xs font-medium text-destructive">{t("x543.fault")}</div>
+                                <div className="mt-1 text-[13px] font-medium text-destructive">{t("x543.fault")}</div>
                               )}
                             </>
                           )}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs tabular-nums">
+                        <TableCell className="whitespace-nowrap text-[13px] tabular-nums">
                           {r.channels === 2 ? (
                             <>
                               <div>
@@ -607,7 +708,7 @@ export default function AiAuditPage() {
                           {r.aiStatus !== "checked" || r.aiLabel === "mixed" ? (
                             <span className="text-muted-foreground">—</span>
                           ) : r.reviewLabel ? (
-                            <div className="text-xs">
+                            <div className="text-[13px]">
                               {r.reviewCorrect ? (
                                 <span className="text-[color:var(--success)]">{t("x543.markedCorrect")}</span>
                               ) : (
@@ -675,6 +776,7 @@ export default function AiAuditPage() {
         </CardContent>
       </Card>
 
+      <NoVoiceBreakdown date={date} />
       <RepeatCallers date={date} />
       <EvidenceExport date={date} />
 

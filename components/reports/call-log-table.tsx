@@ -90,7 +90,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { cn } from "@/lib/utils";
-import { AI_REVIEW_LABELS, NO_VOICE_LABELS, aiLabelKey, aiPending, useCanAiAudit } from "@/lib/ai-labels";
+import { AI_ON_REPORTS, AI_REVIEW_LABELS, NO_VOICE_LABELS, aiLabelKey, aiPending, useCanAiAudit } from "@/lib/ai-labels";
 import { http } from "@/lib/api/http";
 import {
   DropdownMenu,
@@ -737,7 +737,7 @@ export function CallLogTable({
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
     if (role === "publisher") out.revenue = false;
     // CH-546 / CH-548: the AI audit - billing and audit team logins only.
-    if (!canAiAudit) out.ai = false;
+    if (!canAiAudit || !AI_ON_REPORTS) out.ai = false;          // CH-557: AI Audit page only
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
     if (!partnerCan("audio_recording")) out.recording = false;
     return out;
@@ -1021,7 +1021,7 @@ export function CallLogTable({
                 </button>
               </div>
               <div className="max-h-72 overflow-y-auto px-2 py-2">
-                {COLUMNS.filter((col) => col.id !== "ai" || canAiAudit).map((col) => {
+                {COLUMNS.filter((col) => col.id !== "ai" || (canAiAudit && AI_ON_REPORTS)).map((col) => {
                   const id = `log-col-${col.id}`;
                   return (
                     <Label

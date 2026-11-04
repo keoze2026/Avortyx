@@ -27,6 +27,13 @@ export const NO_VOICE_LABELS: ReadonlySet<string> = new Set(["dead_caller", "age
 /** The AI Label filter's choices (Sir: All / Valid / each No Voice / Pending). */
 export const AI_LABEL_FILTERS = ["valid", "caller_ok", "dead_caller", "agent_only", "agent_beep", "ivr", "robocall", "pending"] as const;
 
+/** CH-557 (Sir, 5 Nov: "remove this from the front dashboard, this is killing
+ *  the front view style. Put this under AI audit report"): the AI Label
+ *  column, the AI Label filter and the No Voice / No Voice % columns are not
+ *  shown on Reports / Call Log any more - all of it is on the AI Audit page.
+ *  true brings them back. */
+export const AI_ON_REPORTS = false;
+
 /** CH-555: the labels the audit team can give (Correct / Wrong). */
 export const AI_REVIEW_LABELS = ["valid", "caller_ok", "dead_caller", "agent_only", "agent_beep", "ivr", "robocall"] as const;
 export type AiLabelFilter = (typeof AI_LABEL_FILTERS)[number];

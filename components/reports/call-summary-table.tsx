@@ -41,7 +41,7 @@ import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useCanAiAudit } from "@/lib/ai-labels";
+import { AI_ON_REPORTS, useCanAiAudit } from "@/lib/ai-labels";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
@@ -1232,7 +1232,8 @@ export function CallSummaryTable({
           ? ["revenue", "profit", "cost", "noVoice", "noVoicePct"]
           : [];
     // CH-548: No Voice columns - billing and audit team logins only.
-    const ai: ColumnKey[] = canAiAudit ? [] : ["noVoice", "noVoicePct"];
+    // CH-557: on the AI Audit page now (No Voice by publisher / campaign / buyer).
+    const ai: ColumnKey[] = canAiAudit && AI_ON_REPORTS ? [] : ["noVoice", "noVoicePct"];
     return new Set<ColumnKey>([...base, ...ai, ...(Array.from(partnerHidden) as ColumnKey[])]);
   }, [role, partnerHidden, canAiAudit]);
   // The operator's column choices, with Live forced off when it isn't allowed

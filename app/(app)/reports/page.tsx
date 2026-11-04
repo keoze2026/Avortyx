@@ -32,7 +32,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import type { CallLogQuery, EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.service";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
-import { matchesAiLabel, useCanAiAudit } from "@/lib/ai-labels";
+import { AI_ON_REPORTS, matchesAiLabel, useCanAiAudit } from "@/lib/ai-labels";
 import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
@@ -107,7 +107,7 @@ export default function ReportsPage() {
   // CH-548: the AI Label filter counts only for the billing / audit team logins
   // (a filter kept from before never empties anyone else's report).
   const canAiAudit = useCanAiAudit();
-  const aiLabelFilter = canAiAudit ? filters.aiLabels : NO_AI_LABELS;
+  const aiLabelFilter = canAiAudit && AI_ON_REPORTS ? filters.aiLabels : NO_AI_LABELS;
   // CH-408: "View report" on a campaign page opens this with ?campaign=<id>.
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("campaign");

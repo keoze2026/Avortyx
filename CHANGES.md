@@ -2447,3 +2447,22 @@ CH-555 (the LLM's final label and one-line summary).
   ru, ja, zh).
 
 Commit: see git log --grep CH-555
+
+## CH-557 - AI off Reports, all of it on the AI Audit page; equal filter boxes, bigger text (FRONTEND)
+
+Sir, 5 Nov: "Could you remove this from the front dashboard, this is killing
+the front view style. Put this under AI audit report." Goes with backend CH-557.
+
+- Reports / Call Log: no AI Label column (with its summary and Correct /
+  Wrong), no AI Label filter, no No Voice / No Voice % columns in the Call
+  Summary. One switch brings them back (`AI_ON_REPORTS` in lib/ai-labels.ts).
+- AI Audit page:
+  - "No Voice by Publisher, Campaign and Buyer": per row the calls the AI
+    checked, No Voice, No Voice % (red above 15%), each No Voice type,
+    Voicemail / IVR, Valid - what the Call Summary columns showed, highest
+    No Voice % first.
+  - The filter boxes are all the same size, in an even grid (2 to 7 a row by
+    screen width), each with its name and its count in large figures.
+  - Bigger text: tables 14 px, small text 13 px (was 12-13 / 12).
+
+Commit: see git log --grep CH-557
