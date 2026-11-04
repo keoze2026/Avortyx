@@ -2276,3 +2276,13 @@ English before this change:
   failed:" (now just "TFN Test", as on screen - CH-378).
 After the change: 282 of 282 translated; English files unchanged; real
 caller numbers untouched. New words: lib/i18n/extra/export-words.ts.
+
+## CH-537 - Reports: Voice column removed (FRONTEND)
+
+Sir, 4 Nov: "Remove first from reporting ... Add this feature under AI only
+for main account." The Voice column (CH-532) is taken out of the Call Log on
+the Reports page: the column, its entry in the column chooser, its sort and
+its column in the export files. Buyers and publishers never saw it (the
+backend sends it empty to them, CH-531). The voice check keeps running on
+the server and its Telegram alerts keep going to the team chat. It returns
+on its own AI page, for the main account only (next change).
