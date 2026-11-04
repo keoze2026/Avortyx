@@ -22,6 +22,9 @@ function escapeCsv(value: unknown): string {
   return s;
 }
 
+/** Starts every CSV file we write so Excel reads it as UTF-8. */
+export const CSV_BOM = "\uFEFF";
+
 export function toCSV<T>(columns: ExportColumn<T>[], rows: T[]): string {
   const header = columns.map((c) => escapeCsv(c.label)).join(",");
   const body = rows
@@ -125,7 +128,9 @@ export function downloadRows<T>(
   options: XLSXOptions = {},
 ) {
   if (format === "csv") {
-    const blob = new Blob([toCSV(columns, rows)], {
+    // CH-525: the byte-order mark tells Excel the file is UTF-8 - without it
+    // "—" opened as "â€”" (HANG UP column, 4 Nov).
+    const blob = new Blob([CSV_BOM, toCSV(columns, rows)], {
       type: "text/csv;charset=utf-8;",
     });
     triggerDownload(blob, `${filenameStem}.csv`);

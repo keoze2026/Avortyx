@@ -2184,3 +2184,22 @@ time, which people took for portal faults:
 - Left as is: "THREE.Clock deprecated" is printed by the 3D background
   library itself (@react-three/fiber), not our code; harmless.
 - Type-check unchanged.
+
+## CH-525 - Call log files: date in Eastern time, "—" readable in Excel (FRONTEND)
+
+Reporting team, 4 Nov: the CALL DATE column read "2026-11-03T20:14:15.577Z".
+The call-log files built in the browser (Reports > Call log while a search is
+typed, and the Call Logs page's "Started") wrote the raw UTC instant - five
+hours ahead of Eastern, with "T", milliseconds and "Z". The server's own file
+already wrote "2026-11-03 15:14:15" in the report zone.
+
+- New `exportDateTime` (lib/format.ts): "YYYY-MM-DD HH:MM:SS" in the report
+  zone (Eastern by default), daylight saving included. Both browser-built
+  files use it; the example row now reads 2026-11-03 15:14:15.
+- Every CSV we write starts with the UTF-8 byte-order mark (`CSV_BOM`), so
+  Excel shows "—" instead of "â€”" (HANG UP column).
+- Not changed: Excel shows long numbers in a CSV as 1.62E+10 (CALLER ID) -
+  that is Excel reading the CSV; the Excel (XLSX) download keeps them as text.
+- Checked: 20:14:15Z -> 15:14:15; 04:59:59Z Nov 4 -> Nov 3 23:59:59;
+  05:00Z -> Nov 4 00:00:00; Oct 31 03:30Z (daylight time) -> Oct 30 23:30.
+  Type-check clean on the files touched.

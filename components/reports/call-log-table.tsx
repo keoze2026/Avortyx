@@ -49,6 +49,7 @@ import { friendlyErrorMessage } from "@/lib/api/errors";
 import { analyticsService, type CallLogQuery } from "@/lib/api/services/analytics.service";
 import { callsService } from "@/lib/api/services/calls.service";
 import {
+  CSV_BOM,
   csvRowsToXLSX,
   dateStamped,
   downloadRows,
@@ -71,7 +72,7 @@ import {
   upperLabels,
 } from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
-import { formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
+import { exportDateTime, formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { national, useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { failReasonLabel, isTfnTestCall, localizeFailReason } from "@/lib/fail-reason";
 import { localizeName } from "@/lib/name-translation";
@@ -841,7 +842,7 @@ export function CallLogTable({
     const count = Math.max(table.length - 1, 0);
     const stem = dateStamped("call-log");
     if (format === "csv") {
-      triggerDownload(new Blob([rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
+      triggerDownload(new Blob([CSV_BOM, rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
     } else {
       triggerDownload(
         csvRowsToXLSX(table, "Call log", renamed(SERVER_EXPORT_NUMERIC_HEADERS), {
@@ -883,7 +884,8 @@ export function CallLogTable({
     }
     const dateCol: ExportColumn<Call> = {
       label: t("toolsUI.reports.callLog.columns.callDate"),
-      value: (c) => new Date(c.startedAt).toISOString(),
+      // CH-525: Eastern (the report zone), "2026-11-03 15:14:15" - as the server file.
+      value: (c) => exportDateTime(c.startedAt, timeZone),
     };
     const dataCols: ExportColumn<Call>[] = COLUMNS.filter((c) => columns[c.id]).flatMap((c): ExportColumn<Call>[] => {
       if (c.id === "duration") return [{ label: DURATION_HEADER, value: (row) => formatDuration(row.durationSec) }];

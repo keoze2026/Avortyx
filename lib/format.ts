@@ -350,6 +350,19 @@ export function zonedDayKey(timestamp: number, timeZone: string): string {
 }
 
 /**
+ * CH-525: a call's date and time in an export file - "2026-11-03 15:14:15", in
+ * `timeZone` (the report zone, Eastern by default), the same as the server's
+ * own export writes it. The browser-built files wrote the raw UTC instant
+ * ("2026-11-03T20:14:15.577Z"), five hours ahead with "Z" and milliseconds.
+ */
+export function exportDateTime(timestamp: number, timeZone: string): string {
+  if (!Number.isFinite(timestamp)) return "";
+  const p = zonedParts(timestamp, timeZone);
+  const two = (n: number) => n.toString().padStart(2, "0");
+  return `${zonedDayKey(timestamp, timeZone)} ${two(p.hour)}:${two(p.minute)}:${two(p.second)}`;
+}
+
+/**
  * Call-log timestamp → "Aug 29, 8:30:00 AM" rendered in `timeZone`.
  * Replaces the old browser-local `new Date(ts).getHours()` formatting.
  */

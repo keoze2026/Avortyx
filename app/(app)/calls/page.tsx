@@ -40,7 +40,7 @@ import { useReportsAccess } from "@/lib/store/security-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { isTfnTestCall } from "@/lib/fail-reason";
-import { formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
+import { exportDateTime, formatCompact, formatCurrency, formatDuration, formatPercent, zonedDayKey } from "@/lib/format";
 import type { Call, CallStatus } from "@/lib/types";
 
 const DEFAULT_VISIBLE = new Set(ALL_COLUMNS.map((c) => c.id));
@@ -48,10 +48,15 @@ const DEFAULT_VISIBLE = new Set(ALL_COLUMNS.map((c) => c.id));
 /** Columns written to the CSV / XLSX file - the same names, order and formats
  *  as the Reports call-log export (see lib/call-log-export.ts). Numeric fields
  *  (payout, revenue) stay numbers so XLSX keeps their type. */
-function callExportColumns(destinationNames: ReadonlyMap<string, string>, withRecording = true): ExportColumn<Call>[] {
+function callExportColumns(
+  destinationNames: ReadonlyMap<string, string>,
+  withRecording = true,
+  timeZone = "America/New_York",
+): ExportColumn<Call>[] {
   const cols: ExportColumn<Call>[] = [
     { label: "Call ID", value: (c) => c.id },
-    { label: "Started", value: (c) => new Date(c.startedAt).toISOString() },
+    // CH-525: Eastern (the report zone), "2026-11-03 15:14:15" - not the UTC instant.
+    { label: "Started", value: (c) => exportDateTime(c.startedAt, timeZone) },
     { label: "Caller ID", value: (c) => exportNumber(c.callerNumber) },
     { label: "Called Number", value: (c) => exportNumber(c.calledNumber) },
     { label: "Campaign", value: (c) => c.campaignName },
@@ -206,7 +211,7 @@ export default function CallsPage() {
   const onExport = (format: ExportFormat) => {
     downloadRows(
       format,
-      callExportColumns(destinationNames, partnerCan("audio_recording")).filter(
+      callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
         (c) => !isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase()),
       ),
       filtered,
