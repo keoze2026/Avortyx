@@ -2493,3 +2493,13 @@ raw "pause_buyer" / "assign_buyer" buttons). In Sir's design:
   Japanese and Chinese.
 
 Commit: see git log --grep CH-558
+
+## CH-559 - AI Audit: every AI label the same size; "Possible audio fault" not shown under the label (FRONTEND)
+
+- AI Label column: each label badge is the same width (the longest, "No
+  Voice | Only Agent + Beeping", fits), centred, 13 px, with its confidence %
+  in a fixed column beside it, so the column lines up row by row.
+- The red "Possible audio fault" line under the label is no longer shown
+  (the call keeps its label; the "Possible audio fault" filter box stays).
+
+Commit: see git log --grep CH-559

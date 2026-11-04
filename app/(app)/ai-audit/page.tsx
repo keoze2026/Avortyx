@@ -650,19 +650,22 @@ export default function AiAuditPage() {
                             <span className="text-muted-foreground">{t("x543.noFile")}</span>
                           ) : (
                             <>
-                              <Badge variant={labelVariant(r.aiLabel)}>{labelText(r.aiLabel)}</Badge>
-                              {r.aiConfidence != null && (
-                                <span className="ml-1.5 text-[13px] text-muted-foreground tabular-nums">
-                                  {r.aiConfidence}%
+                              {/* CH-559: every label the same size, its % in a fixed column beside it. */}
+                              <div className="flex items-center justify-center gap-2">
+                                <Badge
+                                  variant={labelVariant(r.aiLabel)}
+                                  className="w-60 justify-center whitespace-nowrap px-2 py-1 text-[13px]"
+                                >
+                                  {labelText(r.aiLabel)}
+                                </Badge>
+                                <span className="w-10 text-left text-[13px] text-muted-foreground tabular-nums">
+                                  {r.aiConfidence != null ? `${r.aiConfidence}%` : ""}
                                 </span>
-                              )}
+                              </div>
                               {r.summary && (
                                 <div className="mt-1 max-w-[18rem] whitespace-normal text-[13px] text-muted-foreground" title={r.transcript || undefined}>
                                   {r.summary}
                                 </div>
-                              )}
-                              {r.audioFault && (
-                                <div className="mt-1 text-[13px] font-medium text-destructive">{t("x543.fault")}</div>
                               )}
                             </>
                           )}
