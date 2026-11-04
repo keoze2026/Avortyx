@@ -2286,3 +2286,13 @@ its column in the export files. Buyers and publishers never saw it (the
 backend sends it empty to them, CH-531). The voice check keeps running on
 the server and its Telegram alerts keep going to the team chat. It returns
 on its own AI page, for the main account only (next change).
+
+## CH-539 - Route Destinations: the Next / Route button always on screen (FRONTEND)
+
+Camp team, 4 Nov: "I don't have an add option on my side when adding TFNs
+in a single camp." The Route Destinations dialog (campaign > Routed
+Destinations > add) kept its list at least 460 px tall. On a laptop screen
+the dialog (at most 90% of the screen) then had no room left for its
+bottom bar, so the Next / Route button was cut off and nothing could be
+added. The list now takes the room that is left and scrolls (at least 120
+px); the bottom bar never shrinks. Nothing else changed.

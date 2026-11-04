@@ -354,7 +354,11 @@ export function AttachDestinationDialog({
           </label>
         </div>
 
-        <div className="min-h-[300px] flex-1 overflow-y-auto rounded-md border sm:min-h-[460px]">
+        {/* CH-539: the list takes the room that is left and scrolls. It was at
+            least 460 px tall, so on a laptop screen the dialog (90% of the
+            screen at most) had no room left for its buttons and "Next" / Route
+            was cut off below - the TFNs could not be added. */}
+        <div className="min-h-[120px] flex-1 overflow-y-auto rounded-md border">
           {filtered.length === 0 ? (
             <p className="p-4 text-center text-xs text-muted-foreground">
               {available.length === 0
@@ -393,7 +397,7 @@ export function AttachDestinationDialog({
         </>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           {step === "billing" ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => setStep("pick")} disabled={submitting}>
