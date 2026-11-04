@@ -2388,3 +2388,24 @@ on /me, from AI_AUDIT_EMAILS + the owner).
   translate the old name.
 
 Commit: see git log --grep CH-548
+
+## CH-550 - Getting Started videos inside Campaign Groups and Number Pools (FRONTEND)
+
+Sir's two new guides, each on its own page:
+
+- Campaign Groups (top of the page): "Campaign Groups Step by Step", 3:20,
+  11 chapters.
+- Number Pools (Phone Numbers > Number Pools tab, above the table): "Number
+  Pools Step by Step", 2:48, 11 chapters.
+
+A one-line strip (title, length, Watch) opens the video with its chapters
+beside it, like the Getting Started page: press a chapter to jump there, the
+chapter playing is highlighted. Closed by default so the page is not pushed
+down; open / closed is remembered in the browser. `components/shared/guide-video.tsx`,
+texts in English, Russian, Japanese and Chinese (`lib/i18n/extra/guide-videos.ts`).
+
+Videos encoded like CH-407 for every browser: 1920x1080 H.264 High 4.1, a
+keyframe every 2 s, index at the front (`public/videos/avortyx-campaign-groups-v1.mp4`,
+`avortyx-number-pools-v1.mp4`, with a poster each).
+
+Commit: see git log --grep CH-550
