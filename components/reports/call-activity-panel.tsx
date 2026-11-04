@@ -4,6 +4,11 @@
  * Call activity — the "X-ray" on a single call, opened from the Call Log's
  * row expander.
  *
+ * CH-565 (Sir, 5 Nov): laid out as his design - header, Caller -> TFN ->
+ * Campaign -> Buyer, figures, ring / talk bar, recording, and the tabs
+ * Activity / Caller / Technical / History. Stored facts only; generic names
+ * for our servers and carriers. The pieces are in call-panel-parts.tsx.
+ *
  * Everything comes from GET /api/analytics/calls/{id}/detail. Two rules
  * from that contract shape this component:
  *
@@ -22,15 +27,21 @@
 
 import * as React from "react";
 import {
-  ArrowRight,
   ChevronRight,
+  CircleDollarSign,
   ContactRound,
+  GitBranch,
+  Globe,
+  Link2,
   ListTree,
   PhoneCall,
   PhoneForwarded,
   PhoneIncoming,
   PhoneOff,
+  PhoneOutgoing,
   Repeat2,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -41,10 +52,25 @@ import {
   hasRoutingTrace,
   type CallActivity,
   type CallerProfile,
+  type CallLeg,
+  type CallPanel,
   type RoutingTrace,
   type TraceDestination,
 } from "@/lib/api/services/calls.service";
 import { formatCallerId, formatCurrency, formatLocalDate, uiLocaleTag } from "@/lib/format";
+import {
+  Figures,
+  FlowCard,
+  HistoryList,
+  PanelHeader,
+  RecordingPlayer,
+  TechnicalTab,
+  fill,
+  legName,
+  offsetOf,
+  prettyPhone,
+  type HistoryItem,
+} from "@/components/reports/call-panel-parts";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -155,9 +181,9 @@ function detailRows(
 }
 
 export function CallActivityPanel({ call, onOpenChange }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
-  const [tab, setTab] = React.useState<"activity" | "parameters">("activity");
+  const [tab, setTab] = React.useState<PanelTab>("activity");
   const [data, setData] = React.useState<CallActivity | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -188,76 +214,500 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
   }, [call]);
 
   const caller = call ? formatCallerId(call.callerNumber) : "";
-  const header = data?.timeline?.[0]?.at ?? (call ? new Date(call.startedAt).toISOString() : undefined);
+  const panel = data?.panel;
+  const profile = data?.callerProfile;
+  const lineTypeKey = profile?.lineType ? LINE_TYPE_KEYS[profile.lineType.toLowerCase()] : undefined;
+  const lineType = locale !== "en" && lineTypeKey ? t(lineTypeKey) : capitalizeFirst(profile?.lineType ?? undefined);
+  const recordingUrl = data?.recording?.url || call?.recordingUrl || "";
+  const eligible = data?.routingTrace?.summary?.eligible;
+  const activity = call && data ? buildActivity(call, data, t, locale) : [];
+  const history = call && panel ? buildHistory(call, panel, t, ruleText(call, panel, t)) : [];
 
   return (
     <Sheet open={!!call} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        // `[&>button]:hidden` drops the Sheet's built-in X: it landed on top
-        // of the caller chip in the corner. Close is the labelled control at
-        // the top-left, as in the reference.
-        className="w-full gap-0 overflow-y-auto p-0 [&>button]:hidden sm:max-w-xl"
+        // `[&>button]:hidden` drops the Sheet's built-in X: the header has
+        // its own close button beside the copy button (CH-565).
+        className="w-full gap-0 overflow-y-auto p-0 [&>button]:hidden sm:max-w-2xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <SheetHeader className="space-y-0 border-b border-border/60 p-0">
-          <div className="px-5 pt-4">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowRight className="h-4 w-4" />
-              {t("toolsUI.reports.activity.close")}
-            </button>
-          </div>
+        <SheetHeader className="space-y-0 p-0">
           <SheetTitle className="sr-only">
             {t("toolsUI.reports.activity.title").replace("{caller}", caller)}
           </SheetTitle>
-          {/* Tabs and the caller chip share a row — the chip used to sit up
-              on the Close line, leaving a block of empty space beside it. */}
-          <div className="flex items-center justify-between gap-3 px-5">
-            <div className="flex gap-5">
-              {(["activity", "parameters"] as const).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={cn(
-                    "-mb-px border-b-2 py-3 text-xs font-semibold uppercase tracking-wider transition-colors",
-                    tab === id
-                      ? "border-accent text-accent"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t(`toolsUI.reports.activity.tabs.${id}`)}
-                </button>
-              ))}
-            </div>
-            <span className="shrink-0 rounded-md bg-accent/15 px-2.5 py-1 text-[9.5px] font-medium tabular-nums text-accent">
-              {data?.callerProfile?.number ?? caller}
-            </span>
-          </div>
         </SheetHeader>
+        {call && (
+          <PanelHeader
+            call={call}
+            panel={panel}
+            carrier={profile?.carrier}
+            lineType={lineType}
+            timeZone={timeZone}
+            onClose={() => onOpenChange(false)}
+          />
+        )}
 
         {loading && !data ? (
           <p className="p-6 text-sm text-muted-foreground">{t("toolsUI.reports.activity.loading")}</p>
         ) : error ? (
           <p className="p-6 text-sm text-destructive">{error}</p>
-        ) : !data ? null : tab === "activity" ? (
-          <div>
-            {header && (
-              <p className="py-4 text-center text-xs font-medium text-muted-foreground">
-                {dayOf(header, timeZone)}
-              </p>
+        ) : !data || !call ? null : (
+          <>
+            <FlowCard call={call} panel={panel} eligible={eligible} />
+            <Figures call={call} panel={panel} />
+            {recordingUrl && <RecordingPlayer url={recordingUrl} />}
+
+            <div className="mt-5 flex gap-6 border-b border-border/60 px-5">
+              {(["activity", "caller", "technical", "history"] as const).map((id) => {
+                const count = id === "activity" ? activity.length : id === "history" ? history.length : undefined;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={cn(
+                      "-mb-px border-b-2 pb-3 text-sm font-medium transition-colors",
+                      tab === id
+                        ? "border-accent text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t(`x565.tab.${id}`)}
+                    {count ? <span className="ml-1.5 text-xs text-muted-foreground">{count}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            {tab === "activity" ? (
+              panel ? (
+                <ActivityList items={activity} timeZone={timeZone} start={panel.startedAt} />
+              ) : (
+                <div>
+                  <p className="py-4 text-center text-xs font-medium text-muted-foreground">
+                    {dayOf(data.timeline?.[0]?.at ?? new Date(call.startedAt).toISOString(), timeZone)}
+                  </p>
+                  <Timeline data={data} timeZone={timeZone} />
+                </div>
+              )
+            ) : tab === "caller" ? (
+              <div className="p-5">
+                <div className="rounded-xl border border-border/70 bg-secondary/20 p-4">
+                  <ProfileFields profile={profile} />
+                </div>
+              </div>
+            ) : tab === "technical" ? (
+              <TechnicalTab
+                call={call}
+                panel={panel}
+                hasRecording={Boolean(recordingUrl)}
+                routingRows={routingRows(data, t, locale)}
+              />
+            ) : (
+              <HistoryList items={history} timeZone={timeZone} />
             )}
-            <Timeline data={data} timeZone={timeZone} />
-          </div>
-        ) : (
-          <ParametersTab data={data} />
+          </>
         )}
       </SheetContent>
     </Sheet>
   );
+}
+
+type PanelTab = "activity" | "caller" | "technical" | "history";
+type T = (key: string) => string;
+
+/* ─── Activity (CH-565) ─────────────────────────────────────────────── */
+
+interface ActivityItem {
+  key: string;
+  icon: React.ElementType;
+  tint: string;
+  title: string;
+  /** Shown with its "+x s" offset from the start; checks and routing have no
+   *  sub-second time of their own, so they show the clock time only. */
+  at?: string | null;
+  offset?: boolean;
+  body?: React.ReactNode;
+}
+
+const TINT = {
+  info: "border-accent/40 text-accent",
+  good: "border-[color:var(--success)]/40 text-[color:var(--success)]",
+  bad: "border-destructive/40 text-destructive",
+  plain: "border-border text-muted-foreground",
+};
+
+function Chip({ children, tone = "plain" }: { children: React.ReactNode; tone?: "plain" | "good" | "bad" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs",
+        tone === "good"
+          ? "border-[color:var(--success)]/30 text-[color:var(--success)]"
+          : tone === "bad"
+            ? "border-destructive/30 text-destructive"
+            : "border-border/70 text-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ruleText(call: Call, panel: CallPanel, t: T): string {
+  const rule = panel.convertRule;
+  const buyer = call.buyerName || panel.destinationName || "";
+  if (!rule?.on || !buyer) return "";
+  if (rule.on === "incoming") return fill(t("x565.rule.incoming"), { buyer });
+  if (rule.on === "length" && rule.seconds) return fill(t("x565.rule.length"), { buyer, n: rule.seconds });
+  return fill(t("x565.rule.connected"), { buyer });
+}
+
+function legChip(leg: CallLeg, t: T): { text: string; tone: "good" | "bad" } {
+  if (leg.result === "answered") return { text: fill(t("x565.leg.answered"), { n: leg.ringSeconds ?? 0 }), tone: "good" };
+  if (leg.result === "busy") return { text: fill(t("x565.leg.busy"), { n: leg.ringSeconds ?? 0 }), tone: "bad" };
+  if (leg.reason === "Not Connected") return { text: fill(t("x565.leg.callerLeft"), { n: leg.ringSeconds ?? 0 }), tone: "bad" };
+  return { text: fill(t("x565.leg.noAnswer"), { n: leg.ringSeconds ?? 0 }), tone: "bad" };
+}
+
+function stepName(step: string, t: T, locale: string): string {
+  return locale !== "en" && STEP_KEYS[step] ? t(STEP_KEYS[step]) : capitalizeFirst(step.replace(/_/g, " ")) ?? step;
+}
+
+function buildActivity(call: Call, data: CallActivity, t: T, locale: string): ActivityItem[] {
+  const panel = data.panel;
+  if (!panel) return [];
+  const items: ActivityItem[] = [];
+  const start = panel.startedAt;
+  const trace = data.routingTrace;
+  const legs = panel.legs ?? [];
+  const last = legs[legs.length - 1];
+  const answered = Boolean(panel.answeredAt);
+
+  items.push({
+    key: "received",
+    icon: PhoneIncoming,
+    tint: TINT.info,
+    title: t("x565.ev.received"),
+    at: start,
+    offset: true,
+    body: (
+      <div className="space-y-2">
+        <p className="text-[13px] text-muted-foreground">
+          {fill(t("x565.ev.receivedBody"), { caller: prettyPhone(call.callerNumber), tfn: prettyPhone(call.calledNumber) })}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <Chip>{panel.repeat ? t("x565.ev.repeatChip") : t("x565.ev.firstCallChip")}</Chip>
+          {(panel.senderTries ?? 1) > 1 && <Chip>{fill(t("x565.ev.senderTries"), { n: panel.senderTries ?? 1 })}</Chip>}
+        </div>
+      </div>
+    ),
+  });
+
+  const steps = trace?.steps ?? [];
+  if (steps.length) {
+    const failed = steps.filter((s) => !s.passed).length;
+    items.push({
+      key: "checks",
+      icon: failed ? ShieldAlert : ShieldCheck,
+      tint: failed ? TINT.bad : TINT.good,
+      title: failed
+        ? fill(t("x565.ev.checksFailed"), { n: failed, total: steps.length })
+        : fill(t("x565.ev.checksPassed"), { n: steps.length }),
+      at: start,
+      body: (
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {steps.map((s) => (
+            <span
+              key={s.step}
+              className={cn("inline-flex items-center gap-1 text-[13px]", s.passed ? "text-muted-foreground" : "text-destructive")}
+              title={s.detail || undefined}
+            >
+              {s.passed ? <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--success)]" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+              {stepName(s.step, t, locale)}
+            </span>
+          ))}
+        </div>
+      ),
+    });
+  }
+
+  if (hasRoutingTrace(trace)) {
+    const s = trace.summary ?? {};
+    const breakdown = (trace.filteringBreakdown ?? []).slice(0, 5);
+    items.push({
+      key: "routing",
+      icon: GitBranch,
+      tint: TINT.info,
+      title: t("x565.ev.routing"),
+      at: start,
+      body: (
+        <div className="space-y-2.5">
+          {s.totalDestinations != null && (
+            <p className="text-[13px] text-muted-foreground">
+              {fill(t("x565.ev.routingBody"), {
+                eligible: s.eligible ?? trace.eligibleDestinations?.length ?? 0,
+                total: s.totalDestinations,
+                campaign: call.campaignName || "",
+              })}
+            </p>
+          )}
+          {breakdown.length > 0 && (
+            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border/70 sm:grid-cols-5">
+              {breakdown.map((b) => (
+                <div key={b.reason} className="min-w-0 border-border/60 px-3 py-2 [&:not(:first-child)]:border-l">
+                  <p className="line-clamp-2 text-[11px] leading-tight text-muted-foreground" title={b.reason}>
+                    {capitalizeFirst(b.reason)}
+                  </p>
+                  <p className="mt-0.5 font-mono text-sm tabular-nums">{b.count}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <MoreDetails label={t("x565.ev.details")}>
+            <CallPlanBody trace={trace} />
+          </MoreDetails>
+        </div>
+      ),
+    });
+  }
+
+  // A website visit (CH-452) or any other event the backend adds.
+  for (const [i, e] of (data.timeline ?? []).entries()) {
+    if (STANDARD_EVENTS.has(e.event)) continue;
+    items.push({
+      key: `${e.event}-${i}`,
+      icon: Globe,
+      tint: TINT.plain,
+      title: e.label ?? capitalizeFirst(e.event.replace(/_/g, " ")) ?? e.event,
+      at: e.at,
+      offset: true,
+      body: <FieldList rows={detailRows(e.detail, t, locale)} />,
+    });
+  }
+
+  if (legs.length) {
+    items.push({
+      key: "ringing",
+      icon: PhoneOutgoing,
+      tint: TINT.info,
+      title:
+        legs.length === 1
+          ? fill(t("x565.ev.ringingOne"), { buyer: legs[0].buyer || legName(legs[0]) })
+          : fill(t("x565.ev.ringingMany"), { n: legs.length }),
+      at: legs[0].startedAt,
+      offset: true,
+      body: (
+        <ol className="space-y-1.5">
+          {legs.map((leg, i) => {
+            const chip = legChip(leg, t);
+            return (
+              <li key={`${leg.destination}-${i}`} className="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2">
+                <span className="w-4 shrink-0 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-[13px]">{legName(leg)}</p>
+                  <p className="truncate font-mono text-xs text-muted-foreground">{prettyPhone(leg.destination)}</p>
+                </div>
+                <Chip tone={chip.tone}>{chip.text}</Chip>
+              </li>
+            );
+          })}
+        </ol>
+      ),
+    });
+  }
+
+  if (answered) {
+    items.push({
+      key: "connected",
+      icon: Link2,
+      tint: TINT.good,
+      title: t("x565.ev.connected"),
+      at: panel.answeredAt,
+      offset: true,
+      body: <p className="text-[13px] text-muted-foreground">{t("x565.ev.connectedBody")}</p>,
+    });
+  }
+
+  if (call.isConverted) {
+    const rule = ruleText(call, panel, t);
+    items.push({
+      key: "converted",
+      icon: CircleDollarSign,
+      tint: TINT.good,
+      title: t("x565.ev.converted"),
+      at: panel.endedAt,
+      offset: true,
+      body: (
+        <p className="text-[13px]">
+          <span className="font-mono text-[color:var(--success)]">+{formatCurrency(call.revenue ?? 0, true)}</span>
+          {rule && <span className="ml-3 text-muted-foreground">{rule}</span>}
+        </p>
+      ),
+    });
+  }
+
+  if (panel.endedAt) {
+    const reason = last?.reason ?? call.failReason;
+    items.push({
+      key: "ended",
+      icon: PhoneOff,
+      tint: TINT.plain,
+      title: t("x565.ev.ended"),
+      at: panel.endedAt,
+      offset: true,
+      body: (
+        <p className="text-[13px] text-muted-foreground">
+          {answered
+            ? fill(t("x565.ev.endedTalk"), { n: panel.talkSeconds ?? 0 })
+            : reason === "Not Connected"
+              ? t("x565.ev.endedBefore")
+              : reason
+                ? locale === "en"
+                  ? reason
+                  : localizeFailReason(reason, locale, t)
+                : t("x565.notAnswered")}
+        </p>
+      ),
+    });
+  }
+  return items;
+}
+
+function MoreDetails({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-xs font-medium text-accent transition-colors hover:text-accent/80"
+      >
+        <ChevronRight className={cn("h-3 w-3 transition-transform", open && "rotate-90")} />
+        {label}
+      </button>
+      {open && <div className="mt-2 pl-4">{children}</div>}
+    </div>
+  );
+}
+
+const STANDARD_EVENTS = new Set(["call_received", "caller_lookup", "destination_dialed", "connected", "converted", "ended"]);
+
+function ActivityList({ items, timeZone, start }: { items: ActivityItem[]; timeZone: string; start?: string | null }) {
+  const { t } = useTranslation();
+  if (items.length === 0) {
+    return <p className="py-8 text-center text-sm text-muted-foreground">{t("toolsUI.reports.activity.noEvents")}</p>;
+  }
+  return (
+    <div className="px-5 py-2">
+      {items.map((item, i) => {
+        const Icon = item.icon;
+        return (
+          <div key={item.key} className="flex gap-4 py-3">
+            <div className="relative w-9 shrink-0">
+              <span className={cn("relative z-10 flex h-9 w-9 items-center justify-center rounded-lg border bg-background", item.tint)}>
+                <Icon className="h-4 w-4" />
+              </span>
+              {i < items.length - 1 && (
+                <span aria-hidden className="absolute -bottom-3 left-1/2 top-9 w-px -translate-x-1/2 bg-border" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 pt-1.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-semibold">{item.title}</h3>
+                <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+                  {item.offset && offsetOf(item.at, start)}
+                  <span className="ml-3">{timeOf(item.at ?? undefined, timeZone)}</span>
+                </span>
+              </div>
+              {item.body && <div className="mt-2">{item.body}</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── History (CH-565) ──────────────────────────────────────────────── */
+
+function buildHistory(call: Call, panel: CallPanel, t: T, rule: string): HistoryItem[] {
+  const legs = panel.legs ?? [];
+  const last = legs[legs.length - 1];
+  const timed: HistoryItem[] = [];
+  const parts = [call.campaignName, call.publisherName, prettyPhone(call.calledNumber), panel.destinationName || call.buyerName]
+    .filter(Boolean)
+    .join(" · ");
+  timed.push({ key: "created", title: t("x565.hist.created"), body: fill(t("x565.hist.createdBody"), { parts }), at: panel.startedAt, tone: "plain" });
+  legs.forEach((leg, i) => {
+    if (leg.result === "answered" || i === legs.length - 1) return;
+    timed.push({
+      key: `moved-${i}`,
+      title: t("x565.hist.moved"),
+      body: fill(t("x565.hist.movedBody"), { name: legName(leg), n: leg.ringSeconds ?? 0 }),
+      at: legs[i + 1]?.startedAt,
+      tone: "info",
+    });
+  });
+  if (panel.answeredAt && last) {
+    timed.push({
+      key: "answered",
+      title: t("x565.hist.answered"),
+      body: fill(t("x565.hist.answeredBody"), { name: legName(last), n: last.ringSeconds ?? 0 }),
+      at: panel.answeredAt,
+      tone: "good",
+    });
+  }
+  if (call.isConverted && panel.endedAt) {
+    timed.push({
+      key: "conversion",
+      title: t("x565.hist.conversion"),
+      body: fill(t("x565.hist.conversionBody"), {
+        buyer: call.buyerName || panel.destinationName || "",
+        amount: formatCurrency(call.revenue ?? 0, true),
+        rule,
+      }).replace(/ · $/, ""),
+      at: panel.endedAt,
+      tone: "info",
+    });
+  }
+  if (panel.endedAt) {
+    timed.push({ key: "ended", title: t("x565.hist.ended"), at: panel.endedAt, tone: "plain" });
+  }
+  timed.sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
+
+  const untimed: HistoryItem[] = [];
+  if (panel.answerConfirmedLater) untimed.push({ key: "confirmed", title: t("x565.hist.confirmed"), tone: "good" });
+  if ((panel.senderTries ?? 1) > 1) {
+    untimed.push({ key: "grouped", title: fill(t("x565.hist.grouped"), { n: panel.senderTries ?? 1 }), tone: "plain" });
+  }
+  return [...untimed, ...timed];
+}
+
+/* ─── Technical: routing rows (the old Parameters tab) ───────────────── */
+
+function routingRows(data: CallActivity, t: T, locale: string): Array<[string, string | undefined | null]> {
+  // The backend sends campaign_name / rule_name / ... (camelCased on the way
+  // in); the older names are read too.
+  const r = (data.routing ?? {}) as Record<string, unknown>;
+  const pick = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = r[k];
+      if (v !== null && v !== undefined && v !== "") return String(v);
+    }
+    return undefined;
+  };
+  const block = pick("blockReason");
+  return [
+    [t("toolsUI.reports.activity.campaign"), pick("campaignName", "campaign")],
+    [t("toolsUI.reports.activity.rule"), pick("ruleName")],
+    [t("toolsUI.reports.activity.ruleType"), capitalizeFirst(pick("ruleType"))],
+    [t("toolsUI.reports.activity.destination"), prettyPhone(pick("destinationNumber", "destination")) || undefined],
+    [t("toolsUI.reports.activity.buyer"), pick("buyerName", "buyer")],
+    [t("toolsUI.reports.activity.publisher"), pick("publisherName", "publisher")],
+    [t("toolsUI.reports.activity.blockReason"), block && (locale === "en" ? block : localizeFailReason(block, locale, t))],
+  ];
 }
 
 /* ─── Activity timeline ─────────────────────────────────────────────── */
@@ -271,6 +721,7 @@ interface TimelineItem {
   body: React.ReactNode;
 }
 
+/** Before CH-565 (a backend without `panel`): the timeline as it was. */
 function Timeline({ data, timeZone }: { data: CallActivity; timeZone: string }) {
   const { t, locale } = useTranslation();
   const trace = data.routingTrace;
@@ -577,77 +1028,5 @@ function DestinationList({
         </li>
       ))}
     </ol>
-  );
-}
-
-/* ─── Parameters tab ────────────────────────────────────────────────── */
-
-/** Routing, money and recording — the sections of the payload that aren't
- *  timeline events. */
-function ParametersTab({ data }: { data: CallActivity }) {
-  const { t, locale } = useTranslation();
-  const money = (v: number | string | null | undefined) =>
-    v === null || v === undefined ? undefined : formatCurrency(Number(v), true);
-
-  const groups: Array<{ title: string; rows: Array<[string, string | undefined]> }> = [
-    {
-      title: t("toolsUI.reports.activity.routing"),
-      rows: [
-        [t("toolsUI.reports.activity.campaign"), data.routing?.campaign ?? undefined],
-        [t("toolsUI.reports.activity.rule"), data.routing?.ruleName ?? undefined],
-        [t("toolsUI.reports.activity.ruleType"), capitalizeFirst(data.routing?.ruleType)],
-        [t("toolsUI.reports.activity.destination"), data.routing?.destination ?? undefined],
-        [t("toolsUI.reports.activity.buyer"), data.routing?.buyer ?? undefined],
-        [t("toolsUI.reports.activity.publisher"), data.routing?.publisher ?? undefined],
-        [t("toolsUI.reports.activity.blockReason"), (locale === "en" ? data.routing?.blockReason : localizeFailReason(data.routing?.blockReason, locale, t)) || undefined],
-      ],
-    },
-    {
-      title: t("toolsUI.reports.activity.financials"),
-      rows: [
-        [t("toolsUI.reports.activity.revenue"), money(data.financials?.revenue)],
-        [t("toolsUI.reports.activity.payout"), money(data.financials?.payout)],
-        [t("toolsUI.reports.activity.profit"), money(data.financials?.profit)],
-        [
-          t("toolsUI.reports.activity.minDuration"),
-          data.financials?.minCallDuration == null
-            ? undefined
-            : t("common.secondsShort").replace("{n}", String(data.financials.minCallDuration)),
-        ],
-      ],
-    },
-    {
-      title: t("toolsUI.reports.activity.recording"),
-      rows: [
-        [t("toolsUI.reports.activity.sentiment"), data.recording?.sentiment ?? undefined],
-        [t("toolsUI.reports.activity.transcription"), data.recording?.transcription ?? undefined],
-      ],
-    },
-  ];
-
-  return (
-    <div className="space-y-5 p-5">
-      {groups.map((g) => {
-        const rows = g.rows.filter(([, v]) => v !== undefined && v !== "");
-        if (rows.length === 0) return null;
-        return (
-          <section key={g.title}>
-            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {g.title}
-            </h3>
-            <div className="space-y-1 rounded-lg bg-secondary/25 p-4">
-              {rows.map(([label, value]) => (
-                <Field key={label} label={label} value={value} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
-      {data.recording?.url && (
-        <audio controls src={data.recording.url} className="w-full">
-          <track kind="captions" />
-        </audio>
-      )}
-    </div>
   );
 }

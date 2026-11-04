@@ -2564,3 +2564,33 @@ same time."
   want it on").
 
 Commit: see git log --grep CH-563
+
+## CH-565 - Call panel as Sir drew it (FRONTEND)
+
+Sir, 5 Nov (his design for the call opened from the Call Log): "Under these
+activity and parameters we can add more informative details which i sent you
+... do not use any real server name - audit name and any brand name, any
+carrier name." Goes with backend CH-565.
+
+- Header: call ID (copy button), caller number, status, place, the caller's
+  phone company, line type, date.
+- Caller -> TFN -> Campaign -> Buyer card (first call / repeat caller,
+  publisher, destinations eligible, answered after N s).
+- Total time, Revenue, Payout, Answered in; ringing / talk-time bar.
+- The recording with its waveform, speed and download.
+- Tabs Activity / Caller / Technical / History:
+  - Activity: call received (+ first call / repeat), the checks, routing
+    decided (N of M eligible, why the others were skipped, full detail on a
+    click), every destination rung with its result and ring time (failover),
+    connected, converted (+amount, the buyer's pay rule), call ended - each
+    with "+x s" from the start and the time.
+  - Technical: call ID, session, "Server 1", "Carrier 1", recording, the
+    call legs (inbound, each outbound with result and time), routing.
+  - History: record created, moved to the next destination, answered,
+    conversion recorded, call ended, and system notes.
+- Only what the call stored. Not shown because nothing measures them: audio
+  quality, sub-second connection steps, who hung up an answered call. No real
+  server, carrier, provider or tool name. Nothing from the AI audit.
+- The demo data gives the same panel.
+
+Commit: see git log --grep CH-565

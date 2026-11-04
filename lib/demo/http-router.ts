@@ -1183,7 +1183,41 @@ route("GET", "/api/analytics/calls/{id}/detail", (req) => {
 
   const revenue = Number(call.revenue || 0);
   const payout = Number(call.publisher_payout || 0);
+  // CH-565: what the real backend sends for the call panel (`panel`).
+  const ring = connected ? 6 : Math.max(1, call.duration);
+  const hex = id.replace(/-/g, "").toUpperCase();
+  const legs = eligible.length
+    ? [{
+        destination: call.destination_number,
+        name: eligible[0].name,
+        buyer: call.buyer_name,
+        result: connected ? "answered" : "no_answer",
+        reason: connected ? null : "Not Connected",
+        started_at: at(0),
+        ring_seconds: ring,
+        talk_seconds: connected ? call.duration : 0,
+      }]
+    : [];
+  const panel = {
+    display_id: `AVX-${hex.slice(0, 4)}-${hex.slice(4, 8)}`,
+    session: `S-${hex.slice(-5)}`,
+    started_at: at(0),
+    answered_at: connected ? at(ring) : null,
+    ended_at: at(Math.max(1, call.duration) + (connected ? ring : 0)),
+    answered_in: connected ? ring : null,
+    wait_seconds: ring,
+    talk_seconds: connected ? call.duration : 0,
+    total_seconds: Math.max(1, call.duration) + (connected ? ring : 0),
+    repeat: !!call.is_duplicate,
+    sender_tries: 1,
+    destination_name: eligible[0]?.name ?? null,
+    convert_rule: { on: "connected", seconds: 0 },
+    legs,
+    recording_sides: null,
+    answer_confirmed_later: false,
+  };
   return {
+    panel,
     caller_profile: {
       number: call.caller_number,
       local_format: local,

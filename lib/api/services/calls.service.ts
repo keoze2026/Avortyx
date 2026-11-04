@@ -171,7 +171,43 @@ export interface RoutingTrace {
   selected?: { destination?: string; buyer?: string; rule?: string } | null;
 }
 
+/** CH-565: one destination rung on the call (failover tries, then the last). */
+export interface CallLeg {
+  destination?: string;
+  /** Its Destinations-page name ("KOZ|2015|"), when the line has one. */
+  name?: string | null;
+  buyer?: string | null;
+  /** "answered", "no_answer", "busy", or the call's status for the last leg. */
+  result?: string;
+  reason?: string | null;
+  startedAt?: string | null;
+  ringSeconds?: number | null;
+  talkSeconds?: number | null;
+}
+
+/** CH-565: what Sir's call panel shows - stored facts only (backend `panel`). */
+export interface CallPanel {
+  displayId?: string;
+  session?: string | null;
+  startedAt?: string | null;
+  answeredAt?: string | null;
+  endedAt?: string | null;
+  answeredIn?: number | null;
+  waitSeconds?: number | null;
+  talkSeconds?: number | null;
+  totalSeconds?: number | null;
+  repeat?: boolean;
+  senderTries?: number;
+  destinationName?: string | null;
+  convertRule?: { on?: string; seconds?: number } | null;
+  legs?: CallLeg[];
+  recordingSides?: "separate" | "mixed" | null;
+  answerConfirmedLater?: boolean;
+}
+
 export interface CallActivity {
+  /** CH-565. Absent from a backend older than CH-565. */
+  panel?: CallPanel;
   callerProfile?: CallerProfile;
   routing?: CallRouting;
   financials?: CallFinancials;
