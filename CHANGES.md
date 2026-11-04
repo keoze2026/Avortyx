@@ -2351,3 +2351,25 @@ backend refuses every buyer and publisher login.
   (and a note). The AI accuracy % (last 30 days) heads the page.
 - English, Russian, Japanese, Chinese.
 - Reports / Call Log filter and No Voice columns: Part 2.
+
+## CH-546 - AI audit in Reports and Call Log, repeat callers, evidence export (FRONTEND)
+
+Sir, 4 Nov (AI audit upgrade, Part 2). Goes with backend CH-546. Main
+account only throughout - buyers and publishers see none of it.
+
+- Reports filter panel: **AI Label** (Valid Call / No Voice | Dead Caller /
+  No Voice | No Beep or Customer / No Voice | Only Agent + Beeping / Pending
+  AI check), applied to the Call Summary and the Call Log together; export
+  then takes the calls on screen.
+- Call Summary, every tab (Campaign, Publisher, Dialed, Number Pool,
+  Destination, Buyer, Date incl. By hour...): **No Voice** and **No Voice %**
+  (No Voice ÷ calls the AI checked). A row's No Voice number opens that row's
+  No Voice calls in the Call Log; the totals cell filters the whole log.
+- Call Log: **AI Label** column - "Pending AI check" until checked, then the
+  label (sortable, in the export, translated like the rest of the file). It
+  updates by itself as calls are checked (live connection, CH-538).
+- AI Audit page: **Repeat callers** (caller IDs with 2+ No Voice calls that
+  day, with publishers and campaigns) and **Evidence export** (a publisher's
+  No Voice calls with labels, both sides' seconds, comment, times and
+  recording links, as an Excel file, for any dates).
+- English, Russian, Japanese, Chinese.

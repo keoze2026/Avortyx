@@ -43,6 +43,8 @@ const HEADER_KEYS: Record<string, string> = {
   "FAIL REASON": "toolsUI.reports.callLog.columns.failReason",
   RECORDING: "toolsUI.reports.callLog.columns.recording",
   VOICE: "x531.voice",
+  // CH-546: the AI audit label.
+  "AI LABEL": "x546.aiLabel",
 };
 
 /** Status words the export writes (any case) -> the screen's key. */
@@ -71,6 +73,16 @@ const HANG_UP_KEYS: Record<string, string> = {
   "caller hung up": "toolsUI.reports.callLog.hangUp.caller",
   "no answer": "hangUp.noAnswer",
   "destination busy": "hangUp.busy",
+};
+
+/** CH-546: AI Label values as the file writes them -> the screen's key. */
+const AI_LABEL_KEYS: Record<string, string> = {
+  "valid call": "x543.label.valid",
+  "no voice | dead caller": "x543.label.dead_caller",
+  "no voice | no beep or customer": "x543.label.agent_only",
+  "no voice | only agent + beeping": "x543.label.agent_beep",
+  "voice (one channel)": "x543.label.mixed",
+  "pending ai check": "x543.pending",
 };
 
 const YES_NO_KEYS: Record<string, string> = {
@@ -129,6 +141,7 @@ export function exportLocalizer(t: T, locale: string): ExportLocalizer {
       return localizeFailReason("TFN Test", locale, t) || cell;
     }
     if (YES_NO_COLUMNS.has(col)) return YES_NO_KEYS[word] ? translated(t, YES_NO_KEYS[word], cell) : cell;
+    if (col === "AI LABEL") return AI_LABEL_KEYS[word] ? translated(t, AI_LABEL_KEYS[word], cell) : cell;
     if (col === "VOICE") {
       // "No voice (0s)" / "Voice (12s)" / "No file" (CH-532).
       const m = /^(no voice|voice)(\s*\(.*\))?$/i.exec(cell.trim());

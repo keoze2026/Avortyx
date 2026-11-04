@@ -12,6 +12,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { AI_LABEL_FILTERS, type AiLabelFilter } from "@/lib/ai-labels";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -28,6 +30,8 @@ export interface ReportFilters {
   buyerIds: string[];
   publisherIds: string[];
   statuses: CallStatus[];
+  /** CH-546 (Sir: "AI Label filter"): our team only. */
+  aiLabels: AiLabelFilter[];
 }
 
 export const EMPTY_FILTERS: ReportFilters = {
@@ -35,6 +39,7 @@ export const EMPTY_FILTERS: ReportFilters = {
   buyerIds: [],
   publisherIds: [],
   statuses: [],
+  aiLabels: [],
 };
 
 const STATUS_KEYS: Array<{ id: CallStatus; labelKey: string }> = [
@@ -54,6 +59,13 @@ interface ReportsFilterPopoverProps {
 export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopoverProps) {
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
+  // CH-546: the AI audit is for our team only - never a buyer or publisher.
+  const role = useAuthStore((st) => st.user?.role);
+  const showAi = role !== "buyer" && role !== "publisher";
+  const AI_OPTIONS = useMemo(
+    () => AI_LABEL_FILTERS.map((id) => ({ id, label: t(id === "pending" ? "x543.pending" : `x543.label.${id}`) })),
+    [t],
+  );
 
   const STATUS_OPTIONS = useMemo(
     () => STATUS_KEYS.map((s) => ({ id: s.id, label: t(s.labelKey) })),
@@ -83,7 +95,8 @@ export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopover
     filters.campaignIds.length +
     filters.buyerIds.length +
     filters.publisherIds.length +
-    filters.statuses.length;
+    filters.statuses.length +
+    filters.aiLabels.length;
 
   const clearAll = () => onChange(EMPTY_FILTERS);
 
@@ -150,6 +163,21 @@ export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopover
               })
             }
           />
+          {showAi && (
+            <FacetGroup
+              title={t("x546.aiLabel")}
+              options={AI_OPTIONS}
+              selected={filters.aiLabels}
+              onToggle={(id) =>
+                onChange({
+                  ...filters,
+                  aiLabels: filters.aiLabels.includes(id)
+                    ? filters.aiLabels.filter((s) => s !== id)
+                    : [...filters.aiLabels, id],
+                })
+              }
+            />
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">

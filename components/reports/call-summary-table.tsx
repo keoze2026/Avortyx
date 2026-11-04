@@ -188,6 +188,8 @@ type ColumnKey =
   | "converted"
   | "noConnect"
   | "dupe"
+  | "noVoice"
+  | "noVoicePct"
   | "conversionRate"
   | "tcl"
   | "acl"
@@ -205,6 +207,10 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "converted", label: "Converted" },
   { id: "noConnect", label: "Not Connected" },
   { id: "dupe", label: "Repeated" },
+  // CH-546 (Sir, 4 Nov - AI audit): No Voice calls and their share of the
+  // calls the AI checked. Our team only.
+  { id: "noVoice", label: "No Voice" },
+  { id: "noVoicePct", label: "No Voice %" },
   { id: "conversionRate", label: "Conv. rate" },
   { id: "tcl", label: "TCL" },
   { id: "acl", label: "ACL" },
@@ -222,6 +228,8 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   paid: "toolsUI.reports.summary.columns.paid",
   converted: "toolsUI.reports.summary.columns.converted",
   noConnect: "toolsUI.reports.summary.columns.noConnect",
+  noVoice: "x546.noVoice",
+  noVoicePct: "x546.noVoicePct",
   dupe: "toolsUI.reports.summary.columns.dupe",
   conversionRate: "toolsUI.reports.summary.columns.conversionRate",
   tcl: "toolsUI.reports.summary.columns.tcl",
@@ -235,7 +243,7 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
 
 /** CH-428 (Sir's design): the headings over the column groups. */
 const COLUMN_GROUPS: Array<{ id: string; labelKey: string; columns: ColumnKey[] }> = [
-  { id: "calls", labelKey: "x428.groupCalls", columns: ["live", "incoming", "connected", "qualified", "paid", "converted", "noConnect", "dupe"] },
+  { id: "calls", labelKey: "x428.groupCalls", columns: ["live", "incoming", "connected", "qualified", "paid", "converted", "noConnect", "dupe", "noVoice", "noVoicePct"] },
   { id: "performance", labelKey: "x428.groupPerformance", columns: ["conversionRate", "tcl", "acl"] },
   { id: "money", labelKey: "x428.groupMoney", columns: ["payout", "revenue", "profit", "cost"] },
 ];
@@ -264,6 +272,9 @@ interface SummaryRow {
   profit?: number;
   cost?: number;
   billableMinutes?: number;
+  /** CH-546: calls the AI labelled No Voice, and calls it checked at all. */
+  noVoice?: number;
+  aiChecked?: number;
 }
 
 /** Day key in the report timezone — the same zone the Call Log, the hourly
@@ -714,6 +725,9 @@ function groupCalls(
       row.converted += 1;
     }
     if (matchesCallStatusFilter(c, "notConnected")) row.noConnect += 1;
+    // CH-546: the AI audit label (staff only - empty for partner logins).
+    if (c.aiLabel) row.aiChecked = (row.aiChecked ?? 0) + 1;
+    if (matchesCallStatusFilter(c, "noVoice")) row.noVoice = (row.noVoice ?? 0) + 1;
     // Same rule as the backend's Dupe: every duplicate that came in,
     // answered or dropped. A campaign with blocking on used to read Dupe 0
     // precisely because the blocking worked.
@@ -994,6 +1008,8 @@ function totalsOf(rows: SummaryRow[], totalsLabel: string): SummaryRow {
     t.converted += r.converted;
     t.noConnect += r.noConnect;
     t.dupe += r.dupe;
+    t.noVoice = (t.noVoice ?? 0) + (r.noVoice ?? 0);
+    t.aiChecked = (t.aiChecked ?? 0) + (r.aiChecked ?? 0);
     t.tcl += r.tcl;
     t.payout += r.payout;
     t.revenue += r.revenue;
@@ -1030,6 +1046,12 @@ function summaryCellValue(row: SummaryRow, key: ColumnKey): number | string {
       return row.noConnect;
     case "dupe":
       return row.dupe;
+    case "noVoice":
+      return row.noVoice ?? 0;
+    case "noVoicePct": {
+      const pct = noVoiceShare(row);
+      return pct === undefined ? "" : Number(pct.toFixed(4));
+    }
     case "conversionRate":
       return Number(row.conversionRate.toFixed(4));
     case "tcl":
@@ -1105,8 +1127,15 @@ type SummarySortKey = "label" | ColumnKey;
 type SortDir = "asc" | "desc";
 
 /** Extract the value used to compare two SummaryRows for the given sort key. */
+/** CH-546: No Voice as a share (0..1) of the calls the AI checked; none checked = unknown. */
+function noVoiceShare(r: SummaryRow): number | undefined {
+  return r.aiChecked ? (r.noVoice ?? 0) / r.aiChecked : undefined;
+}
+
 function sortValue(r: SummaryRow, key: SummarySortKey): number | string {
   if (key === "label") return r.label.toLowerCase();
+  if (key === "noVoice") return r.noVoice ?? 0;
+  if (key === "noVoicePct") return noVoiceShare(r) ?? -1;
   if (key === "profit") return rowProfit(r);
   if (key === "cost") return rowCost(r) ?? 0;
   return r[key];
@@ -1196,9 +1225,9 @@ export function CallSummaryTable({
   const hiddenForRole: ReadonlySet<ColumnKey> = React.useMemo(() => {
     const base: ColumnKey[] =
       role === "buyer"
-        ? ["payout", "profit", "cost"]
+        ? ["payout", "profit", "cost", "noVoice", "noVoicePct"]
         : role === "publisher"
-          ? ["revenue", "profit", "cost"]
+          ? ["revenue", "profit", "cost", "noVoice", "noVoicePct"]
           : [];
     return new Set<ColumnKey>([...base, ...(Array.from(partnerHidden) as ColumnKey[])]);
   }, [role, partnerHidden]);
@@ -1552,6 +1581,8 @@ export function CallSummaryTable({
                 {visible.converted && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.converted")} sortKey="converted" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.noConnect && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.noConnect")} sortKey="noConnect" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.dupe && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.dupe")} sortKey="dupe" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.noVoice && <TableHead className="text-center"><SortHeader label={t("x546.noVoice")} sortKey="noVoice" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.noVoicePct && <TableHead className="text-center"><SortHeader label={t("x546.noVoicePct")} sortKey="noVoicePct" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.conversionRate && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.conversionRate")} sortKey="conversionRate" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.tcl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.tcl")} sortKey="tcl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
@@ -1648,6 +1679,32 @@ export function CallSummaryTable({
                       )}
                       {visible.dupe && (
                         <TableCell className="text-center tabular-nums">{formatNumber(r.dupe)}</TableCell>
+                      )}
+                      {visible.noVoice && (
+                        <TableCell className="text-center tabular-nums">
+                          {(r.noVoice ?? 0) > 0 && onStatusFilterChange ? (
+                            // CH-546: opens this row's No Voice calls in the Call Log.
+                            <button
+                              type="button"
+                              className="font-semibold text-destructive underline-offset-2 hover:underline"
+                              title={t("x546.openNoVoice")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (pickable && !picked) pick();
+                                onStatusFilterChange("noVoice");
+                              }}
+                            >
+                              {formatNumber(r.noVoice ?? 0)}
+                            </button>
+                          ) : (
+                            formatNumber(r.noVoice ?? 0)
+                          )}
+                        </TableCell>
+                      )}
+                      {visible.noVoicePct && (
+                        <TableCell className="text-center tabular-nums">
+                          {noVoiceShare(r) === undefined ? "—" : formatPercent(noVoiceShare(r)! * 100, 1)}
+                        </TableCell>
                       )}
                       {visible.conversionRate && (
                         <TableCell className="text-center tabular-nums">
@@ -1807,6 +1864,22 @@ export function CallSummaryTable({
                           ))
                       }
                     />
+                  )}
+                  {visible.noVoice && (
+                    <TotalsFilterCell
+                      count={totals.noVoice ?? 0}
+                      tone="destructive"
+                      active={activeStatusFilter === "noVoice"}
+                      onClick={
+                        onStatusFilterChange &&
+                        (() => onStatusFilterChange(activeStatusFilter === "noVoice" ? null : "noVoice"))
+                      }
+                    />
+                  )}
+                  {visible.noVoicePct && (
+                    <TableCell className="text-center tabular-nums">
+                      {noVoiceShare(totals) === undefined ? "—" : formatPercent(noVoiceShare(totals)! * 100, 1)}
+                    </TableCell>
                   )}
                   {visible.conversionRate && (
                     <TableCell className="text-center tabular-nums">

@@ -69,6 +69,9 @@ export interface Call {
   voiceLabel?: string;
   /** Seconds of speech heard in the recording. */
   voiceSeconds?: number;
+  /** CH-546: the AI audit label (lib/ai-labels.ts); undefined = Pending AI
+   *  check (or not shown: partner logins never get it). */
+  aiLabel?: string;
   /** Caller's carrier as the backend resolved it ("Verizon", "AT&T", …). */
   carrier?: string;
 }

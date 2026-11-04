@@ -89,6 +89,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { cn } from "@/lib/utils";
+import { NO_VOICE_LABELS, aiLabelKey, aiPending } from "@/lib/ai-labels";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
  *  so the whole row reads evenly: the portal's Inter in Medium, as in the
@@ -155,6 +156,7 @@ type ColumnKey =
   | "hangUp"
   | "status"
   | "failReason"
+  | "ai"
   | "recording";
 
 const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
@@ -177,6 +179,9 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "hangUp", label: "Hang up" },
   { id: "status", label: "Status" },
   { id: "failReason", label: "Fail reason" },
+  // CH-546 (Sir, 4 Nov - AI audit): "Pending AI check" until checked, then the
+  // AI's label. Our team only.
+  { id: "ai", label: "AI Label" },
   { id: "recording", label: "Recording" },
 ];
 
@@ -196,6 +201,7 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   hangUp: "toolsUI.reports.callLog.columns.hangUp",
   status: "toolsUI.reports.callLog.columns.status",
   failReason: "toolsUI.reports.callLog.columns.failReason",
+  ai: "x546.aiLabel",
   recording: "toolsUI.reports.callLog.columns.recording",
 };
 
@@ -531,6 +537,9 @@ function sortValue(c: Call, key: LogSortKey, publisherNameById: Map<string, stri
       return c.durationSec;
     case "status":
       return STATUS_RANK[c.status];
+    case "ai":
+      // CH-546: No Voice first, then the rest; pending and live last.
+      return c.aiLabel ? (NO_VOICE_LABELS.has(c.aiLabel) ? 3 : 2) : aiPending(c) ? 1 : 0;
   }
 }
 
@@ -626,6 +635,8 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "failReason":
       // The backend's own reason (block_reason) - never a guessed one.
       return failReasonText(c);
+    case "ai":
+      return aiExportText(c);
     case "recording":
       return c.recordingUrl ?? "";
   }
@@ -715,6 +726,8 @@ export function CallLogTable({
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
     if (role === "publisher") out.revenue = false;
+    // CH-546: the AI audit is for our team only, never a partner login.
+    if (role === "buyer" || role === "publisher") out.ai = false;
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
     if (!partnerCan("audio_recording")) out.recording = false;
     return out;
@@ -1058,6 +1071,7 @@ export function CallLogTable({
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
                 {columns.status && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.failReason && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
+                {columns.ai && <TableHead className="text-center"><LogSortHeader label={t("x546.aiLabel")} sortKey="ai" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
                 <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
               </TableRow>
@@ -1221,6 +1235,11 @@ export function CallLogTable({
                               </div>
                             );
                           })()}
+                        </TableCell>
+                      )}
+                      {columns.ai && (
+                        <TableCell className={`${CELL} text-center`}>
+                          <AiLabelCell call={c} />
                         </TableCell>
                       )}
                       {columns.recording && (
@@ -1527,3 +1546,35 @@ function CallRowActions({
     </div>
   );
 }
+
+/** CH-546: the AI audit label of a call (staff only): "Pending AI check" until
+ *  our server has listened to it, then Sir's label. */
+function AiLabelCell({ call }: { call: Call }) {
+  const { t } = useTranslation();
+  if (call.aiLabel) {
+    const noVoice = NO_VOICE_LABELS.has(call.aiLabel);
+    return (
+      <Badge variant={noVoice ? "destructive" : call.aiLabel === "valid" ? "default" : "secondary"} className="whitespace-nowrap">
+        {t(aiLabelKey(call.aiLabel))}
+      </Badge>
+    );
+  }
+  if (aiPending(call)) {
+    return <span className="whitespace-nowrap text-muted-foreground">{t("x543.pending")}</span>;
+  }
+  return <span className="text-muted-foreground">{"\u2014"}</span>;
+}
+
+/** CH-546: the AI label in a file (English; translated with the rest of the file). */
+function aiExportText(c: Call): string {
+  if (c.aiLabel) return AI_EXPORT_NAMES[c.aiLabel] ?? c.aiLabel;
+  return aiPending(c) ? "Pending AI check" : "";
+}
+
+const AI_EXPORT_NAMES: Record<string, string> = {
+  valid: "Valid Call",
+  dead_caller: "No Voice | Dead Caller",
+  agent_only: "No Voice | No Beep or Customer",
+  agent_beep: "No Voice | Only Agent + Beeping",
+  mixed: "Voice (one channel)",
+};

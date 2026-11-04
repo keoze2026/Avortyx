@@ -1,4 +1,5 @@
 import type { Call } from "@/lib/types";
+import { NO_VOICE_LABELS } from "@/lib/ai-labels";
 
 /** The outcome buckets surfaced on the Reports page: every clickable total in
  *  the Call Summary's footer row. */
@@ -9,7 +10,10 @@ export type CallStatusFilter =
   | "converted"
   | "notConnected"
   | "live"
-  | "repeated";
+  | "repeated"
+  // CH-546: the AI audit's No Voice labels (Dead Caller, No Beep or Customer,
+  // Only Agent + Beeping) - our team only.
+  | "noVoice";
 
 /**
  * Single source of truth for what "Connected", "Qualified" and "Not
@@ -38,6 +42,9 @@ export function matchesCallStatusFilter(call: Call, filter: CallStatusFilter): b
     // It fell through to the Not Connected rule below, so clicking Repeated
     // could list nothing.
     return call.isDuplicate === true;
+  }
+  if (filter === "noVoice") {
+    return NO_VOICE_LABELS.has(call.aiLabel ?? "");
   }
   if (filter === "live") {
     // Calls still going on right now: ringing or talking.

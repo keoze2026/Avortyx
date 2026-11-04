@@ -32,6 +32,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import type { CallLogQuery, EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.service";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
+import { matchesAiLabel } from "@/lib/ai-labels";
 import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
@@ -64,6 +65,7 @@ const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
   notConnected: "toolsUI.reports.summary.columns.noConnect",
   live: "toolsUI.reports.summary.columns.live",
   repeated: "toolsUI.reports.summary.columns.dupe",
+  noVoice: "x546.noVoice",
 };
 
 /** Shown while the data on hand belongs to a different range (stable references). */
@@ -335,6 +337,8 @@ export default function ReportsPage() {
   // rows — and no status filter is set.
   const summariesForTable = useMemo(() => {
     if (filters.statuses.length > 0) return undefined;
+    // CH-546: nor an AI label - the aggregates know nothing of it.
+    if (filters.aiLabels.length > 0) return undefined;
     // A clicked row on a tab with no aggregate behind it (dialed number,
     // destination, date, …) can't narrow any aggregate: count from the calls.
     const drillOn = drill ? drillEntity(drill) : undefined;
@@ -376,6 +380,7 @@ export default function ReportsPage() {
     const buyerSet = new Set(filters.buyerIds);
     const publisherSet = new Set(filters.publisherIds);
     const statusSet = new Set(filters.statuses);
+    const aiLabels = filters.aiLabels;
 
     // Date scoping already happened server-side (dateFrom/dateTo above) — no
     // client-side day-boundary re-check here, since that's what applied the
@@ -389,6 +394,8 @@ export default function ReportsPage() {
         return false;
       }
       if (statusSet.size > 0 && !statusSet.has(c.status)) return false;
+      // CH-546: AI Label filter (any of the ticked labels).
+      if (aiLabels.length > 0 && !aiLabels.some((f) => matchesAiLabel(c, f))) return false;
       if (drill && !callInDrill(c, drill, timeZone)) return false;
       return true;
     });
@@ -453,12 +460,15 @@ export default function ReportsPage() {
       return null;
     }
     if (filters.statuses.length > 0) return null;
+    // CH-546: an AI Label filter is applied here in the browser: export what is on screen.
+    if (filters.aiLabels.length > 0) return null;
     // Built in the browser: the backend query has no converted or missed filter.
     if (
       statusFilter === "notConnected" ||
       statusFilter === "live" ||
       statusFilter === "converted" ||
-      statusFilter === "repeated"
+      statusFilter === "repeated" ||
+      statusFilter === "noVoice"
     ) return null;
     return {
       dateFrom: fromKey,
