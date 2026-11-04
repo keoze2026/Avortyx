@@ -82,6 +82,7 @@ const AI_LABEL_KEYS: Record<string, string> = {
   "no voice | no beep or customer": "x543.label.agent_only",
   "no voice | only agent + beeping": "x543.label.agent_beep",
   "voice found": "x543.label.mixed",
+  "voicemail / ivr": "x543.label.ivr",
   "voice (one channel)": "x543.label.mixed", // files made before CH-548
   "pending ai check": "x543.pending",
 };

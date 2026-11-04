@@ -2409,3 +2409,14 @@ keyframe every 2 s, index at the front (`public/videos/avortyx-campaign-groups-v
 `avortyx-number-pools-v1.mp4`, with a poster each).
 
 Commit: see git log --grep CH-550
+
+## CH-553 - AI audit: Voicemail / IVR label (FRONTEND)
+
+Goes with backend CH-553 (PANNs: no speech and mostly music = Voicemail / IVR;
+4 Nov, three IVR calls had come out Dead Caller). "Voicemail / IVR" on the AI
+Audit page (its own filter with a count; the audit team can pick it under
+Wrong), in the Reports AI Label filter, the Call Log and its export; English,
+Russian, Japanese and Chinese. It is not one of the three No Voice types, so
+it is not in No Voice / No Voice %.
+
+Commit: see git log --grep CH-553

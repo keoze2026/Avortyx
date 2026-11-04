@@ -1578,4 +1578,5 @@ const AI_EXPORT_NAMES: Record<string, string> = {
   agent_only: "No Voice | No Beep or Customer",
   agent_beep: "No Voice | Only Agent + Beeping",
   mixed: "Voice Found",
+  ivr: "Voicemail / IVR",
 };

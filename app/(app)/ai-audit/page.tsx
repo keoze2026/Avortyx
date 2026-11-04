@@ -44,8 +44,8 @@ import { onReportChanged } from "@/lib/report-events";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { cn } from "@/lib/utils";
 
-/** Labels a reviewer can pick (Sir's four). */
-const LABELS = ["valid", "dead_caller", "agent_only", "agent_beep"] as const;
+/** Labels a reviewer can pick (Sir's four, and Voicemail / IVR - CH-553). */
+const LABELS = ["valid", "dead_caller", "agent_only", "agent_beep", "ivr"] as const;
 type Label = (typeof LABELS)[number];
 const FILTERS = [
   "",
@@ -54,6 +54,7 @@ const FILTERS = [
   "dead_caller",
   "agent_only",
   "agent_beep",
+  "ivr",
   "valid",
   "fault",
   "reviewed",
@@ -91,7 +92,7 @@ interface Row {
 }
 
 type Counts = Record<
-  "total" | "pending" | "noVoice" | "deadCaller" | "agentOnly" | "agentBeep" | "valid" | "mixed" | "fault" | "reviewed" | "wrong",
+  "total" | "pending" | "noVoice" | "deadCaller" | "agentOnly" | "agentBeep" | "ivr" | "valid" | "mixed" | "fault" | "reviewed" | "wrong",
   number
 >;
 
@@ -118,6 +119,7 @@ const FILTER_COUNT: Record<Filter, keyof Counts> = {
   dead_caller: "deadCaller",
   agent_only: "agentOnly",
   agent_beep: "agentBeep",
+  ivr: "ivr",
   valid: "valid",
   fault: "fault",
   reviewed: "reviewed",
