@@ -19,6 +19,7 @@ import { BRAND } from "@/lib/constants";
 /** Pages whose layout exports a `metadata.title`, and that title's key. */
 const TITLE_KEYS: Array<[RegExp, string]> = [
   [/^\/insights(\/|$)/, "nav.aiInsights"],
+  [/^\/ai-audit(\/|$)/, "nav.aiAudit"],
   [/^\/integrations(\/|$)/, "nav.integrations"],
   [/^\/live(\/|$)/, "nav.liveMonitor"],
   [/^\/marketplace(\/|$)/, "nav.marketplace"],

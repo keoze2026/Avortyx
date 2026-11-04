@@ -2328,3 +2328,26 @@ backend CH-542; uses the live connection of CH-538.
   once when looked at again.
 - The live connection now tells each page which events came; the header's
   Live / Total ignore a settings change.
+
+## CH-543 - AI Audit page: Sir's four labels, each side, live, Correct / Wrong (FRONTEND)
+
+Sir, 4 Nov - AI audit upgrade. Goes with backend CH-543 (replaces CH-541,
+never deployed). Main account only: menu entry for staff logins; the
+backend refuses every buyer and publisher login.
+
+- New menu entry **AI Audit** under Insights, next to AI Insights (the
+  Reporting tick, like Reports).
+- A day (EST) of answered calls: time, caller, campaign / publisher > buyer
+  and line, talk, the AI label - Valid Call / No Voice | Dead Caller / No
+  Voice | No Beep or Customer / No Voice | Only Agent + Beeping, with its
+  confidence and "Possible audio fault" - and what each side did: caller and
+  agent speech seconds, when the caller first spoke, beeping on the caller
+  side; Listen.
+- "Pending AI check" until the call is checked; the row turns into its label
+  by itself (live connection, CH-538 / backend "ai.checked").
+- Filters with counts: All, Pending, All No Voice, each No Voice label,
+  Valid Call, Possible audio fault, Marked by team, Marked wrong.
+- **Correct / Wrong** on every checked call; Wrong asks for the right label
+  (and a note). The AI accuracy % (last 30 days) heads the page.
+- English, Russian, Japanese, Chinese.
+- Reports / Call Log filter and No Voice columns: Part 2.

@@ -40,6 +40,8 @@ export const ROUTES = {
   activeBots: "/active-bots",
   marketplace: "/marketplace",
   insights: "/insights",
+  // CH-541: AI audit of call recordings - main account only.
+  aiAudit: "/ai-audit",
   integrations: "/integrations",
   billing: "/billing",
   settings: "/settings",

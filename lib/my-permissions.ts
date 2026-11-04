@@ -29,6 +29,7 @@ const PAGE_AREA: Array<[prefix: string, area: string]> = [
   [ROUTES.reports, "reporting"],
   [ROUTES.automatedReports, "reporting"],
   [ROUTES.calls, "reporting"],
+  [ROUTES.aiAudit, "reporting"],
   [ROUTES.campaigns, "campaigns"],
   [ROUTES.numbers, "tracking-numbers"],
   [ROUTES.tfnCheck, "tracking-numbers"],
