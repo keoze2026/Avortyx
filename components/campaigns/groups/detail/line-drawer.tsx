@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { OnlyTopBox } from "./add-drawer";
 import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { campaignGroups, type CampaignGroup, type SetLineCampaign } from "@/lib/api/services/campaign-groups.service";
@@ -133,6 +134,8 @@ export function LineDrawer({
   const [mode, setMode] = useState<"same" | "per">("same");
   const [cells, setCells] = useState<Record<string, Cell>>({});
   const [samePriority, setSamePriority] = useState("");
+  // CH-562: the only destination at this priority in every campaign it is in.
+  const [onlyTop, setOnlyTop] = useState(false);
   const [sameWeight, setSameWeight] = useState("");
   const [all, setAll] = useState({ priority: "", weight: "" });
   const [limits, setLimits] = useState<LimitsDraft>(limitsOf(null));
@@ -145,6 +148,7 @@ export function LineDrawer({
     setSamePriority(row.mixed ? "" : String(row.minPriority));
     setSameWeight(row.weights.length === 1 ? String(row.weights[0]) : "");
     setAll({ priority: "", weight: "" });
+    setOnlyTop(false);
     setLimits(limitsOf(row.dest));
   }, [row, initial]);
 
@@ -166,7 +170,10 @@ export function LineDrawer({
       const a = initial[c.id];
       const b = target[c.id];
       if (!a || !b) continue;
-      if (a.included !== b.included || (b.included && (a.priority !== b.priority || a.weight !== b.weight))) {
+      // CH-562: with "only line at this priority" every campaign it is in is
+      // sent, even where its priority is already right - the others there move.
+      const forceTop = onlyTop && mode === "same" && samePriority.trim() !== "" && b.included;
+      if (forceTop || a.included !== b.included || (b.included && (a.priority !== b.priority || a.weight !== b.weight))) {
         out.push(
           b.included
             ? { campaignId: c.id, included: true, priority: toInt(b.priority) ?? 1, weight: toInt(b.weight) ?? 100 }
@@ -175,7 +182,7 @@ export function LineDrawer({
       }
     }
     return out;
-  }, [initial, target, group]);
+  }, [initial, target, group, onlyTop, mode, samePriority]);
 
   const destPatch = useMemo(() => (row?.dest ? limitsPatch(limitsOf(row.dest), limits) : {}), [row, limits]);
   const changeCount = campaignChanges.length + Object.keys(destPatch).length;
@@ -215,7 +222,12 @@ export function LineDrawer({
     try {
       if (campaignChanges.length) {
         try {
-          await campaignGroups.setLine(group.id, { number: row.number, buyerId: row.buyerId ?? undefined, campaigns: campaignChanges });
+          await campaignGroups.setLine(group.id, {
+            number: row.number,
+            buyerId: row.buyerId ?? undefined,
+            campaigns: campaignChanges,
+            onlyTop: onlyTop && mode === "same" && samePriority.trim() !== "",
+          });
         } catch (e) {
           // A server not updated yet has no /line: the same priority and
           // weight everywhere the line already is still goes through /apply.
@@ -297,6 +309,14 @@ export function LineDrawer({
                   <div className="text-[11px] font-medium">{t("cg.col.weight")}</div>
                   <Input type="number" min={0} value={sameWeight} onChange={(e) => setSameWeight(e.target.value)} placeholder={t("x415.keepEach")} className="h-9 font-mono" />
                   <p className="text-[11px] text-muted-foreground">{t("x415.weightHint")}</p>
+                </div>
+                <div className="col-span-2">
+                  <OnlyTopBox
+                    checked={onlyTop && samePriority.trim() !== ""}
+                    disabled={samePriority.trim() === ""}
+                    priority={Number(samePriority) || 1}
+                    onChange={setOnlyTop}
+                  />
                 </div>
               </div>
               <div className="space-y-2">

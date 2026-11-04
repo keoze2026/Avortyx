@@ -2528,3 +2528,21 @@ destinations table) or jumped back to 1 (in the destination's edit window).
 - Campaign Groups boxes already worked this way.
 
 Commit: see git log --grep CH-560
+
+## CH-562 - Campaign Groups: who is at the top, and "Only line at this priority" (FRONTEND)
+
+Yanko, 5 Nov: "today i had spent a lot of time adjusting priorities for SOS &
+top filling tfns ... we still have to go & look on each camp to confirm if any
+other tfn is top too ... i saw many other tfns set there too which slows down
+on filling SOS tfns." Goes with backend CH-562.
+
+- New tab "Top Priority" on a group: every campaign with the destinations at
+  its top priority (live ones green, paused grey); the campaigns where more
+  than one live destination shares the top come first, marked "Shared by N
+  live", with a summary line.
+- "Only line at priority N" when adding a destination to the group and when
+  editing a destination (one priority for every campaign): every other
+  destination at that priority in those campaigns moves one step down, so the
+  SOS TFN gets the calls first. One destination at a time; off unless ticked.
+
+Commit: see git log --grep CH-562

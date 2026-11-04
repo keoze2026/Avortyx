@@ -32,6 +32,7 @@ import {
   type CampaignGroup,
   type GroupHistoryItem,
   type GroupLine,
+  type GroupTop,
 } from "@/lib/api/services/campaign-groups.service";
 import { ROUTES } from "@/lib/constants";
 import { formatLocalDateTime } from "@/lib/format";
@@ -50,7 +51,7 @@ import { RemoveDialog } from "./remove-dialog";
 import { TypeCell } from "./type-cell";
 import { CampaignsBar, LineLabel, PriorityCell } from "./ui";
 
-type Tab = "destinations" | "campaigns" | "history";
+type Tab = "destinations" | "tops" | "campaigns" | "history";
 
 export function GroupDetail({
   groupId,
@@ -81,6 +82,7 @@ export function GroupDetail({
   const [group, setGroup] = useState<CampaignGroup | null | undefined>(undefined);
   const [allGroups, setAllGroups] = useState<CampaignGroup[]>([]);
   const [lines, setLines] = useState<GroupLine[] | null>(null);
+  const [tops, setTops] = useState<GroupTop[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("destinations");
 
@@ -104,7 +106,14 @@ export function GroupDetail({
       setAllGroups(list);
       const g = list.find((x) => x.id === groupId) ?? null;
       setGroup(g);
-      setLines(g && g.campaigns.length ? await campaignGroups.destinations(g.id) : []);
+      if (g && g.campaigns.length) {
+        const o = await campaignGroups.overview(g.id);
+        setLines(o.items);
+        setTops(o.tops);
+      } else {
+        setLines([]);
+        setTops([]);
+      }
     } catch (e) {
       setError(friendlyErrorMessage(e));
     }
@@ -300,6 +309,7 @@ export function GroupDetail({
         {(
           [
             ["destinations", t("x415.tabDestinations"), rows.length],
+            ["tops", t("x562.tab"), tops ? tops.filter((x) => x.liveAtTop > 1).length : null],
             ["campaigns", t("x415.tabCampaigns"), group.campaigns.length],
             ["history", t("x415.tabHistory"), null],
           ] as [Tab, string, number | null][]
@@ -521,6 +531,7 @@ export function GroupDetail({
         </div>
       )}
 
+      {tab === "tops" && <TopsTab tops={tops} />}
       {tab === "campaigns" && <CampaignsTab group={group} lines={lines ?? []} />}
       {tab === "history" && <HistoryTab groupId={group.id} />}
 
@@ -661,6 +672,59 @@ function HistoryTab({ groupId }: { groupId: string }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** CH-562 (Yanko, 5 Nov: "we still have to go & look on each camp to confirm
+ *  if any other tfn is top too"): every campaign of the group and the
+ *  destinations at its top priority. More than one LIVE there = they share
+ *  the calls; the campaigns where that happens come first. */
+function TopsTab({ tops }: { tops: GroupTop[] | null }) {
+  const { t } = useTranslation();
+  if (!tops) return <p className="py-8 text-center text-sm text-muted-foreground">…</p>;
+  const sorted = [...tops].sort((a, b) => Number(b.liveAtTop > 1) - Number(a.liveAtTop > 1) || a.campaignName.localeCompare(b.campaignName, undefined, { numeric: true }));
+  const shared = tops.filter((x) => x.liveAtTop > 1).length;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {shared ? fill(t("x562.sharedSummary"), { n: shared, total: tops.length }) : t("x562.allClear")}
+      </p>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <ul className="divide-y divide-border/60">
+          {sorted.map((c) => (
+            <li key={c.campaignId} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start">
+              <div className="w-40 shrink-0">
+                <div className="text-sm font-semibold"><LocalName name={c.campaignName} /></div>
+                <div className="text-xs text-muted-foreground">
+                  {c.priority === null ? t("x562.noLines") : fill(t("x562.topIs"), { p: c.priority })}
+                </div>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                {c.lines.map((l) => (
+                  <span
+                    key={`${l.number}|${l.buyerName}`}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-xs",
+                      l.live ? "border-emerald-500/30 bg-emerald-500/10 text-foreground" : "border-border text-muted-foreground",
+                    )}
+                    title={l.live ? t("x562.live") : t("x562.paused")}
+                  >
+                    <span className={cn("h-1.5 w-1.5 rounded-full", l.live ? "bg-emerald-400" : "bg-muted-foreground/50")} />
+                    {l.buyerName && <span className="font-sans font-semibold">{l.buyerName}</span>}
+                    {l.number}
+                  </span>
+                ))}
+              </div>
+              {c.liveAtTop > 1 && (
+                <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">
+                  {fill(t("x562.sharedBy"), { n: c.liveAtTop })}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

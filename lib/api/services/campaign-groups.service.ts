@@ -70,6 +70,9 @@ export interface ApplyChange {
   revenue?: number;
   convertOn?: "incoming" | "connected" | "length";
   convertSeconds?: number;
+  /** CH-562: the only destination at this priority in each campaign (the
+   *  others there move one step down). One destination at a time. */
+  onlyTop?: boolean;
 }
 
 export interface ApplyResult {
@@ -107,6 +110,17 @@ export interface SetLineChange {
   revenue?: number;
   convertOn?: "incoming" | "connected" | "length";
   convertSeconds?: number;
+  /** CH-562: see ApplyChange.onlyTop. */
+  onlyTop?: boolean;
+}
+
+/** CH-562: one campaign of the group - the destinations at its top priority. */
+export interface GroupTop {
+  campaignId: string;
+  campaignName: string;
+  priority: number | null;
+  liveAtTop: number;
+  lines: { number: string; buyerName: string; weight: number; live: boolean }[];
 }
 
 /** CH-415: one line of a group's Change history. */
@@ -143,6 +157,12 @@ export const campaignGroups = {
   async destinations(id: string): Promise<GroupLine[]> {
     const res = await http.get<{ items: GroupLine[] }>(`${BASE}${id}/destinations`);
     return res.items ?? [];
+  },
+
+  /** CH-562: the destinations and, per campaign, who is at the top. */
+  async overview(id: string): Promise<{ items: GroupLine[]; tops: GroupTop[] }> {
+    const res = await http.get<{ items: GroupLine[]; tops?: GroupTop[] }>(`${BASE}${id}/destinations`);
+    return { items: res.items ?? [], tops: res.tops ?? [] };
   },
 
   async apply(change: ApplyChange): Promise<ApplyResult> {

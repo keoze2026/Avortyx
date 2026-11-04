@@ -88,6 +88,9 @@ export function AddDestinationDrawer({
   const [scope, setScope] = useState<"all" | "some">("all");
   const [some, setSome] = useState<Set<string>>(new Set());
   const [priority, setPriority] = useState("1");
+  // CH-562 (Yanko, 5 Nov): this destination the only one at its priority in
+  // each campaign it is added to - the others there move one step down.
+  const [onlyTop, setOnlyTop] = useState(false);
   const [weight, setWeight] = useState("100");
   const [rate, setRate] = useState("");
   const [convertOn, setConvertOn] = useState<ConvertOn>("");
@@ -108,6 +111,7 @@ export function AddDestinationDrawer({
     setSome(new Set());
     setPriority("1");
     setWeight("100");
+    setOnlyTop(false);
     setRate("");
     setConvertOn("");
     setSeconds("");
@@ -181,6 +185,8 @@ export function AddDestinationDrawer({
   };
 
   const p = toInt(priority) ?? 1;
+  // "Only line at this priority" works one destination at a time.
+  const onlyOne = source !== "existing" || adding.length <= 1;
   const w = toInt(weight) ?? 100;
   const share = shareAt(rows, p, w, key);
 
@@ -219,6 +225,7 @@ export function AddDestinationDrawer({
         buyerId: d.buyerId || undefined,
         campaigns: camps.map((c) => ({ campaignId: c.id, included: true, priority: p, weight: w })),
         ...billing,
+        onlyTop: onlyTop && onlyOne,
       });
     } catch (e) {
       // A server not updated yet has no /line: every missing campaign still
@@ -322,6 +329,7 @@ export function AddDestinationDrawer({
           buyerId,
           campaigns: targets.map((c) => ({ campaignId: c.id, included: true, priority: p, weight: w })),
           ...billing,
+          onlyTop,
         });
       } catch (e) {
         // A server not updated yet has no /line: every missing campaign with
@@ -528,6 +536,7 @@ export function AddDestinationDrawer({
                 <p className="text-[11px] text-muted-foreground">{t("x415.weightHint")}</p>
               </div>
             </div>
+            <OnlyTopBox checked={onlyTop && onlyOne} disabled={!onlyOne} priority={p} onChange={setOnlyTop} />
             <p className="flex gap-2 rounded-lg border border-accent/20 bg-accent/5 p-2.5 text-[11px] text-muted-foreground">
               <Info className="mt-px h-3.5 w-3.5 shrink-0 text-accent" />
               <span>
@@ -668,5 +677,38 @@ export function AddDestinationDrawer({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** CH-562: "Only line at this priority" - Yanko, 5 Nov: setting an SOS TFN
+ *  to the top, other TFNs were at the top too and shared its calls. */
+export function OnlyTopBox({
+  checked,
+  disabled,
+  priority,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  priority: number;
+  onChange: (v: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <label
+      className={cn(
+        "mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3",
+        checked && "border-accent/50 bg-accent/5",
+        disabled && "cursor-not-allowed opacity-60",
+      )}
+    >
+      <Checkbox checked={checked} disabled={disabled} onCheckedChange={(v) => onChange(v === true)} className="mt-0.5" />
+      <span>
+        <span className="block text-sm font-medium">{fill(t("x562.onlyTop"), { p: priority })}</span>
+        <span className="block text-xs text-muted-foreground">
+          {disabled ? t("x562.onlyTopOne") : fill(t("x562.onlyTopHint"), { p: priority, next: priority + 1 })}
+        </span>
+      </span>
+    </label>
   );
 }
