@@ -18,7 +18,11 @@ async function reachable() {
   const abort = new AbortController();
   const timer = window.setTimeout(() => abort.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE_URL}/api/white-label/config`, { cache: "no-store", credentials: "omit", signal: abort.signal });
+    // CH-518: the API's own health check (200 when it and its database answer).
+    // It asked /api/white-label/config, whose 404 was a red console line each
+    // minute. Any answer under 500 still counts, so an API without /api/health
+    // (404) reads "operational" as before.
+    const res = await fetch(`${API_BASE_URL}/api/health`, { cache: "no-store", credentials: "omit", signal: abort.signal });
     return res.status < 500;
   } catch {
     return false;

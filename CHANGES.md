@@ -2166,3 +2166,21 @@ routed calls - 2599, 4105 first, then the 0-call TFNs."
   calls today first, most calls first, then those with 0 calls today. Within
   each, switched-on before switched-off. Nothing is hidden.
 - Type-check unchanged. No backend change.
+
+## CH-518 - Login page: quiet browser console (FRONTEND)
+
+The login page's live strip printed red errors in the browser console all the
+time, which people took for portal faults:
+- the Bitcoin price asked CoinGecko, which refuses the portal's requests
+  (CORS) - two red lines every minute. It now asks Coinbase's stats, the same
+  exchange the live feed and the chart already use (the chart's requests
+  there never failed);
+- the live Coinbase feed retried for as long as the page was open when a
+  network blocks it. It now stops after 5 failures in a row; the price keeps
+  coming once a minute from the stats;
+- the status dot asked /api/white-label/config and took its 404 as "up". It
+  now asks /api/health (CH-517 BACKEND); any answer under 500 still counts, so
+  it reads right before and after the backend update.
+- Left as is: "THREE.Clock deprecated" is printed by the 3D background
+  library itself (@react-three/fiber), not our code; harmless.
+- Type-check unchanged.

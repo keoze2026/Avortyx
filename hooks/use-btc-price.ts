@@ -12,7 +12,10 @@ import { useEffect, useRef, useState } from "react";
 //    and is polled every minute whenever the live feed is down.
 // The feed closes while the tab is hidden and reconnects by itself, waiting longer after each failure.
 
-const GECKO = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true";
+// CH-518: the price when the live feed is down, from the same exchange as the
+// feed and the chart. CoinGecko refused the portal's requests (CORS), which
+// printed two red lines in the console every minute on the login page.
+const STATS = "https://api.exchange.coinbase.com/products/BTC-USD/stats";
 const FEED = "wss://ws-feed.exchange.coinbase.com";
 const CANDLES = "https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=900";
 const SHOW_EVERY_MS = 1000;
@@ -42,7 +45,7 @@ export function useBtcPrice(): BtcPrice {
   useEffect(() => {
     let stopped = false;
     let ws: WebSocket | null = null;
-    let retry = 0, retryTimer = 0, pollTimer = 0, candleTimer = 0;
+    let retry = 0, retryTimer = 0, pollTimer = 0, candleTimer = 0, failures = 0;
 
     // show a price: remember which way it moved
     function show(price: number, change: number | null, live: boolean, day?: Day) {
@@ -63,12 +66,14 @@ export function useBtcPrice(): BtcPrice {
 
     async function poll() {
       try {
-        const res = await fetch(GECKO, { cache: "no-store" });
+        const res = await fetch(STATS, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        const price = data?.bitcoin?.usd, change = data?.bitcoin?.usd_24h_change;
-        if (!stopped && typeof price === "number" && !(ws && ws.readyState === WebSocket.OPEN)) {
-          show(price, typeof change === "number" ? change : null, false);
+        const price = Number(data?.last), open = Number(data?.open);
+        const num = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
+        if (!stopped && Number.isFinite(price) && price > 0 && !(ws && ws.readyState === WebSocket.OPEN)) {
+          show(price, open > 0 ? ((price - open) / open) * 100 : null, false,
+            { high: num(data?.high), low: num(data?.low), volume: num(data?.volume) });
         }
       } catch {
         // offline or rate-limited: keep what is shown
@@ -93,6 +98,7 @@ export function useBtcPrice(): BtcPrice {
       ws = new WebSocket(FEED);
       ws.onopen = () => {
         retry = 0;
+        failures = 0;
         ws?.send(JSON.stringify({ type: "subscribe", product_ids: ["BTC-USD"], channels: ["ticker"] }));
         setState((s) => ({ ...s, live: true }));
       };
@@ -116,6 +122,10 @@ export function useBtcPrice(): BtcPrice {
         ws = null;
         setState((s) => ({ ...s, live: false }));
         if (stopped || document.hidden) return;
+        // CH-518: a network that blocks the feed made this retry for as long as
+        // the page was open, one red console line each time. After 5 failures
+        // in a row it stops; the price keeps coming once a minute from STATS.
+        if (++failures >= 5) return;
         retry = Math.min(retry + 1, 5);
         retryTimer = window.setTimeout(connect, 1000 * 2 ** retry); // 2s, 4s ... 32s
       };
