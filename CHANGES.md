@@ -2466,3 +2466,30 @@ the front view style. Put this under AI audit report." Goes with backend CH-557.
   - Bigger text: tables 14 px, small text 13 px (was 12-13 / 12).
 
 Commit: see git log --grep CH-557
+
+## CH-558 - Notifications organised: grouped, by day, Sir's design (FRONTEND)
+
+Sir, 5 Nov: "We need notification box more organized" - "this is too long to
+read" (the page listed "Buyer TP9 has high no-answer rate", "Buyer RHS ...",
+"Campaign C-16 has no active buyers", "Campaign C-15 ..." one row each, with
+raw "pause_buyer" / "assign_buyer" buttons). In Sir's design:
+
+- One entry per kind of problem (lib/notifications/feed.ts):
+  "7 buyers are missing calls - TP9, RHS, Q06 and 4 more" and "15 campaigns
+  have no active buyers - C-16, C-15, C-14 and 12 more". On the page the
+  first shows each buyer's % missed (red from 80%) and View buyers; the
+  second Assign buyers. Cap alerts and other alerts stay one entry each.
+  Tab counts and "unread" still count every underlying notification;
+  opening an entry marks all it stands for read.
+- Bell menu: Notifications, Mark all read, a settings button; All / Alerts /
+  Insights (underlined tabs); dot - title - one grey line - time; "N unread"
+  and View all at the foot. The Missed / Cap Over / Low AHT chips are gone.
+- Pop-up alert switches (settings button in the menu, Alert settings on the
+  page): "Pop-up alerts - N on", grouped Calls / Caps / Account / System.
+- Notifications page: "N unread", Mark all read, Alert settings; All /
+  Alerts / Insights / Read; entries grouped under Today / Yesterday / date.
+- Bigger text throughout (titles 15 px, lines 14 px).
+- Same data as before (AI insights, anomalies, cap alerts); English, Russian,
+  Japanese and Chinese.
+
+Commit: see git log --grep CH-558

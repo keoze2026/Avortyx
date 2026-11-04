@@ -1,149 +1,125 @@
 "use client";
 
+/**
+ * Notifications page. CH-558 (Sir, 5 Nov: "We need notification box more
+ * organized" / "this is too long to read"), in Sir's design:
+ *   - "1 unread", Mark all read, Alert settings;
+ *   - All / Alerts / Insights / Read;
+ *   - grouped by day (Today, Yesterday, ...);
+ *   - one entry per kind of problem: "7 buyers are missing calls" with each
+ *     buyer's % missed and View buyers; "15 campaigns have no active buyers"
+ *     with Assign buyers - instead of one row per buyer / campaign.
+ */
 import { useMemo, useState } from "react";
-import { CheckCheck, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { toast } from "sonner";
 
-import { NotificationRow } from "@/components/app-shell/notification-row";
-import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { FeedRow } from "@/components/app-shell/feed-row";
+import { PopupAlertSettings } from "@/components/app-shell/popup-alert-settings";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTranslation } from "@/hooks/use-translation";
-import type { NotificationItem } from "@/lib/mock/notifications";
-import {
-  anomalyToNotification,
-  recommendationToNotification,
-} from "@/lib/notifications/mappers";
-import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
+import { dayLabel, useNotificationFeed, type FeedEntry } from "@/lib/notifications/feed";
 import { useNotificationsReadStore } from "@/lib/store/notifications-read-store";
 import { cn } from "@/lib/utils";
 
-type TabId = "all" | "critical" | "insights" | "read";
-
-const TABS: Array<{ id: TabId; label: string; labelKey: string }> = [
-  { id: "all", label: "All", labelKey: "notificationsUI.menu.tabs.all" },
-  { id: "critical", label: "Alerts", labelKey: "notificationsUI.menu.tabs.alerts" },
-  { id: "insights", label: "Insights", labelKey: "notificationsUI.menu.tabs.insights" },
-  { id: "read", label: "Read", labelKey: "notificationsUI.menu.tabs.read" },
-];
+type TabId = "all" | "alerts" | "insights" | "read";
 
 export default function NotificationsPage() {
-  const { t: tr } = useTranslation();
+  const { t, locale } = useTranslation();
   const [tab, setTab] = useState<TabId>("all");
-
-  // Live data — anomalies (alerts) + recommendations (insights) from the AI
-  // store, hydrated once on app boot by StoreHydrator. The backend has no
-  // dedicated alert-feed endpoint; we synthesize one from these two sources.
-  const anomalies = useAiInsightsStore((s) => s.anomalies);
-  const recommendations = useAiInsightsStore((s) => s.recommendations);
-
-  // Read-state is purely client-side (backend rows have no per-user read
-  // flag). Persisted to localStorage so flips survive refresh and stay in
-  // sync with the topbar dropdown.
-  const readIds = useNotificationsReadStore((s) => s.readIds);
+  const [settings, setSettings] = useState(false);
+  const { entries, counts, unread, allIds } = useNotificationFeed();
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
 
-  const items: NotificationItem[] = useMemo(() => {
-    const merged: NotificationItem[] = [
-      ...anomalies.map(anomalyToNotification),
-      ...recommendations.map(recommendationToNotification),
-    ];
-    return merged.map((n) => ({ ...n, read: !!readIds[n.id] }));
-  }, [anomalies, recommendations, readIds]);
+  const tabs: Array<{ id: TabId; label: string; count: number }> = [
+    { id: "all", label: t("notificationsUI.menu.tabs.all"), count: counts.all },
+    { id: "alerts", label: t("notificationsUI.menu.tabs.alerts"), count: counts.alerts },
+    { id: "insights", label: t("notificationsUI.menu.tabs.insights"), count: counts.insights },
+    { id: "read", label: t("notificationsUI.menu.tabs.read"), count: counts.read },
+  ];
 
-  const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
-
-  const counts: Record<TabId, number> = useMemo(
-    () => ({
-      all: items.length,
-      critical: items.filter((x) => x.severity === "critical" || x.severity === "warn").length,
-      insights: items.filter((x) => x.severity === "insight").length,
-      read: items.filter((x) => x.read).length,
-    }),
-    [items],
-  );
-
-  const filtered = useMemo(
-    () =>
-      items.filter((n) => {
-        if (tab === "all") return true;
-        if (tab === "critical") return n.severity === "critical" || n.severity === "warn";
-        if (tab === "insights") return n.severity === "insight";
-        return n.read;
-      }),
-    [items, tab],
-  );
+  const days = useMemo(() => {
+    const shown = entries.filter((e) =>
+      tab === "all" ? true : tab === "read" ? e.read : tab === "alerts" ? e.kind === "alert" : e.kind === "insight",
+    );
+    const out: Array<{ label: string; items: FeedEntry[] }> = [];
+    for (const e of shown) {
+      const label = dayLabel(e.at, t, locale);
+      const last = out[out.length - 1];
+      if (last && last.label === label) last.items.push(e);
+      else out.push({ label, items: [e] });
+    }
+    return out;
+  }, [entries, tab, t, locale]);
 
   const markAllRead = () => {
-    markAllReadStore(items.map((n) => n.id));
-    toast.success(tr("x5.notifications.allMarkedRead"));
+    markAllReadStore(allIds);
+    toast.success(t("x5.notifications.allMarkedRead"));
   };
 
   return (
-    <>
-      <PageHeader
-        title={tr("notificationsUI.menu.title")}
-        description={
-          unread > 0
-            ? tr("x5.notifications.unreadSummary").replace("{count}", String(unread))
-            : tr("x5.notifications.allCaughtUp")
-        }
-        actions={
-          unread > 0 ? (
-            <Button variant="outline" size="sm" onClick={markAllRead}>
-              <CheckCheck className="h-4 w-4" /> {tr("notificationsUI.menu.markAllRead")}
-            </Button>
-          ) : null
-        }
-      />
-
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-md border border-border bg-secondary/30 p-0.5 w-fit">
-        {TABS.map((t) => {
-          const isActive = tab === t.id;
-          const count = counts[t.id];
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isActive
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tr(t.labelKey)}
-              <span
-                className={cn(
-                  "rounded-full px-1.5 text-[10px] tabular-nums",
-                  isActive
-                    ? "bg-accent/15 text-accent"
-                    : "bg-secondary/60 text-muted-foreground",
-                )}
-              >
-                {count}
-              </span>
+    <div className="mx-auto w-full max-w-4xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("notificationsUI.menu.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {unread > 0 ? t("x558.unread").replace("{n}", String(unread)) : t("x5.notifications.allCaughtUp")}
+          </p>
+        </div>
+        <div className="flex items-center gap-5 text-sm">
+          {unread > 0 && (
+            <button type="button" onClick={markAllRead} className="text-muted-foreground transition-colors hover:text-foreground">
+              {t("notificationsUI.menu.markAllRead")}
             </button>
-          );
-        })}
+          )}
+          <button type="button" onClick={() => setSettings(true)} className="font-medium text-foreground/90 transition-colors hover:text-foreground">
+            {t("x558.alertSettings")}
+          </button>
+        </div>
       </div>
 
-      <Card className="overflow-hidden p-0">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-            <Inbox className="h-7 w-7 text-muted-foreground/60" />
-            <p className="text-sm text-muted-foreground">{tr("x5.notifications.emptyFilter")}</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-border/40">
-            {filtered.map((n) => (
-              <NotificationRow key={n.id} item={n} />
-            ))}
-          </ul>
-        )}
-      </Card>
-    </>
+      <div className="mt-6 flex gap-7 border-b border-border/60">
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            onClick={() => setTab(x.id)}
+            className={cn(
+              "-mb-px border-b-2 pb-3 text-[15px] transition-colors",
+              tab === x.id ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {x.label} <span className="ml-1 text-sm tabular-nums text-muted-foreground">{x.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {days.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+          <Inbox className="h-7 w-7 text-muted-foreground/60" />
+          <p className="text-sm text-muted-foreground">{t("x5.notifications.emptyFilter")}</p>
+        </div>
+      ) : (
+        days.map((d) => (
+          <section key={d.label} className="mt-7">
+            <h2 className="mb-2.5 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{d.label}</h2>
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <ul className="divide-y divide-border/50">
+                {d.items.map((e) => (
+                  <FeedRow key={e.id} entry={e} full />
+                ))}
+              </ul>
+            </div>
+          </section>
+        ))
+      )}
+
+      <Dialog open={settings} onOpenChange={setSettings}>
+        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto p-0">
+          <DialogTitle className="sr-only">{t("x558.alertSettings")}</DialogTitle>
+          <PopupAlertSettings />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
