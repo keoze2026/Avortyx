@@ -314,6 +314,8 @@ function getHangUpSide(c: Call): HangUpSide {
  * Incoming) is told by its Status, "Missed With Conversion".
  */
 function failReasonText(c: Call): string {
+  // CH-529: a TFN test reads "TFN Test" in the file too, as on screen (CH-378).
+  if (isTfnTestCall(c)) return TFN_TEST_TEXT;
   return c.isConverted === true ? "" : failReasonLabel(c.failReason);
 }
 
@@ -334,6 +336,7 @@ function convertedUnanswered(c: Call): boolean {
 const MISSED_WITH_CONVERSION = "Missed With Conversion";
 
 function statusExportText(c: Call): string {
+  if (isTfnTestCall(c)) return PASSED_TEXT;
   if (convertedUnanswered(c)) return MISSED_WITH_CONVERSION;
   return isBusy(c) ? "Busy" : STATUS_LABEL_FALLBACK[c.status];
 }
@@ -355,6 +358,34 @@ function withScreenStatus(table: string[][], callsById: Map<string, Call>): stri
     const next = [...row];
     if (statusCol >= 0 && convertedUnanswered(call)) next[statusCol] = MISSED_WITH_CONVERSION;
     if (reasonCol >= 0) next[reasonCol] = "";
+    return next;
+  });
+}
+
+/** CH-529 (009K, 4 Nov): a TFN test call reads Status "Passed" and Fail Reason
+ *  "TFN Test" on screen (CH-378); the files wrote "TFN Test failed: Routing
+ *  would refuse the call: ..." - half translated, half English. The files now
+ *  read as the screen. Found by the caller ID "TFN Test" or a "TFN Test..."
+ *  reason. */
+const PASSED_TEXT = "Passed";
+const TFN_TEST_TEXT = "TFN Test";
+function withTfnTests(table: string[][]): string[][] {
+  if (table.length < 2) return table;
+  const header = table[0].map((h) => h.trim().toUpperCase());
+  const statusCol = header.indexOf("STATUS");
+  const reasonCol = header.indexOf("FAIL REASON");
+  const callerCol = ["CALLER ID", "CALLER"].map((h) => header.indexOf(h)).find((i) => i >= 0) ?? -1;
+  if (statusCol < 0 && reasonCol < 0) return table;
+  return table.map((row, i) => {
+    if (i === 0) return row;
+    const isTest = isTfnTestCall({
+      callerNumber: callerCol >= 0 ? row[callerCol] : "",
+      failReason: reasonCol >= 0 ? row[reasonCol] : "",
+    });
+    if (!isTest) return row;
+    const next = [...row];
+    if (statusCol >= 0) next[statusCol] = PASSED_TEXT;
+    if (reasonCol >= 0) next[reasonCol] = TFN_TEST_TEXT;
     return next;
   });
 }
@@ -853,7 +884,7 @@ export function CallLogTable({
       triggerDownload(new Blob([CSV_BOM, rowsToCsv(table)], { type: "text/csv;charset=utf-8;" }), `${stem}.csv`);
     } else {
       triggerDownload(
-        csvRowsToXLSX(table, "Call log", renamed(SERVER_EXPORT_NUMERIC_HEADERS), {
+        csvRowsToXLSX(table, loc.active ? t("nav.callLogs") : "Call log", renamed(SERVER_EXPORT_NUMERIC_HEADERS), {
           boldHeader: true,
           linkColumns: renamed(CALL_LOG_LINK_HEADERS),
         }),
@@ -871,12 +902,12 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = withHangUp(withScreenStatus(withFailReasonLabels(withScreenTtc(
+      const table = withTfnTests(withHangUp(withScreenStatus(withFailReasonLabels(withScreenTtc(
         formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
           destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
         }),
         callsById,
-      )), callsById), callsById);
+      )), callsById), callsById));
       setPendingExport({ format, table });
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.exportError")));
@@ -906,7 +937,7 @@ export function CallLogTable({
       return [{ label: english(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) }];
     });
     const loc = exportLocalizer(t, locale);
-    downloadRows(format, localizeColumns(upperLabels([dateCol, ...dataCols]), loc), filtered, dateStamped("call-log"), "Call log", {
+    downloadRows(format, localizeColumns(upperLabels([dateCol, ...dataCols]), loc), filtered, dateStamped("call-log"), loc.active ? t("nav.callLogs") : "Call log", {
       boldHeader: true,
       linkColumns: bothLanguages(CALL_LOG_LINK_HEADERS, loc),
     });

@@ -2225,3 +2225,18 @@ Answer, Yes / No, Caller hung up, the fail reasons).
 - Checked in Russian, Japanese and Chinese on real rows (13868645240,
   A49 W3|7015|, Q11|4605|): every heading and value translated, the rest as
   it was. Type-check clean on the files touched.
+
+## CH-529 - Call log files: TFN test rows and the sheet name (FRONTEND)
+
+Checked on 009K's Russian file after CH-528 (4 Nov):
+- TFN test rows wrote "Тест бесплатного номера не пройден: Routing would
+  refuse the call: Destination missed (TFN off)" - half translated, half
+  English - and their own Status. On screen these calls read Status
+  "Passed" and Fail Reason "TFN Test" (CH-378). Both call-log files (server
+  and browser) and the Call Logs page file now read the same as the screen,
+  in every language (Russian: "Пройден" / "Тест бесплатного номера"). This
+  also applies to English files.
+- The Excel sheet tab was "Call log" / "Calls" in every language; it now
+  takes the menu's own name in the chosen language ("Журнал звонков",
+  "通話ログ", "通话日志"). English unchanged.
+- Type-check clean on the files touched.

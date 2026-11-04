@@ -56,6 +56,8 @@ const STATUS_KEYS: Record<string, string> = {
   "in progress": "toolsUI.reports.callLog.statusLabel.live",
   busy: "hangUp.busy",
   "missed with conversion": "status.missedWithConversion",
+  // CH-529: a TFN test call (CH-378).
+  passed: "x378.passed",
 };
 
 const HANG_UP_KEYS: Record<string, string> = {

@@ -66,7 +66,8 @@ function callExportColumns(
     { label: DESTINATION_NAME_HEADER, value: (c) => destinationOf(c, destinationNames).name },
     { label: DESTINATION_NUMBER_HEADER, value: (c) => destinationOf(c, destinationNames).number },
     { label: "State", value: (c) => c.geo.state ?? "" },
-    { label: "Status", value: (c) => statusLabel(c.statusRaw ?? c.status) },
+    // CH-529: a TFN test reads "Passed", as in Reports (CH-378).
+    { label: "Status", value: (c) => (isTfnTestCall(c) ? "Passed" : statusLabel(c.statusRaw ?? c.status)) },
     { label: DURATION_HEADER, value: (c) => formatExportDuration(c.durationSec) },
     { label: "Payout", value: (c) => c.payout },
     { label: "Revenue", value: (c) => c.revenue },
@@ -222,7 +223,7 @@ export default function CallsPage() {
       ),
       filtered,
       dateStamped(`calls-${range}`),
-      "Calls",
+      loc.active ? t("nav.callLogs") : "Calls",
       { boldHeader: true, linkColumns: bothLanguages(CALL_LOG_LINK_HEADERS, loc) },
     );
     toast.success(
