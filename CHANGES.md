@@ -2240,3 +2240,12 @@ Checked on 009K's Russian file after CH-528 (4 Nov):
   takes the menu's own name in the chosen language ("Журнал звонков",
   "通話ログ", "通话日志"). English unchanged.
 - Type-check clean on the files touched.
+
+## CH-530 - Call log files: "TFN Test" caller ID translated too (FRONTEND)
+
+Left after CH-529: a TFN test call's caller ID is the words "TFN Test"
+(CH-344), and the call-log files kept it in English in every language. It
+is now written like its Fail Reason (Russian "Тест бесплатного номера",
+Japanese "フリーダイヤル テスト", Chinese "免费号码测试"). A real caller ID is a
+number and is never touched; English files unchanged. The screen's caller
+column is not changed (still "TFN Test").

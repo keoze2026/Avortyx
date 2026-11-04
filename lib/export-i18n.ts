@@ -71,6 +71,7 @@ const YES_NO_KEYS: Record<string, string> = {
   no: "toolsUI.reports.callLog.repeatedNo",
 };
 const YES_NO_COLUMNS = new Set(["REPEATED", "QUALIFIED", "CONVERTED"]);
+const CALLER_COLUMNS = new Set(["CALLER ID", "CALLER"]);
 
 function translated(t: T, key: string, fallback: string): string {
   const text = t(key);
@@ -105,6 +106,12 @@ export function exportLocalizer(t: T, locale: string): ExportLocalizer {
     if (col === "STATUS") return STATUS_KEYS[word] ? translated(t, STATUS_KEYS[word], cell) : cell;
     if (col === "HANG UP") return HANG_UP_KEYS[word] ? translated(t, HANG_UP_KEYS[word], cell) : cell;
     if (col === "FAIL REASON") return localizeFailReason(cell, locale, t) || cell;
+    // CH-530: a TFN test call's caller ID is the words "TFN Test" (CH-344),
+    // written the same as its Fail Reason ("Тест бесплатного номера"). A real
+    // caller ID is a number and is never touched.
+    if (CALLER_COLUMNS.has(col) && /^tfn\s*test$/i.test(cell.trim())) {
+      return localizeFailReason("TFN Test", locale, t) || cell;
+    }
     if (YES_NO_COLUMNS.has(col)) return YES_NO_KEYS[word] ? translated(t, YES_NO_KEYS[word], cell) : cell;
     return cell;
   };
