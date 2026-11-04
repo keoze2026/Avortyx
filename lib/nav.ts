@@ -56,6 +56,8 @@ export interface NavItem {
   superuserOnly?: boolean;
   /** Shown only to the workspace's main account (CH-477; API keys, CH-243). */
   mainUserOnly?: boolean;
+  /** CH-548: shown only to the billing / audit team logins and the owner. */
+  aiAuditOnly?: boolean;
   /** English fallback used by code that runs outside React (breadcrumbs etc.). */
   label: string;
   /** Dotted translation key under `nav.*`. */
@@ -143,7 +145,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "AI Insights", nameKey: "nav.aiInsights",  href: ROUTES.insights,    icon: Sparkle,  roles: ["admin"] },
       // CH-541 (Sir, 4 Nov): "Add this feature under AI only for main account" -
       // audit and billing team, never a buyer or publisher (backend refuses them too).
-      { label: "AI Audit",    nameKey: "nav.aiAudit",     href: ROUTES.aiAudit,     icon: Headphones, roles: ["admin"] },
+      { label: "AI Audit",    nameKey: "nav.aiAudit",     href: ROUTES.aiAudit,     icon: Headphones, roles: ["admin"], aiAuditOnly: true },
     ],
   },
   {

@@ -87,6 +87,9 @@ export function usePermissions() {
   const rawRole = useMyPermissions((s) => s.rawRole);
   const load = useMyPermissions((s) => s.load);
   const isStaff = !!user && user.role !== "buyer" && user.role !== "publisher";
+  // CH-548: the AI Audit page opened by its address goes back to the Dashboard
+  // for anyone not on the billing / audit team list.
+  const canAiAudit = isStaff && user?.canAiAudit === true;
 
   React.useEffect(() => {
     if (user?.id && isStaff) void load(user.id);
@@ -98,6 +101,7 @@ export function usePermissions() {
     const can = (area: string, action = "view") => !limited || permissions!.has(`${area}.${action}`);
     /** May this employee see this page at all? (Area with nothing ticked = no.) */
     const canSeePath = (pathname: string) => {
+      if (!canAiAudit && (pathname === ROUTES.aiAudit || pathname.startsWith(ROUTES.aiAudit + "/"))) return false;
       if (!limited) return true;
       if (pathname === ROUTES.workspace || pathname.startsWith(ROUTES.workspace + "/")) return false;
       const area = areaForPath(pathname);
@@ -106,5 +110,5 @@ export function usePermissions() {
       return permissions!.has(`${area}.view`);
     };
     return { limited, can, canSeePath };
-  }, [isStaff, permissions, rawRole]);
+  }, [isStaff, permissions, rawRole, canAiAudit]);
 }

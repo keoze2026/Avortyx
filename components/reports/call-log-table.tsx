@@ -89,7 +89,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { cn } from "@/lib/utils";
-import { NO_VOICE_LABELS, aiLabelKey, aiPending } from "@/lib/ai-labels";
+import { NO_VOICE_LABELS, aiLabelKey, aiPending, useCanAiAudit } from "@/lib/ai-labels";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
  *  so the whole row reads evenly: the portal's Inter in Medium, as in the
@@ -721,17 +721,18 @@ export function CallLogTable({
   // button either (Sir, 20 Oct: restrict downloads for Xypheria). The file is
   // built here in the browser, so the server-side block alone never stopped it.
   const canDownload = usePermissions().can("reporting", "download") && partnerCan("download_reports");
+  const canAiAudit = useCanAiAudit();
   const columns = React.useMemo(() => {
     const out = { ...columnsState };
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
     if (role === "publisher") out.revenue = false;
-    // CH-546: the AI audit is for our team only, never a partner login.
-    if (role === "buyer" || role === "publisher") out.ai = false;
+    // CH-546 / CH-548: the AI audit - billing and audit team logins only.
+    if (!canAiAudit) out.ai = false;
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
     if (!partnerCan("audio_recording")) out.recording = false;
     return out;
-  }, [columnsState, role, partnerHidden, partnerCan]);
+  }, [columnsState, role, partnerHidden, partnerCan, canAiAudit]);
   const [pageSize, setPageSize] = React.useState<number>(limit);
   const [page, setPage] = React.useState(0);
   // Most recent call first until a column header is clicked.
@@ -1011,7 +1012,7 @@ export function CallLogTable({
                 </button>
               </div>
               <div className="max-h-72 overflow-y-auto px-2 py-2">
-                {COLUMNS.map((col) => {
+                {COLUMNS.filter((col) => col.id !== "ai" || canAiAudit).map((col) => {
                   const id = `log-col-${col.id}`;
                   return (
                     <Label
@@ -1576,5 +1577,5 @@ const AI_EXPORT_NAMES: Record<string, string> = {
   dead_caller: "No Voice | Dead Caller",
   agent_only: "No Voice | No Beep or Customer",
   agent_beep: "No Voice | Only Agent + Beeping",
-  mixed: "Voice (one channel)",
+  mixed: "Voice Found",
 };

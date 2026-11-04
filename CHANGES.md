@@ -2373,3 +2373,18 @@ account only throughout - buyers and publishers see none of it.
   No Voice calls with labels, both sides' seconds, comment, times and
   recording links, as an Excel file, for any dates).
 - English, Russian, Japanese, Chinese.
+
+## CH-548 - AI audit for the billing and audit team logins only; "Voice Found" (FRONTEND)
+
+Sir, 4 Nov: "only billing email and audit team email should see this - no
+publisher or buyer ever see this." Goes with backend CH-548 (`can_ai_audit`
+on /me, from AI_AUDIT_EMAILS + the owner).
+
+- `useCanAiAudit()` (lib/ai-labels.ts) is the one check. Without it: no AI
+  Audit in the side menu (opening /ai-audit goes back to the Dashboard), no
+  AI Label column or column choice in the Call Log, no No Voice / No Voice %
+  in Call Summary, no AI Label filter; a kept AI filter is ignored.
+- "Voice (one channel)" is now "Voice Found" (ru / ja / zh too); files still
+  translate the old name.
+
+Commit: see git log --grep CH-548

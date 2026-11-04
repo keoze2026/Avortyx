@@ -6,10 +6,18 @@
  *   dead_caller   No Voice | Dead Caller - both sides silent
  *   agent_only    No Voice | No Beep or Customer - agent speaks, caller silent
  *   agent_beep    No Voice | Only Agent + Beeping - agent speaks, caller side only tones
- *   mixed         Voice (one channel) - recorded before the sides were split
+ *   mixed         Voice Found - recorded before the sides were split (CH-548 name)
  *   ""            Pending AI check (an answered call not checked yet)
  */
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Call } from "@/lib/types";
+
+/** CH-548 (Sir): the AI audit - the AI Audit page, AI Label column and filter,
+ *  No Voice columns - only for the billing and audit team logins and the
+ *  owner (backend /me can_ai_audit). Other staff, buyers and publishers never. */
+export function useCanAiAudit(): boolean {
+  return useAuthStore((s) => s.user?.canAiAudit === true && s.user?.role !== "buyer" && s.user?.role !== "publisher");
+}
 
 export const NO_VOICE_LABELS: ReadonlySet<string> = new Set(["dead_caller", "agent_only", "agent_beep"]);
 

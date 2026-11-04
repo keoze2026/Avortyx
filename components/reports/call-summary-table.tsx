@@ -41,6 +41,7 @@ import { useDestinationsStore } from "@/lib/store/destinations-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useCanAiAudit } from "@/lib/ai-labels";
 import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
@@ -1221,6 +1222,7 @@ export function CallSummaryTable({
   // button either (Sir, 20 Oct: restrict downloads for Xypheria). The file is
   // built here in the browser, so the server-side block alone never stopped it.
   const staffCanDownload = usePermissions().can("reporting", "download");
+  const canAiAudit = useCanAiAudit();
   const canDownload = partnerCanDownload && staffCanDownload;
   const hiddenForRole: ReadonlySet<ColumnKey> = React.useMemo(() => {
     const base: ColumnKey[] =
@@ -1229,8 +1231,10 @@ export function CallSummaryTable({
         : role === "publisher"
           ? ["revenue", "profit", "cost", "noVoice", "noVoicePct"]
           : [];
-    return new Set<ColumnKey>([...base, ...(Array.from(partnerHidden) as ColumnKey[])]);
-  }, [role, partnerHidden]);
+    // CH-548: No Voice columns - billing and audit team logins only.
+    const ai: ColumnKey[] = canAiAudit ? [] : ["noVoice", "noVoicePct"];
+    return new Set<ColumnKey>([...base, ...ai, ...(Array.from(partnerHidden) as ColumnKey[])]);
+  }, [role, partnerHidden, canAiAudit]);
   // The operator's column choices, with Live forced off when it isn't allowed
   // and the partner-hidden money forced off whatever the picker says.
   const visible = React.useMemo(() => {

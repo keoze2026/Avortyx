@@ -18,6 +18,9 @@ export interface User {
   /** The workspace's main account (backend CH-243): the only login shown API
    *  keys - not other admins, managers, publishers or buyers. */
   isMainUser?: boolean;
+  /** CH-548 (Sir): may this login see the AI audit - the billing and audit
+   *  team emails (backend AI_AUDIT_EMAILS) and the owner. Never a partner. */
+  canAiAudit?: boolean;
   /** Whether the user has TOTP-based MFA enrolled on the backend. Drives
    *  the Settings → Security 2FA card and the login challenge gating. */
   mfaEnabled?: boolean;

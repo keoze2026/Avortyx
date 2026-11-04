@@ -12,8 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { AI_LABEL_FILTERS, type AiLabelFilter } from "@/lib/ai-labels";
-import { useAuthStore } from "@/lib/store/auth-store";
+import { AI_LABEL_FILTERS, type AiLabelFilter, useCanAiAudit } from "@/lib/ai-labels";
 import { useBuyersStore } from "@/lib/store/buyers-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -59,9 +58,8 @@ interface ReportsFilterPopoverProps {
 export function ReportsFilterPopover({ filters, onChange }: ReportsFilterPopoverProps) {
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
-  // CH-546: the AI audit is for our team only - never a buyer or publisher.
-  const role = useAuthStore((st) => st.user?.role);
-  const showAi = role !== "buyer" && role !== "publisher";
+  // CH-546 / CH-548: the AI Label filter - billing and audit team logins only.
+  const showAi = useCanAiAudit();
   const AI_OPTIONS = useMemo(
     () => AI_LABEL_FILTERS.map((id) => ({ id, label: t(id === "pending" ? "x543.pending" : `x543.label.${id}`) })),
     [t],

@@ -32,7 +32,7 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import type { CallLogQuery, EntitySummary, SummaryEntity } from "@/lib/api/services/analytics.service";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
 import { matchesCallStatusFilter, type CallStatusFilter } from "@/lib/call-status";
-import { matchesAiLabel } from "@/lib/ai-labels";
+import { matchesAiLabel, useCanAiAudit } from "@/lib/ai-labels";
 import { ROUTES } from "@/lib/constants";
 import { calendarDayKey, dayKeyToLocalDate, zonedDayKey } from "@/lib/format";
 import { REPORTS_POLICY, latestReportDay, latestReportDayKey } from "@/lib/reports-policy";
@@ -72,6 +72,8 @@ const STATUS_FILTER_LABEL_KEYS: Record<CallStatusFilter, string> = {
 const NO_RANGE_CALLS: Call[] = [];
 const NO_SUMMARIES: Record<SummaryEntity, EntitySummary[]> = { campaign: [], buyer: [], publisher: [], carrier: [] };
 
+const NO_AI_LABELS: ReportFilters["aiLabels"] = [];
+
 export default function ReportsPage() {
   const role = useAuthStore((st) => st.user?.role);
   const { t } = useTranslation();
@@ -102,6 +104,10 @@ export default function ReportsPage() {
     setDateRange({ from, to: latestDay });
   }, [dateRange, latestKey, latestDay]);
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
+  // CH-548: the AI Label filter counts only for the billing / audit team logins
+  // (a filter kept from before never empties anyone else's report).
+  const canAiAudit = useCanAiAudit();
+  const aiLabelFilter = canAiAudit ? filters.aiLabels : NO_AI_LABELS;
   // CH-408: "View report" on a campaign page opens this with ?campaign=<id>.
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("campaign");
@@ -338,7 +344,7 @@ export default function ReportsPage() {
   const summariesForTable = useMemo(() => {
     if (filters.statuses.length > 0) return undefined;
     // CH-546: nor an AI label - the aggregates know nothing of it.
-    if (filters.aiLabels.length > 0) return undefined;
+    if (aiLabelFilter.length > 0) return undefined;
     // A clicked row on a tab with no aggregate behind it (dialed number,
     // destination, date, …) can't narrow any aggregate: count from the calls.
     const drillOn = drill ? drillEntity(drill) : undefined;
@@ -373,14 +379,14 @@ export default function ReportsPage() {
       }
     }
     return out;
-  }, [filters, viewSummaries, drill]);
+  }, [filters, viewSummaries, drill, aiLabelFilter]);
 
   const filtered = useMemo(() => {
     const campaignSet = new Set(filters.campaignIds);
     const buyerSet = new Set(filters.buyerIds);
     const publisherSet = new Set(filters.publisherIds);
     const statusSet = new Set(filters.statuses);
-    const aiLabels = filters.aiLabels;
+    const aiLabels = aiLabelFilter;
 
     // Date scoping already happened server-side (dateFrom/dateTo above) — no
     // client-side day-boundary re-check here, since that's what applied the
@@ -399,7 +405,7 @@ export default function ReportsPage() {
       if (drill && !callInDrill(c, drill, timeZone)) return false;
       return true;
     });
-  }, [filters, viewCalls, drill, timeZone, role]);
+  }, [filters, viewCalls, drill, timeZone, role, aiLabelFilter]);
 
   // Columns the admin unticked under this buyer / publisher's Reporting
   // visibility. The Call Performance card follows them like the tables do.
@@ -461,7 +467,7 @@ export default function ReportsPage() {
     }
     if (filters.statuses.length > 0) return null;
     // CH-546: an AI Label filter is applied here in the browser: export what is on screen.
-    if (filters.aiLabels.length > 0) return null;
+    if (aiLabelFilter.length > 0) return null;
     // Built in the browser: the backend query has no converted or missed filter.
     if (
       statusFilter === "notConnected" ||
@@ -479,7 +485,7 @@ export default function ReportsPage() {
       status: statusFilter === "connected" ? "completed" : undefined,
       isQualified: statusFilter === "qualified" ? true : undefined,
     };
-  }, [fromKey, toKey, filters, statusFilter, drill]);
+  }, [fromKey, toKey, filters, statusFilter, drill, aiLabelFilter]);
 
   // Backing out of the PIN screen. Where today can be shown, drop back to
   // today; otherwise there is nothing to show here, so go to the Dashboard.
