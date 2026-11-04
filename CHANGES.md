@@ -2249,3 +2249,15 @@ is now written like its Fail Reason (Russian "Тест бесплатного н
 Japanese "フリーダイヤル テスト", Chinese "免费号码测试"). A real caller ID is a
 number and is never touched; English files unchanged. The screen's caller
 column is not changed (still "TFN Test").
+## CH-532 - Call Log: staff-only Voice column (FRONTEND)
+
+The Reports > Call log page shows the backend's voice check (CH-531): a red
+"No voice" badge, "Voice 12s" (seconds of speech heard) in green, "No file",
+or "…" while not checked yet ("—" when there is no recording). Hover: what
+it means. Sortable (least speech first), in the column picker, and in the
+file built in the browser ("No voice (0s)" / "Voice (12s)", translated).
+- Never for a buyer or publisher login: the column is switched off for those
+  roles here, and the backend sends them nothing (null) anyway.
+- English, Russian, Japanese and Chinese (lib/i18n/extra/voice-check.ts).
+- Type-check clean on the files touched. Needs backend CH-531 to show data;
+  before it, the column just reads "—".

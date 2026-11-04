@@ -42,6 +42,7 @@ const HEADER_KEYS: Record<string, string> = {
   STATUS: "toolsUI.reports.callLog.columns.status",
   "FAIL REASON": "toolsUI.reports.callLog.columns.failReason",
   RECORDING: "toolsUI.reports.callLog.columns.recording",
+  VOICE: "x531.voice",
 };
 
 /** Status words the export writes (any case) -> the screen's key. */
@@ -113,6 +114,12 @@ export function exportLocalizer(t: T, locale: string): ExportLocalizer {
       return localizeFailReason("TFN Test", locale, t) || cell;
     }
     if (YES_NO_COLUMNS.has(col)) return YES_NO_KEYS[word] ? translated(t, YES_NO_KEYS[word], cell) : cell;
+    if (col === "VOICE") {
+      // "No voice (0s)" / "Voice (12s)" / "No file" (CH-532).
+      const m = /^(no voice|voice)(\s*\(.*\))?$/i.exec(cell.trim());
+      if (m) return translated(t, m[1].toLowerCase() === "voice" ? "x531.hasVoice" : "x531.noVoice", m[1]) + (m[2] ?? "");
+      if (word === "no file") return translated(t, "x531.missing", cell);
+    }
     return cell;
   };
   return { active, header, value };

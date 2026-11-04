@@ -112,6 +112,9 @@ interface CallRecordWire {
   platformCost?: string | number | null;
   recordingUrl?: string;
   recordingUri?: string;
+  /** CH-531: voice check (staff only; null for partners). */
+  voiceLabel?: string | null;
+  voiceSeconds?: number | null;
   /* §3.13 calls this `started_at`; the CDR list endpoint has historically
      sent `created_at`. Either one is the call's start instant. */
   startedAt?: string;
@@ -486,6 +489,8 @@ function callRecordToCall(w: CallRecordWire): Call {
     // clean, and `||` would turn it into "not scored".
     fraudScore: w.ipqsFraudScore ?? undefined,
     recordingUrl: w.recordingUrl || w.recordingUri || undefined,
+    voiceLabel: w.voiceLabel || undefined,
+    voiceSeconds: typeof w.voiceSeconds === "number" ? w.voiceSeconds : undefined,
   };
 }
 

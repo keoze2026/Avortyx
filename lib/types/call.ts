@@ -64,6 +64,11 @@ export interface Call {
   isConverted?: boolean;
   /** Backend's spam verdict (`is_spam`). */
   isSpam?: boolean;
+  /** CH-531/532: the recording's voice check - "voice", "no_voice", "missing";
+   *  undefined = not checked yet. Staff only: never sent to a partner login. */
+  voiceLabel?: string;
+  /** Seconds of speech heard in the recording. */
+  voiceSeconds?: number;
   /** Caller's carrier as the backend resolved it ("Verizon", "AT&T", …). */
   carrier?: string;
 }

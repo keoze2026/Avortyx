@@ -155,6 +155,7 @@ type ColumnKey =
   | "hangUp"
   | "status"
   | "failReason"
+  | "voice"
   | "recording";
 
 const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
@@ -177,6 +178,9 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "hangUp", label: "Hang up" },
   { id: "status", label: "Status" },
   { id: "failReason", label: "Fail reason" },
+  // CH-532 (Sir, 4 Nov: AI audit of no-voice calls, "just for us"): what the
+  // recording holds, from the backend's voice check (CH-531). Team only.
+  { id: "voice", label: "Voice" },
   { id: "recording", label: "Recording" },
 ];
 
@@ -196,6 +200,7 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   hangUp: "toolsUI.reports.callLog.columns.hangUp",
   status: "toolsUI.reports.callLog.columns.status",
   failReason: "toolsUI.reports.callLog.columns.failReason",
+  voice: "x531.voice",
   recording: "toolsUI.reports.callLog.columns.recording",
 };
 
@@ -531,6 +536,9 @@ function sortValue(c: Call, key: LogSortKey, publisherNameById: Map<string, stri
       return c.durationSec;
     case "status":
       return STATUS_RANK[c.status];
+    case "voice":
+      // CH-532: least speech first; not checked yet below everything.
+      return typeof c.voiceSeconds === "number" ? c.voiceSeconds : -1;
   }
 }
 
@@ -591,6 +599,15 @@ function LogSortHeader({
   );
 }
 
+/** CH-532: the voice check in a file: "No voice (0s)", "Voice (12s)", "No file". */
+function voiceExportText(c: Call): string {
+  const secs = typeof c.voiceSeconds === "number" ? ` (${Math.round(c.voiceSeconds)}s)` : "";
+  if (c.voiceLabel === "no_voice") return `No voice${secs}`;
+  if (c.voiceLabel === "voice") return `Voice${secs}`;
+  if (c.voiceLabel === "missing") return "No file";
+  return "";
+}
+
 /** Single source of truth for export cell values. Numbers stay numeric. */
 function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, string>): number | string {
   switch (key) {
@@ -626,6 +643,8 @@ function logCellValue(c: Call, key: ColumnKey, publisherNameById: Map<string, st
     case "failReason":
       // The backend's own reason (block_reason) - never a guessed one.
       return failReasonText(c);
+    case "voice":
+      return voiceExportText(c);
     case "recording":
       return c.recordingUrl ?? "";
   }
@@ -715,6 +734,8 @@ export function CallLogTable({
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
     if (role === "publisher") out.revenue = false;
+    // CH-532: the voice check is for our team only, never a partner login.
+    if (role === "buyer" || role === "publisher") out.voice = false;
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;
     if (!partnerCan("audio_recording")) out.recording = false;
     return out;
@@ -1058,6 +1079,7 @@ export function CallLogTable({
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
                 {columns.status && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.failReason && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
+                {columns.voice && <TableHead className="text-center" title={t("x531.tip")}>{t("x531.voice")}</TableHead>}
                 {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
                 <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
               </TableRow>
@@ -1221,6 +1243,11 @@ export function CallLogTable({
                               </div>
                             );
                           })()}
+                        </TableCell>
+                      )}
+                      {columns.voice && (
+                        <TableCell className={`${CELL} text-center`}>
+                          <VoiceCell call={c} />
                         </TableCell>
                       )}
                       {columns.recording && (
@@ -1525,5 +1552,33 @@ function CallRowActions({
         <DollarSign className="h-3.5 w-3.5" />
       </Button>
     </div>
+  );
+}
+
+/** CH-532: the recording's voice check (backend CH-531), for the team only. */
+function VoiceCell({ call }: { call: Call }) {
+  const { t } = useTranslation();
+  const secs = typeof call.voiceSeconds === "number" ? `${Math.round(call.voiceSeconds)}s` : "";
+  if (call.voiceLabel === "no_voice") {
+    return (
+      <Badge variant="destructive" className={STATUS_PILL} title={t("x531.tip")}>
+        {t("x531.noVoice")}
+      </Badge>
+    );
+  }
+  if (call.voiceLabel === "voice") {
+    return (
+      <span className="whitespace-nowrap text-[color:var(--success)]" title={t("x531.tip")}>
+        {t("x531.hasVoice")} {secs}
+      </span>
+    );
+  }
+  if (call.voiceLabel === "missing") {
+    return <span className="text-muted-foreground" title={t("x531.tip")}>{t("x531.missing")}</span>;
+  }
+  return call.recordingUrl ? (
+    <span className="text-muted-foreground" title={t("x531.unchecked")}>{"\u2026"}</span>
+  ) : (
+    <span className="text-muted-foreground">{"\u2014"}</span>
   );
 }
