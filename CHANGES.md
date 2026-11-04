@@ -2420,3 +2420,12 @@ Russian, Japanese and Chinese. It is not one of the three No Voice types, so
 it is not in No Voice / No Voice %.
 
 Commit: see git log --grep CH-553
+
+## CH-554 - Destinations: active destinations always on top (FRONTEND)
+
+Sir, 4 Nov: "Active Destinations should always be on top of inactive
+Destinations." The Destinations list now puts every switched-on destination
+above every switched-off one, whatever their calls. Inside each part the
+CH-515 order stays: calls today first, most calls first, then 0 calls today.
+
+Commit: see git log --grep CH-554
