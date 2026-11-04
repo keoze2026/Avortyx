@@ -117,6 +117,10 @@ interface CallRecordWire {
   voiceSeconds?: number | null;
   /** CH-546: AI audit label (staff only; null for partners, "" = pending). */
   aiLabel?: string | null;
+  /** CH-555: confidence, the LLM's summary, the audit team's verdict. */
+  aiConfidence?: number | null;
+  aiSummary?: string | null;
+  aiReviewLabel?: string | null;
   /* §3.13 calls this `started_at`; the CDR list endpoint has historically
      sent `created_at`. Either one is the call's start instant. */
   startedAt?: string;
@@ -494,6 +498,9 @@ function callRecordToCall(w: CallRecordWire): Call {
     voiceLabel: w.voiceLabel || undefined,
     voiceSeconds: typeof w.voiceSeconds === "number" ? w.voiceSeconds : undefined,
     aiLabel: w.aiLabel || undefined,
+    aiConfidence: typeof w.aiConfidence === "number" ? w.aiConfidence : undefined,
+    aiSummary: w.aiSummary || undefined,
+    aiReviewLabel: w.aiReviewLabel || undefined,
   };
 }
 

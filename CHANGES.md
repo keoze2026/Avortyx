@@ -2429,3 +2429,21 @@ above every switched-off one, whatever their calls. Inside each part the
 CH-515 order stays: calls today first, most calls first, then 0 calls today.
 
 Commit: see git log --grep CH-554
+
+## CH-555 - AI label, confidence, summary and Correct / Wrong in the Call Log and Reports (FRONTEND)
+
+Sir, 4 Nov: "Show the label, confidence and summary in the Call Log and
+Reports, with Correct/Wrong buttons for the audit team." Goes with backend
+CH-555 (the LLM's final label and one-line summary).
+
+- Call Log / Reports, AI Label column: the label, its confidence %, the AI's
+  one-line summary (full text on hover), and Correct / Wrong (Wrong opens the
+  list of labels). The verdict is the same as on the AI Audit page and counts
+  in the AI accuracy; once given, the cell shows "Marked correct" / "Marked
+  wrong - right: ...". Only for logins with AI access (CH-548).
+- AI Audit page: the summary under the label (the transcript on hover);
+  filters and the Wrong list include Robocall and Caller Spoke, No Issue.
+- New labels in the Reports AI Label filter, exports and translations (en,
+  ru, ja, zh).
+
+Commit: see git log --grep CH-555

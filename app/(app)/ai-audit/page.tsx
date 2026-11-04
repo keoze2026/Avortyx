@@ -44,8 +44,9 @@ import { onReportChanged } from "@/lib/report-events";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { cn } from "@/lib/utils";
 
-/** Labels a reviewer can pick (Sir's four, and Voicemail / IVR - CH-553). */
-const LABELS = ["valid", "dead_caller", "agent_only", "agent_beep", "ivr"] as const;
+/** Labels a reviewer can pick (Sir's four, Voicemail / IVR - CH-553, and
+ *  Robocall / Caller spoke, no issue - CH-555). */
+const LABELS = ["valid", "caller_ok", "dead_caller", "agent_only", "agent_beep", "ivr", "robocall"] as const;
 type Label = (typeof LABELS)[number];
 const FILTERS = [
   "",
@@ -55,7 +56,9 @@ const FILTERS = [
   "agent_only",
   "agent_beep",
   "ivr",
+  "robocall",
   "valid",
+  "caller_ok",
   "fault",
   "reviewed",
   "wrong",
@@ -78,6 +81,9 @@ interface Row {
   aiLabel: string;
   aiConfidence: number | null;
   aiComment: string;
+  /** CH-555: the LLM's one line and the transcript it read. */
+  summary?: string;
+  transcript?: string;
   audioFault: boolean;
   channels: number | null;
   callerSpeech: number | null;
@@ -92,7 +98,7 @@ interface Row {
 }
 
 type Counts = Record<
-  "total" | "pending" | "noVoice" | "deadCaller" | "agentOnly" | "agentBeep" | "ivr" | "valid" | "mixed" | "fault" | "reviewed" | "wrong",
+  "total" | "pending" | "noVoice" | "deadCaller" | "agentOnly" | "agentBeep" | "ivr" | "robocall" | "callerOk" | "valid" | "mixed" | "fault" | "reviewed" | "wrong",
   number
 >;
 
@@ -120,6 +126,8 @@ const FILTER_COUNT: Record<Filter, keyof Counts> = {
   agent_only: "agentOnly",
   agent_beep: "agentBeep",
   ivr: "ivr",
+  robocall: "robocall",
+  caller_ok: "callerOk",
   valid: "valid",
   fault: "fault",
   reviewed: "reviewed",
@@ -546,6 +554,11 @@ export default function AiAuditPage() {
                                 <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
                                   {r.aiConfidence}%
                                 </span>
+                              )}
+                              {r.summary && (
+                                <div className="mt-1 max-w-[18rem] whitespace-normal text-xs text-muted-foreground" title={r.transcript || undefined}>
+                                  {r.summary}
+                                </div>
                               )}
                               {r.audioFault && (
                                 <div className="mt-1 text-xs font-medium text-destructive">{t("x543.fault")}</div>

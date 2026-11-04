@@ -72,6 +72,11 @@ export interface Call {
   /** CH-546: the AI audit label (lib/ai-labels.ts); undefined = Pending AI
    *  check (or not shown: partner logins never get it). */
   aiLabel?: string;
+  /** CH-555: the AI's confidence %, its one-line summary (LLM) and the audit
+   *  team's verdict (the right label; same as aiLabel = marked correct). */
+  aiConfidence?: number;
+  aiSummary?: string;
+  aiReviewLabel?: string;
   /** Caller's carrier as the backend resolved it ("Verizon", "AT&T", …). */
   carrier?: string;
 }

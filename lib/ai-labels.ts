@@ -8,6 +8,8 @@
  *   agent_beep    No Voice | Only Agent + Beeping - agent speaks, caller side only tones
  *   mixed         Voice Found - recorded before the sides were split (CH-548 name)
  *   ivr           Voicemail / IVR - no person, music or a machine (PANNs, CH-553)
+ *   robocall      Robocall - a recorded / automated caller (LLM, CH-555)
+ *   caller_ok     Caller spoke, no issue - a live caller, no real conversation (LLM, CH-555)
  *   ""            Pending AI check (an answered call not checked yet)
  */
 import { useAuthStore } from "@/lib/store/auth-store";
@@ -23,7 +25,10 @@ export function useCanAiAudit(): boolean {
 export const NO_VOICE_LABELS: ReadonlySet<string> = new Set(["dead_caller", "agent_only", "agent_beep"]);
 
 /** The AI Label filter's choices (Sir: All / Valid / each No Voice / Pending). */
-export const AI_LABEL_FILTERS = ["valid", "dead_caller", "agent_only", "agent_beep", "ivr", "pending"] as const;
+export const AI_LABEL_FILTERS = ["valid", "caller_ok", "dead_caller", "agent_only", "agent_beep", "ivr", "robocall", "pending"] as const;
+
+/** CH-555: the labels the audit team can give (Correct / Wrong). */
+export const AI_REVIEW_LABELS = ["valid", "caller_ok", "dead_caller", "agent_only", "agent_beep", "ivr", "robocall"] as const;
 export type AiLabelFilter = (typeof AI_LABEL_FILTERS)[number];
 
 /** Pending: answered and not checked yet. A call nobody answered is never checked. */

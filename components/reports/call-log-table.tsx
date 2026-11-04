@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   Ban,
+  Check,
   ChevronsUpDown,
   Copy,
   ListTree,
@@ -89,7 +90,15 @@ import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { usePermissions } from "@/lib/my-permissions";
 import { cn } from "@/lib/utils";
-import { NO_VOICE_LABELS, aiLabelKey, aiPending, useCanAiAudit } from "@/lib/ai-labels";
+import { AI_REVIEW_LABELS, NO_VOICE_LABELS, aiLabelKey, aiPending, useCanAiAudit } from "@/lib/ai-labels";
+import { http } from "@/lib/api/http";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /** Every text cell in a call row shares one font, size, weight and colour,
  *  so the whole row reads evenly: the portal's Inter in Medium, as in the
@@ -1549,15 +1558,85 @@ function CallRowActions({
 }
 
 /** CH-546: the AI audit label of a call (staff only): "Pending AI check" until
- *  our server has listened to it, then Sir's label. */
+ *  our server has listened to it, then Sir's label. CH-555 (Sir: "Show the
+ *  label, confidence and summary in the Call Log and Reports, with
+ *  Correct/Wrong buttons for the audit team"): the confidence, the AI's
+ *  one-line summary, and Correct / Wrong (the same verdict as on the AI Audit
+ *  page - it counts in the AI accuracy). */
 function AiLabelCell({ call }: { call: Call }) {
   const { t } = useTranslation();
+  const canReview = useCanAiAudit();
+  const [verdict, setVerdict] = React.useState<string | undefined>(call.aiReviewLabel);
+  const [saving, setSaving] = React.useState(false);
+  React.useEffect(() => setVerdict(call.aiReviewLabel), [call.aiReviewLabel]);
+
+  const review = async (label: string | null) => {
+    if (!call.aiLabel || saving) return;
+    setSaving(true);
+    try {
+      await http.post(`/api/ai-audit/calls/${call.id}/review`, {
+        body: label === null ? { correct: true } : { correct: false, label },
+      });
+      setVerdict(label ?? call.aiLabel);
+      toast.success(t("x555.saved"));
+    } catch (e) {
+      toast.error(t("x555.saveFailed"), { description: friendlyErrorMessage(e) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (call.aiLabel) {
     const noVoice = NO_VOICE_LABELS.has(call.aiLabel);
     return (
-      <Badge variant={noVoice ? "destructive" : call.aiLabel === "valid" ? "default" : "secondary"} className="whitespace-nowrap">
-        {t(aiLabelKey(call.aiLabel))}
-      </Badge>
+      <div className="flex min-w-[9rem] max-w-[16rem] flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Badge variant={noVoice ? "destructive" : call.aiLabel === "valid" ? "default" : "secondary"} className="whitespace-nowrap">
+            {t(aiLabelKey(call.aiLabel))}
+          </Badge>
+          {typeof call.aiConfidence === "number" && (
+            <span className="text-[10px] tabular-nums text-muted-foreground" title={t("x555.confidence").replace("{n}", String(call.aiConfidence))}>
+              {call.aiConfidence}%
+            </span>
+          )}
+        </div>
+        {call.aiSummary && (
+          <span className="line-clamp-2 text-left text-[11px] leading-snug text-muted-foreground" title={call.aiSummary}>
+            {call.aiSummary}
+          </span>
+        )}
+        {canReview && call.aiLabel !== "mixed" && (
+          verdict ? (
+            verdict === call.aiLabel ? (
+              <span className="text-[11px] text-[color:var(--success)]">{t("x543.markedCorrect")}</span>
+            ) : (
+              <span className="text-[11px] text-destructive">{t("x543.markedWrong").replace("{label}", t(aiLabelKey(verdict)))}</span>
+            )
+          ) : (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" disabled={saving}
+                onClick={() => void review(null)} title={t("x555.markCorrect")}>
+                <Check className="h-3 w-3" /> {t("x543.correct")}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" disabled={saving} title={t("x555.markWrong")}>
+                    <X className="h-3 w-3" /> {t("x543.wrong")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuLabel className="text-xs">{t("x543.wrongTitle")}</DropdownMenuLabel>
+                  {AI_REVIEW_LABELS.filter((l) => l !== call.aiLabel).map((l) => (
+                    <DropdownMenuItem key={l} onClick={() => void review(l)}>
+                      {t(aiLabelKey(l))}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )
+        )}
+      </div>
     );
   }
   if (aiPending(call)) {
@@ -1579,4 +1658,6 @@ const AI_EXPORT_NAMES: Record<string, string> = {
   agent_beep: "No Voice | Only Agent + Beeping",
   mixed: "Voice Found",
   ivr: "Voicemail / IVR",
+  robocall: "Robocall",
+  caller_ok: "Caller Spoke, No Issue",
 };
