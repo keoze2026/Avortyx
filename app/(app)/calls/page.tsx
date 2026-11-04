@@ -31,6 +31,7 @@ import {
 } from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { dateStamped, downloadRows, type ExportColumn, type ExportFormat } from "@/lib/export";
+import { bothLanguages, exportLocalizer, localizeColumns } from "@/lib/export-i18n";
 import { isPinRequiredError } from "@/lib/reports-scope";
 import { tFor } from "@/lib/i18n";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
@@ -76,7 +77,7 @@ function callExportColumns(
 }
 
 export default function CallsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const partnerCan = usePartnerPermissions().can;
   // Staff logins whose role has Reporting > Download unticked get no export
   // button either (Sir, 20 Oct: restrict downloads for Xypheria). The file is
@@ -209,15 +210,20 @@ export default function CallsPage() {
     });
 
   const onExport = (format: ExportFormat) => {
+    // CH-528: headings and values in the language chosen in the portal.
+    const loc = exportLocalizer(t, locale);
     downloadRows(
       format,
-      callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
-        (c) => !isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase()),
+      localizeColumns(
+        callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
+          (c) => !isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase()),
+        ),
+        loc,
       ),
       filtered,
       dateStamped(`calls-${range}`),
       "Calls",
-      { boldHeader: true, linkColumns: CALL_LOG_LINK_HEADERS },
+      { boldHeader: true, linkColumns: bothLanguages(CALL_LOG_LINK_HEADERS, loc) },
     );
     toast.success(
       t("toolsUI.callLogs.toastExport")

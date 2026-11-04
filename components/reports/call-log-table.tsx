@@ -75,6 +75,8 @@ import { callMatches, useServerCallSearch } from "@/lib/call-search";
 import { exportDateTime, formatCallerId, formatCallTime, formatCurrency, formatHMS, formatNumber, toE164 } from "@/lib/format";
 import { national, useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { failReasonLabel, isTfnTestCall, localizeFailReason } from "@/lib/fail-reason";
+import { bothLanguages, exportLocalizer, localizeColumns, localizeTable } from "@/lib/export-i18n";
+import { tFor } from "@/lib/i18n";
 import { localizeName } from "@/lib/name-translation";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
@@ -835,10 +837,16 @@ export function CallLogTable({
   const [pendingExport, setPendingExport] = React.useState<{ format: ExportFormat; table: string[][] } | null>(null);
 
   const downloadTable = (format: ExportFormat, full: string[][], keep: string[], names: Record<string, string>) => {
-    const table = applyColumnChoice(full, keep, names);
-    // Number and link formatting follow the headings, renamed or not.
+    // CH-528: the file in the language chosen in the portal (lib/export-i18n.ts).
+    // The column choice stays keyed on the English headings; a heading the
+    // user renamed keeps the name they typed.
+    const loc = exportLocalizer(t, locale);
+    const chosen = full[0]?.filter((h) => keep.includes(h)) ?? [];
+    const typed = new Set(chosen.map((h, j) => ((names[h] || "").trim() ? j : -1)).filter((j) => j >= 0));
+    const table = localizeTable(applyColumnChoice(full, keep, names), loc, { english: chosen, keepAsTyped: typed });
+    // Number and link formatting follow the headings, renamed or not, in either language.
     const renamed = (list: readonly string[]) =>
-      list.flatMap((h) => [h, (names[h] || "").trim()]).filter(Boolean);
+      bothLanguages(list, loc).flatMap((h) => [h, (names[h] || "").trim()]).filter(Boolean);
     const count = Math.max(table.length - 1, 0);
     const stem = dateStamped("call-log");
     if (format === "csv") {
@@ -882,8 +890,10 @@ export function CallLogTable({
       void exportFromServer(format, exportQuery);
       return;
     }
+    // CH-528: built with the English headings, then put in the chosen language.
+    const english = (key: string) => tFor("en", key);
     const dateCol: ExportColumn<Call> = {
-      label: t("toolsUI.reports.callLog.columns.callDate"),
+      label: english("toolsUI.reports.callLog.columns.callDate"),
       // CH-525: Eastern (the report zone), "2026-11-03 15:14:15" - as the server file.
       value: (c) => exportDateTime(c.startedAt, timeZone),
     };
@@ -893,11 +903,12 @@ export function CallLogTable({
       if (c.id === "dialed") return [{ label: "CALLED NUMBER", value: (row) => exportNumber(row.calledNumber) }];
       if (c.id === "destName") return [{ label: DESTINATION_NAME_HEADER, value: (row) => destinationOf(row, destinationNames).name }];
       if (c.id === "destTfn") return [{ label: DESTINATION_NUMBER_HEADER, value: (row) => destinationOf(row, destinationNames).number }];
-      return [{ label: t(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) }];
+      return [{ label: english(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) }];
     });
-    downloadRows(format, upperLabels([dateCol, ...dataCols]), filtered, dateStamped("call-log"), "Call log", {
+    const loc = exportLocalizer(t, locale);
+    downloadRows(format, localizeColumns(upperLabels([dateCol, ...dataCols]), loc), filtered, dateStamped("call-log"), "Call log", {
       boldHeader: true,
-      linkColumns: CALL_LOG_LINK_HEADERS,
+      linkColumns: bothLanguages(CALL_LOG_LINK_HEADERS, loc),
     });
     toast.success(t("toolsUI.reports.callLog.toastExport").replace("{count}", formatNumber(filtered.length)).replace("{format}", format.toUpperCase()));
   };

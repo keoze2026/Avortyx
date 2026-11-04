@@ -2203,3 +2203,25 @@ already wrote "2026-11-03 15:14:15" in the report zone.
 - Checked: 20:14:15Z -> 15:14:15; 04:59:59Z Nov 4 -> Nov 3 23:59:59;
   05:00Z -> Nov 4 00:00:00; Oct 31 03:30Z (daylight time) -> Oct 30 23:30.
   Type-check clean on the files touched.
+
+## CH-528 - Call log files in the portal's language (FRONTEND)
+
+009K, 4 Nov: "When you change language then export excel language aren't
+converting." The Call Summary file was already translated; the call-log
+files were not - Reports > Call log (the server's file and the one built in
+the browser) and the Call Logs page kept English headings (CALLER ID, CALLED
+NUMBER, DESTINATION NAME, HANG UP...) and English values (Completed, No
+Answer, Yes / No, Caller hung up, the fail reasons).
+
+- New `lib/export-i18n.ts`: every call-log file is still built in English
+  (the formatting rules and the column choices are keyed on the English
+  headings), then its headings and known values are put in the chosen
+  language, with the same words the screen shows: Status, Fail Reason,
+  Hang Up, Repeated / Qualified / Converted (Yes / No).
+- English files are exactly as before. A heading renamed in the column
+  chooser keeps the name typed. Numbers, names, phone numbers and dates are
+  never changed; number and link columns stay numbers and links in Excel in
+  every language.
+- Checked in Russian, Japanese and Chinese on real rows (13868645240,
+  A49 W3|7015|, Q11|4605|): every heading and value translated, the rest as
+  it was. Type-check clean on the files touched.
