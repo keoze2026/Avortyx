@@ -2503,3 +2503,12 @@ Commit: see git log --grep CH-558
   (the call keeps its label; the "Possible audio fault" filter box stays).
 
 Commit: see git log --grep CH-559
+
+## CH-561 - AI Audit: the whole label always visible, all labels the same size (FRONTEND)
+
+CH-559 made the AI labels one width in pixels; on a larger screen text size
+"No Voice | No Beep or Customer" was cut ("...or Custome"). The width is now
+set in text widths (20 em), so every label - Valid Call and the longest No
+Voice ones alike - is the same size and shows in full at any text size.
+
+Commit: see git log --grep CH-561

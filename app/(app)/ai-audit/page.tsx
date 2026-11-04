@@ -654,7 +654,9 @@ export default function AiAuditPage() {
                               <div className="flex items-center justify-center gap-2">
                                 <Badge
                                   variant={labelVariant(r.aiLabel)}
-                                  className="w-60 justify-center whitespace-nowrap px-2 py-1 text-[13px]"
+                                  // CH-561: wide enough for the longest label ("No Voice | No Beep
+                                  // or Customer") at any text size - em, not pixels - so no word is cut.
+                                  className="w-[20em] justify-center overflow-visible whitespace-nowrap px-3 py-1 text-[13px]"
                                 >
                                   {labelText(r.aiLabel)}
                                 </Badge>
