@@ -32,6 +32,9 @@ interface DestinationsState {
   statsLoading: boolean;
   error: string | null;
   hydrated: boolean;
+  /** CH-563: when another person's pause / resume reached this screen, per
+   *  destination - a click in the next seconds would undo it unseen. */
+  remoteChangedAt: Record<string, number>;
 
   fetch: () => Promise<void>;
   fetchStats: () => Promise<void>;
@@ -141,6 +144,7 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
   statsLoading: false,
   error: null,
   hydrated: false,
+  remoteChangedAt: {},
 
   fetch: async () => {
     set({ loading: true, error: null });
@@ -170,7 +174,17 @@ export const useDestinationsStore = create<DestinationsState>()((set, get) => ({
       const items = all.map((d) =>
         changedLocallySince(d.id, startedAt) && onScreen.has(d.id) ? { ...d, enabled: onScreen.get(d.id)! } : d,
       );
-      set({ destinations: items, loading: false, hydrated: true });
+      // CH-563: switches someone else moved since this screen last loaded.
+      const now = Date.now();
+      const moved = items.filter((d) => onScreen.has(d.id) && onScreen.get(d.id) !== d.enabled);
+      set((s) => ({
+        destinations: items,
+        loading: false,
+        hydrated: true,
+        remoteChangedAt: moved.length
+          ? { ...s.remoteChangedAt, ...Object.fromEntries(moved.map((d) => [d.id, now])) }
+          : s.remoteChangedAt,
+      }));
     } catch (e) {
       set({ loading: false, error: messageFromError(e), hydrated: true });
     }

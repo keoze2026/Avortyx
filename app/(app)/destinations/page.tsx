@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { DestinationBuilder } from "@/components/destinations/destination-builder";
@@ -44,6 +44,19 @@ export default function DestinationsPage() {
   const fetchDestinations = useDestinationsStore((s) => s.fetch);
   const fetchStats = useDestinationsStore((s) => s.fetchStats);
   const setEnabled = useDestinationsStore((s) => s.setEnabled);
+  const remoteChangedAt = useDestinationsStore((s) => s.remoteChangedAt);
+  // CH-563 (Korea, 5 Nov: "add Refresh Icon on Destination to avoid
+  // refreshing the tab, to confirm pause pings"): load the list again here.
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchDestinations(), fetchStats()]);
+      toast.success(t("x563.refreshed"));
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const setEnabledMany = useDestinationsStore((s) => s.setEnabledMany);
   const enableExclusive = useDestinationsStore((s) => s.enableExclusive);
   const remove = useDestinationsStore((s) => s.remove);
@@ -173,6 +186,16 @@ export default function DestinationsPage() {
   const handleToggle = async (id: string) => {
     const d = destinations.find((x) => x.id === id);
     if (!d) return;
+    // CH-563 (Korea, 5 Nov: "Sometimes a tfn can live when 2 people pause at
+    // the same time"): someone else's pause / resume just reached this screen
+    // and moved this switch - a click now meant the old state and would undo
+    // theirs. Nothing is sent; the switch shows what it is now.
+    if (Date.now() - (remoteChangedAt[id] ?? 0) < 4000) {
+      toast.info(
+        (d.enabled ? t("x563.justResumed") : t("x563.justPaused")).replace("{name}", localName(d.name)),
+      );
+      return;
+    }
     try {
       if (d.enabled) {
         await setEnabled(id, false);
@@ -390,6 +413,19 @@ export default function DestinationsPage() {
           size="sm"
           className="w-56"
         />
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9"
+          onClick={() => void refresh()}
+          disabled={refreshing}
+          title={t("x563.refresh")}
+          aria-label={t("x563.refresh")}
+        >
+          <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          <span className="hidden sm:inline">{t("x563.refresh")}</span>
+        </Button>
 
         {/* Inline summary stats — one bordered card, all 5 stats split by hairlines */}
         <div className="ml-auto inline-flex h-9 items-stretch divide-x divide-border overflow-hidden rounded-md border border-border bg-card">

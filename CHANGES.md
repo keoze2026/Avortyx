@@ -2546,3 +2546,21 @@ on filling SOS tfns." Goes with backend CH-562.
   SOS TFN gets the calls first. One destination at a time; off unless ticked.
 
 Commit: see git log --grep CH-562
+
+## CH-563 - Destinations: Refresh button; a pause by someone else is never undone by a click (FRONTEND)
+
+Korea, 5 Nov: "add Refresh Icon on Destination to avoid refreshing the tab,
+to confirm pause pings. Sometimes a tfn can live when 2 people pause at the
+same time."
+
+- Refresh button beside the filters: loads the list and the header figures
+  again (the list also updates by itself when anyone changes a destination,
+  CH-542).
+- The cause of the live TFN: when another person's pause reached the screen a
+  moment before a click, the switch had already moved, and the click - meant
+  as "pause" - switched it back on. Now a click on a switch that someone
+  else moved in the last 4 seconds sends nothing; a message says who changed
+  it ("was just paused by someone else - nothing changed; click again if you
+  want it on").
+
+Commit: see git log --grep CH-563
