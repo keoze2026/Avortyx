@@ -41,6 +41,9 @@ export const CALL_EVENT_TYPES = [
   "rtb.auction_created",
   "rtb.bid_placed",
   "rtb.auction_settled",
+  // CH-538: "a call event happened in this workspace" - the event name only,
+  // never the call. Reports and the header reload through the API.
+  "report.changed",
 ] as const;
 
 export type CallEventType = (typeof CALL_EVENT_TYPES)[number];

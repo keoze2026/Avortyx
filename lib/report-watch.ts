@@ -11,8 +11,9 @@
  * very same view (days, time zone, partner scope) plus the server's time - and
  * reloads only when the fingerprint changes:
  *
- *   - every WATCH_MS while the tab is visible, and straight away when the tab
- *     comes back into view;
+ *   - the moment a call event is pushed (CH-538, lib/report-events.ts), and
+ *     every WATCH_MS as a fallback while the tab is visible, and straight
+ *     away when the tab comes back into view;
  *   - only for a range that includes today (past days never change);
  *   - a change starts a quiet reload: the figures on screen stay until the new
  *     ones arrive, exactly like an auto refresh;
@@ -25,6 +26,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { http } from "@/lib/api/http";
+import { onReportChanged } from "@/lib/report-events";
 
 /** How often the page asks whether the report has changed. */
 export const REPORT_WATCH_MS = 10_000;
@@ -100,12 +102,16 @@ export function useReportChangeWatch({
     };
 
     void check();
+    // CH-538: checked the moment a call event is pushed (2 s target); the
+    // timer below is only the fallback for when the push connection is down.
+    const stopPush = onReportChanged(() => void check());
     const timer = window.setInterval(() => void check(), REPORT_WATCH_MS);
     const onWake = () => void check();
     window.addEventListener("focus", onWake);
     document.addEventListener("visibilitychange", onWake);
     return () => {
       cancelled = true;
+      stopPush();
       window.clearInterval(timer);
       window.removeEventListener("focus", onWake);
       document.removeEventListener("visibilitychange", onWake);

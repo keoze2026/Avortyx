@@ -2296,3 +2296,18 @@ the dialog (at most 90% of the screen) then had no room left for its
 bottom bar, so the Next / Route button was cut off and nothing could be
 added. The list now takes the room that is left and scrolls (at least 120
 px); the bottom bar never shrinks. Nothing else changed.
+
+## CH-538 - Reports and header update the moment a call event happens (FRONTEND)
+
+Sir, 4 Nov: "Reporting data updating 10 sec late ... Use a WebSocket/event
+push so the page updates without a refresh. Target: any call appears in
+Reports and Call Log within 2 seconds." Goes with backend CH-538.
+
+- One live connection per tab (lib/report-events.ts, /ws/live-calls/). The
+  server sends "report.changed" - the event name only, never the call - when
+  any call of the workspace starts, is answered or ends.
+- Reports: checks for changes at that moment and reloads quietly if its own
+  calls changed (a buyer's or publisher's page only for its own calls).
+- Header: Live and Total refresh at that moment.
+- The timed checks (Reports 10 s, header 30 s / Live 20 s) stay as the
+  fallback for when the connection is down.

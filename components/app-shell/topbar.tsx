@@ -14,7 +14,8 @@ import { prefetchNewsPages } from "@/lib/news-snapshots";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { loadHeaderFigures, type HeaderFigures } from "@/lib/header-figures";
 import { todayScope } from "@/lib/reports-scope";
-import { startLiveCountSync } from "@/lib/live-count";
+import { refreshLiveCountNow, startLiveCountSync } from "@/lib/live-count";
+import { onReportChanged } from "@/lib/report-events";
 import { prefetchReport, todayAndYesterday } from "@/lib/reports-cache";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useCallsStore } from "@/lib/store/calls-store";
@@ -54,6 +55,18 @@ export function Topbar() {
   }, []);
   // Keep the header's Live figure right on every page.
   useEffect(() => startLiveCountSync(), []);
+  // CH-538: Live and Total move the moment a call starts, is answered or
+  // ends (pushed by the server); the timers above are the fallback.
+  useEffect(
+    () =>
+      onReportChanged(() => {
+        refreshLiveCountNow();
+        if (useCallsStore.getState().snapshotDrivesKpis) return;
+        if (document.visibilityState !== "visible") return;
+        void useCallsStore.getState().fetchKpis();
+      }),
+    [],
+  );
 
   // Start loading today's Dashboard figures as soon as the app opens (the
   // topbar is the first thing mounted after sign-in), so the Dashboard is
