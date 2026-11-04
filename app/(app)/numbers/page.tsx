@@ -15,7 +15,6 @@ import {
   deriveName,
   deriveVendor,
 } from "@/components/numbers/track-numbers-table";
-import { GuideVideo, NUMBER_POOLS_GUIDE } from "@/components/shared/guide-video";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/shared/pagination";
 import {
@@ -243,8 +242,6 @@ export default function NumbersPage() {
         {/* ─── Pools ─── */}
         {!isPartner && (
         <TabsContent value="pools" className="space-y-4">
-          {/* CH-550: the Number Pools Getting Started video. */}
-          <GuideVideo {...NUMBER_POOLS_GUIDE} />
           <TableToolbar
             query={poolsQuery}
             onQuery={setPoolsQuery}
