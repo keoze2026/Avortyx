@@ -36,6 +36,8 @@ export function NotificationsMenu() {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<TabId>("all");
   const [view, setView] = React.useState<"list" | "settings" | "confirmClear">("list");
+  // CH-583: controlled, so a link inside the menu can close it.
+  const [open, setOpen] = React.useState(false);
   // CH-568: the bell shows today's (Eastern) notifications only; the page keeps all.
   const { entries, counts, unread: feedUnread, everyId } = useNotificationFeed({ today: true });
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
@@ -59,7 +61,13 @@ export function NotificationsMenu() {
     .slice(0, POPUP_LIMIT);
 
   return (
-    <DropdownMenu onOpenChange={(open) => !open && setView("list")}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setView("list");
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label={t("notificationsUI.menu.bellLabel")}>
           <Bell className="h-4 w-4" />
@@ -172,7 +180,7 @@ export function NotificationsMenu() {
               ))}
             </div>
 
-            {tfnCount > 0 && <DeletedTfnsCard />}
+            {tfnCount > 0 && <DeletedTfnsCard onNavigate={() => setOpen(false)} />}
 
             <div className="max-h-[440px] overflow-y-auto">
               {shown.length === 0 ? (
@@ -194,7 +202,7 @@ export function NotificationsMenu() {
               <span className="text-muted-foreground">
                 {unread > 0 ? t("x558.unread").replace("{n}", String(unread)) : t("notificationsUI.menu.allCaughtUp")}
               </span>
-              <Link href={ROUTES.notifications} className="font-medium text-accent hover:underline">
+              <Link href={ROUTES.notifications} onClick={() => setOpen(false)} className="font-medium text-accent hover:underline">
                 {t("notificationsUI.menu.viewAll")}
               </Link>
             </div>
@@ -207,7 +215,7 @@ export function NotificationsMenu() {
 
 /** The pinned "TFNs deleted" card. Stays until 12 PM Eastern (CH-182); Seen
  *  only clears the badge, so numbers already seen are dimmed, not removed. */
-function DeletedTfnsCard() {
+function DeletedTfnsCard({ onNavigate }: { onNavigate: () => void }) {
   const { t } = useTranslation();
   const unseen = useDeletedTfnsStore((s) => s.unseenCount);
   const { numbers, kept } = useVisibleDeletedTfns();
@@ -276,7 +284,7 @@ function DeletedTfnsCard() {
               </Button>
             )}
             <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
-              <Link href={ROUTES.numbers}>{t("deletedTfns.addTfns")}</Link>
+              <Link href={ROUTES.numbers} onClick={onNavigate}>{t("deletedTfns.addTfns")}</Link>
             </Button>
           </div>
         </div>

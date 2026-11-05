@@ -2782,3 +2782,12 @@ will continue to appear, and any unresolved issues will reappear the following
 day." English text only; the title and buttons are unchanged.
 
 Commit: see git log --grep CH-582
+
+## CH-583 - Bell closes when a link inside it opens a page (FRONTEND)
+
+Reported 5 Nov: "Once the notifications page is open, the banner should
+disappear." View all notifications was a plain link inside the dropdown, so the
+page changed and the bell stayed open over it. The menu's open state is now
+held by the component, and View all notifications and Add TFNs both close it.
+
+Commit: see git log --grep CH-583
