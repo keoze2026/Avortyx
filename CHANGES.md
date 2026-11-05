@@ -3011,3 +3011,20 @@ Follows CH-609 (Sir, 5 Nov, Revo's buyer access: "nothing more than that").
 - Files use the same names: CALL DATE, DESTINATION, PAYOUT, TAG, REC.
 
 Publisher, staff and owner logins: unchanged.
+
+## CH-612 - Buyer login: the Buyers section is view only
+
+Sir, 6 Nov: "Under buyer access - buyer cannot pause - play - set cc from his
+own buyer cap section, he can just view. Buyer can only change cc to his
+alloted destination, not the buyer section."
+
+A buyer (or publisher) login now sees the Buyers section read-only, whatever
+its partner switches say (`usePermissions().can("buyers", ...)` is false for
+anything but view):
+- Buyers list: concurrency shown, not editable; status switch disabled; caps
+  not editable; no Edit, Add TFN, Delete or Create Buyer.
+- Buyer page: no Invite or Pause/Activate; Campaigns, Destinations, Caps and
+  Settings tabs shown read-only.
+Concurrency on its own destinations stays on the Destinations page, as
+before. Staff: unchanged. The server refuses the same changes (backend
+CH-612).

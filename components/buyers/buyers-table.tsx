@@ -161,6 +161,7 @@ export function BuyersTable({
                         current={b.liveKnown ? b.liveCalls : null}
                         cap={b.concurrencyCap}
                         known={b.concurrencyKnown !== false}
+                        readOnly={!can("buyers", "edit")}
                       />
                     </TableCell>
                   )}
@@ -428,6 +429,7 @@ function BuyerCcBox({
   current,
   cap,
   known,
+  readOnly = false,
 }: {
   buyerId: string;
   name: string;
@@ -436,6 +438,8 @@ function BuyerCcBox({
   cap: number;
   /** False until the list says what the limit is: shows "—", still editable. */
   known: boolean;
+  /** CH-612: shown, not changed (a buyer login: view only). */
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const localName = useLocalName();
@@ -495,7 +499,9 @@ function BuyerCcBox({
           <span className={full ? "text-white/80" : "text-muted-foreground"}>/</span>
         </>
       )}
-      {editing ? (
+      {readOnly ? (
+        <span className="px-1 tabular-nums">{!known ? "—" : cap > 0 ? cap : "∞"}</span>
+      ) : editing ? (
         <input
           ref={inputRef}
           type="number"

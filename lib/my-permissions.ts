@@ -87,6 +87,7 @@ export function usePermissions() {
   const rawRole = useMyPermissions((s) => s.rawRole);
   const load = useMyPermissions((s) => s.load);
   const isStaff = !!user && user.role !== "buyer" && user.role !== "publisher";
+  const partnerLogin = !!user && (user.role === "buyer" || user.role === "publisher");
   // CH-548: the AI Audit page opened by its address goes back to the Dashboard
   // for anyone not on the billing / audit team list.
   const canAiAudit = isStaff && user?.canAiAudit === true;
@@ -98,7 +99,15 @@ export function usePermissions() {
   return React.useMemo(() => {
     const limited = isStaff && permissions !== null && rawRole !== "admin";
     /** May this employee do `action` in `area`? (Always true when not limited.) */
-    const can = (area: string, action = "view") => !limited || permissions!.has(`${area}.${action}`);
+    const can = (area: string, action = "view") => {
+      // CH-612 (Sir, 6 Nov: "Under buyer access - buyer cannot pause - play -
+      // set cc from his own buyer cap section, he can just view. Buyer can only
+      // change cc to his allotted destination, not the buyer section"): a
+      // buyer or publisher login only views the Buyers section. Its own
+      // destinations keep their own switches (Destinations page).
+      if (partnerLogin && area === "buyers" && action !== "view") return false;
+      return !limited || permissions!.has(`${area}.${action}`);
+    };
     /** May this employee see this page at all? (Area with nothing ticked = no.) */
     const canSeePath = (pathname: string) => {
       if (!canAiAudit && (pathname === ROUTES.aiAudit || pathname.startsWith(ROUTES.aiAudit + "/"))) return false;
@@ -110,5 +119,5 @@ export function usePermissions() {
       return permissions!.has(`${area}.view`);
     };
     return { limited, can, canSeePath };
-  }, [isStaff, permissions, rawRole, canAiAudit]);
+  }, [isStaff, partnerLogin, permissions, rawRole, canAiAudit]);
 }
