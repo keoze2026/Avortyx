@@ -186,7 +186,15 @@ interface Props {
    * no limit - the default, and what the Dashboard and Expenses use.
    */
   latestDay?: Date;
+  /**
+   * CH-603: for a page that shows one day at a time (AI Audit). Same look as
+   * Reports, but one click picks one day, the label is that day, and only the
+   * one-day presets are offered.
+   */
+  singleDay?: boolean;
 }
+
+const SINGLE_DAY_PRESETS: DateRangePresetId[] = ["today", "yesterday", "custom"];
 
 export function DateRangePicker({
   value,
@@ -195,6 +203,7 @@ export function DateRangePicker({
   placeholder,
   today,
   latestDay,
+  singleDay = false,
 }: Props) {
   const { t, locale } = useTranslation();
   const effectivePlaceholder = placeholder ?? t("sharedUI.dateRange.placeholder");
@@ -211,8 +220,11 @@ export function DateRangePicker({
   );
   // Presets that still make sense with the limit ("Today" etc. drop out).
   const presetIds = React.useMemo(
-    () => PRESET_IDS.filter((id) => id === "custom" || !!presetRange(id, anchor, latest)),
-    [anchor, latest],
+    () =>
+      (singleDay ? SINGLE_DAY_PRESETS : PRESET_IDS).filter(
+        (id) => id === "custom" || !!presetRange(id, anchor, latest),
+      ),
+    [anchor, latest, singleDay],
   );
 
   // Buffered state — edits live here until the operator hits Apply.
@@ -240,9 +252,9 @@ export function DateRangePicker({
       if (!range?.from) return null;
       const from = calendarDayKey(range.from);
       const to = range.to ? calendarDayKey(range.to) : from;
-      return `${from} ~ ${to}`;
+      return singleDay ? from : `${from} ~ ${to}`;
     },
-    [],
+    [singleDay],
   );
 
   const label = formatRange(value) ?? effectivePlaceholder;
@@ -267,16 +279,18 @@ export function DateRangePicker({
   };
 
   const onCalendarSelect = (range: DateRange | undefined) => {
+    if (singleDay) return; // onCalendarDayClick picks the day
     setBuffer(range);
     // Manual edits flip the dropdown to "Custom" unless they happen to match a preset.
     setPreset(detectPreset(range, anchor, latest));
   };
 
   const onCalendarDayClick = (day: Date, _modifiers: unknown, e: React.MouseEvent) => {
-    if (e.detail < 2) return;
+    if (!singleDay && e.detail < 2) return;
     const single: DateRange = { from: day, to: day };
     setBuffer(single);
     setPreset(detectPreset(single, anchor, latest));
+    if (e.detail < 2) return; // one click in single-day mode waits for Apply
     onChange(single);
     setOpen(false);
   };

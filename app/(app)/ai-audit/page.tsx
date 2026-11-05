@@ -21,6 +21,7 @@ import * as React from "react";
 import { Check, Download, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
 import { friendlyErrorMessage } from "@/lib/api/errors";
+import { calendarDayKey, dayKeyToLocalDate } from "@/lib/format";
 import { downloadRows, type ExportColumn } from "@/lib/export";
 import { onReportChanged } from "@/lib/report-events";
 import { usePublishersStore } from "@/lib/store/publishers-store";
@@ -428,14 +430,22 @@ function EvidenceExport({ date }: { date: string }) {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[13px] text-muted-foreground">{t("x546.from")}</span>
-          <Input type="date" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="h-8 w-40" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[13px] text-muted-foreground">{t("x546.to")}</span>
-          <Input type="date" value={to} min={from} max={todayEst()} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-8 w-40" />
-        </label>
+        {/* CH-603: the Reports date picker, not the browser's grey calendar. */}
+        <div className="flex flex-col gap-1">
+          <span className="text-[13px] text-muted-foreground">
+            {t("x546.from")} ~ {t("x546.to")}
+          </span>
+          <DateRangePicker
+            value={{ from: dayKeyToLocalDate(from), to: dayKeyToLocalDate(to) }}
+            onChange={(r) => {
+              if (!r?.from) return;
+              setFrom(calendarDayKey(r.from));
+              setTo(calendarDayKey(r.to ?? r.from));
+            }}
+            today={dayKeyToLocalDate(todayEst())}
+            className="hover:bg-muted hover:text-foreground dark:hover:bg-muted/70"
+          />
+        </div>
         <Button size="sm" onClick={() => void run()} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           {t("x546.evidenceButton")}
@@ -571,20 +581,21 @@ export default function AiAuditPage() {
           ) : (
             <Skeleton className="h-10 w-80" />
           )}
-          <label className="ml-auto flex items-center gap-2">
+          {/* CH-603: the Reports date picker, one day at a time. */}
+          <div className="ml-auto flex items-center gap-2">
             <span className="text-muted-foreground">{t("x543.date")}</span>
-            <Input
-              type="date"
-              value={date}
-              max={todayEst()}
-              onChange={(e) => {
-                if (!e.target.value) return;
-                setDate(e.target.value);
+            <DateRangePicker
+              singleDay
+              value={{ from: dayKeyToLocalDate(date), to: dayKeyToLocalDate(date) }}
+              onChange={(r) => {
+                if (!r?.from) return;
+                setDate(calendarDayKey(r.from));
                 setPage(1);
               }}
-              className="h-8 w-40"
+              today={dayKeyToLocalDate(todayEst())}
+              className="hover:bg-muted hover:text-foreground dark:hover:bg-muted/70"
             />
-          </label>
+          </div>
         </CardContent>
       </Card>
 

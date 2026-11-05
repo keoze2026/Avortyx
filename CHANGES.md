@@ -2914,3 +2914,12 @@ also gets no publisher in the call panel's timeline details and in the Live
 Monitor's routing path.
 
 Staff and owner: unchanged.
+
+## CH-603 - AI Audit: date picker same as Reports
+
+Sir, 5 Nov: "Match color and date format same as our report page format".
+
+- Day (EST) now uses the Reports date picker instead of the browser's grey
+  calendar: portal colours, 2026-11-05 format, Today / Yesterday, Cancel and
+  Apply. A new single-day mode keeps it to one day, as this page shows one day.
+- The No Voice evidence export's two date boxes are now one Reports date range.
