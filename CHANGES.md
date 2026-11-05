@@ -2801,3 +2801,13 @@ header, tabs, buttons and footer. Exact sizes, because `text-xs` is only 9.75px
 in this app. The Notifications page keeps its size.
 
 Commit: see git log --grep CH-584
+
+## CH-585 - Bell fits the screen at any zoom (FRONTEND)
+
+Reported 5 Nov: "Entire banner not fully visible on 100% zoom." The TFN card sat
+above a list with its own 440px height, so together they ran off the screen and
+pushed View all notifications out of view. The box is now never taller than the
+space available: the TFN card and list scroll in the middle, and the header,
+tabs and footer stay in view. The TFN card is also shorter. Sizing only.
+
+Commit: see git log --grep CH-585

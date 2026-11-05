@@ -83,9 +83,13 @@ export function NotificationsMenu() {
       <DropdownMenuContent
         align="end"
         sideOffset={8}
+        collisionPadding={8}
+        // CH-585: never taller than the screen; the middle scrolls, the header
+        // and footer stay in view at any zoom.
+        style={view === "list" ? { maxHeight: "var(--radix-dropdown-menu-content-available-height)" } : undefined}
         // CH-567: the alert settings open wider, so every switch shows at once.
         className={cn(
-          "overflow-hidden rounded-xl border-border bg-popover p-0",
+          "flex flex-col overflow-hidden rounded-xl border-border bg-popover p-0",
           view === "settings" ? "w-[min(760px,calc(100vw-1rem))]" : "w-[min(360px,calc(100vw-1rem))]",
         )}
       >
@@ -128,7 +132,7 @@ export function NotificationsMenu() {
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between px-3.5 pt-3">
+            <div className="flex shrink-0 items-center justify-between px-3.5 pt-3">
               <h3 className="text-[13px] font-semibold">{t("notificationsUI.menu.title")}</h3>
               <div className="flex items-center gap-1">
                 {/* CH-568: always there (it hid once everything was read). */}
@@ -164,7 +168,7 @@ export function NotificationsMenu() {
             </div>
 
             {/* Tabs - underlined, like the page */}
-            <div className="mt-1.5 flex gap-4 border-b border-border/60 px-3.5">
+            <div className="mt-1.5 flex shrink-0 gap-4 border-b border-border/60 px-3.5">
               {tabs.map((x) => (
                 <button
                   key={x.id}
@@ -180,9 +184,8 @@ export function NotificationsMenu() {
               ))}
             </div>
 
-            {tfnCount > 0 && <DeletedTfnsCard onNavigate={() => setOpen(false)} />}
-
-            <div className="max-h-[440px] overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {tfnCount > 0 && <DeletedTfnsCard onNavigate={() => setOpen(false)} />}
               {shown.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Inbox className="h-6 w-6 text-muted-foreground/60" />
@@ -198,7 +201,7 @@ export function NotificationsMenu() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between border-t border-border/60 px-3.5 py-2 text-[11px]">
+            <div className="flex shrink-0 items-center justify-between border-t border-border/60 px-3.5 py-2 text-[11px]">
               <span className="text-muted-foreground">
                 {unread > 0 ? t("x558.unread").replace("{n}", String(unread)) : t("notificationsUI.menu.allCaughtUp")}
               </span>
@@ -230,7 +233,7 @@ function DeletedTfnsCard({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div
       className={cn(
-        "mx-5 mt-3 rounded-md border p-3",
+        "mx-3.5 my-2 rounded-md border p-2.5",
         unseen > 0 ? "border-destructive/40 bg-destructive/10" : "border-border bg-secondary/30",
       )}
     >
@@ -246,7 +249,7 @@ function DeletedTfnsCard({ onNavigate }: { onNavigate: () => void }) {
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             {count === 1 ? t("deletedTfnsOne.body") : t("deletedTfns.body")}
           </p>
-          <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+          <ul className="mt-1.5 max-h-20 space-y-0.5 overflow-y-auto">
             {shown.map((n) => (
               <li key={n.id} className={cn("flex items-baseline justify-between gap-2 text-[11px]", n.seen && "opacity-60")}>
                 {/* The number only (CH-199): carrier codes and rules are for our backend. */}
