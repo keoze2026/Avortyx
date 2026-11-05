@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { ROUTES } from "@/lib/constants";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
@@ -123,6 +124,10 @@ export function CampaignsTable({
   canCreate = true,
   canDelete = true,
 }: CampaignsTableProps) {
+  // CH-579: staff only. A publisher login opens this page too, and must never
+  // read who else shares its campaign.
+  const role = useAuthStore((st) => st.user?.role);
+  const showPublisher = columns.publisher && role !== "buyer" && role !== "publisher";
   const { t, locale } = useTranslation();
   const router = useRouter();
   // Live count of tracking numbers attached per campaign — drives the
@@ -176,6 +181,7 @@ export function CampaignsTable({
               </TableHead>
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
               <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
+              {showPublisher && <TableHead className="text-left">{t("x579.publisher")}</TableHead>}
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
@@ -237,6 +243,11 @@ export function CampaignsTable({
                       )}
                     </div>
                   </TableCell>
+                  {showPublisher && (
+                    <TableCell className="max-w-[260px] whitespace-normal text-left text-sm text-muted-foreground">
+                      {c.publishers?.length ? c.publishers.join(", ") : "-"}
+                    </TableCell>
+                  )}
                   {columns.access && (
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5 text-muted-foreground">

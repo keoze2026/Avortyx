@@ -2745,3 +2745,14 @@ a problem that is still there returns the next day. The TFN notice is also
 marked Seen. Nothing is deleted on the server and other logins are not touched.
 
 Commit: see git log --grep CH-578
+
+## CH-579 - Campaigns: Publisher column next to the campaign name (FRONTEND)
+
+Reported 5 Nov: "Add one more column publisher and add list here, next to
+campaign name." The Campaigns table lists each campaign's publishers right
+after its name, or "-" when it has none, with a switch in the column settings.
+Staff only: a buyer or publisher login gets neither the column nor the switch.
+Long lists wrap inside the column.
+
+Backend half: CH-579 in call_platform. Until it is deployed every row shows "-".
+Commit: see git log --grep CH-579

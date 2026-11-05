@@ -29,6 +29,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 
 export type CampaignSortKey = "name" | "callsToday" | "revenueToday" | "recent";
@@ -37,6 +38,7 @@ export type CampaignStatusFilter = "all" | "active" | "paused" | "draft" | "arch
 
 export type CampaignColumnKey =
   | "progress"
+  | "publisher"
   | "access"
   | "live"
   | "hourly"
@@ -47,6 +49,7 @@ export type CampaignColumnKey =
 
 export const CAMPAIGN_COLUMNS: Array<{ id: CampaignColumnKey; labelKey: string }> = [
   { id: "progress", labelKey: "trafficUI.campaigns.columns.progress" },
+  { id: "publisher", labelKey: "x579.publisher" },
   { id: "access", labelKey: "trafficUI.campaigns.columns.access" },
   { id: "live", labelKey: "trafficUI.campaigns.columns.live" },
   { id: "hourly", labelKey: "trafficUI.campaigns.columns.hourly" },
@@ -104,6 +107,9 @@ export function CampaignsToolbar({
   onColumns,
   onRefresh,
 }: CampaignsToolbarProps) {
+  // CH-579: the Publisher column is for staff; a partner never gets its switch.
+  const role = useAuthStore((st) => st.user?.role);
+  const partner = role === "buyer" || role === "publisher";
   const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center justify-end gap-1">
@@ -248,7 +254,7 @@ export function CampaignsToolbar({
             </button>
           </div>
           <div className="max-h-72 overflow-y-auto px-2 py-2">
-            {CAMPAIGN_COLUMNS.map((col) => {
+            {CAMPAIGN_COLUMNS.filter((col) => col.id !== "publisher" || !partner).map((col) => {
               const id = `camp-col-${col.id}`;
               return (
                 <Label

@@ -42,6 +42,7 @@ interface CampaignScheduleWire {
 interface CampaignListWire {
   id: string;
   name: string;
+  publishers?: string[];
   status: string;
   routingType: string;
   payoutAmount: string;
@@ -250,6 +251,7 @@ function listWireToCampaign(w: CampaignListWire): Campaign {
     numbersCount: 0,
     buyersCount: 0,
     publishersCount: 0,
+    publishers: w.publishers ?? [],
     callsToday: w.dailyCalls ?? w.callsToday ?? 0,
     // Was hardcoded 0 — the backend has been sending the figure all along.
     revenueToday: toNum(w.dailyRevenue ?? w.revenueToday ?? w.revenue),

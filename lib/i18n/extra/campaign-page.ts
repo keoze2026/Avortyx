@@ -4,6 +4,7 @@ import type { ExtraTranslations } from "./types";
 
 export const campaignPage: ExtraTranslations = {
   en: {
+    "x579.publisher": "Publisher",
     "x409.trackingTitle": "Tracking Numbers",
     "x409.trackingHint": "Numbers Publishers Send Calls To.",
     "x409.addNumber": "Add Number",
@@ -36,6 +37,7 @@ export const campaignPage: ExtraTranslations = {
     "x408.sumDiffNote": "never a line already reached",
   },
   ru: {
+    "x579.publisher": "Издатель",
     "x409.trackingTitle": "Номера отслеживания",
     "x409.trackingHint": "Номера, на которые издатели отправляют звонки.",
     "x409.addNumber": "Добавить номер",
@@ -68,6 +70,7 @@ export const campaignPage: ExtraTranslations = {
     "x408.sumDiffNote": "никогда на линию, где он уже был",
   },
   ja: {
+    "x579.publisher": "パブリッシャー",
     "x409.trackingTitle": "トラッキング番号",
     "x409.trackingHint": "パブリッシャーが通話を送る番号。",
     "x409.addNumber": "番号を追加",
@@ -100,6 +103,7 @@ export const campaignPage: ExtraTranslations = {
     "x408.sumDiffNote": "既に到達した回線には送らない",
   },
   zh: {
+    "x579.publisher": "发布商",
     "x409.trackingTitle": "追踪号码",
     "x409.trackingHint": "发布商发送来电的号码。",
     "x409.addNumber": "添加号码",

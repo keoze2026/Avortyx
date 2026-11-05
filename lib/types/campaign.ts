@@ -48,6 +48,8 @@ export interface Campaign {
   numbersCount: number;
   buyersCount: number;
   publishersCount: number;
+  /** CH-579: publisher names for the Campaigns list. Staff only; empty for partners. */
+  publishers?: string[];
   callsToday: number;
   revenueToday: number;
   conversionRate: number;
