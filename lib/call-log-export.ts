@@ -153,7 +153,7 @@ export function formatCallLogTable(
  * DESTINATION NUMBER (CH-594). Staff and owner logins: untouched.
  */
 export const PARTNER_HIDDEN_HEADERS: Readonly<Record<string, readonly string[]>> = {
-  buyer: ["CALLED NUMBER", "CAMPAIGN", "PUBLISHER"],
+  buyer: ["CALLED NUMBER", "CAMPAIGN", "PUBLISHER", "REPEATED"],   // REPEATED: CH-607
   publisher: ["BUYER", DESTINATION_NAME_HEADER, DESTINATION_NUMBER_HEADER],
 };
 

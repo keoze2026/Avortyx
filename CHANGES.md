@@ -2957,3 +2957,18 @@ Sir, 5 Nov: "Comments centers and organized".
   it, at most four lines, with the whole text on hover.
 - The label and % columns still line up row to row; rows with a comment are
   taller. Rows without one are unchanged.
+
+## CH-607 - Buyer logins: no Repeated, on screen or in the downloaded file
+
+Sir, 5 Nov: "Remove repeated from buyer access - from excel and visibility
+both."
+
+A buyer login now gets:
+- Reports call summary: no Repeated column (and no Repeated total to click);
+  the summary download drops it too.
+- Reports call log: no Repeated column; the download (server-built file and
+  the one built in the browser) has no REPEATED column.
+- Call panel: no "Repeat caller" / "First call" label under the caller, and
+  no repeat chip on Call Received.
+
+Publishers, staff and owner: unchanged.

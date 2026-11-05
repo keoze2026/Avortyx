@@ -1237,7 +1237,7 @@ export function CallSummaryTable({
   const hiddenForRole: ReadonlySet<ColumnKey> = React.useMemo(() => {
     const base: ColumnKey[] =
       role === "buyer"
-        ? ["payout", "profit", "cost", "noVoice", "noVoicePct"]
+        ? ["payout", "profit", "cost", "noVoice", "noVoicePct", "dupe"]   // CH-607: no Repeated for a buyer
         : role === "publisher"
           ? ["revenue", "profit", "cost", "noVoice", "noVoicePct"]
           : [];

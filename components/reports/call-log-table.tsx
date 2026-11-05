@@ -736,6 +736,8 @@ export function CallLogTable({
     const out = { ...columnsState };
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
+    // CH-607 (Sir, 5 Nov: "Remove repeated from buyer access, from excel and visibility both").
+    if (role === "buyer") out.repeated = false;
     // CH-594 (Sir, 5 Nov: "Hide the buyer name from publisher access"): a
     // publisher sees no buyer - not its name, its line's name or its number.
     if (role === "publisher") { out.revenue = false; out.buyer = false; out.destName = false; out.destTfn = false; }

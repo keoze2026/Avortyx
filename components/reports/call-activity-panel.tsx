@@ -474,7 +474,7 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string, vie
             : fill(t("x566.receivedFrom"), { caller: prettyPhone(call.callerNumber) })}
         </p>
         <div className="flex flex-wrap gap-1.5">
-          <Chip>{panel.repeat ? t("x565.ev.repeatChip") : t("x565.ev.firstCallChip")}</Chip>
+          {!viewer.buyer && <Chip>{panel.repeat ? t("x565.ev.repeatChip") : t("x565.ev.firstCallChip")}</Chip>}
           {(panel.senderTries ?? 1) > 1 && <Chip>{fill(t("x565.ev.senderTries"), { n: panel.senderTries ?? 1 })}</Chip>}
         </div>
       </div>

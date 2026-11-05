@@ -288,7 +288,8 @@ export function FlowCard({
       icon: Phone,
       label: t("x565.caller"),
       value: prettyPhone(call.callerNumber).replace(/^\+1 /, ""),
-      sub: panel?.repeat ?? call.isDuplicate ? t("x565.repeatCaller") : t("x565.firstCall"),
+      // CH-607: a buyer is not told whether the caller is a repeat.
+      sub: viewer.buyer ? "" : (panel?.repeat ?? call.isDuplicate) ? t("x565.repeatCaller") : t("x565.firstCall"),
       show: true,
     },
     {
