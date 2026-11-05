@@ -2676,3 +2676,13 @@ Step". The "Getting Started:" prefix is removed: "Number Pools Step by Step",
 "Campaign Groups Step by Step".
 
 Commit: see git log --grep CH-572
+
+## CH-573 - Call Plan Detail: every reason starts with a capital letter (FRONTEND)
+
+In the call's Call Plan Detail, the Filtering Breakdown and the Ineligible
+Destinations reasons started in lower case ("destination +1... is switched
+off", "buyer NEO ... is archived"). Each now starts with a capital
+("Destination ... is switched off", "Buyer NEO ... is archived"); the rest of
+the text is unchanged.
+
+Commit: see git log --grep CH-573

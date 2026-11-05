@@ -983,7 +983,8 @@ function CallPlanBody({ trace }: { trace: RoutingTrace | undefined }) {
         <ul className="space-y-1 pt-1">
           {(trace?.filteringBreakdown ?? []).map((b) => (
             <li key={b.reason} className="flex justify-between gap-3 text-[9.5px] font-medium">
-              <span className="text-muted-foreground">{b.reason}</span>
+              {/* CH-573: each reason starts with a capital letter. */}
+              <span className="text-muted-foreground">{capitalizeFirst(b.reason)}</span>
               <span className="tabular-nums">{b.count}</span>
             </li>
           ))}
@@ -1062,7 +1063,7 @@ function DestinationList({
           {numbered && <span className="w-6 shrink-0 text-right text-muted-foreground">{i + 1}.</span>}
           <span className="min-w-0 break-all"><LocalName name={d.name} /></span>
           {showReason && d.reason && (
-            <span className="ml-auto shrink-0 text-[9.5px] text-muted-foreground">{d.reason}</span>
+            <span className="ml-auto shrink-0 text-[9.5px] text-muted-foreground">{capitalizeFirst(d.reason)}</span>
           )}
         </li>
       ))}
