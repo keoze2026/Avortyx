@@ -287,7 +287,9 @@ interface BreakdownRow {
   ivr: number;
   valid: number;
 }
-type BreakdownBy = "publisher" | "campaign" | "buyer";
+/** CH-600 (Sir, 4 Nov: "no-voice rate by publisher, campaign, TFN, buyer and
+ *  hour"): TFN and hour (EST, in the day's order) added. */
+type BreakdownBy = "publisher" | "campaign" | "buyer" | "tfn" | "hour";
 
 /** CH-557 (Sir, 5 Nov: "put this under AI audit report"): the No Voice / No
  *  Voice % that were Call Summary columns on Reports - per publisher, campaign
@@ -316,8 +318,8 @@ function NoVoiceBreakdown({ date }: { date: string }) {
             <div className="text-sm font-semibold">{t("x557.title")}</div>
             <div className="text-[13px] text-muted-foreground">{t("x557.desc")}</div>
           </div>
-          <div className="flex gap-1">
-            {(["publisher", "campaign", "buyer"] as const).map((b) => (
+          <div className="flex flex-wrap gap-1">
+            {(["publisher", "campaign", "buyer", "tfn", "hour"] as const).map((b) => (
               <Button key={b} size="sm" variant={by === b ? "default" : "outline"} onClick={() => setBy(b)}>
                 {t(`x557.by.${b}`)}
               </Button>
