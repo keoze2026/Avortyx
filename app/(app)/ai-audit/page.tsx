@@ -14,6 +14,9 @@
  *     when the caller first spoke, beeping on the caller's line;
  *   - Listen, and Correct / Wrong for the audit team (Wrong asks for the
  *     right label). The AI's accuracy % is worked out from those verdicts.
+ *     CH-616 (Sir, 6 Nov: "Only put audit under no voice calls, rest leave
+ *     it"): the buttons are on No Voice calls only, and the accuracy % is the
+ *     No Voice calls' only. A verdict given earlier on another call still shows.
  * The page updates by itself when a call is checked (live connection, CH-538).
  */
 
@@ -50,6 +53,8 @@ import { cn } from "@/lib/utils";
  *  Robocall / Caller spoke, no issue - CH-555). */
 const LABELS = ["valid", "caller_ok", "dead_caller", "agent_only", "agent_beep", "ivr", "robocall"] as const;
 type Label = (typeof LABELS)[number];
+/** CH-616: the labels the audit team marks Correct / Wrong (No Voice only). */
+const AUDIT_LABELS: readonly string[] = ["dead_caller", "agent_only", "agent_beep"];
 const FILTERS = [
   "",
   "pending",
@@ -97,6 +102,8 @@ interface Row {
   reviewCorrect: boolean | null;
   reviewNote: string;
   reviewedBy: string;
+  /** CH-616: true on No Voice calls - the only ones the audit team marks. */
+  auditable?: boolean;
 }
 
 type Counts = Record<
@@ -645,7 +652,7 @@ export default function AiAuditPage() {
                   {acc?.percent != null ? `${acc.percent}%` : "—"}
                 </div>
                 <div className="text-[13px] text-muted-foreground">
-                  {t("x543.accuracyBase")
+                  {t("x616.accuracyBase")
                     .replace("{correct}", String(acc?.correct ?? 0))
                     .replace("{reviewed}", String(acc?.reviewed ?? 0))
                     .replace("{days}", String(acc?.days ?? 30))}
@@ -821,7 +828,9 @@ export default function AiAuditPage() {
                           )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap pr-4">
-                          {r.aiStatus !== "checked" || r.aiLabel === "mixed" ? (
+                          {r.aiStatus !== "checked" ||
+                          r.aiLabel === "mixed" ||
+                          (!r.reviewLabel && !(r.auditable ?? AUDIT_LABELS.includes(r.aiLabel))) ? (
                             <span className="text-muted-foreground">—</span>
                           ) : r.reviewLabel ? (
                             <div className="text-[13px]">

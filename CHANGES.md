@@ -3047,3 +3047,17 @@ screenshot of specific publisher".
   It resets to All when the tab or the day changes.
 
 Main account only, as the page. Nothing else changes.
+
+## CH-616 - AI Audit: Correct / Wrong on No Voice calls only
+
+Sir, 6 Nov: "Only put audit under no voice calls, rest leave it." "For now
+train it for NV, rest we will check and train later."
+
+- Correct / Wrong buttons: on No Voice calls only (Dead Caller, No Beep or
+  Customer, Only Agent + Beeping). Valid, Caller OK, IVR, Robocall and Mixed
+  show "-". The server refuses a verdict on them too (backend CH-616).
+- A verdict given earlier on another call still shows on its row.
+- AI accuracy: "No Voice calls: X of Y marked correct (last 30 days)" - the
+  No Voice calls' verdicts only (en / ru / ja / zh).
+
+Main account only, as the page. Nothing else changes.
