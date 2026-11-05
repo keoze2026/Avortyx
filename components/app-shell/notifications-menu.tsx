@@ -86,7 +86,7 @@ export function NotificationsMenu() {
         // CH-567: the alert settings open wider, so every switch shows at once.
         className={cn(
           "overflow-hidden rounded-xl border-border bg-popover p-0",
-          view === "settings" ? "w-[min(760px,calc(100vw-1rem))]" : "w-[min(440px,calc(100vw-1rem))]",
+          view === "settings" ? "w-[min(760px,calc(100vw-1rem))]" : "w-[min(360px,calc(100vw-1rem))]",
         )}
       >
         {view === "settings" ? (
@@ -128,17 +128,17 @@ export function NotificationsMenu() {
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5">
-              <h3 className="text-lg font-semibold">{t("notificationsUI.menu.title")}</h3>
+            <div className="flex items-center justify-between px-3.5 pt-3">
+              <h3 className="text-[13px] font-semibold">{t("notificationsUI.menu.title")}</h3>
               <div className="flex items-center gap-1">
                 {/* CH-568: always there (it hid once everything was read). */}
                 <button
                   type="button"
                   onClick={() => markAllReadStore(everyId)}
                   disabled={feedUnread === 0}
-                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
                 >
-                  <CheckCheck className="h-4 w-4" />
+                  <CheckCheck className="h-3 w-3" />
                   {t("notificationsUI.menu.markAllRead")}
                 </button>
                 {/* CH-578 */}
@@ -146,9 +146,9 @@ export function NotificationsMenu() {
                   type="button"
                   onClick={() => setView("confirmClear")}
                   disabled={everyId.length + tfnCount === 0}
-                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3" />
                   {t("x578.clearAll")}
                 </button>
                 <button
@@ -156,26 +156,26 @@ export function NotificationsMenu() {
                   onClick={() => setView("settings")}
                   title={t("x558.alertSettings")}
                   aria-label={t("x558.alertSettings")}
-                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
                 >
-                  <Settings2 className="h-4 w-4" />
+                  <Settings2 className="h-3 w-3" />
                 </button>
               </div>
             </div>
 
             {/* Tabs - underlined, like the page */}
-            <div className="mt-3 flex gap-6 border-b border-border/60 px-5">
+            <div className="mt-1.5 flex gap-4 border-b border-border/60 px-3.5">
               {tabs.map((x) => (
                 <button
                   key={x.id}
                   type="button"
                   onClick={() => setTab(x.id)}
                   className={cn(
-                    "-mb-px border-b-2 pb-2.5 text-[15px] transition-colors",
+                    "-mb-px border-b-2 pb-1.5 text-[12px] transition-colors",
                     tab === x.id ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {x.label} <span className="ml-1 text-sm tabular-nums text-muted-foreground">{x.count}</span>
+                  {x.label} <span className="ml-0.5 text-[10.5px] tabular-nums text-muted-foreground">{x.count}</span>
                 </button>
               ))}
             </div>
@@ -198,7 +198,7 @@ export function NotificationsMenu() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between border-t border-border/60 px-5 py-3.5 text-sm">
+            <div className="flex items-center justify-between border-t border-border/60 px-3.5 py-2 text-[11px]">
               <span className="text-muted-foreground">
                 {unread > 0 ? t("x558.unread").replace("{n}", String(unread)) : t("notificationsUI.menu.allCaughtUp")}
               </span>

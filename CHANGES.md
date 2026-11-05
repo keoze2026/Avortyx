@@ -2791,3 +2791,13 @@ page changed and the bell stayed open over it. The menu's open state is now
 held by the component, and View all notifications and Add TFNs both close it.
 
 Commit: see git log --grep CH-583
+
+## CH-584 - Bell: the whole box smaller (FRONTEND)
+
+Reported 5 Nov: "Still same i need more small." CH-580 shrank only the messages,
+so the box looked unchanged. The bell is now 360px wide (was 440px), titles are
+12px, the second line 10.5px and rows about 43px high (was 53px), with a smaller
+header, tabs, buttons and footer. Exact sizes, because `text-xs` is only 9.75px
+in this app. The Notifications page keeps its size.
+
+Commit: see git log --grep CH-584
