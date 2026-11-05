@@ -2869,3 +2869,16 @@ publisher names. It now sits in the space between the two names, within a few
 pixels of centre at common screen widths. Nothing else moved.
 
 Commit: see git log --grep CH-591
+
+## CH-592 - Alert switches also control the list (FRONTEND)
+
+Reported 5 Nov: "i have selected everything uncheck why still notification
+coming." The Pop-up Alerts switches only stopped the banner; every alert still
+reached the bell and the Notifications page. Now an alert switched off appears
+in neither, and the counts follow at once. This covers cap alerts, anomalies,
+the missing-calls insight and the TFN notice. Alerts are still recorded, so
+switching one back on brings it back. Until a login's choices are known nothing
+is hidden, and an alert with no switch always shows. The panel text now says so.
+Portal only: Telegram and email are not affected.
+
+Commit: see git log --grep CH-592

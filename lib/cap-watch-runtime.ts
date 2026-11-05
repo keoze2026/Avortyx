@@ -60,7 +60,7 @@ function levelFor(used: number, cap: number): CapLevel | null {
 /** The backend event name whose "Pop-up alerts" switch governs this alert
  *  (`campaign.cap_reached` / `buyer.cap_reached` / `destination.cap_reached`).
  *  "Almost reached" banners follow the same switch as "reached". */
-function popupEventFor(entityType: CapAlert["entityType"]): string {
+export function popupEventFor(entityType: CapAlert["entityType"]): string {
   return `${entityType}.cap_reached`;
 }
 
@@ -141,7 +141,7 @@ export function useCapWatchRuntime() {
         at: Date.now(),
       };
       if (!record(alert)) continue;
-      // Logged to the bell either way; the banner is the operator's choice.
+      // Recorded either way; the switch decides the banner and the list (CH-592).
       if (!popupAllowed(popupEventFor(cand.entityType))) continue;
 
       const root = `notificationsUI.capWatch.${cand.metric}.${level}`;

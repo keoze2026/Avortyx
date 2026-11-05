@@ -62,7 +62,7 @@ const useAnomalyPopupLedger = create<LedgerState>()(
   ),
 );
 
-function popupEventFor(item: NotificationItem, kind: string): string | null {
+export function popupEventFor(item: NotificationItem, kind: string): string | null {
   switch (item.alertKind) {
     case "missed":
       return "buyer.missed";

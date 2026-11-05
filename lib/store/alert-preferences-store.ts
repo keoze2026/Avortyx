@@ -6,8 +6,9 @@
  *   GET   /api/notifications/preferences   { popups_enabled, popup_events, sound_enabled }
  *   PATCH /api/notifications/preferences   any subset; popup_events replaces the list
  *
- * Every alert still lands in the bell menu and on /notifications; this
- * only decides whether it *also* interrupts the operator with a banner.
+ * CH-592: a switch also decides the list. An alert switched off shows neither
+ * as a banner nor in the bell or on /notifications (`useAlertShown`); it is
+ * still recorded, so switching it back on brings it back.
  * Set from the "Pop-up alerts" panel under the bell's Alerts tab.
  *
  * The last known catalogue + preferences are cached in localStorage so the
@@ -17,6 +18,7 @@
 
 "use client";
 
+import * as React from "react";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
@@ -156,4 +158,27 @@ export function popupAllowed(event: string): boolean {
   const known = s.events.some((e) => e.event === event);
   if (!known) return !partner;
   return s.popupEvents.includes(event);
+}
+
+/**
+ * CH-592: is this alert on for the bell and the Notifications page?
+ *
+ * Reactive, so a switch takes effect at once. Until this login's choices are
+ * known everything shows, and an event the catalogue does not list has no
+ * switch to turn it off: neither may hide an alert by accident.
+ */
+export function useAlertShown(): (event: string) => boolean {
+  const events = useAlertPreferencesStore((s) => s.events);
+  const popupsEnabled = useAlertPreferencesStore((s) => s.popupsEnabled);
+  const popupEvents = useAlertPreferencesStore((s) => s.popupEvents);
+  const owner = useAlertPreferencesStore((s) => s.userId);
+  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  return React.useCallback(
+    (event: string) => {
+      if (owner !== userId || events.length === 0) return true;
+      if (!popupsEnabled) return false;
+      return !events.some((e) => e.event === event) || popupEvents.includes(event);
+    },
+    [events, popupsEnabled, popupEvents, owner, userId],
+  );
 }

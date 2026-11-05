@@ -17,7 +17,10 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import type { NotificationItem } from "@/lib/mock/notifications";
 import { anomalyToNotification, capAlertToNotification, recommendationToNotification } from "@/lib/notifications/mappers";
+import { popupEventFor as anomalyEvent } from "@/lib/anomaly-popup-runtime";
+import { popupEventFor as capEvent } from "@/lib/cap-watch-runtime";
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
+import { useAlertShown } from "@/lib/store/alert-preferences-store";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useCapAlertsStore } from "@/lib/store/cap-alerts-store";
 import { activeCleared, useNotificationsClearedStore } from "@/lib/store/notifications-cleared-store";
@@ -213,6 +216,7 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
   const clearedIds = useNotificationsClearedStore((s) => s.ids);
   const clearedDay = useNotificationsClearedStore((s) => s.day);
   const clearedOwner = useNotificationsClearedStore((s) => s.owner);
+  const shown = useAlertShown();
   // CH-576: a buyer or publisher login sees only its own cap alerts (CH-335).
   // The AI insights and campaign caps describe the whole workspace.
   const partner = role === "buyer" || role === "publisher";
@@ -220,15 +224,19 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
   return React.useMemo(() => {
     const cleared = activeCleared({ ids: clearedIds, day: clearedDay, owner: clearedOwner }, today, userId);
     const every: Raw[] = ([
-      ...capAlerts.filter((a) => !partner || a.entityType !== "campaign").map((a) => {
+      // CH-592: an alert switched off stays out of the list as well.
+      ...capAlerts.filter((a) => (!partner || a.entityType !== "campaign") && shown(capEvent(a.entityType))).map((a) => {
         const item = capAlertToNotification(a, t);
         return { item, at: a.at, title: item.title };
       }),
-      ...(partner ? [] : anomalies).map((a) => {
+      ...(partner ? [] : anomalies).filter((a) => {
+        const event = anomalyEvent(anomalyToNotification(a), a.kind);
+        return !event || shown(event);
+      }).map((a) => {
         const item = anomalyToNotification(a);
         return { item, at: a.detectedAt, title: item.title };
       }),
-      ...(partner ? [] : recommendations).map((r) => ({
+      ...(partner ? [] : recommendations).filter((r) => r.impact?.value !== "pause_buyer" || shown("buyer.missed")).map((r) => ({
         item: recommendationToNotification(r),
         at: r.createdAt,
         action: r.impact?.value,
@@ -246,7 +254,7 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
     };
     const unread = raws.length - counts.read;
     return { entries, counts, unread, allIds: raws.map((r) => r.item.id), everyId: every.map((r) => r.item.id) };
-  }, [anomalies, recommendations, capAlerts, readIds, t, since, partner, today, userId, clearedIds, clearedDay, clearedOwner]);
+  }, [anomalies, recommendations, capAlerts, readIds, t, since, partner, today, userId, clearedIds, clearedDay, clearedOwner, shown]);
 }
 
 /** CH-578: Clear All - hides what is showing now until 12 AM Eastern. The
@@ -271,11 +279,13 @@ export function useVisibleDeletedTfns() {
   const ids = useNotificationsClearedStore((s) => s.ids);
   const day = useNotificationsClearedStore((s) => s.day);
   const owner = useNotificationsClearedStore((s) => s.owner);
+  const alertShown = useAlertShown();
   return React.useMemo(() => {
     const cleared = activeCleared({ ids, day, owner }, today, userId);
-    const show = (n: { id: string }) => !cleared[`tfn:${n.id}`];
+    const on = alertShown("number.deleted");
+    const show = (n: { id: string }) => on && !cleared[`tfn:${n.id}`];
     return { numbers: numbers.filter(show), kept: kept.filter(show) };
-  }, [numbers, kept, ids, day, owner, today, userId]);
+  }, [numbers, kept, ids, day, owner, today, userId, alertShown]);
 }
 
 /** "Today" / "Yesterday" / "Mon 3 Nov" for a day heading. */
