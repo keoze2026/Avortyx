@@ -2710,3 +2710,16 @@ instead of being cut; the reason drops what the row already shows -
 other reason is shown as recorded. Filtering Breakdown is unchanged.
 
 Commit: see git log --grep CH-575
+
+## CH-576 - Inside notifications hidden from buyer and publisher logins (FRONTEND)
+
+Reported 5 Nov: "All publishers and buyers are getting our inside
+notification. Hide this fast." A partner login no longer loads or shows the
+workspace's AI insights and anomalies, in the bell, on the Notifications page
+or as pop-ups, and no longer sees campaign cap alerts. Its own buyer,
+destination and publisher cap alerts (CH-335) and the TFNs deleted notice stay.
+The Buyer Missed Call pop-up came from the same anomalies, so buyer logins no
+longer get it. The main account and staff logins are unchanged.
+
+Backend half: CH-576 in call_platform.
+Commit: see git log --grep CH-576

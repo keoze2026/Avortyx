@@ -92,7 +92,9 @@ export function StoreHydrator() {
 
 function loadSecondaryStores() {
   // AI Insights — recommendations + anomalies (cheap, rule-based on the backend).
-  void useAiInsightsStore.getState().fetchAll();
+  // CH-576: workspace data, never loaded on a buyer or publisher login.
+  const role = useAuthStore.getState().user?.role;
+  if (role !== "buyer" && role !== "publisher") void useAiInsightsStore.getState().fetchAll();
   // Suppression list — blocked numbers (blacklist).
   void useBlockedNumbersStore.getState().fetch();
   // Every blocked caller in the workspace, for the red colour in call logs (CH-185).

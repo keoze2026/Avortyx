@@ -18,6 +18,7 @@ import { ROUTES } from "@/lib/constants";
 import type { NotificationItem } from "@/lib/mock/notifications";
 import { anomalyToNotification, capAlertToNotification, recommendationToNotification } from "@/lib/notifications/mappers";
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useCapAlertsStore } from "@/lib/store/cap-alerts-store";
 import { useNotificationsReadStore } from "@/lib/store/notifications-read-store";
 
@@ -204,18 +205,22 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
   const recommendations = useAiInsightsStore((s) => s.recommendations);
   const capAlerts = useCapAlertsStore((s) => s.alerts);
   const readIds = useNotificationsReadStore((s) => s.readIds);
+  const role = useAuthStore((s) => s.user?.role);
+  // CH-576: a buyer or publisher login sees only its own cap alerts (CH-335).
+  // The AI insights and campaign caps describe the whole workspace.
+  const partner = role === "buyer" || role === "publisher";
 
   return React.useMemo(() => {
     const every: Raw[] = [
-      ...capAlerts.map((a) => {
+      ...capAlerts.filter((a) => !partner || a.entityType !== "campaign").map((a) => {
         const item = capAlertToNotification(a, t);
         return { item, at: a.at, title: item.title };
       }),
-      ...anomalies.map((a) => {
+      ...(partner ? [] : anomalies).map((a) => {
         const item = anomalyToNotification(a);
         return { item, at: a.detectedAt, title: item.title };
       }),
-      ...recommendations.map((r) => ({
+      ...(partner ? [] : recommendations).map((r) => ({
         item: recommendationToNotification(r),
         at: r.createdAt,
         action: r.impact?.value,
@@ -233,7 +238,7 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
     };
     const unread = raws.length - counts.read;
     return { entries, counts, unread, allIds: raws.map((r) => r.item.id), everyId: every.map((r) => r.item.id) };
-  }, [anomalies, recommendations, capAlerts, readIds, t, since]);
+  }, [anomalies, recommendations, capAlerts, readIds, t, since, partner]);
 }
 
 /** "Today" / "Yesterday" / "Mon 3 Nov" for a day heading. */

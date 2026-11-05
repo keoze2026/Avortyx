@@ -27,6 +27,7 @@ import { ROUTES } from "@/lib/constants";
 import { zonedDayKey } from "@/lib/format";
 import { anomalyToNotification } from "@/lib/notifications/mappers";
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { popupAllowed } from "@/lib/store/alert-preferences-store";
 import { pushNotification } from "@/lib/store/push-notifications-store";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -80,9 +81,12 @@ export function useAnomalyPopupRuntime() {
   const anomalies = useAiInsightsStore((s) => s.anomalies);
   const timeZone = useUIStore((s) => s.reportTimezone);
   const mark = useAnomalyPopupLedger((s) => s.mark);
+  const role = useAuthStore((s) => s.user?.role);
+  // CH-576: these are the workspace's anomalies, never a buyer's or publisher's.
+  const partner = role === "buyer" || role === "publisher";
 
   React.useEffect(() => {
-    if (anomalies.length === 0) return;
+    if (partner || anomalies.length === 0) return;
     const day = zonedDayKey(Date.now(), timeZone);
     for (const a of anomalies) {
       const item = anomalyToNotification(a);
@@ -103,5 +107,5 @@ export function useAnomalyPopupRuntime() {
         durationMs: 12_000,
       });
     }
-  }, [anomalies, timeZone, mark, t]);
+  }, [anomalies, timeZone, mark, t, partner]);
 }
