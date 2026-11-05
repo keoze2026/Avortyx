@@ -73,7 +73,11 @@ export function NotificationsMenu() {
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-[min(440px,calc(100vw-1rem))] overflow-hidden rounded-xl border-border bg-popover p-0"
+        // CH-567: the alert settings open wider, so every switch shows at once.
+        className={cn(
+          "overflow-hidden rounded-xl border-border bg-popover p-0",
+          view === "settings" ? "w-[min(760px,calc(100vw-1rem))]" : "w-[min(440px,calc(100vw-1rem))]",
+        )}
       >
         {view === "settings" ? (
           <>
@@ -85,8 +89,8 @@ export function NotificationsMenu() {
               <ArrowLeft className="h-4 w-4" />
               {t("notificationsUI.menu.title")}
             </button>
-            <div className="max-h-[480px] overflow-y-auto">
-              <PopupAlertSettings />
+            <div className="max-h-[calc(100vh-7rem)] overflow-y-auto">
+              <PopupAlertSettings wide />
             </div>
           </>
         ) : (

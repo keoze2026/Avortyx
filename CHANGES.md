@@ -2612,3 +2612,17 @@ CH-565 drew the same panel for every login. Goes with backend CH-566.
   row's own answer time, not "Not answered".
 
 Commit: see git log --grep CH-566
+
+## CH-567 - Pop-up alerts: group names in our blue, every switch visible at once (FRONTEND)
+
+The bell menu's Pop-up alerts settings: group names (Calls, Caps, Account,
+System) were grey capitals, and the box was 480 px tall, so the 15 switches
+needed scrolling.
+
+- Group names in normal case and our blue (also on the Notifications page).
+- In the bell menu the settings open wider (up to 760 px) with the groups in
+  two balanced columns, and the box may use the screen's height: on a
+  1366 x 768 screen all 15 switches show without scrolling. Phones keep one
+  column. The notification list keeps its size.
+
+Commit: see git log --grep CH-567

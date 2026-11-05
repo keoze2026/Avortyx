@@ -46,7 +46,11 @@ const SECTIONS: Array<{ key: string; events: string[] }> = [
   { key: "system", events: [] },
 ];
 
-export function PopupAlertSettings({ className }: { className?: string }) {
+/**
+ * `wide` (CH-567, the bell menu): the groups sit in two balanced columns so
+ * every switch is visible at once, without scrolling.
+ */
+export function PopupAlertSettings({ className, wide = false }: { className?: string; wide?: boolean }) {
   const { t, locale } = useTranslation();
   // English keeps the backend's own label; other languages use ours for the types we know.
   const eventLabel = (e: { event: string; label: string }) =>
@@ -107,10 +111,11 @@ export function PopupAlertSettings({ className }: { className?: string }) {
       ) : events.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">{t("notificationsUI.popupPrefs.empty")}</p>
       ) : (
-        <div className={cn("mt-2", !popupsEnabled && "opacity-50")}>
+        <div className={cn("mt-2", wide && "sm:columns-2 sm:gap-x-10", !popupsEnabled && "opacity-50")}>
           {sections.map((sec) => (
-            <div key={sec.key} className="mt-4">
-              <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <div key={sec.key} className="break-inside-avoid pt-4">
+              {/* CH-567: the group names in normal case and our blue, not grey capitals. */}
+              <p className="mb-1 text-sm font-semibold text-accent">
                 {t(`x558.popups.section.${sec.key}`)}
               </p>
               <ul>
