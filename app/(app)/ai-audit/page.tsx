@@ -300,9 +300,17 @@ function NoVoiceBreakdown({ date }: { date: string }) {
   const { t } = useTranslation();
   const [by, setBy] = React.useState<BreakdownBy>("publisher");
   const [items, setItems] = React.useState<BreakdownRow[] | null>(null);
+  // CH-613 (Sir, 6 Nov: "Give filter option here if anyone wants to see or send
+  // screenshot of specific publisher"): one name, or all.
+  const [pick, setPick] = React.useState("");
+  const shown = React.useMemo(
+    () => (items && pick ? items.filter((r) => r.name === pick) : items),
+    [items, pick],
+  );
   React.useEffect(() => {
     let cancelled = false;
     setItems(null);
+    setPick("");
     http
       .get<{ items: BreakdownRow[] }>("/api/ai-audit/breakdown", { query: { dateFrom: date, dateTo: date, by } })
       .then((r) => !cancelled && setItems(r.items))
@@ -320,7 +328,20 @@ function NoVoiceBreakdown({ date }: { date: string }) {
             <div className="text-sm font-semibold">{t("x557.title")}</div>
             <div className="text-[13px] text-muted-foreground">{t("x557.desc")}</div>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <select
+              value={pick}
+              onChange={(e) => setPick(e.target.value)}
+              aria-label={t("x613.filter")}
+              className="mr-2 h-8 max-w-[14rem] rounded-md border bg-background px-2 text-sm"
+            >
+              <option value="">{t("x613.all")}</option>
+              {(items ?? []).map((r) => (
+                <option key={r.name} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
             {(["publisher", "campaign", "buyer", "tfn", "hour"] as const).map((b) => (
               <Button key={b} size="sm" variant={by === b ? "default" : "outline"} onClick={() => setBy(b)}>
                 {t(`x557.by.${b}`)}
@@ -328,11 +349,11 @@ function NoVoiceBreakdown({ date }: { date: string }) {
             ))}
           </div>
         </div>
-        {items === null ? (
+        {shown === null ? (
           <div className="p-4">
             <Skeleton className="h-5 w-full" />
           </div>
-        ) : items.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-muted-foreground">{t("x557.none")}</div>
         ) : (
           <div className="overflow-x-auto">
@@ -351,7 +372,7 @@ function NoVoiceBreakdown({ date }: { date: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((r) => (
+                {shown.map((r) => (
                   <TableRow key={r.name}>
                     <TableCell className="pl-6 text-left font-medium">{r.name}</TableCell>
                     <TableCell className="text-center tabular-nums">{r.checked}</TableCell>
@@ -468,6 +489,64 @@ export default function AiAuditPage() {
 
   const labelText = React.useCallback((l: string) => t(`x543.label.${l}`), [t]);
 
+  // CH-613 (Sir, 6 Nov: "give an option to download this file in Excel with
+  // comment like we do reporting"): every call of the day under the tile
+  // picked (All, No Voice, ...), not only the page on screen, with the AI's
+  // comment, each side's seconds, the team's verdict and the recording link.
+  const [exporting, setExporting] = React.useState(false);
+  const exportCalls = async () => {
+    setExporting(true);
+    try {
+      const all: Row[] = [];
+      for (let p = 1; p <= 100; p++) {
+        const r = await http.get<Page>("/api/ai-audit/calls", { query: { date, label: filter, page: p, pageSize: 200 } });
+        all.push(...r.items);
+        if (r.items.length === 0 || all.length >= r.total) break;
+      }
+      if (all.length === 0) {
+        toast.info(t("x613.none"));
+        return;
+      }
+      const label = (r: Row) =>
+        r.aiStatus === "checked"
+          ? labelText(r.aiLabel) + (r.audioFault ? ` (${t("x613.fault")})` : "")
+          : r.aiStatus === "pending" ? t("x543.pending") : t("x543.noFile");
+      const audit = (r: Row) =>
+        r.reviewCorrect === true ? t("x613.correct")
+          : r.reviewCorrect === false ? `${t("x613.wrong")}: ${labelText(r.reviewLabel)}` : "";
+      const columns: ExportColumn<Row>[] = [
+        { label: "DATE (EST)", value: (r) => `${date} ${timeEst(r.startedAt)}` },
+        { label: "CALLER ID", value: (r) => r.caller },
+        { label: "CAMPAIGN", value: (r) => r.campaign },
+        { label: "PUBLISHER", value: (r) => r.publisher },
+        { label: "BUYER", value: (r) => r.buyer },
+        { label: "DESTINATION", value: (r) => r.destination },
+        { label: "TALK", value: (r) => mmss(r.duration) },
+        { label: "AI LABEL", value: label },
+        { label: "CONFIDENCE %", value: (r) => (r.aiStatus === "checked" ? r.aiConfidence ?? "" : "") },
+        { label: "AI COMMENT", value: (r) => r.summary || r.aiComment || "" },
+        { label: "CALLER SPEECH (S)", value: (r) => r.callerSpeech ?? "" },
+        { label: "CALLER FIRST WORD AFTER (S)", value: (r) => r.callerFirst ?? "" },
+        { label: "AGENT SPEECH (S)", value: (r) => r.agentSpeech ?? "" },
+        { label: "BEEPING (S)", value: (r) => r.beepSeconds ?? "" },
+        { label: "AUDIT", value: audit },
+        { label: "AUDIT NOTE", value: (r) => r.reviewNote || "" },
+        { label: "REVIEWED BY", value: (r) => r.reviewedBy || "" },
+        { label: "RECORDING", value: (r) => r.recordingUrl || "" },
+        { label: "CALL ID", value: (r) => r.id },
+      ];
+      downloadRows("xlsx", columns, all, `ai-audit-${date}${filter ? `-${filter}` : ""}`, "AI Audit", {
+        boldHeader: true,
+        linkColumns: ["RECORDING"],
+      });
+      toast.success(t("x613.done").replace("{count}", String(all.length)));
+    } catch (e) {
+      toast.error(friendlyErrorMessage(e));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const load = React.useCallback(
     async (quiet = false) => {
       if (!quiet) setLoading(true);
@@ -543,10 +622,16 @@ export default function AiAuditPage() {
         title={t("x543.title")}
         description={t("x543.desc")}
         actions={
-          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            {t("x543.refresh")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => void exportCalls()} disabled={exporting}>
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {t("x613.download")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {t("x543.refresh")}
+            </Button>
+          </div>
         }
       />
 

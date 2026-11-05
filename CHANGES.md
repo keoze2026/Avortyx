@@ -3028,3 +3028,22 @@ anything but view):
 Concurrency on its own destinations stays on the Destinations page, as
 before. Staff: unchanged. The server refuses the same changes (backend
 CH-612).
+
+## CH-613 - AI Audit: Excel download with the AI comment; filter on No Voice by Publisher
+
+Sir, 6 Nov: "give an option to download this file in Excel with comment like
+we do reporting" and "Give filter option here if anyone wants to see or send
+screenshot of specific publisher".
+
+- Download Excel (top right, beside Refresh): every call of the day under the
+  tile picked (All, No Voice, Valid Call, ...), not only the page on screen.
+  Columns: Date (EST), Caller ID, Campaign, Publisher, Buyer, Destination,
+  Talk, AI Label (with "Possible audio fault"), Confidence %, AI Comment,
+  Caller speech, Caller first word after, Agent speech, Beeping, Audit
+  (Correct / Wrong: label), Audit note, Reviewed by, Recording (link), Call ID.
+  Capital, bold headings as on Reports.
+- No Voice by Publisher, Campaign and Buyer: a dropdown (All, or one name) to
+  show a single publisher, campaign, buyer, TFN or hour - for a screenshot.
+  It resets to All when the tab or the day changes.
+
+Main account only, as the page. Nothing else changes.
