@@ -8,13 +8,20 @@
  * to jump there, and the chapter playing is highlighted. The video is served
  * from /public/videos (4K, web-optimised MP4 that starts playing before it has
  * fully downloaded).
+ *
+ * CH-571 (Sir, 5 Nov: "Videos only under Getting Started ... Advance Routing,
+ * then this camp grp video"): the Number Pools video (Sir's "Advanced
+ * Routing") and then the Campaign Groups video sit under the walkthrough
+ * here, and nowhere else. Our team only, as their pages were.
  */
 
 import * as React from "react";
 import { CirclePlay, Clock, MessageCircle } from "lucide-react";
 
+import { CAMPAIGN_GROUPS_GUIDE, GuideVideo, NUMBER_POOLS_GUIDE } from "@/components/shared/guide-video";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +58,7 @@ function clock(seconds: number): string {
 
 export default function GettingStartedPage() {
   const { t } = useTranslation();
+  const { isPartner } = usePartnerPermissions();
   const video = React.useRef<HTMLVideoElement>(null);
   const [now, setNow] = React.useState(0);
   const [length, setLength] = React.useState(158);
@@ -188,6 +196,13 @@ export default function GettingStartedPage() {
           </CardContent>
         </Card>
       </div>
+
+      {!isPartner && (
+        <div className="space-y-3">
+          <GuideVideo {...NUMBER_POOLS_GUIDE} />
+          <GuideVideo {...CAMPAIGN_GROUPS_GUIDE} />
+        </div>
+      )}
     </div>
   );
 }

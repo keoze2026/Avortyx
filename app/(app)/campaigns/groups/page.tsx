@@ -25,7 +25,6 @@ import { GroupDetail } from "@/components/campaigns/groups/detail/group-detail";
 import { GroupEditorDialog } from "@/components/campaigns/groups/group-editor-dialog";
 import { fill } from "@/components/campaigns/groups/shared";
 import { EmptyState } from "@/components/shared/empty-state";
-import { CAMPAIGN_GROUPS_GUIDE, GuideVideo } from "@/components/shared/guide-video";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -167,8 +166,7 @@ export default function CampaignGroupsPage() {
 
   return (
     <div className="space-y-6">
-      {/* CH-550: the Campaign Groups Getting Started video. */}
-      <GuideVideo {...CAMPAIGN_GROUPS_GUIDE} />
+      {/* CH-571: the Campaign Groups video is on the Getting Started page only. */}
       {error ? (
         <EmptyState
           icon={Layers}

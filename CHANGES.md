@@ -2656,3 +2656,14 @@ The Pop-up Alerts settings title was white; it is now our blue, the same as
 its group names (CH-567). Bell menu and Notifications page.
 
 Commit: see git log --grep CH-570
+
+## CH-571 - Guide videos only on Getting Started: Number Pools, then Campaign Groups (FRONTEND)
+
+"Videos only under Getting Started ... Advance Routing, then this camp grp
+video." The Number Pools video ("Advanced Routing") and the Campaign Groups
+video (CH-550) are taken off the Number Pools and Campaign Groups pages and
+shown on the Getting Started page under the walkthrough, in that order, each
+as a strip that opens with Watch. Our team only, as on their old pages
+(partner logins never saw those pages).
+
+Commit: see git log --grep CH-571
