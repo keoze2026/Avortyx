@@ -181,7 +181,7 @@ export function CampaignsTable({
               </TableHead>
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
               <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
-              {showPublisher && <TableHead className="text-left">{t("x579.publisher")}</TableHead>}
+              {showPublisher && <TableHead>{t("x579.publisher")}</TableHead>}
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
@@ -244,7 +244,7 @@ export function CampaignsTable({
                     </div>
                   </TableCell>
                   {showPublisher && (
-                    <TableCell className="max-w-[260px] whitespace-normal text-left text-sm text-muted-foreground">
+                    <TableCell className="max-w-[260px] whitespace-normal text-center text-sm text-muted-foreground">
                       {c.publishers?.length ? c.publishers.join(", ") : "-"}
                     </TableCell>
                   )}

@@ -2766,3 +2766,10 @@ notifications?" and says what will happen, with Cancel and Clear All: a panel
 inside the bell, a dialog on the page. Cancel changes nothing.
 
 Commit: see git log --grep CH-580
+
+## CH-581 - Campaigns: Publisher column centred (FRONTEND)
+
+Reported 5 Nov: "Center the dash." The Publisher header, names and "-" now sit
+on one centre line, like the table's other columns.
+
+Commit: see git log --grep CH-581
