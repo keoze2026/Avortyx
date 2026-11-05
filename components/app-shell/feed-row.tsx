@@ -26,24 +26,24 @@ export function FeedRow({ entry, full = false }: { entry: FeedEntry; full?: bool
       className={cn(
         "flex transition-colors",
         // CH-580: the bell's messages are smaller; the full page keeps its size.
-        full ? "gap-3 px-5 py-4" : "gap-2 px-3.5 py-1.5",
+        full ? "gap-3 px-5 py-4" : "gap-2 px-3.5 py-1",
         !entry.read ? "bg-accent/[0.06]" : "hover:bg-secondary/30",
       )}
     >
-      <span aria-hidden className={cn("shrink-0 rounded-full", full ? "mt-[7px] h-2 w-2" : "mt-[5px] h-1.5 w-1.5", TONE_DOT[entry.tone])} />
+      <span aria-hidden className={cn("shrink-0 rounded-full", full ? "mt-[7px] h-2 w-2" : "mt-[3px] h-[4px] w-[4px]", TONE_DOT[entry.tone])} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className={cn(full ? "text-[15px]" : "text-[12px]", "leading-snug", entry.read ? "font-medium text-foreground/80" : "font-semibold text-foreground")}>
+            <p className={cn(full ? "text-[15px]" : "text-[8.5px]", "leading-snug", entry.read ? "font-medium text-foreground/80" : "font-semibold text-foreground")}>
               {title}
             </p>
-            {line && <p className={cn("leading-snug text-muted-foreground", full ? "mt-0.5 text-sm" : "text-[10.5px]")}>{line}</p>}
+            {line && <p className={cn("leading-snug text-muted-foreground", full ? "mt-0.5 text-sm" : "text-[7.5px]")}>{line}</p>}
             {full && !entry.details && entry.subtitle && (
               <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{entry.subtitle}</p>
             )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <span className={cn("tabular-nums text-muted-foreground", full ? "text-xs" : "text-[10px]")}>{shortTime(entry.at, locale)}</span>
+            <span className={cn("tabular-nums text-muted-foreground", full ? "text-xs" : "text-[7px]")}>{shortTime(entry.at, locale)}</span>
             {full && entry.action && (
               <Link href={entry.action.href} className="text-sm font-medium text-accent hover:underline">
                 {entry.action.label}

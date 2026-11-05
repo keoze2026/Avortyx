@@ -244,8 +244,12 @@ export function CampaignsTable({
                     </div>
                   </TableCell>
                   {showPublisher && (
-                    <TableCell className="max-w-[260px] whitespace-normal text-center text-sm text-muted-foreground">
-                      {c.publishers?.length ? c.publishers.join(", ") : "-"}
+                    // CH-586: the call log's style - small, one line. A long list
+                    // ends in "..." with every name on hover.
+                    <TableCell className="whitespace-nowrap text-center text-[9.5px] font-medium text-muted-foreground">
+                      <span className="mx-auto block max-w-[260px] truncate" title={c.publishers?.join(", ")}>
+                        {c.publishers?.length ? c.publishers.join(", ") : "-"}
+                      </span>
                     </TableCell>
                   )}
                   {columns.access && (

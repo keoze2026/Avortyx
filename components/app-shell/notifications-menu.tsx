@@ -133,16 +133,16 @@ export function NotificationsMenu() {
           <>
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between px-3.5 pt-3">
-              <h3 className="text-[13px] font-semibold">{t("notificationsUI.menu.title")}</h3>
+              <h3 className="text-[9px] font-semibold">{t("notificationsUI.menu.title")}</h3>
               <div className="flex items-center gap-1">
                 {/* CH-568: always there (it hid once everything was read). */}
                 <button
                   type="button"
                   onClick={() => markAllReadStore(everyId)}
                   disabled={feedUnread === 0}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[8px] text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
                 >
-                  <CheckCheck className="h-3 w-3" />
+                  <CheckCheck className="h-2.5 w-2.5" />
                   {t("notificationsUI.menu.markAllRead")}
                 </button>
                 {/* CH-578 */}
@@ -150,9 +150,9 @@ export function NotificationsMenu() {
                   type="button"
                   onClick={() => setView("confirmClear")}
                   disabled={everyId.length + tfnCount === 0}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[8px] text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-2.5 w-2.5" />
                   {t("x578.clearAll")}
                 </button>
                 <button
@@ -162,7 +162,7 @@ export function NotificationsMenu() {
                   aria-label={t("x558.alertSettings")}
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
                 >
-                  <Settings2 className="h-3 w-3" />
+                  <Settings2 className="h-2.5 w-2.5" />
                 </button>
               </div>
             </div>
@@ -175,11 +175,11 @@ export function NotificationsMenu() {
                   type="button"
                   onClick={() => setTab(x.id)}
                   className={cn(
-                    "-mb-px border-b-2 pb-1.5 text-[12px] transition-colors",
+                    "-mb-px border-b-2 pb-1 text-[8.5px] transition-colors",
                     tab === x.id ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {x.label} <span className="ml-0.5 text-[10.5px] tabular-nums text-muted-foreground">{x.count}</span>
+                  {x.label} <span className="ml-0.5 text-[7.5px] tabular-nums text-muted-foreground">{x.count}</span>
                 </button>
               ))}
             </div>
@@ -201,7 +201,7 @@ export function NotificationsMenu() {
             </div>
 
             {/* Footer */}
-            <div className="flex shrink-0 items-center justify-between border-t border-border/60 px-3.5 py-2 text-[11px]">
+            <div className="flex shrink-0 items-center justify-between border-t border-border/60 px-3.5 py-1.5 text-[8px]">
               <span className="text-muted-foreground">
                 {unread > 0 ? t("x558.unread").replace("{n}", String(unread)) : t("notificationsUI.menu.allCaughtUp")}
               </span>
@@ -240,29 +240,29 @@ function DeletedTfnsCard({ onNavigate }: { onNavigate: () => void }) {
       <div className="flex items-start gap-2">
         <PhoneOff className={cn("mt-0.5 h-4 w-4 shrink-0", unseen > 0 ? "text-destructive" : "text-muted-foreground")} />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-foreground">
+          <p className="text-[8.5px] font-semibold text-foreground">
             {count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count))}
           </p>
           {/* Sir's wording (24 Oct). The notice still goes by itself at 12 PM
               Eastern (the server stops listing the numbers); the page no
               longer says so. */}
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-0.5 text-[8px] text-muted-foreground">
             {count === 1 ? t("deletedTfnsOne.body") : t("deletedTfns.body")}
           </p>
           <ul className="mt-1.5 max-h-20 space-y-0.5 overflow-y-auto">
             {shown.map((n) => (
-              <li key={n.id} className={cn("flex items-baseline justify-between gap-2 text-[11px]", n.seen && "opacity-60")}>
+              <li key={n.id} className={cn("flex items-baseline justify-between gap-2 text-[8px]", n.seen && "opacity-60")}>
                 {/* The number only (CH-199): carrier codes and rules are for our backend. */}
                 <span className="font-mono text-foreground">{prettyTfn(n.number)}</span>
               </li>
             ))}
           </ul>
           {more > 0 && (
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-[8px] text-muted-foreground">
               {t("deletedTfns.more").replace("{count}", String(more))}
             </p>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 text-[8px] text-muted-foreground">
             {count === 1 ? t("deletedTfnsOne.replace") : t("deletedTfns.replace")}
           </p>
           <div className="mt-2 flex items-center gap-2">
@@ -270,7 +270,7 @@ function DeletedTfnsCard({ onNavigate }: { onNavigate: () => void }) {
               <Button
                 size="sm"
                 variant="secondary"
-                className="h-7 px-2 text-xs"
+                className="h-5 px-1.5 text-[8px]"
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);
@@ -286,7 +286,7 @@ function DeletedTfnsCard({ onNavigate }: { onNavigate: () => void }) {
                 <CheckCheck className="h-3.5 w-3.5" /> {t("deletedTfns.seen")}
               </Button>
             )}
-            <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
+            <Button asChild size="sm" variant="ghost" className="h-5 px-1.5 text-[8px]">
               <Link href={ROUTES.numbers} onClick={onNavigate}>{t("deletedTfns.addTfns")}</Link>
             </Button>
           </div>

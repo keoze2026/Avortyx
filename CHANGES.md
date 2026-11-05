@@ -2811,3 +2811,15 @@ space available: the TFN card and list scroll in the middle, and the header,
 tabs and footer stay in view. The TFN card is also shorter. Sizing only.
 
 Commit: see git log --grep CH-585
+
+## CH-586 - Bell text 30% smaller; Publisher names small, on one line (FRONTEND)
+
+Reported 5 Nov: "notification make it 30% more small, what's written in words
+should small", "Publisher name make it more small", "Should be in one row like
+we have things under reporting section." All text in the bell, TFN card
+included, is 30% smaller (titles 8.5px, second line 7.5px) and rows are about
+30px high; the box keeps its width and the Notifications page its size.
+Publisher names take the call log's style: 9.5px, medium, one line, ending in
+"..." past 260px with every name on hover.
+
+Commit: see git log --grep CH-586
