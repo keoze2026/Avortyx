@@ -156,16 +156,57 @@ export function buildFeed(raws: Raw[], readIds: Record<string, true>, t: (k: str
   return out.sort((a, b) => b.at - a.at || Number(b.id.startsWith("group:")) - Number(a.id.startsWith("group:")));
 }
 
-/** The feed for the bell menu and the page, plus the tab counts. */
-export function useNotificationFeed() {
+/** Midnight Eastern (America/New_York) of the day `now` falls in, as epoch ms. */
+export function easternDayStart(now: number = Date.now()): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(new Date(now));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  // "24" is how some engines write midnight with hour12 off.
+  let start = now - (((get("hour") % 24) * 60 + get("minute")) * 60 + get("second")) * 1000 - (now % 1000);
+  // A day that changes clocks (DST) is 23 or 25 hours long: land on 00:00.
+  const hourAt = (ms: number) =>
+    Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit" }).format(new Date(ms))) % 24;
+  if (hourAt(start) === 23) start += 3600_000;
+  else if (hourAt(start) === 1) start -= 3600_000;
+  return start;
+}
+
+/** CH-568: the current Eastern day's start, moving on by itself at midnight. */
+function useEasternDayStart(enabled: boolean): number {
+  const [start, setStart] = React.useState(() => (enabled ? easternDayStart() : 0));
+  React.useEffect(() => {
+    if (!enabled) return;
+    const tick = () => setStart((prev) => {
+      const next = easternDayStart();
+      return next === prev ? prev : next;
+    });
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [enabled]);
+  return enabled ? start : 0;
+}
+
+/**
+ * The feed for the bell menu and the page, plus the tab counts.
+ *
+ * `today` (CH-568, the bell): only what arrived since 12 AM Eastern - older
+ * notifications leave the bell at midnight but stay on the Notifications
+ * page; nothing is deleted. `everyId` is every notification, for Mark all
+ * as read. The "TFNs deleted" card is not part of this feed and keeps its
+ * own time (12 PM, CH-182).
+ */
+export function useNotificationFeed(options: { today?: boolean } = {}) {
   const { t } = useTranslation();
+  const since = useEasternDayStart(Boolean(options.today));
   const anomalies = useAiInsightsStore((s) => s.anomalies);
   const recommendations = useAiInsightsStore((s) => s.recommendations);
   const capAlerts = useCapAlertsStore((s) => s.alerts);
   const readIds = useNotificationsReadStore((s) => s.readIds);
 
   return React.useMemo(() => {
-    const raws: Raw[] = [
+    const every: Raw[] = [
       ...capAlerts.map((a) => {
         const item = capAlertToNotification(a, t);
         return { item, at: a.at, title: item.title };
@@ -181,6 +222,7 @@ export function useNotificationFeed() {
         title: r.title,
       })),
     ];
+    const raws = since ? every.filter((r) => r.at >= since) : every;
     const entries = buildFeed(raws, readIds, t);
     const isAlert = (r: Raw) => r.item.severity === "critical" || r.item.severity === "warn";
     const counts = {
@@ -190,8 +232,8 @@ export function useNotificationFeed() {
       read: raws.filter((r) => readIds[r.item.id]).length,
     };
     const unread = raws.length - counts.read;
-    return { entries, counts, unread, allIds: raws.map((r) => r.item.id) };
-  }, [anomalies, recommendations, capAlerts, readIds, t]);
+    return { entries, counts, unread, allIds: raws.map((r) => r.item.id), everyId: every.map((r) => r.item.id) };
+  }, [anomalies, recommendations, capAlerts, readIds, t, since]);
 }
 
 /** "Today" / "Yesterday" / "Mon 3 Nov" for a day heading. */

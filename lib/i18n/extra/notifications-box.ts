@@ -17,7 +17,7 @@ export const notificationsBox: ExtraTranslations = {
     "x558.yesterday": "Yesterday",
     "x558.unread": "{n} unread",
     "x558.alertSettings": "Alert settings",
-    "x558.popups.title": "Pop-up alerts",
+    "x558.popups.title": "Pop-up Alerts",
     "x558.popups.on": "{n} on",
     "x558.popups.desc": "Every alert is still saved in the list.",
     "x558.popups.off": "Pop-ups are off",

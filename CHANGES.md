@@ -2626,3 +2626,16 @@ needed scrolling.
   column. The notification list keeps its size.
 
 Commit: see git log --grep CH-567
+
+## CH-568 - Bell: today only (clears at 12 AM Eastern), Mark all as read always there, "Pop-up Alerts" (FRONTEND)
+
+- The bell shows only notifications from 12 AM Eastern today; at midnight
+  Eastern the older ones leave the bell by themselves (its counts and the red
+  badge too). Nothing is deleted: the Notifications page still lists every
+  notification. The "TFNs deleted" card keeps its own time (12 PM, CH-182).
+- "Mark all as read" was shown only while something was unread, so it looked
+  missing. It is now always in the bell's header (greyed when nothing is
+  unread) and marks every notification read.
+- The settings title reads "Pop-up Alerts".
+
+Commit: see git log --grep CH-568

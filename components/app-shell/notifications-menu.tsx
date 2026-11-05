@@ -36,7 +36,8 @@ export function NotificationsMenu() {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<TabId>("all");
   const [view, setView] = React.useState<"list" | "settings">("list");
-  const { entries, counts, unread: feedUnread, allIds } = useNotificationFeed();
+  // CH-568: the bell shows today's (Eastern) notifications only; the page keeps all.
+  const { entries, counts, unread: feedUnread, everyId } = useNotificationFeed({ today: true });
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
 
   // "TFNs deleted" (backend CH-179): pinned above the list until 12 PM
@@ -99,15 +100,16 @@ export function NotificationsMenu() {
             <div className="flex items-center justify-between px-5 pt-5">
               <h3 className="text-lg font-semibold">{t("notificationsUI.menu.title")}</h3>
               <div className="flex items-center gap-1">
-                {unread > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => markAllReadStore(allIds)}
-                    className="rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
-                  >
-                    {t("notificationsUI.menu.markAllRead")}
-                  </button>
-                )}
+                {/* CH-568: always there (it hid once everything was read). */}
+                <button
+                  type="button"
+                  onClick={() => markAllReadStore(everyId)}
+                  disabled={feedUnread === 0}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                  {t("notificationsUI.menu.markAllRead")}
+                </button>
                 <button
                   type="button"
                   onClick={() => setView("settings")}
