@@ -2639,3 +2639,13 @@ Commit: see git log --grep CH-567
 - The settings title reads "Pop-up Alerts".
 
 Commit: see git log --grep CH-568
+
+## CH-569 - AI Audit tables laid out like Reports: values centred under their headers (FRONTEND)
+
+"No Voice by Publisher, Campaign and Buyer" and "Repeat callers with No Voice
+calls": numbers were right-aligned in wide columns, so they did not sit under
+their headers. Now as Reports' Call Summary: the first column (name / caller)
+on the left, every other header and its values centred in the same column
+(0 px apart, measured).
+
+Commit: see git log --grep CH-569

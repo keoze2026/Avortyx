@@ -214,6 +214,8 @@ const EVIDENCE_COLUMNS: ExportColumn<EvidenceRow>[] = [
 ];
 
 /** CH-546: caller IDs with two or more No Voice calls that day. */
+// CH-569: both tables laid out as Reports' Call Summary - the first column
+// on the left, every other header and its values centred in the same column.
 function RepeatCallers({ date }: { date: string }) {
   const { t } = useTranslation();
   const [items, setItems] = React.useState<RepeatCaller[] | null>(null);
@@ -246,23 +248,23 @@ function RepeatCallers({ date }: { date: string }) {
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-4">{t("x543.col.caller")}</TableHead>
-                  <TableHead className="text-right">{t("x546.noVoice")}</TableHead>
-                  <TableHead className="text-right">{t("x546.allCalls")}</TableHead>
-                  <TableHead>{t("x546.publishers")}</TableHead>
-                  <TableHead>{t("x546.campaigns")}</TableHead>
-                  <TableHead className="pr-4">{t("x546.lastCall")}</TableHead>
+                  <TableHead className="pl-6 text-left">{t("x543.col.caller")}</TableHead>
+                  <TableHead className="text-center">{t("x546.noVoice")}</TableHead>
+                  <TableHead className="text-center">{t("x546.allCalls")}</TableHead>
+                  <TableHead className="text-center">{t("x546.publishers")}</TableHead>
+                  <TableHead className="text-center">{t("x546.campaigns")}</TableHead>
+                  <TableHead className="pr-6 text-center">{t("x546.lastCall")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((r) => (
                   <TableRow key={r.caller}>
-                    <TableCell className="pl-4 tabular-nums">{r.caller}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.calls}</TableCell>
-                    <TableCell>{r.publishers.join(", ")}</TableCell>
-                    <TableCell>{r.campaigns.join(", ")}</TableCell>
-                    <TableCell className="pr-4 tabular-nums">{r.lastCall ? timeEst(r.lastCall) : "—"}</TableCell>
+                    <TableCell className="pl-6 text-left tabular-nums">{r.caller}</TableCell>
+                    <TableCell className="text-center font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.calls}</TableCell>
+                    <TableCell className="text-center">{r.publishers.join(", ")}</TableCell>
+                    <TableCell className="text-center">{r.campaigns.join(", ")}</TableCell>
+                    <TableCell className="pr-6 text-center tabular-nums">{r.lastCall ? timeEst(r.lastCall) : "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -333,31 +335,31 @@ function NoVoiceBreakdown({ date }: { date: string }) {
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-4">{t(`x557.by.${by}`)}</TableHead>
-                  <TableHead className="text-right">{t("x557.checked")}</TableHead>
-                  <TableHead className="text-right">{t("x546.noVoice")}</TableHead>
-                  <TableHead className="text-right">{t("x546.noVoicePct")}</TableHead>
-                  <TableHead className="text-right">{t("x543.label.dead_caller")}</TableHead>
-                  <TableHead className="text-right">{t("x543.label.agent_only")}</TableHead>
-                  <TableHead className="text-right">{t("x543.label.agent_beep")}</TableHead>
-                  <TableHead className="text-right">{t("x543.label.ivr")}</TableHead>
-                  <TableHead className="pr-4 text-right">{t("x543.label.valid")}</TableHead>
+                  <TableHead className="pl-6 text-left">{t(`x557.by.${by}`)}</TableHead>
+                  <TableHead className="text-center">{t("x557.checked")}</TableHead>
+                  <TableHead className="text-center">{t("x546.noVoice")}</TableHead>
+                  <TableHead className="text-center">{t("x546.noVoicePct")}</TableHead>
+                  <TableHead className="text-center">{t("x543.label.dead_caller")}</TableHead>
+                  <TableHead className="text-center">{t("x543.label.agent_only")}</TableHead>
+                  <TableHead className="text-center">{t("x543.label.agent_beep")}</TableHead>
+                  <TableHead className="text-center">{t("x543.label.ivr")}</TableHead>
+                  <TableHead className="pr-6 text-center">{t("x543.label.valid")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((r) => (
                   <TableRow key={r.name}>
-                    <TableCell className="pl-4 font-medium">{r.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.checked}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
-                    <TableCell className={cn("text-right font-semibold tabular-nums", (r.noVoicePct ?? 0) > 15 && "text-destructive")}>
+                    <TableCell className="pl-6 text-left font-medium">{r.name}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.checked}</TableCell>
+                    <TableCell className="text-center font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
+                    <TableCell className={cn("text-center font-semibold tabular-nums", (r.noVoicePct ?? 0) > 15 && "text-destructive")}>
                       {pct(r.noVoicePct)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{r.deadCaller}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.agentOnly}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.agentBeep}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.ivr}</TableCell>
-                    <TableCell className="pr-4 text-right tabular-nums">{r.valid}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.deadCaller}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.agentOnly}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.agentBeep}</TableCell>
+                    <TableCell className="text-center tabular-nums">{r.ivr}</TableCell>
+                    <TableCell className="pr-6 text-center tabular-nums">{r.valid}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
