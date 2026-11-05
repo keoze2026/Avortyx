@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { useBlockedCallerMatcher } from "@/lib/blocked-caller";
 import { ROUTES } from "@/lib/constants";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { formatCallerId, formatCurrency, formatHMS, formatRelativeTime } from "@/lib/format";
 import type { Call } from "@/lib/types";
 import { LocalName } from "@/lib/i18n/local-name";
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Props) {
+  const isBuyerLogin = useAuthStore((st) => st.user?.role) === "buyer";
   const { t } = useTranslation();
   // Callers on the Blocked Numbers list show in red, as in the Reports call log.
   const isBlocked = useBlockedCallerMatcher();
@@ -138,8 +140,9 @@ export function CallsTable({ calls, visibleColumns, onSelect, selectedId }: Prop
                   )}
                   {visibleColumns.has("payout") && (
                     <TableCell className="text-right font-mono tabular-nums">
-                      {c.payout > 0 ? (
-                        <span className="text-foreground">{formatCurrency(c.payout, true)}</span>
+                      {/* CH-610: a buyer's Payout is what it pays: our Revenue. */}
+                      {(isBuyerLogin ? c.revenue : c.payout) > 0 ? (
+                        <span className="text-foreground">{formatCurrency(isBuyerLogin ? c.revenue : c.payout, true)}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

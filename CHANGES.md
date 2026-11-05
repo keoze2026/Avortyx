@@ -2995,3 +2995,19 @@ A buyer login now gets a fixed list (no longer "everything but"):
 
 Publishers, staff and owner: unchanged. The admin's per-buyer column
 switches still hide more on top of this.
+
+## CH-610 - Buyer access: Sir's exact order and names, and the Call Logs page too
+
+Follows CH-609 (Sir, 5 Nov, Revo's buyer access: "nothing more than that").
+
+- Call Logs download: now the same allow-list as Reports. It still carried Call
+  ID, Buyer, Destination Number and State. It has no Hang Up or Tag to give.
+- Call Logs screen: no Buyer or Geo; Payout shows what the buyer pays.
+- Reports search download, built in the browser: same allow-list and order.
+- Call Summary: Payout, ACL, TCL in Sir's order; "No Connect"; no Calls /
+  Performance / Money headings.
+- Call Log: Destination, Tag (our Fail Reason) before Status. A line with no
+  name shows its number.
+- Files use the same names: CALL DATE, DESTINATION, PAYOUT, TAG, REC.
+
+Publisher, staff and owner logins: unchanged.

@@ -69,6 +69,7 @@ import {
   destinationOf,
   exportNumber,
   formatCallLogTable,
+  partnerFileColumns,
   withoutPartnerColumns,
   formatDuration,
   upperLabels,
@@ -199,6 +200,14 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
 const BUYER_LOG_COLUMNS: ReadonlySet<ColumnKey> = new Set<ColumnKey>([
   "caller", "destName", "revenue", "duration", "hangUp", "status", "failReason", "recording",
 ]);
+
+/** CH-610: Sir's names for a buyer's columns, as on Revo's buyer access. */
+const BUYER_LOG_LABEL_KEYS: Partial<Record<ColumnKey, string>> = {
+  destName: "x610.destination",
+  revenue: "toolsUI.reports.callLog.columns.payout",
+  failReason: "x610.tag",
+  recording: "x610.rec",
+};
 
 const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   campaign: "toolsUI.reports.callLog.columns.campaign",
@@ -737,6 +746,7 @@ export function CallLogTable({
   // built here in the browser, so the server-side block alone never stopped it.
   const canDownload = usePermissions().can("reporting", "download") && partnerCan("download_reports");
   const canAiAudit = useCanAiAudit();
+  const logLabelKey = (id: ColumnKey) => (role === "buyer" && BUYER_LOG_LABEL_KEYS[id]) || COLUMN_LABEL_KEYS[id];
   const columns = React.useMemo(() => {
     const out = { ...columnsState };
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
@@ -782,6 +792,8 @@ export function CallLogTable({
   }, [query, pageSize, calls.length, sortKey, sortDir]);
 
   const colSpan = 3 + COLUMNS.filter((c) => columns[c.id]).length; // +expander +Call date +actions
+  // CH-610: a buyer's Tag comes before Status.
+  const reasonHead = columns.failReason ? <TableHead className="text-center">{t(logLabelKey("failReason"))}</TableHead> : null;
   const toggleColumn = (id: ColumnKey) =>
     setColumns((v) => ({ ...v, [id]: !v[id] }));
 
@@ -973,12 +985,10 @@ export function CallLogTable({
       if (c.id === "dialed") return [{ label: "CALLED NUMBER", value: (row) => exportNumber(row.calledNumber) }];
       if (c.id === "destName") return [{ label: DESTINATION_NAME_HEADER, value: (row) => destinationOf(row, destinationNames).name }];
       if (c.id === "destTfn") return [{ label: DESTINATION_NUMBER_HEADER, value: (row) => destinationOf(row, destinationNames).number }];
-      // CH-609: a buyer's Revenue column is its Payout - what it pays for the call.
-      const key = role === "buyer" && c.id === "revenue" ? COLUMN_LABEL_KEYS.payout : COLUMN_LABEL_KEYS[c.id];
-      return [{ label: english(key), value: (row) => logCellValue(row, c.id, publisherNameById) }];
+      return [{ label: english(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) }];
     });
     const loc = exportLocalizer(t, locale);
-    downloadRows(format, localizeColumns(upperLabels([dateCol, ...dataCols]), loc), filtered, dateStamped("call-log"), loc.active ? t("nav.callLogs") : "Call log", {
+    downloadRows(format, localizeColumns(partnerFileColumns(upperLabels([dateCol, ...dataCols]), role), loc), filtered, dateStamped("call-log"), loc.active ? t("nav.callLogs") : "Call log", {
       boldHeader: true,
       linkColumns: bothLanguages(CALL_LOG_LINK_HEADERS, loc),
     });
@@ -1090,18 +1100,19 @@ export function CallLogTable({
                 {columns.dialed && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.dialed")} sortKey="dialed" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.repeated && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.repeated")} sortKey="repeated" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.destName && <TableHead className="text-center">{t("x380.destName")}</TableHead>}
+                {columns.destName && <TableHead className="text-center">{t(logLabelKey("destName"))}</TableHead>}
                 {columns.destTfn && <TableHead className="text-center">{t("x380.destTfn")}</TableHead>}
-                {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t(role === "buyer" ? "toolsUI.reports.callLog.columns.payout" : "toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t(logLabelKey("revenue"))} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.duration && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.hangUp && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.hangUp")}</TableHead>}
+                {role === "buyer" && reasonHead}
                 {columns.status && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.status")} sortKey="status" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.failReason && <TableHead className="text-center">{t("toolsUI.reports.callLog.columns.failReason")}</TableHead>}
+                {role !== "buyer" && reasonHead}
                 {columns.ai && <TableHead className="text-center"><LogSortHeader label={t("x546.aiLabel")} sortKey="ai" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {columns.recording && <TableHead>{t("toolsUI.reports.callLog.columns.rec")}</TableHead>}
-                <TableHead className="pr-6">{t("toolsUI.reports.callLog.columns.action")}</TableHead>
+                {columns.recording && <TableHead>{t(role === "buyer" ? "x610.rec" : "toolsUI.reports.callLog.columns.rec")}</TableHead>}
+                <TableHead className="pr-6">{t(role === "buyer" ? "x610.actions" : "toolsUI.reports.callLog.columns.action")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1122,6 +1133,31 @@ export function CallLogTable({
                 </TableRow>
               ) : (
                 visible.map((c) => {
+                  const reasonCell = columns.failReason ? (
+                    <TableCell className={`${CELL} text-center`}>
+                          {(() => {
+                            const reason = failReasonOnScreen(c, locale, t);
+                            if (!reason) return "\u2014";
+                            const [firstWord, ...others] = reason.split(" ");
+                            return (
+                              <div className="mx-auto flex w-fit gap-x-[0.6em] whitespace-nowrap text-left">
+                                <span className="grid">
+                                  <span className="[grid-area:1/1]">{firstWord}</span>
+                                  <span aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
+                                    {reasonLayout.first}
+                                  </span>
+                                </span>
+                                <span className="grid">
+                                  <span className="[grid-area:1/1]">{others.join(" ")}</span>
+                                  <span aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
+                                    {reasonLayout.rest}
+                                  </span>
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </TableCell>
+                  ) : null;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="w-9 pl-4 pr-0">
@@ -1181,7 +1217,7 @@ export function CallLogTable({
                       )}
                       {columns.destName && (
                         <TableCell className={`${CELL} text-center`}>
-                          {destinationOf(c, destinationNames).name || "\u2014"}
+                          {destinationOf(c, destinationNames).name || (role === "buyer" && c.destinationNumber?.trim() ? toE164(c.destinationNumber) : "\u2014")}
                         </TableCell>
                       )}
                       {columns.destTfn && (
@@ -1218,6 +1254,7 @@ export function CallLogTable({
                           <HangUpCell call={c} />
                         </TableCell>
                       )}
+                      {role === "buyer" && reasonCell}
                       {columns.status && (
                         <TableCell>
                           {/* Fixed width so Live / Completed / No Answer are
@@ -1240,31 +1277,7 @@ export function CallLogTable({
                           )}
                         </TableCell>
                       )}
-                      {columns.failReason && (
-                        <TableCell className={`${CELL} text-center`}>
-                          {(() => {
-                            const reason = failReasonOnScreen(c, locale, t);
-                            if (!reason) return "\u2014";
-                            const [firstWord, ...others] = reason.split(" ");
-                            return (
-                              <div className="mx-auto flex w-fit gap-x-[0.6em] whitespace-nowrap text-left">
-                                <span className="grid">
-                                  <span className="[grid-area:1/1]">{firstWord}</span>
-                                  <span aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
-                                    {reasonLayout.first}
-                                  </span>
-                                </span>
-                                <span className="grid">
-                                  <span className="[grid-area:1/1]">{others.join(" ")}</span>
-                                  <span aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
-                                    {reasonLayout.rest}
-                                  </span>
-                                </span>
-                              </div>
-                            );
-                          })()}
-                        </TableCell>
-                      )}
+                      {role !== "buyer" && reasonCell}
                       {columns.ai && (
                         <TableCell className={`${CELL} text-center`}>
                           <AiLabelCell call={c} />

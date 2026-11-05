@@ -27,6 +27,7 @@ import {
   exportNumber,
   formatDuration as formatExportDuration,
   statusLabel,
+  partnerFileColumns,
   upperLabels,
 } from "@/lib/call-log-export";
 import { callMatches, useServerCallSearch } from "@/lib/call-search";
@@ -98,6 +99,9 @@ export default function CallsPage() {
     const out = new Set(visibleColumns);
     out.delete("campaign");
     out.delete("publisher");
+    // CH-610: nor Buyer or Geo - outside Sir's list.
+    out.delete("buyer");
+    out.delete("geo");
     return out;
   }, [visibleColumns, isBuyerLogin]);
   const [page, setPage] = useState(0);
@@ -217,13 +221,14 @@ export default function CallsPage() {
     downloadRows(
       format,
       localizeColumns(
-        callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
+        // CH-610: a buyer's file is Sir's list and nothing else.
+        partnerFileColumns(callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
           (c) =>
             // CH-605: nor our called number (TFN).
             (!isBuyerLogin || !["CAMPAIGN", "PUBLISHER", "CALLED NUMBER"].includes(String(c.label).toUpperCase())) &&
             // CH-594: a publisher's file has no buyer, destination name or number.
             (!isPublisherLogin || !["BUYER", "DESTINATION NAME", "DESTINATION NUMBER"].includes(String(c.label).toUpperCase())),
-        ),
+        ), isBuyerLogin ? "buyer" : undefined),
         loc,
       ),
       filtered,

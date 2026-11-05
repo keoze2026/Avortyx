@@ -24,7 +24,7 @@ export const DESTINATION_NUMBER_HEADER = "DESTINATION NUMBER";
 /** Numeric columns of the server's call-log file, as headed after formatting. */
 export const CALL_LOG_NUMERIC_HEADERS = ["REVENUE", "PAYOUT", "PROFIT"];
 /** Columns whose web addresses become clickable links in Excel. */
-export const CALL_LOG_LINK_HEADERS = ["RECORDING", "RECORDING URL", "RECORD"];
+export const CALL_LOG_LINK_HEADERS = ["RECORDING", "RECORDING URL", "RECORD", "REC"];
 
 /** "completed" -> "Completed", "no_answer" -> "No answer", "in-progress" -> "In progress". */
 export function statusLabel(raw: string | null | undefined): string {
@@ -158,27 +158,49 @@ export const PARTNER_HIDDEN_HEADERS: Readonly<Record<string, readonly string[]>>
 };
 
 /**
- * CH-609 (Sir, 5 Nov, showing Revo's buyer view: "this is what only a buyer
- * access can see or download, nothing more than that"): a buyer's call-log
- * file holds these columns only, in this order. PAYOUT is what the buyer pays
- * for the call - the REVENUE column of our own file.
+ * CH-609 / CH-610 (Sir, 5 Nov, Revo's buyer access: "this is what only a buyer
+ * access can see or download, nothing more than that"): a buyer's file is an
+ * allow-list, in this order under these names. PAYOUT is what the buyer pays for
+ * the call - our REVENUE; our own PAYOUT (to publishers) never reaches a buyer.
  */
-export const BUYER_FILE_HEADERS: readonly string[] = [
-  "DATE", "CALLER ID", DESTINATION_NAME_HEADER, "PAYOUT", DURATION_HEADER, "HANG UP", "FAIL REASON", "STATUS", "RECORDING",
+export const BUYER_FILE_COLUMNS: ReadonlyArray<{ from: readonly string[]; label: string }> = [
+  { from: ["CALL DATE", "DATE", "STARTED"], label: "CALL DATE" },
+  { from: ["CALLER ID"], label: "CALLER ID" },
+  { from: [DESTINATION_NAME_HEADER], label: "DESTINATION" },
+  { from: ["REVENUE"], label: "PAYOUT" },
+  { from: [DURATION_HEADER], label: DURATION_HEADER },
+  { from: ["HANG UP"], label: "HANG UP" },
+  { from: ["FAIL REASON"], label: "TAG" },
+  { from: ["STATUS"], label: "STATUS" },
+  { from: ["RECORDING"], label: "REC" },
 ];
 
+/** A table cut down to BUYER_FILE_COLUMNS. A line with no name shows its number. */
 function buyerFile(table: string[][]): string[][] {
   const header = table[0].map((h) => String(h).trim().toUpperCase());
-  // Our own PAYOUT (what we pay a publisher) never reaches a buyer; the
-  // buyer's PAYOUT is our REVENUE.
-  const source = (name: string) =>
-    name === "PAYOUT" ? header.indexOf("REVENUE") : header.indexOf(name);
-  const cols = BUYER_FILE_HEADERS.map((name) => ({ name, at: source(name) })).filter((c) => c.at >= 0);
-  return table.map((row, i) => cols.map((c) => (i === 0 ? c.name : row[c.at] ?? "")));
+  const numberCol = header.indexOf(DESTINATION_NUMBER_HEADER);
+  const picked = BUYER_FILE_COLUMNS.flatMap((c) => {
+    const at = c.from.map((h) => header.indexOf(h)).find((i) => i >= 0);
+    return at === undefined ? [] : [{ at, label: c.label }];
+  });
+  return table.map((row, i) =>
+    i === 0
+      ? picked.map((c) => c.label)
+      : picked.map((c) => (c.label === "DESTINATION" && !row[c.at]?.trim() && numberCol >= 0 ? row[numberCol] ?? "" : row[c.at] ?? "")),
+  );
+}
+
+/** The same allow-list for a file built in the browser from columns (labels in capitals). */
+export function partnerFileColumns<T>(columns: ExportColumn<T>[], role: string | null | undefined): ExportColumn<T>[] {
+  if (role !== "buyer") return columns;
+  return BUYER_FILE_COLUMNS.flatMap((c) => {
+    const col = columns.find((x) => c.from.includes(String(x.label).trim().toUpperCase()));
+    return col ? [{ ...col, label: c.label }] : [];
+  });
 }
 
 /** Drop PARTNER_HIDDEN_HEADERS for this role from a table (first row = header);
- *  a buyer's table keeps BUYER_FILE_HEADERS only (CH-609). */
+ *  a buyer's table keeps BUYER_FILE_COLUMNS only (CH-609). */
 export function withoutPartnerColumns(table: string[][], role: string | null | undefined): string[][] {
   if (role === "buyer" && table.length > 0) return buyerFile(table);
   const hidden = PARTNER_HIDDEN_HEADERS[role ?? ""];

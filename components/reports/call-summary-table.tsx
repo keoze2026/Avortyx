@@ -249,6 +249,14 @@ const COLUMN_GROUPS: Array<{ id: string; labelKey: string; columns: ColumnKey[] 
   { id: "money", labelKey: "x428.groupMoney", columns: ["payout", "revenue", "profit", "cost"] },
 ];
 
+/** CH-610 (Sir, 5 Nov, Revo's buyer access): a buyer's Call Summary, in this order:
+ *  Live, Incoming, Connected, Converted, No Connect, Payout, ACL, TCL. */
+const BUYER_COLUMN_ORDER: ColumnKey[] = ["live", "incoming", "connected", "converted", "noConnect", "revenue", "acl", "tcl"];
+const BUYER_LABEL_KEYS: Partial<Record<ColumnKey, string>> = {
+  noConnect: "x610.noConnect",
+  revenue: "toolsUI.reports.summary.columns.payout",
+};
+
 const ALL_VISIBLE: Record<ColumnKey, boolean> = COLUMNS.reduce(
   (acc, c) => ({ ...acc, [c.id]: true }),
   {} as Record<ColumnKey, boolean>,
@@ -1401,6 +1409,10 @@ export function CallSummaryTable({
   };
 
   const visibleCount = COLUMNS.filter((c) => visible[c.id]).length;
+  const labelKey = (id: ColumnKey) => (isBuyerLogin && BUYER_LABEL_KEYS[id]) || COLUMN_LABEL_KEYS[id];
+  // CH-610: a buyer reads Payout, ACL, TCL; everyone else TCL, ACL, Payout, Revenue.
+  const tailCells = (tcl: React.ReactNode, acl: React.ReactNode, payout: React.ReactNode, revenue: React.ReactNode) =>
+    isBuyerLogin ? <>{revenue}{acl}{tcl}</> : <>{tcl}{acl}{payout}{revenue}</>;
   const colSpan = visibleCount + 1; // +1 for the label column
   const tabLabel = (() => {
     const own = tabs.find((td) => td.id === tab || td.sub?.some((s) => s.id === tab));
@@ -1423,10 +1435,13 @@ export function CallSummaryTable({
       label: tabKey ? t(tabKey) : t("toolsUI.reports.summary.columns.group"),
       value: (r) => exportLabel(r.label),
     };
-    const dataCols: ExportColumn<SummaryRow>[] = COLUMNS.filter((c) => visible[c.id]).map(
+    const fileColumns = isBuyerLogin
+      ? BUYER_COLUMN_ORDER.flatMap((id) => COLUMNS.filter((c) => c.id === id && visible[id]))
+      : COLUMNS.filter((c) => visible[c.id]);
+    const dataCols: ExportColumn<SummaryRow>[] = fileColumns.map(
       (c) => ({
         // CH-609: a buyer's Revenue column is its Payout - what it pays.
-        label: t(role === "buyer" && c.id === "revenue" ? COLUMN_LABEL_KEYS.payout : COLUMN_LABEL_KEYS[c.id]),
+        label: t(labelKey(c.id)),
         value: (r) => summaryCellValue(r, c.id),
       }),
     );
@@ -1567,7 +1582,7 @@ export function CallSummaryTable({
           <Table className="min-w-[1100px]">
             <TableHeader>
               {/* CH-428 (Sir's design): Calls, Performance and Money over their columns. */}
-              {groupSpans.length > 0 && (
+              {groupSpans.length > 0 && !isBuyerLogin && (
                 <TableRow className="border-b-0 hover:bg-transparent">
                   <TableHead className="h-7 pl-6" />
                   {groupSpans.map((g) => (
@@ -1581,7 +1596,7 @@ export function CallSummaryTable({
                   ))}
                 </TableRow>
               )}
-              <TableRow className="hover:bg-transparent">
+              <TableRow className={cn("hover:bg-transparent", isBuyerLogin && "[&_button]:uppercase")}>
                 <TableHead className="pl-6 text-left">
                   <SortHeader
                     label={(() => { const k = tabs.find((td) => td.id === tab)?.labelKey; return k ? t(k) : t("toolsUI.reports.summary.columns.group"); })()}
@@ -1598,15 +1613,17 @@ export function CallSummaryTable({
                 {visible.qualified && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.qualified")} sortKey="qualified" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.paid && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.paid")} sortKey="paid" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.converted && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.converted")} sortKey="converted" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.noConnect && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.noConnect")} sortKey="noConnect" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.noConnect && <TableHead className="text-center"><SortHeader label={t(labelKey("noConnect"))} sortKey="noConnect" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.dupe && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.dupe")} sortKey="dupe" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.noVoice && <TableHead className="text-center"><SortHeader label={t("x546.noVoice")} sortKey="noVoice" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.noVoicePct && <TableHead className="text-center"><SortHeader label={t("x546.noVoicePct")} sortKey="noVoicePct" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.conversionRate && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.conversionRate")} sortKey="conversionRate" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.tcl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.tcl")} sortKey="tcl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.payout && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.revenue && <TableHead className="text-center"><SortHeader label={t(role === "buyer" ? "toolsUI.reports.summary.columns.payout" : "toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {tailCells(
+visible.tcl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.tcl")} sortKey="tcl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>,
+visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>,
+visible.payout && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>,
+visible.revenue && <TableHead className="text-center"><SortHeader label={t(labelKey("revenue"))} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>,
+)}
                 {visible.profit && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.cost && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
               </TableRow>
@@ -1730,18 +1747,20 @@ export function CallSummaryTable({
                           {formatPercent(r.conversionRate * 100, 1)}
                         </TableCell>
                       )}
-                      {visible.tcl && (
+                      {tailCells(
+visible.tcl && (
                         <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.tcl)}</TableCell>
-                      )}
-                      {visible.acl && (
+                      ),
+visible.acl && (
                         <TableCell className="text-center font-mono tabular-nums">{formatTimer(r.acl)}</TableCell>
-                      )}
-                      {visible.payout && (
+                      ),
+visible.payout && (
                         <TableCell className="text-center tabular-nums">{formatCurrency(r.payout, true)}</TableCell>
-                      )}
-                      {visible.revenue && (
+                      ),
+visible.revenue && (
                         <TableCell className="text-center tabular-nums">{formatCurrency(r.revenue, true)}</TableCell>
-                      )}
+                      ),
+)}
                       {visible.profit && (
                         <TableCell
                           className={cn(
@@ -1905,18 +1924,20 @@ export function CallSummaryTable({
                       {formatPercent(totals.conversionRate * 100, 1)}
                     </TableCell>
                   )}
-                  {visible.tcl && (
+                  {tailCells(
+visible.tcl && (
                     <TableCell className="text-center font-mono tabular-nums">{formatTimer(totals.tcl)}</TableCell>
-                  )}
-                  {visible.acl && (
+                  ),
+visible.acl && (
                     <TableCell className="text-center font-mono tabular-nums">{formatTimer(totals.acl)}</TableCell>
-                  )}
-                  {visible.payout && (
+                  ),
+visible.payout && (
                     <TableCell className="text-center tabular-nums">{formatCurrency(totals.payout, true)}</TableCell>
-                  )}
-                  {visible.revenue && (
+                  ),
+visible.revenue && (
                     <TableCell className="text-center tabular-nums">{formatCurrency(totals.revenue, true)}</TableCell>
-                  )}
+                  ),
+)}
                   {visible.profit && (
                     <TableCell
                       className={cn(
