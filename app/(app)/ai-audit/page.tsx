@@ -659,9 +659,12 @@ export default function AiAuditPage() {
                           {/* CH-602 (5 Nov: "this looks ugly ... well aligned ... remove those
                               comments"): every row the same - one 20em box (the label, Pending AI
                               check or No file) and its % in a fixed slot - so the column lines up
-                              and every row is one line high. The AI's comment is on hover only
-                              (it still goes to the team's Telegram). */}
-                          <div className="inline-flex items-center gap-2" title={r.summary || undefined}>
+                              and every row is one line high.
+                              CH-606 (Sir: "Comments centers and organized"): the comment is back,
+                              in the label's own column - exactly as wide as the label and centred
+                              on it - at most four lines, the whole text on hover. w-0 min-w-full
+                              keeps it from widening the column. */}
+                          <div className="inline-grid grid-cols-[auto_2.5rem] items-center gap-x-2">
                             {r.aiStatus === "checked" ? (
                               <Badge
                                 variant={labelVariant(r.aiLabel)}
@@ -679,6 +682,14 @@ export default function AiAuditPage() {
                             <span className="w-10 text-left text-[13px] text-muted-foreground tabular-nums">
                               {r.aiStatus === "checked" && r.aiConfidence != null ? `${r.aiConfidence}%` : ""}
                             </span>
+                            {r.aiStatus === "checked" && r.summary && (
+                              <div
+                                className="col-start-1 mt-1 line-clamp-4 w-0 min-w-full whitespace-normal text-center text-[12px] leading-snug text-muted-foreground [text-wrap:balance]"
+                                title={r.summary}
+                              >
+                                {r.summary}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-[13px] tabular-nums">

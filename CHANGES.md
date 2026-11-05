@@ -2947,3 +2947,13 @@ DESTINATION NAME and DESTINATION NUMBER (CH-594 covered the screen and the
 Call Logs file, not this server-built file).
 
 Staff and owner logins: the full row, unchanged. Nothing else changes.
+
+## CH-606 - AI Audit: comments back, centred under the label
+
+Sir, 5 Nov: "Comments centers and organized".
+
+- The AI's comment is back under the label (CH-602 had moved it to hover). It
+  sits in the label's own column: exactly as wide as the label and centred on
+  it, at most four lines, with the whole text on hover.
+- The label and % columns still line up row to row; rows with a comment are
+  taller. Rows without one are unchanged.
