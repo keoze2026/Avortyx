@@ -2882,3 +2882,14 @@ is hidden, and an alert with no switch always shows. The panel text now says so.
 Portal only: Telegram and email are not affected.
 
 Commit: see git log --grep CH-592
+
+## CH-593 - Every insight follows a switch: all off, list empty (FRONTEND)
+
+Tested after CH-592 with every switch off: "2 campaigns have no active buyers",
+"No Recent Call Activity" and "Top performing campaign" still showed, because
+they had no switch. Every insight and anomaly without its own switch now follows
+Autopilot Alert, which the backend already uses for these rule-based alerts.
+Missing calls follow Buyer Missed Call and AHT its own switch. Each switch
+removes only its own alerts; everything else stays.
+
+Commit: see git log --grep CH-593

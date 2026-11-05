@@ -230,13 +230,15 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
         return { item, at: a.at, title: item.title };
       }),
       ...(partner ? [] : anomalies).filter((a) => {
+        // CH-593: anything without a switch of its own follows Autopilot Alert,
+        // so with every switch off the list is empty.
         const event = anomalyEvent(anomalyToNotification(a), a.kind);
-        return !event || shown(event);
+        return shown(event === "buyer.missed" || event === "aht.low" ? event : "autopilot.alert");
       }).map((a) => {
         const item = anomalyToNotification(a);
         return { item, at: a.detectedAt, title: item.title };
       }),
-      ...(partner ? [] : recommendations).filter((r) => r.impact?.value !== "pause_buyer" || shown("buyer.missed")).map((r) => ({
+      ...(partner ? [] : recommendations).filter((r) => shown(r.impact?.value === "pause_buyer" ? "buyer.missed" : "autopilot.alert")).map((r) => ({
         item: recommendationToNotification(r),
         at: r.createdAt,
         action: r.impact?.value,
