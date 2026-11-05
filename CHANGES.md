@@ -2667,3 +2667,12 @@ as a strip that opens with Watch. Our team only, as on their old pages
 (partner logins never saw those pages).
 
 Commit: see git log --grep CH-571
+
+## CH-572 - Getting Started videos: just their titles (FRONTEND)
+
+The two video strips on the Getting Started page read "Getting Started:
+Number Pools Step by Step" and "Getting Started: Campaign Groups Step by
+Step". The "Getting Started:" prefix is removed: "Number Pools Step by Step",
+"Campaign Groups Step by Step".
+
+Commit: see git log --grep CH-572

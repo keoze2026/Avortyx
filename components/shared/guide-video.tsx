@@ -119,9 +119,8 @@ export function GuideVideo({ id, src, poster, titleKey, subtitleKey, chapters, s
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
         <CirclePlay className="h-5 w-5 shrink-0 text-accent" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">
-            {t("guideVideo.gettingStarted")}: {t(titleKey)}
-          </div>
+          {/* CH-572: just the video's title - it sits on the Getting Started page (CH-571). */}
+          <div className="truncate text-sm font-semibold">{t(titleKey)}</div>
           <div className="truncate text-xs text-muted-foreground">{t(subtitleKey)}</div>
         </div>
         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
