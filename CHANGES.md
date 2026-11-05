@@ -2734,3 +2734,14 @@ sends. Tested in a browser against a backend still sending the insights: no AI
 requests on a buyer or publisher login, and the admin login unchanged.
 
 Commit: see git log --grep CH-577
+
+## CH-578 - Clear All in the bell and on the Notifications page (FRONTEND)
+
+Reported 5 Nov: "delete all notification so we can start fresh." Insights and
+anomalies are worked out from live data on every load, so there is no stored
+row to delete. Clear All hides everything showing now, TFNs Expired included,
+for this login on this browser until 12 AM Eastern. Anything new shows at once;
+a problem that is still there returns the next day. The TFN notice is also
+marked Seen. Nothing is deleted on the server and other logins are not touched.
+
+Commit: see git log --grep CH-578

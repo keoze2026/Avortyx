@@ -18,7 +18,7 @@ import { FeedRow } from "@/components/app-shell/feed-row";
 import { PopupAlertSettings } from "@/components/app-shell/popup-alert-settings";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTranslation } from "@/hooks/use-translation";
-import { dayLabel, useNotificationFeed, type FeedEntry } from "@/lib/notifications/feed";
+import { dayLabel, useClearAllNotifications, useNotificationFeed, type FeedEntry } from "@/lib/notifications/feed";
 import { useNotificationsReadStore } from "@/lib/store/notifications-read-store";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,8 @@ export default function NotificationsPage() {
   const { t, locale } = useTranslation();
   const [tab, setTab] = useState<TabId>("all");
   const [settings, setSettings] = useState(false);
-  const { entries, counts, unread, allIds } = useNotificationFeed();
+  const { entries, counts, unread, allIds, everyId } = useNotificationFeed();
+  const clearAll = useClearAllNotifications(everyId);
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
 
   const tabs: Array<{ id: TabId; label: string; count: number }> = [
@@ -70,6 +71,11 @@ export default function NotificationsPage() {
           {unread > 0 && (
             <button type="button" onClick={markAllRead} className="text-muted-foreground transition-colors hover:text-foreground">
               {t("notificationsUI.menu.markAllRead")}
+            </button>
+          )}
+          {everyId.length > 0 && (
+            <button type="button" onClick={clearAll} className="text-muted-foreground transition-colors hover:text-foreground">
+              {t("x578.clearAll")}
             </button>
           )}
           <button type="button" onClick={() => setSettings(true)} className="font-medium text-foreground/90 transition-colors hover:text-foreground">

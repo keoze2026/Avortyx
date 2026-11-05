@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, Bell, CheckCheck, Inbox, PhoneOff, Settings2 } from "lucide-react";
+import { ArrowLeft, Bell, CheckCheck, Inbox, PhoneOff, Settings2, Trash2 } from "lucide-react";
 
 import { FeedRow } from "@/components/app-shell/feed-row";
 import { PopupAlertSettings } from "@/components/app-shell/popup-alert-settings";
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
-import { useNotificationFeed } from "@/lib/notifications/feed";
+import { useClearAllNotifications, useNotificationFeed, useVisibleDeletedTfns } from "@/lib/notifications/feed";
 import { useNotificationsReadStore } from "@/lib/store/notifications-read-store";
 import { useDeletedTfnsStore } from "@/lib/store/deleted-tfns-store";
 import { toast } from "sonner";
@@ -43,10 +43,11 @@ export function NotificationsMenu() {
   // "TFNs deleted" (backend CH-179): pinned above the list until 12 PM
   // Eastern (CH-182); only numbers not yet Seen count on the bell. Not part
   // of "Mark all read" on purpose.
-  const deletedCount = useDeletedTfnsStore((s) => s.count);
   const deletedUnseen = useDeletedTfnsStore((s) => s.unseenCount);
-  const keptCount = useDeletedTfnsStore((s) => s.kept.length);
-  const unread = feedUnread + deletedUnseen;
+  const visibleTfns = useVisibleDeletedTfns();
+  const tfnCount = visibleTfns.numbers.length + visibleTfns.kept.length;
+  const unread = feedUnread + (tfnCount > 0 ? deletedUnseen : 0);
+  const clearAll = useClearAllNotifications(everyId);
 
   const tabs: Array<{ id: TabId; label: string; count: number }> = [
     { id: "all", label: t("notificationsUI.menu.tabs.all"), count: counts.all },
@@ -110,6 +111,16 @@ export function NotificationsMenu() {
                   <CheckCheck className="h-4 w-4" />
                   {t("notificationsUI.menu.markAllRead")}
                 </button>
+                {/* CH-578 */}
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  disabled={everyId.length + tfnCount === 0}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t("x578.clearAll")}
+                </button>
                 <button
                   type="button"
                   onClick={() => setView("settings")}
@@ -139,7 +150,7 @@ export function NotificationsMenu() {
               ))}
             </div>
 
-            {deletedCount + keptCount > 0 && <DeletedTfnsCard />}
+            {tfnCount > 0 && <DeletedTfnsCard />}
 
             <div className="max-h-[440px] overflow-y-auto">
               {shown.length === 0 ? (
@@ -176,13 +187,11 @@ export function NotificationsMenu() {
  *  only clears the badge, so numbers already seen are dimmed, not removed. */
 function DeletedTfnsCard() {
   const { t } = useTranslation();
-  const total = useDeletedTfnsStore((s) => s.count);
   const unseen = useDeletedTfnsStore((s) => s.unseenCount);
-  const numbers = useDeletedTfnsStore((s) => s.numbers);
-  const kept = useDeletedTfnsStore((s) => s.kept);
+  const { numbers, kept } = useVisibleDeletedTfns();
   const markSeen = useDeletedTfnsStore((s) => s.markSeen);
   const [busy, setBusy] = React.useState(false);
-  const count = total + kept.length;
+  const count = numbers.length + kept.length;
   // The server marks what this user has Seen (backend CH-182).
   const listed = [...numbers.map((n) => ({ ...n, seen: !!n.seen })), ...kept.map((n) => ({ ...n, seen: true }))];
   const shown = listed.slice(0, 8);

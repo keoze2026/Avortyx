@@ -20,6 +20,8 @@ import { anomalyToNotification, capAlertToNotification, recommendationToNotifica
 import { useAiInsightsStore } from "@/lib/store/ai-insights-store";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useCapAlertsStore } from "@/lib/store/cap-alerts-store";
+import { activeCleared, useNotificationsClearedStore } from "@/lib/store/notifications-cleared-store";
+import { useDeletedTfnsStore } from "@/lib/store/deleted-tfns-store";
 import { useNotificationsReadStore } from "@/lib/store/notifications-read-store";
 
 export type FeedTone = "red" | "amber" | "blue" | "green" | "grey" | "violet";
@@ -206,12 +208,18 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
   const capAlerts = useCapAlertsStore((s) => s.alerts);
   const readIds = useNotificationsReadStore((s) => s.readIds);
   const role = useAuthStore((s) => s.user?.role);
+  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  const today = useEasternDayStart(true);
+  const clearedIds = useNotificationsClearedStore((s) => s.ids);
+  const clearedDay = useNotificationsClearedStore((s) => s.day);
+  const clearedOwner = useNotificationsClearedStore((s) => s.owner);
   // CH-576: a buyer or publisher login sees only its own cap alerts (CH-335).
   // The AI insights and campaign caps describe the whole workspace.
   const partner = role === "buyer" || role === "publisher";
 
   return React.useMemo(() => {
-    const every: Raw[] = [
+    const cleared = activeCleared({ ids: clearedIds, day: clearedDay, owner: clearedOwner }, today, userId);
+    const every: Raw[] = ([
       ...capAlerts.filter((a) => !partner || a.entityType !== "campaign").map((a) => {
         const item = capAlertToNotification(a, t);
         return { item, at: a.at, title: item.title };
@@ -226,7 +234,7 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
         action: r.impact?.value,
         title: r.title,
       })),
-    ];
+    ] as Raw[]).filter((r) => !cleared[r.item.id]);
     const raws = since ? every.filter((r) => r.at >= since) : every;
     const entries = buildFeed(raws, readIds, t);
     const isAlert = (r: Raw) => r.item.severity === "critical" || r.item.severity === "warn";
@@ -238,7 +246,36 @@ export function useNotificationFeed(options: { today?: boolean } = {}) {
     };
     const unread = raws.length - counts.read;
     return { entries, counts, unread, allIds: raws.map((r) => r.item.id), everyId: every.map((r) => r.item.id) };
-  }, [anomalies, recommendations, capAlerts, readIds, t, since, partner]);
+  }, [anomalies, recommendations, capAlerts, readIds, t, since, partner, today, userId, clearedIds, clearedDay, clearedOwner]);
+}
+
+/** CH-578: Clear All - hides what is showing now until 12 AM Eastern. The
+ *  TFN notice is marked Seen as well, so it stops counting on the bell. */
+export function useClearAllNotifications(ids: string[]) {
+  const clear = useNotificationsClearedStore((s) => s.clear);
+  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  return React.useCallback(() => {
+    const tfns = useDeletedTfnsStore.getState();
+    const tfnIds = [...tfns.numbers, ...tfns.kept].map((n) => `tfn:${n.id}`);
+    clear([...ids, ...tfnIds], easternDayStart(), userId);
+    if (tfns.unseenCount > 0) void tfns.markSeen().catch(() => undefined);
+  }, [ids, clear, userId]);
+}
+
+/** CH-578: the TFN notice's numbers, without those cleared today. */
+export function useVisibleDeletedTfns() {
+  const numbers = useDeletedTfnsStore((s) => s.numbers);
+  const kept = useDeletedTfnsStore((s) => s.kept);
+  const userId = useAuthStore((s) => s.user?.id) ?? null;
+  const today = useEasternDayStart(true);
+  const ids = useNotificationsClearedStore((s) => s.ids);
+  const day = useNotificationsClearedStore((s) => s.day);
+  const owner = useNotificationsClearedStore((s) => s.owner);
+  return React.useMemo(() => {
+    const cleared = activeCleared({ ids, day, owner }, today, userId);
+    const show = (n: { id: string }) => !cleared[`tfn:${n.id}`];
+    return { numbers: numbers.filter(show), kept: kept.filter(show) };
+  }, [numbers, kept, ids, day, owner, today, userId]);
 }
 
 /** "Today" / "Yesterday" / "Mon 3 Nov" for a day heading. */
