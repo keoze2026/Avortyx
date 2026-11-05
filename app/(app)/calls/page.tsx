@@ -219,7 +219,8 @@ export default function CallsPage() {
       localizeColumns(
         callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
           (c) =>
-            (!isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase())) &&
+            // CH-605: nor our called number (TFN).
+            (!isBuyerLogin || !["CAMPAIGN", "PUBLISHER", "CALLED NUMBER"].includes(String(c.label).toUpperCase())) &&
             // CH-594: a publisher's file has no buyer, destination name or number.
             (!isPublisherLogin || !["BUYER", "DESTINATION NAME", "DESTINATION NUMBER"].includes(String(c.label).toUpperCase())),
         ),

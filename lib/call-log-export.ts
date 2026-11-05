@@ -145,6 +145,29 @@ export function formatCallLogTable(
   });
 }
 
+/**
+ * CH-605 (Sir, 5 Nov): what a partner login never gets in a downloaded file,
+ * whatever the server's file carries. A buyer: no CALLED NUMBER (our TFN), no
+ * CAMPAIGN, no PUBLISHER - "should never come to buyer access portal or excel
+ * when they download report". A publisher: no BUYER, DESTINATION NAME or
+ * DESTINATION NUMBER (CH-594). Staff and owner logins: untouched.
+ */
+export const PARTNER_HIDDEN_HEADERS: Readonly<Record<string, readonly string[]>> = {
+  buyer: ["CALLED NUMBER", "CAMPAIGN", "PUBLISHER"],
+  publisher: ["BUYER", DESTINATION_NAME_HEADER, DESTINATION_NUMBER_HEADER],
+};
+
+/** Drop PARTNER_HIDDEN_HEADERS for this role from a table (first row = header). */
+export function withoutPartnerColumns(table: string[][], role: string | null | undefined): string[][] {
+  const hidden = PARTNER_HIDDEN_HEADERS[role ?? ""];
+  if (!hidden || table.length === 0) return table;
+  const drop = new Set(
+    table[0].map((h, j) => (hidden.includes(String(h).trim().toUpperCase()) ? j : -1)).filter((j) => j >= 0),
+  );
+  if (drop.size === 0) return table;
+  return table.map((row) => row.filter((_, j) => !drop.has(j)));
+}
+
 /** The same rule for columns built in the browser: labels in capitals. */
 export function upperLabels<T>(columns: ExportColumn<T>[]): ExportColumn<T>[] {
   return columns.map((c) => ({ ...c, label: c.label.toUpperCase() }));

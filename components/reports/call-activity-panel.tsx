@@ -372,6 +372,9 @@ function Chip({ children, tone = "plain" }: { children: React.ReactNode; tone?: 
 
 const BUYER_KEYS = ["buyerName", "buyer", "buyer_name", "destinationName", "destination_name", "destinationNumber", "destination", "destination_number", "lineName", "line_name"];
 const PUBLISHER_KEYS = ["publisherName", "publisher", "publisher_name"];
+// CH-605: what a buyer login never gets in the timeline details: the publisher,
+// our campaign and our called number ("to" on Call Received).
+const BUYER_HIDDEN_KEYS = [...PUBLISHER_KEYS, "campaignName", "campaign", "campaign_name", "calledNumber", "called_number", "to"];
 
 function strip(detail: Record<string, unknown> | null | undefined, keys: string[]) {
   if (!detail) return detail;
@@ -412,7 +415,7 @@ function partnerActivity(d: CallActivity, viewer: Viewer, buyerWord: string): Ca
     return {
       ...d,
       routing: d.routing ? { ...d.routing, publisher: null } : d.routing,
-      timeline: (d.timeline ?? []).map((e) => ({ ...e, detail: strip(e.detail, PUBLISHER_KEYS) })),
+      timeline: (d.timeline ?? []).map((e) => ({ ...e, detail: strip(e.detail, BUYER_HIDDEN_KEYS) })),
     };
   }
   return d;

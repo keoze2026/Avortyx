@@ -55,7 +55,7 @@ export function RoutingPath({ call }: { call: Call | null }) {
                   : s.key === "number"
                     ? role === "publisher" ? "—" : call.destinationNumber.slice(-7)
                     : s.key === "routing"
-                      ? call.campaignName.split(" ").slice(0, 2).join(" ")
+                      ? role === "buyer" ? "—" : call.campaignName.split(" ").slice(0, 2).join(" ")   // CH-605: no campaign for a buyer
                       : role === "publisher" ? "—" : call.buyerName ?? t("liveUI.routing.state.pending");
             const isCurrent =
               (s.key === "caller" && call.status === "ringing") ||

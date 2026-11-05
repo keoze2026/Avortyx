@@ -2923,3 +2923,27 @@ Sir, 5 Nov: "Match color and date format same as our report page format".
   calendar: portal colours, 2026-11-05 format, Today / Yesterday, Cancel and
   Apply. A new single-day mode keeps it to one day, as this page shows one day.
 - The No Voice evidence export's two date boxes are now one Reports date range.
+
+## CH-605 - Buyer logins: no called number, campaign or publisher, in the portal or the downloaded file
+
+Sir, 5 Nov: "Called number - publisher name - campaign name - should never come
+to buyer access portal or excel when they download report. Non buyer access
+should get full row report."
+
+The Reports call-log download is built from the server's file, which carried
+every column; the screen hid them for a buyer (CH-375) but the file did not.
+
+A buyer login now gets:
+- Reports call-log download (Excel and CSV): no CALLED NUMBER, CAMPAIGN or
+  PUBLISHER column, whatever the server's file holds.
+- Call Logs download: no CALLED NUMBER (campaign and publisher were already
+  gone).
+- Live Monitor routing path: the campaign step reads "-".
+- Call panel timeline details: no campaign and no called number (publisher
+  was already gone).
+
+A publisher login: the Reports call-log download now also drops BUYER,
+DESTINATION NAME and DESTINATION NUMBER (CH-594 covered the screen and the
+Call Logs file, not this server-built file).
+
+Staff and owner logins: the full row, unchanged. Nothing else changes.

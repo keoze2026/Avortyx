@@ -69,6 +69,7 @@ import {
   destinationOf,
   exportNumber,
   formatCallLogTable,
+  withoutPartnerColumns,
   formatDuration,
   upperLabels,
 } from "@/lib/call-log-export";
@@ -927,12 +928,14 @@ export function CallLogTable({
       const text = await blob.text();
       // Caller IDs in the file match the screen (with the leading "1"); then
       // capital headers, capitalised Status, and Duration in minutes.
-      const table = withTfnTests(withHangUp(withScreenStatus(withFailReasonLabels(withScreenTtc(
+      // CH-605: a buyer's file has no called number, campaign or publisher; a
+      // publisher's no buyer or destination - whatever the server's file holds.
+      const table = withoutPartnerColumns(withTfnTests(withHangUp(withScreenStatus(withFailReasonLabels(withScreenTtc(
         formatCallLogTable(formatExportCallerColumn(parseCSV(text)), {
           destinationFor: (callId) => destinationOf(callsById.get(callId), destinationNames),
         }),
         callsById,
-      )), callsById), callsById));
+      )), callsById), callsById)), role);
       setPendingExport({ format, table });
     } catch (e) {
       toast.error(friendlyErrorMessage(e, t("toolsUI.reports.callLog.exportError")));
