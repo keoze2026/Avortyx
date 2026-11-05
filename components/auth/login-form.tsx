@@ -74,7 +74,7 @@ export function LoginForm() {
     setNote("");
     try {
       // null: the backend wants the authenticator code (`pendingMfa` is now set)
-      if (await login(email.trim(), password, "admin")) {
+      if (await login(email.trim(), password)) {
         toast.success(t("y.login.welcomeBack"));
         finishLogin();
       } else {
@@ -93,7 +93,7 @@ export function LoginForm() {
     setPending(true);
     setNote("");
     try {
-      await completeMfa(code, "admin");
+      await completeMfa(code);
       toast.success(t("y.login.welcomeBack"));
       finishLogin();
     } catch (e) {

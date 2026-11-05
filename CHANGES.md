@@ -2723,3 +2723,14 @@ longer get it. The main account and staff logins are unchanged.
 
 Backend half: CH-576 in call_platform.
 Commit: see git log --grep CH-576
+
+## CH-577 - Sign-in keeps the login's real role (FRONTEND)
+
+The login form passed "admin" as a role override on every sign-in, so a buyer
+or publisher counted as admin until the profile reloaded. In that window the
+portal still asked for the workspace's AI insights (CH-576) and could have
+shown a pop-up from them. Sign-in and the MFA step now use the role the server
+sends. Tested in a browser against a backend still sending the insights: no AI
+requests on a buyer or publisher login, and the admin login unchanged.
+
+Commit: see git log --grep CH-577
