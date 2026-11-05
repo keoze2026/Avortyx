@@ -243,9 +243,8 @@ export function CampaignsTable({
                   )}
                   <TableCell className="font-medium text-foreground">
                     {/* Names start at the cell's left edge, close to Progress,
-                        active and paused on the same line (CH-337, Sir). The
-                        Active pill keeps the cell's right edge. */}
-                    <div className="relative flex items-center justify-start pr-[76px]">
+                        active and paused on the same line (CH-337, Sir). */}
+                    <div className="flex items-center justify-start">
                       <span className="inline-grid min-w-0 max-w-full justify-items-center">
                         {/* Unseen copy of the header: gives this block the header's width. */}
                         <span aria-hidden className="invisible col-start-1 row-start-1 h-0 overflow-hidden text-xs font-medium uppercase tracking-wider">
@@ -260,7 +259,9 @@ export function CampaignsTable({
                         </span>
                       </span>
                       {isActive && (
-                        <span className="absolute right-0 top-1/2 -translate-y-1/2">
+                        // CH-591: between the campaign and publisher names. The left
+                        // padding balances the gap the Publisher column adds on its side.
+                        <span data-active-badge className="flex min-w-[76px] flex-1 shrink-0 justify-center pl-[20px]">
                           <ActiveBadge />
                         </span>
                       )}

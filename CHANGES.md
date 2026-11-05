@@ -2860,3 +2860,12 @@ they arrive, then the right state once, and the list orders by status alone
 meanwhile, so rows do not jump. If the numbers fail to load, the old rule applies.
 
 Commit: see git log --grep CH-590
+
+## CH-591 - Campaigns: Active badge between campaign and publisher names (FRONTEND)
+
+Reported 5 Nov: "Center the active status in between campaigns and publishers.
+its far right." The badge was pinned to the cell's right edge, beside the
+publisher names. It now sits in the space between the two names, within a few
+pixels of centre at common screen widths. Nothing else moved.
+
+Commit: see git log --grep CH-591
