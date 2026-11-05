@@ -2893,3 +2893,24 @@ Missing calls follow Buyer Missed Call and AHT its own switch. Each switch
 removes only its own alerts; everything else stays.
 
 Commit: see git log --grep CH-593
+
+## CH-594 - Buyer names hidden from publisher logins, publisher names from buyer logins
+
+Sir, 5 Nov: "Why buyer names are coming in publisher portal ... Hide the buyer
+name from publisher access. Publisher name from buyer access."
+
+A publisher login now sees no buyer anywhere:
+- Call Log and Call Logs: no Buyer, Destination Name or Destination TFN
+  column (the line name carries the buyer's name, the number is the buyer's
+  line); the downloaded file drops them too.
+- Reports summary: no Buyer and no Destination tab.
+- Call panel: the buyer box reads "-"; each line rung reads just "Buyer", with
+  no name or number; no routing plan (it lists every buyer); the timeline
+  details carry no buyer, line or destination.
+- Live Monitor: the buyer and destination steps read "-".
+
+A buyer login (already without campaign, publisher and our TFN, CH-375) now
+also gets no publisher in the call panel's timeline details and in the Live
+Monitor's routing path.
+
+Staff and owner: unchanged.

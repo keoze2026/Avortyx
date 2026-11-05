@@ -183,12 +183,21 @@ function detailRows(
   return out;
 }
 
-export function CallActivityPanel({ call, onOpenChange }: Props) {
+export function CallActivityPanel({ call: rawCall, onOpenChange }: Props) {
   const { t, locale } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
   const viewer = useViewer();
   const [tab, setTab] = React.useState<PanelTab>("activity");
-  const [data, setData] = React.useState<CallActivity | null>(null);
+  const [rawData, setData] = React.useState<CallActivity | null>(null);
+  // CH-594 (Sir, 5 Nov: "Hide the buyer name from publisher access, publisher
+  // name from buyer access"): what a partner login may not see is taken out
+  // once, here, so no part of the panel can show it.
+  const call = React.useMemo(() => partnerCall(rawCall, viewer), [rawCall, viewer.buyer, viewer.publisher]); // eslint-disable-line react-hooks/exhaustive-deps
+  const buyerWord = t("x565.buyer");
+  const data = React.useMemo(
+    () => (rawData ? partnerActivity(rawData, viewer, buyerWord) : null),
+    [rawData, viewer.buyer, viewer.publisher, buyerWord], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -359,6 +368,54 @@ function Chip({ children, tone = "plain" }: { children: React.ReactNode; tone?: 
       {children}
     </span>
   );
+}
+
+const BUYER_KEYS = ["buyerName", "buyer", "buyer_name", "destinationName", "destination_name", "destinationNumber", "destination", "destination_number", "lineName", "line_name"];
+const PUBLISHER_KEYS = ["publisherName", "publisher", "publisher_name"];
+
+function strip(detail: Record<string, unknown> | null | undefined, keys: string[]) {
+  if (!detail) return detail;
+  const out = { ...detail };
+  for (const k of keys) delete out[k];
+  return out;
+}
+
+/** CH-594: the call row without the other side's name. */
+function partnerCall(call: Call | null, viewer: Viewer): Call | null {
+  if (!call) return call;
+  if (viewer.publisher) return { ...call, buyerName: "" };
+  if (viewer.buyer) return { ...call, publisherName: "" };
+  return call;
+}
+
+/** CH-594: the panel's data without the other side's names. A publisher gets
+ *  no buyer name, line name or buyer number (each line it was offered reads
+ *  just "Buyer"); a buyer gets no publisher name. */
+function partnerActivity(d: CallActivity, viewer: Viewer, buyerWord: string): CallActivity {
+  if (viewer.publisher) {
+    const panel = d.panel
+      ? {
+          ...d.panel,
+          destinationName: "",
+          legs: (d.panel.legs ?? []).map((l) => ({ ...l, name: buyerWord, buyer: null, destination: "" })),
+        }
+      : d.panel;
+    return {
+      ...d,
+      panel,
+      routing: d.routing ? { ...d.routing, buyer: null, destination: null } : d.routing,
+      routingTrace: undefined,
+      timeline: (d.timeline ?? []).map((e) => ({ ...e, detail: strip(e.detail, BUYER_KEYS) })),
+    };
+  }
+  if (viewer.buyer) {
+    return {
+      ...d,
+      routing: d.routing ? { ...d.routing, publisher: null } : d.routing,
+      timeline: (d.timeline ?? []).map((e) => ({ ...e, detail: strip(e.detail, PUBLISHER_KEYS) })),
+    };
+  }
+  return d;
 }
 
 function ruleText(call: Call, panel: CallPanel, t: T): string {

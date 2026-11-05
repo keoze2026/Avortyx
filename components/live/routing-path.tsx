@@ -11,6 +11,7 @@ import { Building2, GitFork, Hash, PhoneIncoming, Users } from "lucide-react";
 import { BracketCard } from "@/components/shared/bracket-card";
 import { SectionLabel } from "@/components/shared/section-label";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ const STEPS = [
 
 export function RoutingPath({ call }: { call: Call | null }) {
   const { t } = useTranslation();
+  // CH-594: a publisher sees no buyer (name or line), a buyer no publisher.
+  const role = useAuthStore((s) => s.user?.role);
   return (
     <BracketCard>
       <SectionLabel
@@ -48,12 +51,12 @@ export function RoutingPath({ call }: { call: Call | null }) {
               s.key === "caller"
                 ? call.callerNumber.slice(-7)
                 : s.key === "publisher"
-                  ? call.publisherName ?? "—"
+                  ? role === "buyer" ? "—" : call.publisherName ?? "—"
                   : s.key === "number"
-                    ? call.destinationNumber.slice(-7)
+                    ? role === "publisher" ? "—" : call.destinationNumber.slice(-7)
                     : s.key === "routing"
                       ? call.campaignName.split(" ").slice(0, 2).join(" ")
-                      : call.buyerName ?? t("liveUI.routing.state.pending");
+                      : role === "publisher" ? "—" : call.buyerName ?? t("liveUI.routing.state.pending");
             const isCurrent =
               (s.key === "caller" && call.status === "ringing") ||
               (s.key === "buyer" && call.status === "in-progress");

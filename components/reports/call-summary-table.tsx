@@ -1160,7 +1160,17 @@ export function CallSummaryTable({
   // number-pool or traffic-source breakdowns.
   const tabRole = useAuthStore((st) => st.user?.role);
   const isBuyerLogin = tabRole === "buyer";
-  const tabs = React.useMemo(() => (isBuyerLogin ? TABS.filter((td) => BUYER_TABS.has(td.id)) : TABS), [isBuyerLogin]);
+  // CH-594: a publisher gets no Buyer or Destination tab (buyer names and lines).
+  const isPublisherLogin = tabRole === "publisher";
+  const tabs = React.useMemo(
+    () =>
+      isBuyerLogin
+        ? TABS.filter((td) => BUYER_TABS.has(td.id))
+        : isPublisherLogin
+          ? TABS.filter((td) => td.id !== "buyer" && td.id !== "destination")
+          : TABS,
+    [isBuyerLogin, isPublisherLogin],
+  );
   const [tab, setTab] = React.useState<GroupKey>(isBuyerLogin ? "destination" : "campaign");
   React.useEffect(() => {
     if (!isBuyerLogin) return;

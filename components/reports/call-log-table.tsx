@@ -735,7 +735,9 @@ export function CallLogTable({
     const out = { ...columnsState };
     // CH-375: a buyer sees its own TFNs and calls, not our campaigns or publishers.
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
-    if (role === "publisher") out.revenue = false;
+    // CH-594 (Sir, 5 Nov: "Hide the buyer name from publisher access"): a
+    // publisher sees no buyer - not its name, its line's name or its number.
+    if (role === "publisher") { out.revenue = false; out.buyer = false; out.destName = false; out.destTfn = false; }
     // CH-546 / CH-548: the AI audit - billing and audit team logins only.
     if (!canAiAudit || !AI_ON_REPORTS) out.ai = false;          // CH-557: AI Audit page only
     for (const k of partnerHidden) if (k in out) out[k as ColumnKey] = false;

@@ -49,6 +49,8 @@ import { cn } from "@/lib/utils";
  */
 export interface Viewer {
   buyer: boolean;
+  /** CH-594: a publisher login - no buyer name, line name or buyer number anywhere. */
+  publisher: boolean;
   showRevenue: boolean;
   showPayout: boolean;
   showTtc: boolean;
@@ -68,13 +70,14 @@ export function useViewer(): Viewer {
   const publisher = role === "publisher";
   return {
     buyer,
+    publisher,
     showRevenue: !publisher && !hidden.has("revenue"),
     showPayout: !buyer && !hidden.has("payout"),
     showTtc: !buyer && !hidden.has("ttc"),
     showTfn: !buyer && !hidden.has("dialed"),
     showCampaign: !buyer && !hidden.has("campaign"),
     showPublisher: !buyer && !hidden.has("publisher"),
-    showRouting: !buyer,
+    showRouting: !buyer && !publisher,
     canListen: can("audio_recording") && !hidden.has("recording"),
   };
 }

@@ -92,6 +92,7 @@ export default function CallsPage() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(DEFAULT_VISIBLE);
   // CH-375: a buyer login never sees our campaign or publisher names.
   const isBuyerLogin = useAuthStore((s) => s.user?.role) === "buyer";
+  const isPublisherLogin = useAuthStore((s) => s.user?.role) === "publisher";
   const shownColumns = useMemo(() => {
     if (!isBuyerLogin) return visibleColumns;
     const out = new Set(visibleColumns);
@@ -217,7 +218,10 @@ export default function CallsPage() {
       format,
       localizeColumns(
         callExportColumns(destinationNames, partnerCan("audio_recording"), timeZone).filter(
-          (c) => !isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase()),
+          (c) =>
+            (!isBuyerLogin || !["CAMPAIGN", "PUBLISHER"].includes(String(c.label).toUpperCase())) &&
+            // CH-594: a publisher's file has no buyer, destination name or number.
+            (!isPublisherLogin || !["BUYER", "DESTINATION NAME", "DESTINATION NUMBER"].includes(String(c.label).toUpperCase())),
         ),
         loc,
       ),
