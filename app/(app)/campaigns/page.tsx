@@ -88,6 +88,9 @@ export default function CampaignsPage() {
 
   // Tracking numbers per campaign — the same count the Progress badge uses.
   const allNumbers = useNumbersStore((s) => s.numbers);
+  // CH-590: while the numbers load, order by status alone, so rows don't jump
+  // from an all-Incomplete order once they arrive.
+  const numbersKnown = useNumbersStore((s) => s.hydrated || !!s.error);
   const numbersByCampaign = useMemo(() => {
     const map = new Map<string, number>();
     for (const n of allNumbers ?? []) {
@@ -111,7 +114,7 @@ export default function CampaignsPage() {
     // Ready always first, then Paused, then Incomplete; the chosen sort
     // (recent, name, calls, revenue) orders campaigns within each group.
     const rank = (c: (typeof list)[number]) =>
-      PROGRESS_ORDER[campaignProgress(c, numbersByCampaign.get(c.id) ?? 0)];
+      PROGRESS_ORDER[campaignProgress(c, numbersKnown ? (numbersByCampaign.get(c.id) ?? 0) : 1)];
     return [...list].sort((a, b) => {
       const byProgress = rank(a) - rank(b);
       if (byProgress !== 0) return byProgress;
@@ -120,7 +123,7 @@ export default function CampaignsPage() {
       if (sort === "revenueToday") return b.revenueToday - a.revenueToday;
       return b.createdAt - a.createdAt;
     });
-  }, [campaigns, query, statusFilter, sort, numbersByCampaign]);
+  }, [campaigns, query, statusFilter, sort, numbersByCampaign, numbersKnown]);
 
   const start = page * pageSize;
   const visible = filtered.slice(start, start + pageSize);

@@ -140,6 +140,9 @@ export function CampaignsTable({
   // "Incomplete" progress pill so a campaign with zero TFNs reads as needing
   // setup, regardless of its on-record `numbersCount`.
   const allNumbers = useNumbersStore((s) => s.numbers);
+  // CH-590: until the numbers arrive nobody knows who has one, so the pill
+  // waits instead of flashing Incomplete. A failed load falls back to the rule.
+  const numbersKnown = useNumbersStore((s) => s.hydrated || !!s.error);
   const numbersByCampaign = React.useMemo(() => {
     const map = new Map<string, number>();
     for (const n of allNumbers ?? []) {
@@ -231,7 +234,11 @@ export function CampaignsTable({
                   </TableCell>
                   {columns.progress && (
                     <TableCell>
-                      <ProgressPill state={progressState} />
+                      {numbersKnown ? (
+                        <ProgressPill state={progressState} />
+                      ) : (
+                        <span aria-hidden className="inline-block h-[1.625rem] min-w-[5.75rem] animate-pulse rounded-md bg-secondary/60" />
+                      )}
                     </TableCell>
                   )}
                   <TableCell className="font-medium text-foreground">

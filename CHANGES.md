@@ -2850,3 +2850,13 @@ longest name, centred under the CAMPAIGN header, so they all start on one line.
 The header, the Active badges and every other column stay where they were.
 
 Commit: see git log --grep CH-589
+
+## CH-590 - Campaigns: no Incomplete flash on refresh (FRONTEND)
+
+Reported 5 Nov: "when you refresh campaign page for 2 sec it shows incomplete."
+The list carries no number count, so until the numbers loaded every campaign
+counted as having none. The Progress pill now shows a neutral placeholder until
+they arrive, then the right state once, and the list orders by status alone
+meanwhile, so rows do not jump. If the numbers fail to load, the old rule applies.
+
+Commit: see git log --grep CH-590
