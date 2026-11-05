@@ -35,7 +35,7 @@ const POPUP_LIMIT = 6;
 export function NotificationsMenu() {
   const { t } = useTranslation();
   const [tab, setTab] = React.useState<TabId>("all");
-  const [view, setView] = React.useState<"list" | "settings">("list");
+  const [view, setView] = React.useState<"list" | "settings" | "confirmClear">("list");
   // CH-568: the bell shows today's (Eastern) notifications only; the page keeps all.
   const { entries, counts, unread: feedUnread, everyId } = useNotificationFeed({ today: true });
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
@@ -95,6 +95,28 @@ export function NotificationsMenu() {
               <PopupAlertSettings wide />
             </div>
           </>
+        ) : view === "confirmClear" ? (
+          // CH-580: a panel in the menu, as the settings are. A dialog over the
+          // dropdown can leave the page unclickable when the two close.
+          <div className="p-5">
+            <h3 className="text-base font-semibold">{t("x578.confirm.title")}</h3>
+            <p className="mt-2 text-sm leading-snug text-muted-foreground">{t("x578.confirm.body")}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setView("list")}>
+                {t("x578.confirm.cancel")}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  clearAll();
+                  setView("list");
+                }}
+              >
+                {t("x578.clearAll")}
+              </Button>
+            </div>
+          </div>
         ) : (
           <>
             {/* Header */}
@@ -114,7 +136,7 @@ export function NotificationsMenu() {
                 {/* CH-578 */}
                 <button
                   type="button"
-                  onClick={clearAll}
+                  onClick={() => setView("confirmClear")}
                   disabled={everyId.length + tfnCount === 0}
                   className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-accent transition-colors hover:bg-secondary/60 disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-transparent"
                 >

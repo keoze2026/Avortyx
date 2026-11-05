@@ -24,18 +24,20 @@ export function FeedRow({ entry, full = false }: { entry: FeedEntry; full?: bool
     <li
       onClick={() => !entry.read && markAllRead(entry.ids)}
       className={cn(
-        "flex gap-3 px-5 py-4 transition-colors",
+        "flex gap-3 px-5 transition-colors",
+        // CH-580: the bell's messages are smaller; the full page keeps its size.
+        full ? "py-4" : "py-2.5",
         !entry.read ? "bg-accent/[0.06]" : "hover:bg-secondary/30",
       )}
     >
-      <span aria-hidden className={cn("mt-[7px] h-2 w-2 shrink-0 rounded-full", TONE_DOT[entry.tone])} />
+      <span aria-hidden className={cn("h-2 w-2 shrink-0 rounded-full", full ? "mt-[7px]" : "mt-[5px]", TONE_DOT[entry.tone])} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className={cn("text-[15px] leading-snug", entry.read ? "font-medium text-foreground/80" : "font-semibold text-foreground")}>
+            <p className={cn(full ? "text-[15px]" : "text-[13px]", "leading-snug", entry.read ? "font-medium text-foreground/80" : "font-semibold text-foreground")}>
               {title}
             </p>
-            {line && <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{line}</p>}
+            {line && <p className={cn("mt-0.5 leading-snug text-muted-foreground", full ? "text-sm" : "text-[11px]")}>{line}</p>}
             {full && !entry.details && entry.subtitle && (
               <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{entry.subtitle}</p>
             )}

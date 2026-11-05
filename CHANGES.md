@@ -2756,3 +2756,13 @@ Long lists wrap inside the column.
 
 Backend half: CH-579 in call_platform. Until it is deployed every row shows "-".
 Commit: see git log --grep CH-579
+
+## CH-580 - Bell: smaller messages, Clear All asks first (FRONTEND)
+
+Reported 5 Nov: "Message size more small - Delete all need confirmation." In
+the bell, titles go from 15px to 13px, the second line is 11px and rows are
+tighter; the Notifications page keeps its size. Clear All now asks "Clear all
+notifications?" and says what will happen, with Cancel and Clear All: a panel
+inside the bell, a dialog on the page. Cancel changes nothing.
+
+Commit: see git log --grep CH-580

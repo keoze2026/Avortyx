@@ -16,6 +16,16 @@ import { toast } from "sonner";
 
 import { FeedRow } from "@/components/app-shell/feed-row";
 import { PopupAlertSettings } from "@/components/app-shell/popup-alert-settings";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTranslation } from "@/hooks/use-translation";
 import { dayLabel, useClearAllNotifications, useNotificationFeed, type FeedEntry } from "@/lib/notifications/feed";
@@ -28,6 +38,7 @@ export default function NotificationsPage() {
   const { t, locale } = useTranslation();
   const [tab, setTab] = useState<TabId>("all");
   const [settings, setSettings] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const { entries, counts, unread, allIds, everyId } = useNotificationFeed();
   const clearAll = useClearAllNotifications(everyId);
   const markAllReadStore = useNotificationsReadStore((s) => s.markAllRead);
@@ -74,7 +85,7 @@ export default function NotificationsPage() {
             </button>
           )}
           {everyId.length > 0 && (
-            <button type="button" onClick={clearAll} className="text-muted-foreground transition-colors hover:text-foreground">
+            <button type="button" onClick={() => setConfirmClear(true)} className="text-muted-foreground transition-colors hover:text-foreground">
               {t("x578.clearAll")}
             </button>
           )}
@@ -83,6 +94,20 @@ export default function NotificationsPage() {
           </button>
         </div>
       </div>
+
+      {/* CH-580 */}
+      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("x578.confirm.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("x578.confirm.body")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("x578.confirm.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={clearAll}>{t("x578.clearAll")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-6 flex gap-7 border-b border-border/60">
         {tabs.map((x) => (
