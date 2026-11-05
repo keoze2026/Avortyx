@@ -19,7 +19,7 @@ export const notificationsBox: ExtraTranslations = {
     "x558.alertSettings": "Alert settings",
     "x578.clearAll": "Clear All",
     "x578.confirm.title": "Clear all notifications?",
-    "x578.confirm.body": "Everything showing now will be hidden until 12 AM Eastern. New alerts will still appear, and anything not fixed returns tomorrow.",
+    "x578.confirm.body": "All current notifications will be hidden until 12:00 AM Eastern Time. New alerts will continue to appear, and any unresolved issues will reappear the following day.",
     "x578.confirm.cancel": "Cancel",
     "x558.popups.title": "Pop-up Alerts",
     "x558.popups.on": "{n} on",

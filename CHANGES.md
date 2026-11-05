@@ -2773,3 +2773,12 @@ Reported 5 Nov: "Center the dash." The Publisher header, names and "-" now sit
 on one centre line, like the table's other columns.
 
 Commit: see git log --grep CH-581
+
+## CH-582 - Clear All confirmation in professional English (FRONTEND)
+
+Reported 5 Nov: "Use professional English." The confirmation now reads: "All
+current notifications will be hidden until 12:00 AM Eastern Time. New alerts
+will continue to appear, and any unresolved issues will reappear the following
+day." English text only; the title and buttons are unchanged.
+
+Commit: see git log --grep CH-582
