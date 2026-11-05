@@ -2832,3 +2832,12 @@ the Publisher column in Reports. The "-" for a campaign with no publisher stays
 centred (CH-581). Size and row height are unchanged.
 
 Commit: see git log --grep CH-587
+
+## CH-588 - Campaigns: Publisher names parallel and centred (FRONTEND)
+
+Reported 5 Nov: "make them parallel as they are centered, not at the edge."
+Replaces CH-587's left edge. The header is centred again and every row's names
+sit in a block as wide as the longest list, centred in the column, so they all
+start on one line. The "-" stays centred. Size and row height are unchanged.
+
+Commit: see git log --grep CH-588

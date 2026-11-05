@@ -128,6 +128,9 @@ export function CampaignsTable({
   // read who else shares its campaign.
   const role = useAuthStore((st) => st.user?.role);
   const showPublisher = columns.publisher && role !== "buyer" && role !== "publisher";
+  // CH-588: every row's names sit in a block as wide as the longest list, so
+  // they start on one line and the group stays centred under the header.
+  const publisherChars = Math.max(0, ...campaigns.map((c) => (c.publishers ?? []).join(", ").length));
   const { t, locale } = useTranslation();
   const router = useRouter();
   // Live count of tracking numbers attached per campaign — drives the
@@ -181,7 +184,7 @@ export function CampaignsTable({
               </TableHead>
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
               <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
-              {showPublisher && <TableHead className="text-left">{t("x579.publisher")}</TableHead>}
+              {showPublisher && <TableHead>{t("x579.publisher")}</TableHead>}
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
@@ -246,9 +249,12 @@ export function CampaignsTable({
                   {showPublisher && (
                     // CH-586: the call log's style - small, one line. A long list
                     // ends in "..." with every name on hover.
-                    <TableCell className={cn("whitespace-nowrap text-[9.5px] font-medium text-muted-foreground", c.publishers?.length ? "text-left" : "text-center")}>
-                      {/* CH-587: names start on one edge, as in Reports; the dash stays centred (CH-581). */}
-                      <span className="block max-w-[260px] truncate" title={c.publishers?.join(", ")}>
+                    <TableCell className="whitespace-nowrap text-center text-[9.5px] font-medium text-muted-foreground">
+                      <span
+                        className={cn("mx-auto block max-w-[260px] truncate", c.publishers?.length && "text-left")}
+                        style={{ width: `${publisherChars}ch` }}
+                        title={c.publishers?.join(", ")}
+                      >
                         {c.publishers?.length ? c.publishers.join(", ") : "-"}
                       </span>
                     </TableCell>
