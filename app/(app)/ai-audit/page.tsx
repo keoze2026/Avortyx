@@ -644,61 +644,61 @@ export default function AiAuditPage() {
                           <div className="text-[13px] text-muted-foreground tabular-nums">{r.destination}</div>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{mmss(r.duration)}</TableCell>
-                        <TableCell className="min-w-[220px]">
-                          {r.aiStatus === "pending" ? (
-                            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              {t("x543.pending")}
+                        <TableCell>
+                          {/* CH-602 (5 Nov: "this looks ugly ... well aligned ... remove those
+                              comments"): every row the same - one 20em box (the label, Pending AI
+                              check or No file) and its % in a fixed slot - so the column lines up
+                              and every row is one line high. The AI's comment is on hover only
+                              (it still goes to the team's Telegram). */}
+                          <div className="inline-flex items-center gap-2" title={r.summary || undefined}>
+                            {r.aiStatus === "checked" ? (
+                              <Badge
+                                variant={labelVariant(r.aiLabel)}
+                                // CH-561: wide enough for the longest label at any text size.
+                                className="w-[20em] justify-center overflow-visible whitespace-nowrap px-3 py-1 text-[13px]"
+                              >
+                                {labelText(r.aiLabel)}
+                              </Badge>
+                            ) : (
+                              <span className="inline-flex w-[20em] items-center justify-center gap-1.5 rounded-md border border-dashed px-3 py-1 text-[13px] text-muted-foreground">
+                                {r.aiStatus === "pending" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                {r.aiStatus === "pending" ? t("x543.pending") : t("x543.noFile")}
+                              </span>
+                            )}
+                            <span className="w-10 text-left text-[13px] text-muted-foreground tabular-nums">
+                              {r.aiStatus === "checked" && r.aiConfidence != null ? `${r.aiConfidence}%` : ""}
                             </span>
-                          ) : r.aiStatus === "missing" ? (
-                            <span className="text-muted-foreground">{t("x543.noFile")}</span>
-                          ) : (
-                            <>
-                              {/* CH-559: every label the same size, its % in a fixed column beside it. */}
-                              <div className="flex items-center justify-center gap-2">
-                                <Badge
-                                  variant={labelVariant(r.aiLabel)}
-                                  // CH-561: wide enough for the longest label ("No Voice | No Beep
-                                  // or Customer") at any text size - em, not pixels - so no word is cut.
-                                  className="w-[20em] justify-center overflow-visible whitespace-nowrap px-3 py-1 text-[13px]"
-                                >
-                                  {labelText(r.aiLabel)}
-                                </Badge>
-                                <span className="w-10 text-left text-[13px] text-muted-foreground tabular-nums">
-                                  {r.aiConfidence != null ? `${r.aiConfidence}%` : ""}
-                                </span>
-                              </div>
-                              {r.summary && (
-                                <div className="mt-1 max-w-[18rem] whitespace-normal text-[13px] text-muted-foreground" title={r.transcript || undefined}>
-                                  {r.summary}
-                                </div>
-                              )}
-                            </>
-                          )}
+                          </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-[13px] tabular-nums">
+                          {/* CH-602: names in one column, seconds in the next - the numbers line
+                              up row to row instead of each line being centred on its own. */}
                           {r.channels === 2 ? (
-                            <>
-                              <div>
-                                {t("x543.callerSide")} {sec(r.callerSpeech)}
-                                {r.callerFirst != null &&
-                                  ` · ${t("x543.firstWord").replace("{s}", r.callerFirst.toFixed(0))}`}
-                              </div>
-                              <div>
-                                {t("x543.agentSide")} {sec(r.agentSpeech)}
-                              </div>
+                            <div className="mx-auto grid w-fit grid-cols-[auto_auto] gap-x-2 text-left">
+                              <span className="text-muted-foreground">{t("x543.callerSide")}</span>
+                              <span>
+                                {sec(r.callerSpeech)}
+                                {r.callerFirst != null && (
+                                  <span className="text-muted-foreground">
+                                    {` · ${t("x543.firstWord").replace("{s}", r.callerFirst.toFixed(0))}`}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-muted-foreground">{t("x543.agentSide")}</span>
+                              <span>{sec(r.agentSpeech)}</span>
                               {(r.beepSeconds ?? 0) > 0 && (
-                                <div>
-                                  {t("x543.beep")} {sec(r.beepSeconds)}
-                                </div>
+                                <>
+                                  <span className="text-muted-foreground">{t("x543.beep")}</span>
+                                  <span>{sec(r.beepSeconds)}</span>
+                                </>
                               )}
-                            </>
+                            </div>
                           ) : r.aiStatus === "checked" ? (
                             <span className="text-muted-foreground">
                               {t("x543.oneChannel").replace("{s}", sec(r.speech))}
                             </span>
                           ) : (
-                            "—"
+                            <span className="text-muted-foreground">—</span>
                           )}
                           {r.recordingUrl && (
                             <div className="mt-1">
