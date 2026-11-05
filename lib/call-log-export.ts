@@ -157,8 +157,30 @@ export const PARTNER_HIDDEN_HEADERS: Readonly<Record<string, readonly string[]>>
   publisher: ["BUYER", DESTINATION_NAME_HEADER, DESTINATION_NUMBER_HEADER],
 };
 
-/** Drop PARTNER_HIDDEN_HEADERS for this role from a table (first row = header). */
+/**
+ * CH-609 (Sir, 5 Nov, showing Revo's buyer view: "this is what only a buyer
+ * access can see or download, nothing more than that"): a buyer's call-log
+ * file holds these columns only, in this order. PAYOUT is what the buyer pays
+ * for the call - the REVENUE column of our own file.
+ */
+export const BUYER_FILE_HEADERS: readonly string[] = [
+  "DATE", "CALLER ID", DESTINATION_NAME_HEADER, "PAYOUT", DURATION_HEADER, "HANG UP", "FAIL REASON", "STATUS", "RECORDING",
+];
+
+function buyerFile(table: string[][]): string[][] {
+  const header = table[0].map((h) => String(h).trim().toUpperCase());
+  // Our own PAYOUT (what we pay a publisher) never reaches a buyer; the
+  // buyer's PAYOUT is our REVENUE.
+  const source = (name: string) =>
+    name === "PAYOUT" ? header.indexOf("REVENUE") : header.indexOf(name);
+  const cols = BUYER_FILE_HEADERS.map((name) => ({ name, at: source(name) })).filter((c) => c.at >= 0);
+  return table.map((row, i) => cols.map((c) => (i === 0 ? c.name : row[c.at] ?? "")));
+}
+
+/** Drop PARTNER_HIDDEN_HEADERS for this role from a table (first row = header);
+ *  a buyer's table keeps BUYER_FILE_HEADERS only (CH-609). */
 export function withoutPartnerColumns(table: string[][], role: string | null | undefined): string[][] {
+  if (role === "buyer" && table.length > 0) return buyerFile(table);
   const hidden = PARTNER_HIDDEN_HEADERS[role ?? ""];
   if (!hidden || table.length === 0) return table;
   const drop = new Set(

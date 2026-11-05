@@ -1237,7 +1237,10 @@ export function CallSummaryTable({
   const hiddenForRole: ReadonlySet<ColumnKey> = React.useMemo(() => {
     const base: ColumnKey[] =
       role === "buyer"
-        ? ["payout", "profit", "cost", "noVoice", "noVoicePct", "dupe"]   // CH-607: no Repeated for a buyer
+        ? ["payout", "profit", "cost", "noVoice", "noVoicePct", "dupe",   // CH-607: no Repeated for a buyer
+           // CH-609 (Sir, 5 Nov, Revo's buyer view): Live, Incoming, Connected,
+           // Converted, No Connect, Payout (our Revenue), ACL, TCL - nothing more.
+           "qualified", "paid", "conversionRate"]
         : role === "publisher"
           ? ["revenue", "profit", "cost", "noVoice", "noVoicePct"]
           : [];
@@ -1422,7 +1425,8 @@ export function CallSummaryTable({
     };
     const dataCols: ExportColumn<SummaryRow>[] = COLUMNS.filter((c) => visible[c.id]).map(
       (c) => ({
-        label: t(COLUMN_LABEL_KEYS[c.id]),
+        // CH-609: a buyer's Revenue column is its Payout - what it pays.
+        label: t(role === "buyer" && c.id === "revenue" ? COLUMN_LABEL_KEYS.payout : COLUMN_LABEL_KEYS[c.id]),
         value: (r) => summaryCellValue(r, c.id),
       }),
     );
@@ -1602,7 +1606,7 @@ export function CallSummaryTable({
                 {visible.tcl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.tcl")} sortKey="tcl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.acl && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.acl")} sortKey="acl" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.payout && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
-                {visible.revenue && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {visible.revenue && <TableHead className="text-center"><SortHeader label={t(role === "buyer" ? "toolsUI.reports.summary.columns.payout" : "toolsUI.reports.summary.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.profit && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.profit")} sortKey="profit" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {visible.cost && <TableHead className="text-center"><SortHeader label={t("toolsUI.reports.summary.columns.cost")} sortKey="cost" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
               </TableRow>

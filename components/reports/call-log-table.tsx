@@ -195,6 +195,11 @@ const COLUMNS: Array<{ id: ColumnKey; label: string }> = [
   { id: "recording", label: "Recording" },
 ];
 
+/** CH-609: the only call-log columns a buyer login gets (Revo's buyer view). */
+const BUYER_LOG_COLUMNS: ReadonlySet<ColumnKey> = new Set<ColumnKey>([
+  "caller", "destName", "revenue", "duration", "hangUp", "status", "failReason", "recording",
+]);
+
 const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   campaign: "toolsUI.reports.callLog.columns.campaign",
   publisher: "toolsUI.reports.callLog.columns.publisher",
@@ -738,6 +743,10 @@ export function CallLogTable({
     if (role === "buyer") { out.payout = false; out.campaign = false; out.publisher = false; out.dialed = false; }
     // CH-607 (Sir, 5 Nov: "Remove repeated from buyer access, from excel and visibility both").
     if (role === "buyer") out.repeated = false;
+    // CH-609 (Sir, 5 Nov, Revo's buyer view: "nothing more than that"): a buyer
+    // sees Caller ID, Destination, Payout (our Revenue), Duration, Hang up,
+    // Status, Fail reason and Rec - and no other column.
+    if (role === "buyer") for (const k of Object.keys(out) as ColumnKey[]) if (!BUYER_LOG_COLUMNS.has(k)) out[k] = false;
     // CH-594 (Sir, 5 Nov: "Hide the buyer name from publisher access"): a
     // publisher sees no buyer - not its name, its line's name or its number.
     if (role === "publisher") { out.revenue = false; out.buyer = false; out.destName = false; out.destTfn = false; }
@@ -964,7 +973,9 @@ export function CallLogTable({
       if (c.id === "dialed") return [{ label: "CALLED NUMBER", value: (row) => exportNumber(row.calledNumber) }];
       if (c.id === "destName") return [{ label: DESTINATION_NAME_HEADER, value: (row) => destinationOf(row, destinationNames).name }];
       if (c.id === "destTfn") return [{ label: DESTINATION_NUMBER_HEADER, value: (row) => destinationOf(row, destinationNames).number }];
-      return [{ label: english(COLUMN_LABEL_KEYS[c.id]), value: (row) => logCellValue(row, c.id, publisherNameById) }];
+      // CH-609: a buyer's Revenue column is its Payout - what it pays for the call.
+      const key = role === "buyer" && c.id === "revenue" ? COLUMN_LABEL_KEYS.payout : COLUMN_LABEL_KEYS[c.id];
+      return [{ label: english(key), value: (row) => logCellValue(row, c.id, publisherNameById) }];
     });
     const loc = exportLocalizer(t, locale);
     downloadRows(format, localizeColumns(upperLabels([dateCol, ...dataCols]), loc), filtered, dateStamped("call-log"), loc.active ? t("nav.callLogs") : "Call log", {
@@ -1081,7 +1092,7 @@ export function CallLogTable({
                 {columns.buyer && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.buyer")} sortKey="buyer" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.destName && <TableHead className="text-center">{t("x380.destName")}</TableHead>}
                 {columns.destTfn && <TableHead className="text-center">{t("x380.destTfn")}</TableHead>}
-                {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
+                {columns.revenue && <TableHead className="text-center"><LogSortHeader label={t(role === "buyer" ? "toolsUI.reports.callLog.columns.payout" : "toolsUI.reports.callLog.columns.revenue")} sortKey="revenue" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.payout && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.payout")} sortKey="payout" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.ttc && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.ttc")} sortKey="ttc" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}
                 {columns.duration && <TableHead className="text-center"><LogSortHeader label={t("toolsUI.reports.callLog.columns.duration")} sortKey="duration" active={sortKey} dir={sortDir} onClick={requestSort} /></TableHead>}

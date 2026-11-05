@@ -2972,3 +2972,26 @@ A buyer login now gets:
   no repeat chip on Call Received.
 
 Publishers, staff and owner: unchanged.
+
+## CH-609 - Buyer logins see only Revo's buyer view, on screen and in every download
+
+Sir, 5 Nov, showing Revo's buyer access: "Give this only. This is what only a
+buyer access can see or download, nothing more than that."
+
+A buyer login now gets a fixed list (no longer "everything but"):
+- Call Summary: Destination and Date tabs (as before); columns Live,
+  Incoming, Connected, Converted, No Connect, Payout, ACL, TCL. Qualified,
+  Paid and Conv. rate are gone. The download has the same columns.
+- Call Log: Call Date, Caller ID, Destination Name, Payout, Duration, Hang
+  up, Status, Fail reason (Revo's Tag), Rec, Actions. Buyer, Destination TFN
+  and TTC are gone.
+- Call Log download (server-built and browser-built): DATE, CALLER ID,
+  DESTINATION NAME, PAYOUT, DURATION, HANG UP, FAIL REASON, STATUS,
+  RECORDING, in that order. Nothing else (no Call ID, State, Carrier,
+  Qualified, Converted).
+- "Payout" for a buyer is what the buyer pays for the call: our Revenue
+  column, relabelled for the buyer only. Our own payout to publishers never
+  reaches a buyer.
+
+Publishers, staff and owner: unchanged. The admin's per-buyer column
+switches still hide more on top of this.
