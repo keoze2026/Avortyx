@@ -87,7 +87,8 @@ export function PopupAlertSettings({ className, wide = false }: { className?: st
   return (
     <div className={cn("px-5 py-4", className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-base font-semibold">{t("x558.popups.title")}</p>
+        {/* CH-570: the title in our blue, as the group names (CH-567). */}
+        <p className="text-base font-semibold text-accent">{t("x558.popups.title")}</p>
         <span className="text-sm tabular-nums text-muted-foreground">
           {t("x558.popups.on").replace("{n}", String(popupsEnabled ? onCount : 0))}
         </span>

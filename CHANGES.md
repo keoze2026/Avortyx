@@ -2649,3 +2649,10 @@ on the left, every other header and its values centred in the same column
 (0 px apart, measured).
 
 Commit: see git log --grep CH-569
+
+## CH-570 - "Pop-up Alerts" title in our blue (FRONTEND)
+
+The Pop-up Alerts settings title was white; it is now our blue, the same as
+its group names (CH-567). Bell menu and Notifications page.
+
+Commit: see git log --grep CH-570
