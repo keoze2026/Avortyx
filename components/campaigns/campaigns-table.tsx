@@ -133,6 +133,9 @@ export function CampaignsTable({
   const publisherChars = Math.max(0, ...campaigns.map((c) => (c.publishers ?? []).join(", ").length));
   const { t, locale } = useTranslation();
   const router = useRouter();
+  // CH-589: as the Publisher column, campaign names sit in a block as wide as
+  // the longest name, centred under the header, so they start on one line.
+  const campaignChars = Math.max(0, ...campaigns.map((c) => localizeName(c.name, locale).length));
   // Live count of tracking numbers attached per campaign — drives the
   // "Incomplete" progress pill so a campaign with zero TFNs reads as needing
   // setup, regardless of its on-record `numbersCount`.
@@ -236,8 +239,18 @@ export function CampaignsTable({
                         active and paused on the same line (CH-337, Sir). The
                         Active pill keeps the cell's right edge. */}
                     <div className="relative flex items-center justify-start pr-[76px]">
-                      <span className="truncate" title={locale === "en" ? undefined : c.name}>
-                        {localizeName(c.name, locale)}
+                      <span className="inline-grid min-w-0 max-w-full justify-items-center">
+                        {/* Unseen copy of the header: gives this block the header's width. */}
+                        <span aria-hidden className="invisible col-start-1 row-start-1 h-0 overflow-hidden text-xs font-medium uppercase tracking-wider">
+                          {t("trafficUI.campaigns.columns.campaign")}
+                        </span>
+                        <span
+                          className="col-start-1 row-start-1 block max-w-full truncate text-left"
+                          style={{ width: `${campaignChars}ch` }}
+                          title={locale === "en" ? undefined : c.name}
+                        >
+                          {localizeName(c.name, locale)}
+                        </span>
                       </span>
                       {isActive && (
                         <span className="absolute right-0 top-1/2 -translate-y-1/2">

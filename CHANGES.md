@@ -2841,3 +2841,12 @@ sit in a block as wide as the longest list, centred in the column, so they all
 start on one line. The "-" stays centred. Size and row height are unchanged.
 
 Commit: see git log --grep CH-588
+
+## CH-589 - Campaigns: campaign names centred like the publishers (FRONTEND)
+
+Reported 5 Nov: "Center the campaign name content like we have in the publisher
+side. Move just the names nothing else." Names sit in a block as wide as the
+longest name, centred under the CAMPAIGN header, so they all start on one line.
+The header, the Active badges and every other column stay where they were.
+
+Commit: see git log --grep CH-589
