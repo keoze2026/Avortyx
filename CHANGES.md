@@ -2686,3 +2686,14 @@ off", "buyer NEO ... is archived"). Each now starts with a capital
 the text is unchanged.
 
 Commit: see git log --grep CH-573
+
+## CH-574 - Call Plan Detail: the destination's name on the same line as its number (FRONTEND)
+
+"Destination name should also come next to destination number - organized
+way ... name should be in a parallel line." Eligible and Ineligible
+Destinations: each row is number, then its Destinations-page name
+("Q07|9804|", from backend CH-574; the buyer when the line has no row), then
+the reason on the right - each in its own column, the same columns in both
+lists, so every name sits in one straight line.
+
+Commit: see git log --grep CH-574

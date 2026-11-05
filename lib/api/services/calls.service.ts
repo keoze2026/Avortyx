@@ -152,6 +152,8 @@ export interface TraceDestination {
   ruleName?: string | null;
   /** Rejected destinations only. */
   reason?: string | null;
+  /** CH-574: its Destinations-page name ("Q07|2500|"); absent when it has none. */
+  lineName?: string | null;
 }
 
 export interface RoutingTrace {

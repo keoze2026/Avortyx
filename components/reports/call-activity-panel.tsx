@@ -1056,15 +1056,22 @@ function DestinationList({
   showReason?: boolean;
 }) {
   if (!items || items.length === 0) return null;
+  // CH-574 (Sir: "Destination name should also come next to destination
+  // number - organized way ... in a parallel line"): number, then its
+  // Destinations-page name on the same line, each in its own column so the
+  // names line up; the reason (ineligible list) stays on the right.
+  // The same columns in every list, so the names line up across them too.
+  const cols = "grid-cols-[1.5rem_7.5rem_minmax(0,1fr)_auto]";
   return (
     <ol className="space-y-0.5 pt-1">
       {items.map((d, i) => (
-        <li key={`${d.name}-${i}`} className="flex gap-2 text-[9.5px] font-medium tabular-nums">
-          {numbered && <span className="w-6 shrink-0 text-right text-muted-foreground">{i + 1}.</span>}
-          <span className="min-w-0 break-all"><LocalName name={d.name} /></span>
-          {showReason && d.reason && (
-            <span className="ml-auto shrink-0 text-[9.5px] text-muted-foreground">{capitalizeFirst(d.reason)}</span>
-          )}
+        <li key={`${d.name}-${i}`} className={cn("grid items-baseline gap-x-3 text-[9.5px] font-medium tabular-nums", cols)}>
+          <span className="text-right text-muted-foreground">{numbered ? `${i + 1}.` : ""}</span>
+          <span className="whitespace-nowrap"><LocalName name={d.name} /></span>
+          <span className="min-w-0 truncate text-muted-foreground" title={d.lineName ?? d.buyer ?? undefined}>
+            {d.lineName ?? d.buyer ?? ""}
+          </span>
+          <span className="text-right text-muted-foreground">{showReason && d.reason ? capitalizeFirst(d.reason) : ""}</span>
         </li>
       ))}
     </ol>
