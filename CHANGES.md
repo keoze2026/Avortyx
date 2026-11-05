@@ -2823,3 +2823,12 @@ Publisher names take the call log's style: 9.5px, medium, one line, ending in
 "..." past 260px with every name on hover.
 
 Commit: see git log --grep CH-586
+
+## CH-587 - Campaigns: Publisher names on one left edge, as in Reports (FRONTEND)
+
+Reported 5 Nov: "They need to be parallel." Centred names started at different
+points. The Publisher header and names now start on the same left edge, like
+the Publisher column in Reports. The "-" for a campaign with no publisher stays
+centred (CH-581). Size and row height are unchanged.
+
+Commit: see git log --grep CH-587

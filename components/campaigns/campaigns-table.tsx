@@ -181,7 +181,7 @@ export function CampaignsTable({
               </TableHead>
               {columns.progress && <TableHead>{t("trafficUI.campaigns.columns.progress")}</TableHead>}
               <TableHead className="text-left">{t("trafficUI.campaigns.columns.campaign")}</TableHead>
-              {showPublisher && <TableHead>{t("x579.publisher")}</TableHead>}
+              {showPublisher && <TableHead className="text-left">{t("x579.publisher")}</TableHead>}
               {columns.access && <TableHead>{t("trafficUI.campaigns.columns.access")}</TableHead>}
               {columns.live && <TableHead>{t("trafficUI.campaigns.columns.live")}</TableHead>}
               {columns.hourly && <TableHead>{t("trafficUI.campaigns.columns.hourly")}</TableHead>}
@@ -246,8 +246,9 @@ export function CampaignsTable({
                   {showPublisher && (
                     // CH-586: the call log's style - small, one line. A long list
                     // ends in "..." with every name on hover.
-                    <TableCell className="whitespace-nowrap text-center text-[9.5px] font-medium text-muted-foreground">
-                      <span className="mx-auto block max-w-[260px] truncate" title={c.publishers?.join(", ")}>
+                    <TableCell className={cn("whitespace-nowrap text-[9.5px] font-medium text-muted-foreground", c.publishers?.length ? "text-left" : "text-center")}>
+                      {/* CH-587: names start on one edge, as in Reports; the dash stays centred (CH-581). */}
+                      <span className="block max-w-[260px] truncate" title={c.publishers?.join(", ")}>
                         {c.publishers?.length ? c.publishers.join(", ") : "-"}
                       </span>
                     </TableCell>
