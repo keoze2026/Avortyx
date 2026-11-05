@@ -1046,6 +1046,19 @@ function Disclosure({
   );
 }
 
+/** CH-575: a reason without the number or buyer already on its row -
+ *  "destination +18443125984 is switched off" -> "Destination is switched
+ *  off", "buyer NEO (deleted ...) is archived" -> "Buyer is archived". Any
+ *  other reason is shown as recorded, starting with a capital. */
+function shortReason(d: TraceDestination): string {
+  let r = (d.reason ?? "").trim();
+  const num = (d.name ?? "").trim();
+  if (num) r = r.replace(new RegExp(`^destination\\s+\\+?${num.replace(/^\+/, "").replace(/[^0-9]/g, "")}\\b`, "i"), "destination");
+  const buyer = (d.buyer ?? "").trim();
+  if (buyer && r.toLowerCase().startsWith(`buyer ${buyer.toLowerCase()}`)) r = `buyer${r.slice(6 + buyer.length)}`;
+  return capitalizeFirst(r) ?? "";
+}
+
 function DestinationList({
   items,
   numbered = false,
@@ -1061,17 +1074,17 @@ function DestinationList({
   // Destinations-page name on the same line, each in its own column so the
   // names line up; the reason (ineligible list) stays on the right.
   // The same columns in every list, so the names line up across them too.
-  const cols = "grid-cols-[1.5rem_7.5rem_minmax(0,1fr)_auto]";
+  // CH-575: the reason has its own left-aligned column (every reason starts
+  // at the same place), and names wrap instead of being cut off.
+  const cols = "grid-cols-[1.5rem_7.5rem_8rem_minmax(0,1fr)]";
   return (
-    <ol className="space-y-0.5 pt-1">
+    <ol className="space-y-1 pt-1">
       {items.map((d, i) => (
-        <li key={`${d.name}-${i}`} className={cn("grid items-baseline gap-x-3 text-[9.5px] font-medium tabular-nums", cols)}>
+        <li key={`${d.name}-${i}`} className={cn("grid items-start gap-x-3 text-[9.5px] font-medium tabular-nums", cols)}>
           <span className="text-right text-muted-foreground">{numbered ? `${i + 1}.` : ""}</span>
           <span className="whitespace-nowrap"><LocalName name={d.name} /></span>
-          <span className="min-w-0 truncate text-muted-foreground" title={d.lineName ?? d.buyer ?? undefined}>
-            {d.lineName ?? d.buyer ?? ""}
-          </span>
-          <span className="text-right text-muted-foreground">{showReason && d.reason ? capitalizeFirst(d.reason) : ""}</span>
+          <span className="min-w-0 break-words text-muted-foreground">{d.lineName ?? d.buyer ?? ""}</span>
+          <span className="min-w-0 text-muted-foreground">{showReason && d.reason ? shortReason(d) : ""}</span>
         </li>
       ))}
     </ol>

@@ -2697,3 +2697,16 @@ the reason on the right - each in its own column, the same columns in both
 lists, so every name sits in one straight line.
 
 Commit: see git log --grep CH-574
+
+## CH-575 - Ineligible Destinations organised: reason in its own column, no repeated number (FRONTEND)
+
+The reasons were right-aligned and of different lengths, so they started in
+different places, cut the names short ("NEO (deleted 20...") and repeated the
+number or buyer already on the row. Now each row is number | name | reason,
+every column starting at the same place on every row (measured); names wrap
+instead of being cut; the reason drops what the row already shows -
+"Destination +18443125984 is switched off" -> "Destination is switched off",
+"Buyer NEO (deleted 2026-11-03) is archived" -> "Buyer is archived". Any
+other reason is shown as recorded. Filtering Breakdown is unchanged.
+
+Commit: see git log --grep CH-575
