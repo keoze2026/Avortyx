@@ -46,7 +46,6 @@ import {
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslation } from "@/hooks/use-translation";
-import { localizeFailReason } from "@/lib/fail-reason";
 import {
   callsService,
   hasRoutingTrace,
@@ -66,10 +65,14 @@ import {
   RecordingPlayer,
   TechnicalTab,
   fill,
+  isAnswered,
   legName,
   offsetOf,
   prettyPhone,
+  reasonText,
+  useViewer,
   type HistoryItem,
+  type Viewer,
 } from "@/components/reports/call-panel-parts";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { Call } from "@/lib/types";
@@ -183,6 +186,7 @@ function detailRows(
 export function CallActivityPanel({ call, onOpenChange }: Props) {
   const { t, locale } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
+  const viewer = useViewer();
   const [tab, setTab] = React.useState<PanelTab>("activity");
   const [data, setData] = React.useState<CallActivity | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -218,10 +222,11 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
   const profile = data?.callerProfile;
   const lineTypeKey = profile?.lineType ? LINE_TYPE_KEYS[profile.lineType.toLowerCase()] : undefined;
   const lineType = locale !== "en" && lineTypeKey ? t(lineTypeKey) : capitalizeFirst(profile?.lineType ?? undefined);
-  const recordingUrl = data?.recording?.url || call?.recordingUrl || "";
+  // CH-566: only with the Audio Recording permission, as in the Call Log.
+  const recordingUrl = viewer.canListen ? data?.recording?.url || call?.recordingUrl || "" : "";
   const eligible = data?.routingTrace?.summary?.eligible;
-  const activity = call && data ? buildActivity(call, data, t, locale) : [];
-  const history = call && panel ? buildHistory(call, panel, t, ruleText(call, panel, t)) : [];
+  const activity = call && data ? buildActivity(call, data, t, locale, viewer) : [];
+  const history = call && panel ? buildHistory(call, panel, t, ruleText(call, panel, t), viewer) : [];
 
   return (
     <Sheet open={!!call} onOpenChange={onOpenChange}>
@@ -254,8 +259,8 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
           <p className="p-6 text-sm text-destructive">{error}</p>
         ) : !data || !call ? null : (
           <>
-            <FlowCard call={call} panel={panel} eligible={eligible} />
-            <Figures call={call} panel={panel} />
+            <FlowCard call={call} panel={panel} eligible={viewer.showRouting ? eligible : undefined} viewer={viewer} />
+            <Figures call={call} panel={panel} viewer={viewer} />
             {recordingUrl && <RecordingPlayer url={recordingUrl} />}
 
             <div className="mt-5 flex gap-6 border-b border-border/60 px-5">
@@ -303,6 +308,7 @@ export function CallActivityPanel({ call, onOpenChange }: Props) {
                 panel={panel}
                 hasRecording={Boolean(recordingUrl)}
                 routingRows={routingRows(data, t, locale)}
+                viewer={viewer}
               />
             ) : (
               <HistoryList items={history} timeZone={timeZone} />
@@ -364,26 +370,34 @@ function ruleText(call: Call, panel: CallPanel, t: T): string {
   return fill(t("x565.rule.connected"), { buyer });
 }
 
-function legChip(leg: CallLeg, t: T): { text: string; tone: "good" | "bad" } {
-  if (leg.result === "answered") return { text: fill(t("x565.leg.answered"), { n: leg.ringSeconds ?? 0 }), tone: "good" };
-  if (leg.result === "busy") return { text: fill(t("x565.leg.busy"), { n: leg.ringSeconds ?? 0 }), tone: "bad" };
-  if (leg.reason === "Not Connected") return { text: fill(t("x565.leg.callerLeft"), { n: leg.ringSeconds ?? 0 }), tone: "bad" };
-  return { text: fill(t("x565.leg.noAnswer"), { n: leg.ringSeconds ?? 0 }), tone: "bad" };
+function legChip(leg: CallLeg, t: T, withTime: boolean): { text: string; tone: "good" | "bad" } {
+  // CH-566: no ring time where the viewer may not see time to answer.
+  const timed = withTime && leg.ringSeconds != null;
+  const n = leg.ringSeconds ?? 0;
+  if (leg.result === "answered") return { text: timed ? fill(t("x565.leg.answered"), { n }) : t("x565.res.answered"), tone: "good" };
+  if (leg.result === "busy") return { text: timed ? fill(t("x565.leg.busy"), { n }) : t("x565.res.busy"), tone: "bad" };
+  if (leg.reason === "Not Connected") return { text: timed ? fill(t("x565.leg.callerLeft"), { n }) : t("x566.callerLeft"), tone: "bad" };
+  return { text: timed ? fill(t("x565.leg.noAnswer"), { n }) : t("x565.res.notAnswered"), tone: "bad" };
 }
 
 function stepName(step: string, t: T, locale: string): string {
   return locale !== "en" && STEP_KEYS[step] ? t(STEP_KEYS[step]) : capitalizeFirst(step.replace(/_/g, " ")) ?? step;
 }
 
-function buildActivity(call: Call, data: CallActivity, t: T, locale: string): ActivityItem[] {
+function buildActivity(call: Call, data: CallActivity, t: T, locale: string, viewer: Viewer): ActivityItem[] {
   const panel = data.panel;
   if (!panel) return [];
   const items: ActivityItem[] = [];
-  const start = panel.startedAt;
+  // CH-566: the start time is in the Call Log row for everyone; the times
+  // after it give away the time to answer, so they are only for those who
+  // may see it (never a buyer, CH-325).
+  const start = panel.startedAt ?? new Date(call.startedAt).toISOString();
+  const timed = viewer.showTtc;
   const trace = data.routingTrace;
   const legs = panel.legs ?? [];
   const last = legs[legs.length - 1];
-  const answered = Boolean(panel.answeredAt);
+  const answered = isAnswered(call);
+  const ended = call.status !== "ringing" && call.status !== "in-progress";
 
   items.push({
     key: "received",
@@ -391,11 +405,13 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string): Ac
     tint: TINT.info,
     title: t("x565.ev.received"),
     at: start,
-    offset: true,
+    offset: timed,
     body: (
       <div className="space-y-2">
         <p className="text-[13px] text-muted-foreground">
-          {fill(t("x565.ev.receivedBody"), { caller: prettyPhone(call.callerNumber), tfn: prettyPhone(call.calledNumber) })}
+          {viewer.showTfn
+            ? fill(t("x565.ev.receivedBody"), { caller: prettyPhone(call.callerNumber), tfn: prettyPhone(call.calledNumber) })
+            : fill(t("x566.receivedFrom"), { caller: prettyPhone(call.callerNumber) })}
         </p>
         <div className="flex flex-wrap gap-1.5">
           <Chip>{panel.repeat ? t("x565.ev.repeatChip") : t("x565.ev.firstCallChip")}</Chip>
@@ -405,7 +421,7 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string): Ac
     ),
   });
 
-  const steps = trace?.steps ?? [];
+  const steps = viewer.showRouting ? trace?.steps ?? [] : [];
   if (steps.length) {
     const failed = steps.filter((s) => !s.passed).length;
     items.push({
@@ -433,7 +449,7 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string): Ac
     });
   }
 
-  if (hasRoutingTrace(trace)) {
+  if (viewer.showRouting && hasRoutingTrace(trace)) {
     const s = trace.summary ?? {};
     const breakdown = (trace.filteringBreakdown ?? []).slice(0, 5);
     items.push({
@@ -496,12 +512,12 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string): Ac
         legs.length === 1
           ? fill(t("x565.ev.ringingOne"), { buyer: legs[0].buyer || legName(legs[0]) })
           : fill(t("x565.ev.ringingMany"), { n: legs.length }),
-      at: legs[0].startedAt,
-      offset: true,
+      at: timed ? legs[0].startedAt : null,
+      offset: timed,
       body: (
         <ol className="space-y-1.5">
           {legs.map((leg, i) => {
-            const chip = legChip(leg, t);
+            const chip = legChip(leg, t, timed);
             return (
               <li key={`${leg.destination}-${i}`} className="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2">
                 <span className="w-4 shrink-0 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
@@ -524,8 +540,8 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string): Ac
       icon: Link2,
       tint: TINT.good,
       title: t("x565.ev.connected"),
-      at: panel.answeredAt,
-      offset: true,
+      at: timed ? panel.answeredAt : null,
+      offset: timed,
       body: <p className="text-[13px] text-muted-foreground">{t("x565.ev.connectedBody")}</p>,
     });
   }
@@ -537,37 +553,36 @@ function buildActivity(call: Call, data: CallActivity, t: T, locale: string): Ac
       icon: CircleDollarSign,
       tint: TINT.good,
       title: t("x565.ev.converted"),
-      at: panel.endedAt,
-      offset: true,
+      at: timed ? panel.endedAt : null,
+      offset: timed,
       body: (
         <p className="text-[13px]">
-          <span className="font-mono text-[color:var(--success)]">+{formatCurrency(call.revenue ?? 0, true)}</span>
+          {viewer.showRevenue && (
+            <span className="font-mono text-[color:var(--success)]">+{formatCurrency(call.revenue ?? 0, true)}</span>
+          )}
           {rule && <span className="ml-3 text-muted-foreground">{rule}</span>}
         </p>
       ),
     });
   }
 
-  if (panel.endedAt) {
+  if (ended) {
     const reason = last?.reason ?? call.failReason;
+    const why = reasonText(reason, locale, t);
     items.push({
       key: "ended",
       icon: PhoneOff,
       tint: TINT.plain,
       title: t("x565.ev.ended"),
-      at: panel.endedAt,
-      offset: true,
+      at: timed ? panel.endedAt : null,
+      offset: timed,
       body: (
         <p className="text-[13px] text-muted-foreground">
           {answered
-            ? fill(t("x565.ev.endedTalk"), { n: panel.talkSeconds ?? 0 })
-            : reason === "Not Connected"
+            ? fill(t("x565.ev.endedTalk"), { n: panel.talkSeconds ?? call.durationSec ?? 0 })
+            : reason === "Not Connected" || /^asterisk_gone$/i.test(reason ?? "")
               ? t("x565.ev.endedBefore")
-              : reason
-                ? locale === "en"
-                  ? reason
-                  : localizeFailReason(reason, locale, t)
-                : t("x565.notAnswered")}
+              : why || t("x565.notAnswered")}
         </p>
       ),
     });
@@ -632,50 +647,74 @@ function ActivityList({ items, timeZone, start }: { items: ActivityItem[]; timeZ
 
 /* ─── History (CH-565) ──────────────────────────────────────────────── */
 
-function buildHistory(call: Call, panel: CallPanel, t: T, rule: string): HistoryItem[] {
+function buildHistory(call: Call, panel: CallPanel, t: T, rule: string, viewer: Viewer): HistoryItem[] {
   const legs = panel.legs ?? [];
   const last = legs[legs.length - 1];
+  // CH-566: times after the start only for those who may see time to answer.
+  const when = (iso: string | null | undefined) => (viewer.showTtc ? iso : null);
   const timed: HistoryItem[] = [];
-  const parts = [call.campaignName, call.publisherName, prettyPhone(call.calledNumber), panel.destinationName || call.buyerName]
+  const parts = [
+    viewer.showCampaign ? call.campaignName : "",
+    viewer.showPublisher ? call.publisherName : "",
+    viewer.showTfn ? prettyPhone(call.calledNumber) : "",
+    panel.destinationName || call.buyerName,
+  ]
     .filter(Boolean)
     .join(" · ");
-  timed.push({ key: "created", title: t("x565.hist.created"), body: fill(t("x565.hist.createdBody"), { parts }), at: panel.startedAt, tone: "plain" });
+  timed.push({
+    key: "created",
+    title: t("x565.hist.created"),
+    body: fill(t("x565.hist.createdBody"), { parts }),
+    at: panel.startedAt ?? new Date(call.startedAt).toISOString(),
+    tone: "plain",
+  });
   legs.forEach((leg, i) => {
     if (leg.result === "answered" || i === legs.length - 1) return;
     timed.push({
       key: `moved-${i}`,
       title: t("x565.hist.moved"),
       body: fill(t("x565.hist.movedBody"), { name: legName(leg), n: leg.ringSeconds ?? 0 }),
-      at: legs[i + 1]?.startedAt,
+      at: when(legs[i + 1]?.startedAt),
       tone: "info",
     });
   });
-  if (panel.answeredAt && last) {
+  if (isAnswered(call) && last) {
     timed.push({
       key: "answered",
       title: t("x565.hist.answered"),
-      body: fill(t("x565.hist.answeredBody"), { name: legName(last), n: last.ringSeconds ?? 0 }),
-      at: panel.answeredAt,
+      body:
+        viewer.showTtc && last.ringSeconds != null
+          ? fill(t("x565.hist.answeredBody"), { name: legName(last), n: last.ringSeconds })
+          : fill(t("x566.answeredBodyNoTime"), { name: legName(last) }),
+      at: when(panel.answeredAt),
       tone: "good",
     });
   }
-  if (call.isConverted && panel.endedAt) {
+  if (call.isConverted) {
     timed.push({
       key: "conversion",
       title: t("x565.hist.conversion"),
       body: fill(t("x565.hist.conversionBody"), {
         buyer: call.buyerName || panel.destinationName || "",
-        amount: formatCurrency(call.revenue ?? 0, true),
+        amount: viewer.showRevenue ? formatCurrency(call.revenue ?? 0, true) : "",
         rule,
-      }).replace(/ · $/, ""),
-      at: panel.endedAt,
+      })
+        .replace("+ · ", "")
+        .replace(/ · $/, ""),
+      at: when(panel.endedAt),
       tone: "info",
     });
   }
-  if (panel.endedAt) {
-    timed.push({ key: "ended", title: t("x565.hist.ended"), at: panel.endedAt, tone: "plain" });
+  if (call.status !== "ringing" && call.status !== "in-progress") {
+    timed.push({ key: "ended", title: t("x565.hist.ended"), at: when(panel.endedAt), tone: "plain" });
   }
-  timed.sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
+  // Newest first; without a time an entry keeps its place in the call's order.
+  const order = new Map(timed.map((h, i) => [h.key, i]));
+  timed.sort((a, b) => {
+    const ta = Date.parse(a.at ?? ""), tb = Date.parse(b.at ?? "");
+    if (Number.isFinite(ta) && Number.isFinite(tb)) return tb - ta;
+    return (order.get(b.key) ?? 0) - (order.get(a.key) ?? 0);
+  });
 
   const untimed: HistoryItem[] = [];
   if (panel.answerConfirmedLater) untimed.push({ key: "confirmed", title: t("x565.hist.confirmed"), tone: "good" });
@@ -706,7 +745,7 @@ function routingRows(data: CallActivity, t: T, locale: string): Array<[string, s
     [t("toolsUI.reports.activity.destination"), prettyPhone(pick("destinationNumber", "destination")) || undefined],
     [t("toolsUI.reports.activity.buyer"), pick("buyerName", "buyer")],
     [t("toolsUI.reports.activity.publisher"), pick("publisherName", "publisher")],
-    [t("toolsUI.reports.activity.blockReason"), block && (locale === "en" ? block : localizeFailReason(block, locale, t))],
+    [t("toolsUI.reports.activity.blockReason"), reasonText(block, locale, t) || undefined],
   ];
 }
 

@@ -1,4 +1,4 @@
-/** CH-565: the call panel Sir drew - header, flow card, timing, recording, Activity / Caller / Technical / History. */
+/** CH-565 / CH-566: the call panel Sir drew - header, flow card, timing, recording, Activity / Caller / Technical / History. */
 import type { ExtraTranslations } from "./types";
 
 export const callPanel: ExtraTranslations = {
@@ -99,6 +99,10 @@ export const callPanel: ExtraTranslations = {
     "x565.hist.confirmed": "Answer confirmed later from the publisher's report",
     "x565.hist.grouped": "{n} tries from the sender grouped into this one call",
     "x565.hist.system": "System",
+    "x566.talk": "Talk time",
+    "x566.callerLeft": "Caller hung up",
+    "x566.receivedFrom": "From {caller}",
+    "x566.answeredBodyNoTime": "{name} answered",
   },
   ru: {
     "x565.call": "Звонок",
@@ -197,6 +201,10 @@ export const callPanel: ExtraTranslations = {
     "x565.hist.confirmed": "Ответ подтверждён позже по отчёту издателя",
     "x565.hist.grouped": "{n} попыток отправителя объединены в этот звонок",
     "x565.hist.system": "Система",
+    "x566.talk": "Разговор",
+    "x566.callerLeft": "Звонящий положил трубку",
+    "x566.receivedFrom": "С номера {caller}",
+    "x566.answeredBodyNoTime": "{name} ответил",
   },
   ja: {
     "x565.call": "通話",
@@ -295,6 +303,10 @@ export const callPanel: ExtraTranslations = {
     "x565.hist.confirmed": "パブリッシャーのレポートで後から応答を確認",
     "x565.hist.grouped": "送信元の {n} 回の試行をこの1件の通話にまとめました",
     "x565.hist.system": "システム",
+    "x566.talk": "通話時間",
+    "x566.callerLeft": "発信者が切断",
+    "x566.receivedFrom": "{caller} から",
+    "x566.answeredBodyNoTime": "{name} が応答",
   },
   zh: {
     "x565.call": "通话",
@@ -393,5 +405,9 @@ export const callPanel: ExtraTranslations = {
     "x565.hist.confirmed": "之后根据发布商报告确认已接听",
     "x565.hist.grouped": "发送方的 {n} 次尝试已合并为这一通电话",
     "x565.hist.system": "系统",
+    "x566.talk": "通话时长",
+    "x566.callerLeft": "来电者挂断",
+    "x566.receivedFrom": "来自 {caller}",
+    "x566.answeredBodyNoTime": "{name} 已接听",
   },
 };

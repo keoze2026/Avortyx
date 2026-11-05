@@ -2594,3 +2594,21 @@ carrier name." Goes with backend CH-565.
 - The demo data gives the same panel.
 
 Commit: see git log --grep CH-565
+
+## CH-566 - Call panel: same rules as the Call Log row (FRONTEND, fixes CH-565)
+
+CH-565 drew the same panel for every login. Goes with backend CH-566.
+
+- Buyer login: no Answered in / ring / total time and no times after the
+  start (CH-325), no campaign, publisher, our TFN, checks or routing
+  (CH-375), no payout; only its own line in the list of destinations rung.
+  Publisher login: no revenue. Columns the admin switched off for a partner
+  stay off here too. The recording only with the Audio Recording permission.
+- Payout is the Call Log's Payout (revenue minus the publisher's share); it
+  showed the publisher's share ($0.25 against $0.75 in the row).
+- Reasons read as in the Call Log ("Not Connected", "No Destination" ...);
+  a raw internal code or a reason naming one of our servers is never shown.
+- With a backend older than CH-565 an answered call reads Answered, with the
+  row's own answer time, not "Not answered".
+
+Commit: see git log --grep CH-566

@@ -28,11 +28,76 @@ import {
   X,
 } from "lucide-react";
 
+import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
+import { usePartnerHiddenColumns } from "@/hooks/use-partner-report-columns";
 import { useTranslation } from "@/hooks/use-translation";
 import type { CallLeg, CallPanel } from "@/lib/api/services/calls.service";
+import { failReasonLabel, localizeFailReason } from "@/lib/fail-reason";
 import { formatCurrency, formatLocalDateTime, uiLocaleTag } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Call } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+/* ─── Who is looking (CH-566) ────────────────────────────────────────── */
+
+/**
+ * What this login may see, by the same rules as the Call Log row it opened
+ * the panel from: a buyer never sees time to answer (CH-325), our campaign,
+ * publisher, tracking number or routing (CH-375), or payout; a publisher
+ * never sees revenue; columns the admin switched off for a partner stay off;
+ * the recording only with the Audio Recording permission.
+ */
+export interface Viewer {
+  buyer: boolean;
+  showRevenue: boolean;
+  showPayout: boolean;
+  showTtc: boolean;
+  showTfn: boolean;
+  showCampaign: boolean;
+  showPublisher: boolean;
+  /** Routing, checks and the other destinations tried - our side. */
+  showRouting: boolean;
+  canListen: boolean;
+}
+
+export function useViewer(): Viewer {
+  const role = useAuthStore((s) => s.user?.role);
+  const hidden = usePartnerHiddenColumns().log;
+  const can = usePartnerPermissions().can;
+  const buyer = role === "buyer";
+  const publisher = role === "publisher";
+  return {
+    buyer,
+    showRevenue: !publisher && !hidden.has("revenue"),
+    showPayout: !buyer && !hidden.has("payout"),
+    showTtc: !buyer && !hidden.has("ttc"),
+    showTfn: !buyer && !hidden.has("dialed"),
+    showCampaign: !buyer && !hidden.has("campaign"),
+    showPublisher: !buyer && !hidden.has("publisher"),
+    showRouting: !buyer,
+    canListen: can("audio_recording") && !hidden.has("recording"),
+  };
+}
+
+/** The Payout the Call Log shows (its `customerPayout`): revenue minus the
+ *  publisher's share. The raw `payout` field is the publisher's cut. */
+export function customerPayout(c: Call): number {
+  return Math.max(0, (c.revenue ?? 0) - (c.payout ?? 0));
+}
+
+/** A fail reason as the Call Log words it - never a raw internal code or a
+ *  reason that names one of our servers. */
+export function reasonText(reason: string | null | undefined, locale: string, t: (k: string) => string): string {
+  const raw = (reason ?? "").trim();
+  if (!raw) return "";
+  if (/\bserver\s*[ab]\b/i.test(raw) || (/asterisk/i.test(raw) && !/^asterisk_gone$/i.test(raw))) return "";
+  return locale === "en" ? failReasonLabel(raw) : localizeFailReason(raw, locale, t);
+}
+
+/** Answered, from the call itself - works with a backend without `panel`. */
+export function isAnswered(call: Call): boolean {
+  return call.status === "completed";
+}
 
 /** "{n} s" style placeholders. */
 export function fill(text: string, vars: Record<string, string | number>): string {
@@ -200,44 +265,61 @@ export function PanelHeader({
 
 /* ─── Caller -> TFN -> Campaign -> Buyer ─────────────────────────────── */
 
-export function FlowCard({ call, panel, eligible }: { call: Call; panel: CallPanel | undefined; eligible?: number }) {
+export function FlowCard({
+  call,
+  panel,
+  eligible,
+  viewer,
+}: {
+  call: Call;
+  panel: CallPanel | undefined;
+  eligible?: number;
+  viewer: Viewer;
+}) {
   const { t } = useTranslation();
-  const last = panel?.legs?.[panel.legs.length - 1];
-  const answered = call.status === "completed" && panel?.answeredIn != null;
+  const answered = isAnswered(call);
+  const answeredIn = panel ? panel.answeredIn : call.ttc;
   const buyerName = panel?.destinationName || call.buyerName || "";
-  const cells: Array<{ icon: React.ElementType; label: string; value: string; sub: string; good?: boolean }> = [
+  const all: Array<{ icon: React.ElementType; label: string; value: string; sub: string; good?: boolean; show: boolean }> = [
     {
       icon: Phone,
       label: t("x565.caller"),
       value: prettyPhone(call.callerNumber).replace(/^\+1 /, ""),
       sub: panel?.repeat ?? call.isDuplicate ? t("x565.repeatCaller") : t("x565.firstCall"),
+      show: true,
     },
     {
       icon: Hash,
       label: t("x565.tfn"),
       value: prettyPhone(call.calledNumber).replace(/^\+1 /, ""),
-      sub: call.publisherName ?? "",
+      sub: viewer.showPublisher ? call.publisherName ?? "" : "",
+      show: viewer.showTfn,
     },
     {
       icon: Megaphone,
       label: t("x565.campaign"),
       value: call.campaignName || "—",
       sub: eligible != null ? fill(t("x565.eligible"), { n: eligible }) : "",
+      show: viewer.showCampaign,
     },
     {
       icon: Building2,
       label: t("x565.buyer"),
       value: buyerName || "—",
-      sub: !last
-        ? t("x565.notForwarded")
-        : answered
-          ? fill(t("x565.answeredAfter"), { n: panel?.answeredIn ?? 0 })
-          : t("x565.notAnswered"),
+      sub: answered
+        ? viewer.showTtc && answeredIn != null
+          ? fill(t("x565.answeredAfter"), { n: answeredIn })
+          : t("x565.res.answered")
+        : call.destinationNumber
+          ? t("x565.notAnswered")
+          : t("x565.notForwarded"),
       good: answered,
+      show: true,
     },
   ];
+  const cells = all.filter((c) => c.show);
   return (
-    <div className="mx-5 grid grid-cols-2 gap-4 rounded-xl border border-border/70 bg-secondary/20 p-4 sm:grid-cols-4">
+    <div className={cn("mx-5 grid grid-cols-2 gap-4 rounded-xl border border-border/70 bg-secondary/20 p-4", SM_COLS[cells.length])}>
       {cells.map((c) => {
         const Icon = c.icon;
         return (
@@ -264,22 +346,27 @@ export function FlowCard({ call, panel, eligible }: { call: Call; panel: CallPan
 
 /* ─── Figures and the ring / talk bar ────────────────────────────────── */
 
-export function Figures({ call, panel }: { call: Call; panel: CallPanel | undefined }) {
+const SM_COLS: Record<number, string> = { 1: "sm:grid-cols-1", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3", 4: "sm:grid-cols-4" };
+
+export function Figures({ call, panel, viewer }: { call: Call; panel: CallPanel | undefined; viewer: Viewer }) {
   const { t } = useTranslation();
-  const total = panel?.totalSeconds ?? null;
-  const answeredIn = panel?.answeredIn ?? null;
-  const items: Array<[string, string]> = [
-    [t("x565.totalTime"), total == null ? "—" : clock(total)],
-    [t("x565.revenue"), formatCurrency(call.revenue ?? 0, true)],
-    [t("x565.payout"), formatCurrency(call.payout ?? 0, true)],
-    [t("x565.answeredIn"), answeredIn == null ? "—" : `${answeredIn} s`],
-  ];
-  const ring = answeredIn ?? panel?.waitSeconds ?? 0;
-  const talk = panel?.talkSeconds ?? 0;
+  const answered = isAnswered(call);
+  // A backend without `panel` (before CH-565): the Call Log row's own figures.
+  const total = panel ? panel.totalSeconds ?? null : null;
+  const answeredIn = panel ? panel.answeredIn ?? null : answered ? call.ttc ?? null : null;
+  const talk = panel ? panel.talkSeconds ?? 0 : answered ? call.durationSec ?? 0 : 0;
+  const items: Array<[string, string]> = [];
+  if (viewer.showTtc) items.push([t("x565.totalTime"), total == null ? "—" : clock(total)]);
+  if (viewer.showRevenue) items.push([t("x565.revenue"), formatCurrency(call.revenue ?? 0, true)]);
+  if (viewer.showPayout) items.push([t("x565.payout"), formatCurrency(customerPayout(call), true)]);
+  if (viewer.showTtc) items.push([t("x565.answeredIn"), answeredIn == null ? "—" : `${answeredIn} s`]);
+  else items.push([t("x566.talk"), answered ? clock(talk) : "—"]);
+  const ring = viewer.showTtc ? answeredIn ?? panel?.waitSeconds ?? 0 : 0;
   const whole = Math.max(1, ring + talk);
+  const bar = viewer.showTtc ? total != null || talk > 0 : talk > 0;
   return (
     <div className="px-5 pt-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-3", SM_COLS[items.length])}>
         {items.map(([label, value], i) => (
           <div key={label} className={cn("min-w-0", i > 0 && "sm:border-l sm:border-border/60 sm:pl-4")}>
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -287,14 +374,14 @@ export function Figures({ call, panel }: { call: Call; panel: CallPanel | undefi
           </div>
         ))}
       </div>
-      {total != null && (
+      {bar && (
         <div className="mt-4">
           <div className="flex h-1.5 overflow-hidden rounded-full bg-secondary">
             <span className="bg-muted-foreground/40" style={{ width: `${(ring / whole) * 100}%` }} />
             {talk > 0 && <span className="bg-accent" style={{ width: `${(talk / whole) * 100}%` }} />}
           </div>
           <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-            <span>{fill(t("x565.ringing"), { n: ring })}</span>
+            <span>{viewer.showTtc ? fill(t("x565.ringing"), { n: ring }) : ""}</span>
             {talk > 0 && <span>{fill(t("x565.talkTime"), { n: talk })}</span>}
           </div>
         </div>
@@ -482,15 +569,17 @@ export function TechnicalTab({
   panel,
   routingRows,
   hasRecording,
+  viewer,
 }: {
   call: Call;
   panel: CallPanel | undefined;
   routingRows: Array<[string, string | undefined | null]>;
   hasRecording: boolean;
+  viewer: Viewer;
 }) {
   const { t } = useTranslation();
   const legs = panel?.legs ?? [];
-  const answered = call.status === "completed" && panel?.answeredIn != null;
+  const answered = isAnswered(call);
   const recording = !hasRecording
     ? t("x565.tech.recNone")
     : panel?.recordingSides === "separate"
@@ -536,7 +625,7 @@ export function TechnicalTab({
             </tr>
             {legs.map((leg, i) => {
               const r = legResult(leg, t);
-              const secs = leg.result === "answered" ? leg.talkSeconds : leg.ringSeconds;
+              const secs = leg.result === "answered" ? leg.talkSeconds : viewer.showTtc ? leg.ringSeconds : null;
               return (
                 <tr key={`${leg.destination}-${i}`}>
                   <td className="px-4 py-2.5">{fill(t("x565.tech.outbound"), { n: i + 1 })}</td>
@@ -552,7 +641,7 @@ export function TechnicalTab({
         </table>
       </Card>
 
-      {routingRows.some(([, v]) => v) && (
+      {viewer.showRouting && routingRows.some(([, v]) => v) && (
         <Card title={t("x565.tech.routing")}>
           <KeyValue rows={routingRows} />
         </Card>
