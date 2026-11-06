@@ -3164,3 +3164,17 @@ The first full run of "Isolation screens" (CH-625) started the backend and the
 portal, then could not sign in: the test accounts' emails ended in .test, a
 reserved name the login form rejects ("value is not a valid email address").
 The test accounts now use avx-isolation.io. Test job only.
+
+## CH-629 - Customer account staff: no Trust Engine step
+
+Found while building the screen check (CH-625). A login that is not an admin
+must pass two steps before using the portal: identity (Trust Engine / KYC)
+and a funded balance. Since CH-619 Trust Engine is our main account's only -
+Sir: it "never appears in customer portals" - so a customer account's staff
+login would be sent to a page it cannot open and stay stuck there.
+
+Now a customer account's logins skip the identity step: the customer company
+is verified by us when it signs up, and its admin already skipped both steps.
+The balance step still applies - an account with no balance still cannot be
+used. Our own account: unchanged. Nobody is affected today (customer accounts
+have no staff logins yet).

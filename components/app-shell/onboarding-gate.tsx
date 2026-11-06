@@ -96,7 +96,13 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const kycApproved = kycStatus === "approved";
+  // CH-629: a customer account's logins skip the identity step. Trust Engine
+  // is our main account's only (CH-619, Sir: it "never appears in customer
+  // portals"), so the step would send them to a page they cannot open. The
+  // customer company is verified by us when it signs up; its admin already
+  // skips both steps. The balance step still applies. Our own account: as before.
+  const customerAccount = user?.isMainAccount === false;
+  const kycApproved = customerAccount || kycStatus === "approved";
   const balanceFunded = (balance ?? 0) > 0;
   const passes = kycApproved && balanceFunded;
 
