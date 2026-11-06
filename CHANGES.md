@@ -3148,3 +3148,12 @@ Screenshots of any failing screen are kept with the run.
 Nothing touches the live system. Needs the BACKEND_REPO_TOKEN secret (the
 read-only token "portal checks" already uses); without it the job says so
 and stops.
+
+## CH-627 - GitHub checks: install with pnpm 10
+
+"Portal checks" has failed on every push since at least 5 Nov, in about 15
+seconds, and the new "Isolation screens" job (CH-625) failed the same way:
+"ERR packages field missing or empty". Both jobs installed with pnpm 9;
+pnpm-workspace.yaml holds a pnpm 10 setting (allowBuilds) and no "packages"
+list, which pnpm 9 refuses. Both now use pnpm 10. The portal itself and its
+Vercel build are not changed.
