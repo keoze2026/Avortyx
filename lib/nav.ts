@@ -58,6 +58,9 @@ export interface NavItem {
   mainUserOnly?: boolean;
   /** CH-548: shown only to the billing / audit team logins and the owner. */
   aiAuditOnly?: boolean;
+  /** CH-619 (customer accounts point 3): never shown to a customer account's
+   *  login - our own (main) account's sections only. */
+  mainAccountOnly?: boolean;
   /** English fallback used by code that runs outside React (breadcrumbs etc.). */
   label: string;
   /** Dotted translation key under `nav.*`. */
@@ -161,14 +164,14 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "x424.section.account",
     items: [
       // CH-424 (Sir's sidebar design): the owner pages head Account.
-      { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true },
-      { label: "Carrier Costs", nameKey: "nav.carrierCosts", href: "/owner/carrier-costs", icon: Landmark, roles: ["admin"], superuserOnly: true },
+      { label: "Owner", nameKey: "nav.owner", href: "/owner", icon: Crown, roles: ["admin"], superuserOnly: true, mainAccountOnly: true },
+      { label: "Carrier Costs", nameKey: "nav.carrierCosts", href: "/owner/carrier-costs", icon: Landmark, roles: ["admin"], superuserOnly: true, mainAccountOnly: true },
       // CH-434 (Sir's design): what customers paid us minus what carriers charge us.
-      { label: "Company Profit", nameKey: "nav.companyProfit", href: "/owner/company-profit", icon: TrendingUp, roles: ["admin"], superuserOnly: true },
+      { label: "Company Profit", nameKey: "nav.companyProfit", href: "/owner/company-profit", icon: TrendingUp, roles: ["admin"], superuserOnly: true, mainAccountOnly: true },
       { label: "Referrals",    nameKey: "nav.referrals",    href: ROUTES.referrals,    icon: Gift,        roles: ALL_ROLES },
-      { label: "Trust Engine", nameKey: "nav.trustEngine",  href: ROUTES.kyc,          icon: ScanFace,    roles: ALL_ROLES },
+      { label: "Trust Engine", nameKey: "nav.trustEngine",  href: ROUTES.kyc,          icon: ScanFace,    roles: ALL_ROLES, mainAccountOnly: true },
       { label: "Integrations", nameKey: "nav.integrations", href: ROUTES.integrations, icon: Plug,        roles: ["admin"] },
-      { label: "White Label",  nameKey: "nav.whiteLabel",   href: ROUTES.whiteLabel,   icon: Palette,     roles: ["admin"] },
+      { label: "White Label",  nameKey: "nav.whiteLabel",   href: ROUTES.whiteLabel,   icon: Palette,     roles: ["admin"], mainAccountOnly: true },
       { label: "Billing",      nameKey: "nav.billing",      href: ROUTES.billing,      icon: CreditCard,  roles: ["admin"] },
       { label: "Settings",     nameKey: "nav.settings",     href: ROUTES.settings,     icon: Cog,    roles: ALL_ROLES, shortcut: "S" },
     ],

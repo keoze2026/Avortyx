@@ -50,8 +50,18 @@ import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LocalName } from "@/lib/i18n/local-name";
 
-function isVisibleForRole(item: NavItem, role: Role | undefined, isSuperuser: boolean, isMainUser = false, canAiAudit = false) {
+function isVisibleForRole(
+  item: NavItem,
+  role: Role | undefined,
+  isSuperuser: boolean,
+  isMainUser = false,
+  canAiAudit = false,
+  isMainAccount = true,
+) {
   if (!role) return false;
+  // CH-619 (customer accounts point 3): a customer account's login never sees
+  // our own sections, whatever its role - not even a superuser.
+  if (item.mainAccountOnly && !isMainAccount) return false;
   // Owner-only entries never render for anyone else - the item simply does
   // not exist in a workspace admin's sidebar, same as partner-hidden pages.
   if (item.superuserOnly && !isSuperuser) return false;
@@ -77,6 +87,7 @@ export function AppSidebar() {
   const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
   const isMainUser = useAuthStore((s) => s.user?.isMainUser === true);
   const canAiAudit = useCanAiAudit();
+  const isMainAccount = useAuthStore((s) => s.user?.isMainAccount !== false);
   // Workspace role permissions (employees only): an area with nothing ticked
   // is left out of the menu, and opening its page directly goes back to the
   // Dashboard. Until the backend sends permissions, nothing changes.
@@ -103,7 +114,7 @@ export function AppSidebar() {
     group,
     visible: group.items.filter(
       (i) =>
-        isVisibleForRole(i, role, isSuperuser, isMainUser, canAiAudit) &&
+        isVisibleForRole(i, role, isSuperuser, isMainUser, canAiAudit, isMainAccount) &&
         canSeePath(i.href) &&
         (!i.partnerPermission || !partner.isPartner || partner.can(i.partnerPermission)),
     ),

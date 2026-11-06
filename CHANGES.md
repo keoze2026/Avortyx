@@ -3092,3 +3092,20 @@ Now the TFN notice stays in the bell until Seen, whatever the switches, as
 set on 21 Oct ("that notification remain unless user sees"). Clear All still
 clears it and marks it Seen. Every other alert still follows its switch
 (CH-592, CH-593). Staff logins only, as before.
+
+## CH-619 - Customer accounts point 3: our own sections hidden from customer accounts
+
+Sir, 5 Nov (customer accounts plan, point 3): "Owner-only sections (Owner,
+Carrier Costs, Company Profit, Trust Engine, White Label admin, internal AI
+audit) never appear in customer portals ... (server-side check, not just
+hidden menus)."
+
+With backend CH-619 the profile says whether a login is of our own (main)
+account. A customer account's login, whatever its role:
+- does not see Owner, Carrier Costs, Company Profit, Trust Engine or White
+  Label in the menu (AI Audit already follows the server's can_ai_audit);
+- opening one of those pages by its address goes back to the Dashboard.
+The server refuses their data as well (403).
+
+Our own logins: nothing changes. Before the backend is deployed (no flag
+sent), every login counts as main, so nothing disappears in between.

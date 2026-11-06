@@ -21,6 +21,11 @@ export interface User {
   /** CH-548 (Sir): may this login see the AI audit - the billing and audit
    *  team emails (backend AI_AUDIT_EMAILS) and the owner. Never a partner. */
   canAiAudit?: boolean;
+  /** Customer accounts point 3 (backend CH-619): a login of our own (main)
+   *  account. False for a customer account's login: Owner, Carrier Costs,
+   *  Company Profit, Trust Engine and White Label are not shown. Unknown
+   *  (an older server that does not send it) counts as main. */
+  isMainAccount?: boolean;
   /** Whether the user has TOTP-based MFA enrolled on the backend. Drives
    *  the Settings → Security 2FA card and the login challenge gating. */
   mfaEnabled?: boolean;

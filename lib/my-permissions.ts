@@ -80,6 +80,10 @@ export const useMyPermissions = create<State>()((set, get) => ({
   },
 }));
 
+/** CH-619: our own (main) account's sections - Owner (with Carrier Costs and
+ *  Company Profit), Trust Engine, White Label. */
+const MAIN_ACCOUNT_PATHS = ["/owner", ROUTES.kyc, ROUTES.whiteLabel];
+
 /** Load once per signed-in user; returns helpers. */
 export function usePermissions() {
   const user = useAuthStore((s) => s.user);
@@ -91,6 +95,10 @@ export function usePermissions() {
   // CH-548: the AI Audit page opened by its address goes back to the Dashboard
   // for anyone not on the billing / audit team list.
   const canAiAudit = isStaff && user?.canAiAudit === true;
+  // CH-619 (customer accounts point 3): our own sections, opened by their
+  // address from a customer account, go back to the Dashboard. The server
+  // refuses their data too (403). Unknown (not loaded yet) counts as main.
+  const mainAccount = !user || user.isMainAccount !== false;
 
   React.useEffect(() => {
     if (user?.id && isStaff) void load(user.id);
@@ -111,6 +119,7 @@ export function usePermissions() {
     /** May this employee see this page at all? (Area with nothing ticked = no.) */
     const canSeePath = (pathname: string) => {
       if (!canAiAudit && (pathname === ROUTES.aiAudit || pathname.startsWith(ROUTES.aiAudit + "/"))) return false;
+      if (!mainAccount && MAIN_ACCOUNT_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return false;
       if (!limited) return true;
       if (pathname === ROUTES.workspace || pathname.startsWith(ROUTES.workspace + "/")) return false;
       const area = areaForPath(pathname);
@@ -119,5 +128,5 @@ export function usePermissions() {
       return permissions!.has(`${area}.view`);
     };
     return { limited, can, canSeePath };
-  }, [isStaff, partnerLogin, permissions, rawRole, canAiAudit]);
+  }, [isStaff, partnerLogin, permissions, rawRole, canAiAudit, mainAccount]);
 }
