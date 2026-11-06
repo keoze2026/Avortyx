@@ -45,7 +45,9 @@ for key, slug, digit in (('main', 'interns', '3'), ('A', 'iso-test-a', '1'), ('B
             destination_number=line.tfn)
         mirror_call_log(str(c.id))
     password = 'Iso-' + secrets.token_urlsafe(12)       # this run only
-    email = f'iso-{key.lower()}@isolation.test'
+    # A real-looking domain: the login form refuses reserved ones (.test,
+    # .local, ...) as "not a valid email address" (CH-628).
+    email = f'iso-{key.lower()}@avx-isolation.io'
     admin = User.objects.create(username=f'iso-{key.lower()}', email=email, organization=org,
                                 role='admin', is_active=True, first_name=f'Iso {key}')
     admin.set_password(password)

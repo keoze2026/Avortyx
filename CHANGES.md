@@ -3157,3 +3157,10 @@ seconds, and the new "Isolation screens" job (CH-625) failed the same way:
 pnpm-workspace.yaml holds a pnpm 10 setting (allowBuilds) and no "packages"
 list, which pnpm 9 refuses. Both now use pnpm 10. The portal itself and its
 Vercel build are not changed.
+
+## CH-628 - Isolation screens: test logins with an accepted email address
+
+The first full run of "Isolation screens" (CH-625) started the backend and the
+portal, then could not sign in: the test accounts' emails ended in .test, a
+reserved name the login form rejects ("value is not a valid email address").
+The test accounts now use avx-isolation.io. Test job only.
