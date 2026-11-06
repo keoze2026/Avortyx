@@ -3061,3 +3061,19 @@ train it for NV, rest we will check and train later."
   No Voice calls' verdicts only (en / ru / ja / zh).
 
 Main account only, as the page. Nothing else changes.
+
+## CH-617 - Campaigns: publisher names MT-00, GG-00, CG-00 shown in full
+
+Sir, 6 Nov: "Small bug publisher name MT-00, GG-00, CG-00 - 0 value not
+showing under name, like TB-00."
+
+The Publisher column's block was sized by counting letters (5 letters = 5
+widths of "0"). Capitals such as M, G and C are wider than "0", so MT-00,
+GG-00 and CG-00 were a fraction of a pixel too wide and were cut to "MT-...".
+TB-00 and DS-04 fit, which is why only some names were cut.
+
+The block is now as wide as the widest list as actually drawn (hidden copies
+of every row's list, the same way the TFN names on a campaign's page are
+sized). Names still start in one place in every row, centred under the
+heading; a long list still stops at 260px with "..." and every name on hover.
+No other column or page changes.

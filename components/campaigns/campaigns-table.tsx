@@ -130,7 +130,13 @@ export function CampaignsTable({
   const showPublisher = columns.publisher && role !== "buyer" && role !== "publisher";
   // CH-588: every row's names sit in a block as wide as the longest list, so
   // they start on one line and the group stays centred under the header.
-  const publisherChars = Math.max(0, ...campaigns.map((c) => (c.publishers ?? []).join(", ").length));
+  // CH-617: the block takes the width of the widest list as actually drawn
+  // (hidden copies of every list), not its letter count - capitals such as
+  // M, G and C are wider than a letter's average, so MT-00, GG-00 and CG-00
+  // were cut to "MT-...".
+  const publisherLists = Array.from(
+    new Set(campaigns.map((c) => (c.publishers ?? []).join(", ")).filter(Boolean)),
+  );
   const { t, locale } = useTranslation();
   const router = useRouter();
   // CH-589: as the Publisher column, campaign names sit in a block as wide as
@@ -271,13 +277,21 @@ export function CampaignsTable({
                     // CH-586: the call log's style - small, one line. A long list
                     // ends in "..." with every name on hover.
                     <TableCell className="whitespace-nowrap text-center text-[9.5px] font-medium text-muted-foreground">
-                      <span
-                        className={cn("mx-auto block max-w-[260px] truncate", c.publishers?.length && "text-left")}
-                        style={{ width: `${publisherChars}ch` }}
-                        title={c.publishers?.join(", ")}
-                      >
-                        {c.publishers?.length ? c.publishers.join(", ") : "-"}
-                      </span>
+                      {c.publishers?.length ? (
+                        <span
+                          className="inline-grid max-w-[260px] grid-cols-[minmax(0,max-content)] text-left"
+                          title={c.publishers.join(", ")}
+                        >
+                          <span className="truncate [grid-area:1/1]">{c.publishers.join(", ")}</span>
+                          {publisherLists.map((v) => (
+                            <span key={v} aria-hidden className="invisible h-0 overflow-hidden [grid-area:1/1]">
+                              {v}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
                   )}
                   {columns.access && (
