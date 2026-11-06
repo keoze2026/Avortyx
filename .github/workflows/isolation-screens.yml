@@ -1,0 +1,113 @@
+# CH-625 - customer accounts point 11, the portal screens: a real browser
+# opens every screen of the portal as each of three test accounts (our main
+# account, Test A, Test B), signed in one after the other in the same browser,
+# and fails if any screen shows another account's data.
+#
+# Everything runs inside this job: the backend (with its own throwaway
+# database and the three test accounts) and the portal are started here.
+# Nothing touches the live system.
+#
+# Secret (already used by "portal checks"): BACKEND_REPO_TOKEN - a read-only
+# token for keoze2026/call_platform. Without it the job says so and stops.
+name: Isolation screens
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: isolation-screens-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screens:
+    name: isolation screens
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      BACKEND_REPO_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
+      SECRET_KEY: ci-only-not-a-secret
+      DJANGO_SETTINGS_MODULE: config.isolation_settings
+    steps:
+      - name: Backend token present?
+        id: token
+        run: |
+          if [ -z "$BACKEND_REPO_TOKEN" ]; then
+            echo "::warning::BACKEND_REPO_TOKEN is not set - the screen sweep cannot start the backend."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
+        with:
+          repository: keoze2026/call_platform
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+          path: backend
+      - uses: actions/setup-python@v5
+        if: steps.token.outputs.ok == 'true'
+        with:
+          python-version: '3.12'
+      - name: Backend - install, database, test accounts
+        if: steps.token.outputs.ok == 'true'
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          cp ../scripts/isolation/isolation_settings.py config/isolation_settings.py
+          mkdir -p /tmp/isolation
+          python manage.py migrate --noinput
+          python manage.py shell < ../scripts/isolation/seed.py
+      - name: Backend - start
+        if: steps.token.outputs.ok == 'true'
+        working-directory: backend
+        run: |
+          nohup python manage.py runserver 0.0.0.0:8000 --noreload > /tmp/isolation/backend.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:8000/api/docs && break; sleep 2; done
+      - uses: pnpm/action-setup@v4
+        if: steps.token.outputs.ok == 'true'
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: steps.token.outputs.ok == 'true'
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Portal - build and start
+        if: steps.token.outputs.ok == 'true'
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          NEXT_PUBLIC_WS_BASE_URL: ws://localhost:8000
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          pnpm install --frozen-lockfile=false
+          pnpm build
+          nohup pnpm start -p 3000 > /tmp/isolation/portal.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000/login && break; sleep 2; done
+      - name: Robot browser
+        if: steps.token.outputs.ok == 'true'
+        run: |
+          mkdir -p /tmp/robot && cd /tmp/robot
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Open every screen as each account
+        if: steps.token.outputs.ok == 'true'
+        env:
+          NODE_PATH: /tmp/robot/node_modules
+          PORTAL_URL: http://localhost:3000
+          ACCOUNTS: /tmp/isolation/accounts.json
+        run: node scripts/isolation-screens.cjs
+      - name: Screenshots and logs
+        if: always() && steps.token.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolation-screens
+          path: |
+            /tmp/isolation/shots
+            /tmp/isolation/backend.log
+            /tmp/isolation/portal.log
+          if-no-files-found: ignore

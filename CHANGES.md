@@ -3120,3 +3120,31 @@ section read-only - the status switch cannot be moved, and Edit, Pause /
 Activate and Remove are not offered on the list or on the publisher's page.
 Viewing is unchanged. The server refuses those changes too (backend CH-620).
 Staff: unchanged.
+
+## CH-625 - Customer accounts point 11: every portal screen, as each account
+
+Sir: "run automated isolation tests on every page and API endpoint: no data
+visible across accounts or from the main account. Run these tests on every
+deploy." The backend sweeps (CH-623, CH-624) cover every API page; this
+covers the screens.
+
+New GitHub job "Isolation screens" (.github/workflows/isolation-screens.yml),
+on every push to main, every pull request, and by hand:
+- starts the backend inside the job, on a throwaway database, with three test
+  accounts - our main account, Test A and Test B - each with its own campaign,
+  buyer, destination, publisher, TFN, routing rule and calls
+  (scripts/isolation/seed.py);
+- builds and starts the portal against it;
+- a real browser signs in as Test A, opens every page of the portal (every
+  app page, found from the code, so a new page is covered the day it is
+  added) and the other accounts' detail pages by their address; signs out
+  from the account menu; signs in as Test B in the same browser; then as our
+  main account (scripts/isolation-screens.cjs);
+- fails if any screen shows another account's name or number - including
+  anything left over from the account signed in before (saved lists,
+  caches). Control: each account sees its own campaign.
+Screenshots of any failing screen are kept with the run.
+
+Nothing touches the live system. Needs the BACKEND_REPO_TOKEN secret (the
+read-only token "portal checks" already uses); without it the job says so
+and stops.
