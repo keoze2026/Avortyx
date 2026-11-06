@@ -3077,3 +3077,18 @@ of every row's list, the same way the TFN names on a campaign's page are
 sized). Names still start in one place in every row, centred under the
 heading; a long list still stops at 260px with "..." and every name on hover.
 No other column or page changes.
+
+## CH-618 - TFN Expired notice back in the bell
+
+Sir, 6 Nov: the "TFNs Expired" notice showed as the pop-up but was missing
+from the bell, "like it was coming before".
+
+Cause: CH-592 (5 Nov) made the Pop-up Alerts switches hide alerts from the
+bell list too, and the TFN notice was included. With the switches off, the
+bell hid the notice while the pop-up (which never followed the switches)
+still showed it.
+
+Now the TFN notice stays in the bell until Seen, whatever the switches, as
+set on 21 Oct ("that notification remain unless user sees"). Clear All still
+clears it and marks it Seen. Every other alert still follows its switch
+(CH-592, CH-593). Staff logins only, as before.

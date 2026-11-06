@@ -272,7 +272,13 @@ export function useClearAllNotifications(ids: string[]) {
   }, [ids, clear, userId]);
 }
 
-/** CH-578: the TFN notice's numbers, without those cleared today. */
+/** CH-578: the TFN notice's numbers, without those cleared today.
+ *  CH-618 (Sir, 6 Nov: the TFN expiry notice is gone from the bell "like it
+ *  was coming before"): the notice no longer follows the Pop-up Alerts
+ *  switches (CH-592 hid it when they were off, while the banner still
+ *  showed). It stays in the bell until Seen, as Sir set on 21 Oct ("that
+ *  notification remain unless user sees"). Clear All still clears it, and
+ *  marks it Seen. */
 export function useVisibleDeletedTfns() {
   const numbers = useDeletedTfnsStore((s) => s.numbers);
   const kept = useDeletedTfnsStore((s) => s.kept);
@@ -281,13 +287,11 @@ export function useVisibleDeletedTfns() {
   const ids = useNotificationsClearedStore((s) => s.ids);
   const day = useNotificationsClearedStore((s) => s.day);
   const owner = useNotificationsClearedStore((s) => s.owner);
-  const alertShown = useAlertShown();
   return React.useMemo(() => {
     const cleared = activeCleared({ ids, day, owner }, today, userId);
-    const on = alertShown("number.deleted");
-    const show = (n: { id: string }) => on && !cleared[`tfn:${n.id}`];
+    const show = (n: { id: string }) => !cleared[`tfn:${n.id}`];
     return { numbers: numbers.filter(show), kept: kept.filter(show) };
-  }, [numbers, kept, ids, day, owner, today, userId, alertShown]);
+  }, [numbers, kept, ids, day, owner, today, userId]);
 }
 
 /** "Today" / "Yesterday" / "Mon 3 Nov" for a day heading. */
