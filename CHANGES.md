@@ -3109,3 +3109,14 @@ The server refuses their data as well (403).
 
 Our own logins: nothing changes. Before the backend is deployed (no flag
 sent), every login counts as main, so nothing disappears in between.
+
+## CH-620 - Publisher login: the Publishers section is view only
+
+Sir, 6 Nov: "Like we did under Buyer access - buyer cannot pause from Buyer
+option. Same push for publisher - publisher cannot pause, publisher access."
+
+As CH-612 for buyers: a publisher (or buyer) login sees the Publishers
+section read-only - the status switch cannot be moved, and Edit, Pause /
+Activate and Remove are not offered on the list or on the publisher's page.
+Viewing is unchanged. The server refuses those changes too (backend CH-620).
+Staff: unchanged.

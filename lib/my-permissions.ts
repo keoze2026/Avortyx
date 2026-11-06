@@ -114,6 +114,10 @@ export function usePermissions() {
       // buyer or publisher login only views the Buyers section. Its own
       // destinations keep their own switches (Destinations page).
       if (partnerLogin && area === "buyers" && action !== "view") return false;
+      // CH-620 (Sir, 6 Nov: "Same push for publisher - publisher cannot pause,
+      // publisher access"): the Publishers section likewise - view only, no
+      // pause, play, edit, caps or remove.
+      if (partnerLogin && area === "traffic-sources" && action !== "view") return false;
       return !limited || permissions!.has(`${area}.${action}`);
     };
     /** May this employee see this page at all? (Area with nothing ticked = no.) */
