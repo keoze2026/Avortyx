@@ -3235,3 +3235,16 @@ publisher's calls came in on in the chosen dates
 (`components/reports/call-summary-table.tsx`). The calls do not change, so
 a past day's report shows the same campaign names every time it is opened.
 Frontend only; no backend change.
+
+## CH-643 - AI Audit page: Valid calls can be marked too, and the misses shown
+
+Backend CH-643: Correct / Wrong is now given on No Voice, Valid and "Caller
+spoke - no issue" calls, so the audit team can mark a No Voice call the AI
+missed (it said Valid) and the AI learns from it.
+
+- The buttons follow the server's `auditable` on each row, as before, so
+  they now appear on Valid and Caller spoke calls too.
+- The accuracy line reads "No Voice, Valid and Caller spoke calls: X of Y
+  marked correct", and a red line "No Voice calls the AI missed: N" shows
+  when the team has marked any (`app/(app)/ai-audit/page.tsx`,
+  `lib/i18n/extra/ai-audit.ts`, en / ru / ja / zh).

@@ -17,6 +17,9 @@
  *     CH-616 (Sir, 6 Nov: "Only put audit under no voice calls, rest leave
  *     it"): the buttons are on No Voice calls only, and the accuracy % is the
  *     No Voice calls' only. A verdict given earlier on another call still shows.
+ *     CH-643 (8 Nov): Valid and Caller spoke calls get the buttons too (the
+ *     server's `auditable`), so a No Voice call the AI missed can be marked;
+ *     the % counts them and "missed" shows how many.
  * The page updates by itself when a call is checked (live connection, CH-538).
  */
 
@@ -120,7 +123,7 @@ interface Page {
 }
 
 interface Status {
-  accuracy: { reviewed: number; correct: number; percent: number | null; days: number };
+  accuracy: { reviewed: number; correct: number; percent: number | null; days: number; missed?: number };
   pending: number;
   minSpeechSeconds: number;
   minBeepSeconds: number;
@@ -657,6 +660,12 @@ export default function AiAuditPage() {
                     .replace("{reviewed}", String(acc?.reviewed ?? 0))
                     .replace("{days}", String(acc?.days ?? 30))}
                 </div>
+                {/* CH-643: Valid calls the team marked No Voice - what the AI missed. */}
+                {(acc?.missed ?? 0) > 0 && (
+                  <div className="text-[13px] text-destructive">
+                    {t("x643.missed").replace("{missed}", String(acc?.missed ?? 0))}
+                  </div>
+                )}
               </div>
               <div>
                 <div className="text-[13px] text-muted-foreground">{t("x543.pendingNow")}</div>
