@@ -3178,3 +3178,27 @@ is verified by us when it signs up, and its admin already skipped both steps.
 The balance step still applies - an account with no balance still cannot be
 used. Our own account: unchanged. Nobody is affected today (customer accounts
 have no staff logins yet).
+
+## CH-639 - TFNs expired pop-up in Sir's new design
+
+Sir, 7 Nov: "Push this front end notification" - the new design for the
+"TFNs expired" pop-up, replacing the old yellow banner (one long sentence
+with the numbers run together and a small Seen button).
+
+The pop-up is now a dark card with a gold border
+(`components/app-shell/expired-tfns-toast.tsx`):
+- title "12 TFNs expired" with the warning sign in a circle, and the short
+  line "These numbers no longer receive calls.";
+- the numbers written +18888914875, two per row with a dot between them;
+  five shown and "+7 more" in the sixth place (all six when there are six);
+- "Add replacements" (yellow) opens the Numbers page and counts the numbers
+  as Seen - the person is acting on them;
+- "View all" lists every number in the card (scrolls when long), "Show less"
+  folds it back; shown only when some numbers are folded away;
+- the close button only closes the pop-up, as before: the numbers stay in
+  the bell until Seen there (Sir, 21 Oct: "that notification remain unless
+  user sees").
+
+Who sees it and when is unchanged: staff logins only, once per new batch of
+expired numbers, until 12 PM Eastern. The bell card is unchanged. Texts in
+English, Russian, Japanese and Chinese.

@@ -1,9 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { ExpiredTfnsToast } from "@/components/app-shell/expired-tfns-toast";
 import { useTranslation } from "@/hooks/use-translation";
+import { ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useDeletedTfnsStore } from "@/lib/store/deleted-tfns-store";
 
@@ -16,9 +19,15 @@ const TOAST_ID = "deleted-tfns";
  * acknowledge it: the notice stays pinned in the bell menu until Seen is
  * clicked (Sir, 21 Oct: "that notification remain unless user sees").
  * Employees only - buyer and publisher logins have no TFNs to replace.
+ *
+ * CH-639: the banner is Sir's new design (7 Nov, components/app-shell/
+ * expired-tfns-toast.tsx). "Add replacements" opens the Numbers page and
+ * counts as Seen (the person is acting on it); the close button only closes
+ * the banner, as before.
  */
 export function useDeletedTfnsRuntime() {
   const { t } = useTranslation();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isStaff = !!user && user.role !== "buyer" && user.role !== "publisher";
   const load = useDeletedTfnsStore((s) => s.load);
@@ -51,28 +60,19 @@ export function useDeletedTfnsRuntime() {
     // One banner per batch: a new retirement raises it again.
     if (bannerFor.current === newestAt) return;
     bannerFor.current = newestAt;
-    // Numbers only, written 18888910358 as in Sir's wording.
-    const shown = numbers
-      .filter((n) => !n.seen)
-      .slice(0, 5)
-      .map((n) => n.number.replace(/\D/g, "") || n.number)
-      .join(", ");
-    const more = count > 5 ? " " + t("deletedTfns.more").replace("{count}", String(count - 5)) : "";
-    toast.warning(
-      count === 1 ? t("deletedTfnsOne.title") : t("deletedTfns.title").replace("{count}", String(count)),
-      {
-        id: TOAST_ID,
-        duration: Infinity,
-        description: `${count === 1 ? t("deletedTfnsOne.body") : t("deletedTfns.body")} ${shown}${more}. ${
-          count === 1 ? t("deletedTfnsOne.replace") : t("deletedTfns.replace")
-        }`,
-        action: {
-          label: t("deletedTfns.seen"),
-          onClick: () => {
+    const unseen = numbers.filter((n) => !n.seen).map((n) => n.number);
+    toast.custom(
+      () =>
+        React.createElement(ExpiredTfnsToast, {
+          numbers: unseen,
+          onAddReplacements: () => {
+            toast.dismiss(TOAST_ID);
             markSeen().catch(() => toast.error(t("deletedTfns.seenFailed")));
+            router.push(ROUTES.numbers);
           },
-        },
-      },
+          onClose: () => toast.dismiss(TOAST_ID),
+        }),
+      { id: TOAST_ID, duration: Infinity },
     );
-  }, [isStaff, count, numbers, newestAt, markSeen, t]);
+  }, [isStaff, count, numbers, newestAt, markSeen, router, t]);
 }
