@@ -3202,3 +3202,17 @@ The pop-up is now a dark card with a gold border
 Who sees it and when is unchanged: staff logins only, once per new batch of
 expired numbers, until 12 PM Eastern. The bell card is unchanged. Texts in
 English, Russian, Japanese and Chinese.
+
+## CH-640 - TFNs expired pop-up stays closed after the X
+
+Sir, 7 Nov: "This yellow pop up keep on reflecting on every refresh - once
+user close this X it should not show again ... on top notification already
+there for tfns expiry".
+
+The pop-up remembered being closed only until the page was refreshed. Now
+the close button is remembered for that batch of expired numbers, per login,
+in this browser (`lib/deleted-tfns-runtime.ts`), so a refresh no longer
+brings it back. A new batch of expired numbers raises it again.
+
+Unchanged: the bell keeps the numbers until Seen, and until 12 PM Eastern;
+"Add replacements" still counts as Seen and opens the Numbers page.
