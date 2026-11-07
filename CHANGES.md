@@ -3216,3 +3216,22 @@ brings it back. A new batch of expired numbers raises it again.
 
 Unchanged: the bell keeps the numbers until Seen, and until 12 PM Eastern;
 "Add replacements" still counts as Seen and opens the Numbers page.
+
+## CH-642 - Reports, Publisher tab: campaign names no longer vanish from past days
+
+Sir, 7 Nov: "when i clicked on yesterday reports - under publisher few
+campaign names are missing ... how yesterdays report can change and camp
+name cannot just vanish".
+
+Cause: the small campaign names next to each publisher (CH-429) were read
+from today's Phone Numbers list, with expired numbers left out - not from
+the report. Nobody changed a publisher; their TFNs expired overnight (the
+nightly rules), and with them the publishers' campaign names disappeared
+from every report, yesterday's included. The calls and the figures were
+never affected.
+
+Now the names come from the report's own calls: the campaigns each
+publisher's calls came in on in the chosen dates
+(`components/reports/call-summary-table.tsx`). The calls do not change, so
+a past day's report shows the same campaign names every time it is opened.
+Frontend only; no backend change.

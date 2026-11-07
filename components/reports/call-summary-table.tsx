@@ -38,7 +38,6 @@ import { destinationNameMap } from "@/lib/call-log-export";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useDestinationsStore } from "@/lib/store/destinations-store";
-import { useNumbersStore } from "@/lib/store/numbers-store";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { AI_ON_REPORTS, useCanAiAudit } from "@/lib/ai-labels";
@@ -1189,27 +1188,31 @@ export function CallSummaryTable({
   const showLabel = (label: string) => localizeRowLabel(label, tab, locale, t);
   // CH-429 (Sir, 30 Oct: "Next to it camps name which was assigned to that
   // publisher - very small, just for quick view"): on the Publisher tab each
-  // name carries the campaigns its tracking numbers are assigned to, from the
-  // Phone Numbers list (expired numbers left out).
-  const numbers = useNumbersStore((st) => st.numbers);
-
+  // name carries its campaigns.
+  // CH-642 (Sir, 7 Nov: "how yesterdays report can change and camp name
+  // cannot just vanish"): the campaigns are taken from the report's own calls
+  // - the campaigns this publisher's calls came in on in the chosen dates -
+  // not from today's Phone Numbers list. Read from that list, a publisher
+  // lost its campaign names in past reports as soon as its TFNs expired
+  // overnight. The calls never change, so a past day's report does not.
   const campaignsByPublisher = React.useMemo(() => {
     const byId = new Map<string, Set<string>>();
     const byName = new Map<string, Set<string>>();
-    for (const n of numbers) {
-      if (n.status === "expired" || !n.campaignName) continue;
+    for (const c of calls) {
+      const camp = (c.campaignName ?? "").trim();
+      if (!camp) continue;
       const add = (m: Map<string, Set<string>>, k: string) => {
         const set = m.get(k) ?? new Set<string>();
-        set.add(n.campaignName!);
+        set.add(camp);
         m.set(k, set);
       };
-      if (n.publisherId) add(byId, n.publisherId);
-      if (n.publisherName) add(byName, n.publisherName.trim().toLowerCase());
+      if (c.publisherId) add(byId, c.publisherId);
+      if (c.publisherName) add(byName, c.publisherName.trim().toLowerCase());
     }
     const sorted = (set?: Set<string>) =>
       set ? [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
     return (key: string, label: string) => sorted(byId.get(key) ?? byName.get(label.trim().toLowerCase()));
-  }, [numbers]);
+  }, [calls]);
   const copyLabel = (el: HTMLElement, label: string) => {
     const sel = window.getSelection();
     if (sel) {
