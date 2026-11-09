@@ -29,15 +29,23 @@ export function faviconSvg(theme: ColorTheme): string | null {
   const stops = faviconStops(theme);
   if (!stops) return null;
   const [bright, mid, deep] = stops;
-  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
+  const ultra = mix(bright, "#ffffff", 0.7);
+  // Same dark tile as public/favicon.svg, with the mark in the picked colour.
+  return `<svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" fill="none">
 <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
 <stop offset="0%" stop-color="${bright}"/><stop offset="55%" stop-color="${mid}"/><stop offset="100%" stop-color="${deep}"/>
-</linearGradient></defs>
-<g transform="translate(32 32) scale(1.42) translate(-32 -32)">
-<path d="M52 32a20 20 0 1 1-13.2-18.8" stroke="url(#g)" stroke-width="5" stroke-linecap="round"/>
-<path d="M44.5 32a12.5 12.5 0 1 1-8.9-11.9" stroke="url(#g)" stroke-width="4.4" stroke-linecap="round"/>
-<path d="M38 32a6 6 0 1 1-4.2-5.7" stroke="url(#g)" stroke-width="3.6" stroke-linecap="round"/>
-<circle cx="32" cy="32" r="2" fill="${bright}"/>
+</linearGradient>
+<radialGradient id="c" cx="50%" cy="50%" r="50%">
+<stop offset="0%" stop-color="${ultra}"/><stop offset="60%" stop-color="${bright}" stop-opacity="0.6"/><stop offset="100%" stop-color="${mid}" stop-opacity="0"/>
+</radialGradient>
+<filter id="f" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="180" height="180" rx="40" fill="#0E1219"/>
+<g transform="translate(90 90) scale(2.2) translate(-32 -32)">
+<circle cx="32" cy="32" r="20" fill="url(#c)" opacity="0.45"/>
+<path d="M52 32a20 20 0 1 1-13.2-18.8" stroke="url(#g)" stroke-width="3" stroke-linecap="round" filter="url(#f)"/>
+<path d="M44.5 32a12.5 12.5 0 1 1-8.9-11.9" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" filter="url(#f)" opacity="0.92"/>
+<path d="M38 32a6 6 0 1 1-4.2-5.7" stroke="url(#g)" stroke-width="2" stroke-linecap="round" filter="url(#f)" opacity="0.9"/>
+<circle cx="32" cy="32" r="1.6" fill="${ultra}" filter="url(#f)"/>
 </g></svg>`;
 }
 

@@ -65,13 +65,13 @@ export const metadata: Metadata = {
   // Avortyx mark on its dark tile so it reads on light and dark tab bars.
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon.ico?v=3", sizes: "16x16 32x32 48x48" },
+      { url: "/favicon.svg?v=3", type: "image/svg+xml" },
+      { url: "/icon-192.png?v=3", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png?v=3", type: "image/png", sizes: "512x512" },
     ],
-    shortcut: "/favicon.ico",
-    apple: "/apple-icon.png",
+    shortcut: "/favicon.ico?v=3",
+    apple: "/apple-icon.png?v=3",
   },
 };
 
