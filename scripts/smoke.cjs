@@ -82,16 +82,34 @@ async function main() {
   let firstFail = null;
 
   // 1. Log in.
+  // CH-647 (9 Nov): on GitHub's machines the first real run stayed on the
+  // login page and no login request reached the server. The robot typed as
+  // soon as the HTML arrived, before the page's code was running, so the text
+  // never reached the form. Now it waits for the page to settle, tries a
+  // second time if the first does not leave the login page, and says what
+  // the login request got: the server's answer, a failed request, or none.
+  let loginStatus = "no login request was sent";
+  page.on("response", (r) => {
+    if (r.url().includes("/api/accounts/login")) loginStatus = `server answered ${r.status()}`;
+  });
+  page.on("requestfailed", (r) => {
+    if (r.url().includes("/api/accounts/login")) loginStatus = `login request failed: ${(r.failure() || {}).errorText || "?"}`;
+  });
+  const onLogin = () => /\/login/.test(new URL(page.url()).pathname);
   try {
     await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: SLOW_MS });
-    await page.locator("#email").fill(process.env.GUARD_EMAIL);
-    await page.locator("#password").fill(process.env.GUARD_PASSWORD);
-    await page.locator("#password").press("Enter");
-    await page.waitForURL((u) => !/\/login/.test(u.pathname), { timeout: SLOW_MS });
+    await page.waitForLoadState("networkidle", { timeout: SLOW_MS }).catch(() => {});
+    for (let attempt = 1; attempt <= 2 && onLogin(); attempt++) {
+      await page.locator("#email").fill(process.env.GUARD_EMAIL);
+      await page.locator("#password").fill(process.env.GUARD_PASSWORD);
+      await page.locator("#password").press("Enter");
+      await page.waitForURL((u) => !/\/login/.test(u.pathname), { timeout: attempt === 1 ? 15_000 : SLOW_MS }).catch(() => {});
+    }
+    if (onLogin()) throw new Error("still on the login page");
     results.push(["Log in", true, ""]);
   } catch (e) {
     const mfa = await page.getByText(/code|verification|authenticator/i).first().isVisible().catch(() => false);
-    const why = mfa ? "the robot account asks for a 2FA code - turn 2FA off for it" : `login failed (${e.message.split("\n")[0]})`;
+    const why = mfa ? "the robot account asks for a 2FA code - turn 2FA off for it" : `login failed (${loginStatus}; ${e.message.split("\n")[0]})`;
     results.push(["Log in", false, why]);
     firstFail = { name: "Log in", png: await page.screenshot().catch(() => null) };
   }
@@ -142,6 +160,8 @@ async function main() {
       `\n✅ ${results.length - failed.length} of ${results.length} fine` +
       (process.env.GITHUB_SERVER_URL ? `\n<a href="${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}">Run details</a>` : "");
     await telegram(text, firstFail && firstFail.png);
+    // CH-647: the first failed page's screenshot, kept with the run on GitHub.
+    if (firstFail && firstFail.png) require("fs").writeFileSync("robot-fail.png", firstFail.png);
     process.exit(1);
   }
 }

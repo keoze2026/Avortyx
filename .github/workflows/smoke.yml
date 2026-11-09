@@ -49,3 +49,12 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           GUARD_CHAT_ID: ${{ secrets.GUARD_CHAT_ID }}
         run: node scripts/smoke.cjs
+      # CH-647: the screenshot of the first failed page, kept 7 days with the run.
+      - name: Keep the screenshot of the first failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-check-screenshot
+          path: robot-fail.png
+          if-no-files-found: ignore
+          retention-days: 7

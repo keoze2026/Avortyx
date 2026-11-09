@@ -3248,3 +3248,24 @@ missed (it said Valid) and the AI learns from it.
   marked correct", and a red line "No Voice calls the AI missed: N" shows
   when the team has marked any (`app/(app)/ai-audit/page.tsx`,
   `lib/i18n/extra/ai-audit.ts`, en / ru / ja / zh).
+
+## CH-647 - Robot check: wait for the login page, say what the login got
+
+9 Nov, first run with the robot login (robot@avortyx.io, Viewer) and the
+GitHub secrets: "FAIL Log in - login failed (page.waitForURL: Timeout
+30000ms exceeded.)", and no login request reached Server B. The robot typed
+as soon as the login page's HTML arrived, before the page's code was
+running, so the text never reached the form. Reproduced with a stand-in
+login page whose code starts 3 s late: the old script fails with that exact
+message even with the right password.
+
+- `scripts/smoke.cjs`: waits for the login page to settle, tries a second
+  time if the first does not leave the login page, and the failure says
+  what the login request got ("server answered 400", "login request
+  failed: ...", or "no login request was sent"). On the stand-in: right
+  password -> logged in and all 11 pages OK; wrong password -> "server
+  answered 400".
+- `.github/workflows/smoke.yml`: the first failed page's screenshot is kept
+  with the run for 7 days (artifact "robot-check-screenshot").
+
+The pages checked and the read-only rule are unchanged.
