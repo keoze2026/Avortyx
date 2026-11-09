@@ -158,6 +158,22 @@ async function downloadEvidence(
   toast.success(t("x546.evidenceDone").replace("{count}", String(r.count)));
 }
 
+/** A count the server did not send (e.g. Robocall before the backend has it) reads as 0, so no cell or total shows NaN. */
+function withZeros(r: BreakdownRow): BreakdownRow {
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  return {
+    ...r,
+    checked: n(r.checked),
+    noVoice: n(r.noVoice),
+    deadCaller: n(r.deadCaller),
+    agentOnly: n(r.agentOnly),
+    agentBeep: n(r.agentBeep),
+    ivr: n(r.ivr),
+    robocall: n(r.robocall),
+    valid: n(r.valid),
+  };
+}
+
 function useBreakdown(date: string, by: ReportBy) {
   const [items, setItems] = React.useState<BreakdownRow[] | null>(null);
   React.useEffect(() => {
@@ -165,7 +181,7 @@ function useBreakdown(date: string, by: ReportBy) {
     setItems(null);
     http
       .get<{ items: BreakdownRow[] }>("/api/ai-audit/breakdown", { query: { dateFrom: date, dateTo: date, by } })
-      .then((r) => !cancelled && setItems(r.items))
+      .then((r) => !cancelled && setItems(r.items.map(withZeros)))
       .catch(() => !cancelled && setItems([]));
     return () => {
       cancelled = true;
@@ -377,21 +393,21 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
               <thead>
                 <tr className="border-b">
                   <th rowSpan={2} className={cn(th, "pl-4 text-left")}>{t(`x557.by.${by}`)}</th>
-                  <th rowSpan={2} className={cn(th, "text-right")}>{t("x557.checked")}</th>
-                  <th rowSpan={2} className={cn(th, "text-right")}>{t("x546.noVoice")}</th>
-                  <th rowSpan={2} className={cn(th, "text-right")}>{t("x546.noVoicePct")}</th>
-                  <th rowSpan={2} className={cn(th, "border-r text-right")}>{t("x650.share")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x557.checked")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x546.noVoice")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x546.noVoicePct")}</th>
+                  <th rowSpan={2} className={cn(th, "border-r text-center")}>{t("x650.share")}</th>
                   <th colSpan={3} className={cn(th, "border-b border-r text-center")}>{t("x650.typeGroup")}</th>
-                  <th rowSpan={2} className={cn(th, "text-right")}>{t("x650.ivr")}</th>
-                  <th rowSpan={2} className={cn(th, "text-right")}>{t("x543.label.robocall")}</th>
-                  <th rowSpan={2} className={cn(th, "text-right")}>{t("x543.label.valid")}</th>
-                  <th rowSpan={2} className={cn(th, "text-left")}>{t("x650.status")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x650.ivr")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x543.label.robocall")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x543.label.valid")}</th>
+                  <th rowSpan={2} className={cn(th, "text-center")}>{t("x650.status")}</th>
                   <th rowSpan={2} className={cn(th, "pr-4")} />
                 </tr>
                 <tr className="border-b">
-                  <th className={cn(th, "text-right")}>{t("x650.type.dead_caller")}</th>
-                  <th className={cn(th, "text-right")}>{t("x650.type.agent_only")}</th>
-                  <th className={cn(th, "border-r text-right")}>{t("x650.type.agent_beep")}</th>
+                  <th className={cn(th, "text-center")}>{t("x650.type.dead_caller")}</th>
+                  <th className={cn(th, "text-center")}>{t("x650.type.agent_only")}</th>
+                  <th className={cn(th, "border-r text-center")}>{t("x650.type.agent_beep")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -404,31 +420,31 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
                       className={cn("border-b last:border-b-0", hot && "bg-destructive/5 shadow-[inset_2px_0_0_hsl(var(--destructive))]")}
                     >
                       <td className={cn(td, "pl-4 font-mono font-medium")}>{r.name}</td>
-                      <td className={cn(td, "text-right")}>{r.checked.toLocaleString()}</td>
-                      <td className={cn(td, "text-right", r.noVoice > 0 ? "text-destructive" : "text-muted-foreground")}>
+                      <td className={cn(td, "text-center")}>{r.checked.toLocaleString()}</td>
+                      <td className={cn(td, "text-center", r.noVoice > 0 ? "text-destructive" : "text-muted-foreground")}>
                         {r.noVoice}
                       </td>
                       <td className={td}>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <div className="h-1 w-14 overflow-hidden rounded bg-muted">
                             <div
                               className={cn("h-full", hot ? "bg-destructive" : "bg-muted-foreground/60")}
                               style={{ width: `${Math.min(100, r.noVoicePct ?? 0)}%` }}
                             />
                           </div>
-                          <span className={cn("w-14 text-right", hot && "text-destructive")}>{pct1(r.noVoicePct)}</span>
+                          <span className={cn("w-12 text-left", hot && "text-destructive")}>{pct1(r.noVoicePct)}</span>
                         </div>
                       </td>
-                      <td className={cn(td, "border-r text-right", !r.noVoice && "text-muted-foreground")}>
+                      <td className={cn(td, "border-r text-center", !r.noVoice && "text-muted-foreground")}>
                         {share(r.noVoice)}%
                       </td>
-                      <td className={cn(td, "text-right", !r.deadCaller && "text-muted-foreground")}>{r.deadCaller}</td>
-                      <td className={cn(td, "text-right", !r.agentOnly && "text-muted-foreground")}>{r.agentOnly}</td>
-                      <td className={cn(td, "border-r text-right", !r.agentBeep && "text-muted-foreground")}>{r.agentBeep}</td>
-                      <td className={cn(td, "text-right", !r.ivr && "text-muted-foreground")}>{r.ivr}</td>
-                      <td className={cn(td, "text-right", !r.robocall && "text-muted-foreground")}>{r.robocall}</td>
-                      <td className={cn(td, "text-right")}>{r.valid}</td>
-                      <td className={td}>
+                      <td className={cn(td, "text-center", !r.deadCaller && "text-muted-foreground")}>{r.deadCaller}</td>
+                      <td className={cn(td, "text-center", !r.agentOnly && "text-muted-foreground")}>{r.agentOnly}</td>
+                      <td className={cn(td, "border-r text-center", !r.agentBeep && "text-muted-foreground")}>{r.agentBeep}</td>
+                      <td className={cn(td, "text-center", !r.ivr && "text-muted-foreground")}>{r.ivr}</td>
+                      <td className={cn(td, "text-center", !r.robocall && "text-muted-foreground")}>{r.robocall}</td>
+                      <td className={cn(td, "text-center")}>{r.valid}</td>
+                      <td className={cn(td, "text-center")}>
                         {s === "send" ? (
                           <button type="button" onClick={() => void evidence(r)} disabled={busy !== null}>
                             {tag(s)}
@@ -474,18 +490,18 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
                 <tfoot>
                   <tr className="border-t font-semibold">
                     <td className={cn(td, "pl-4")}>{t("x650.total")}</td>
-                    <td className={cn(td, "text-right")}>{sums.checked.toLocaleString()}</td>
-                    <td className={cn(td, "text-right")}>{sums.noVoice}</td>
-                    <td className={cn(td, "text-right")}>
+                    <td className={cn(td, "text-center")}>{sums.checked.toLocaleString()}</td>
+                    <td className={cn(td, "text-center")}>{sums.noVoice}</td>
+                    <td className={cn(td, "text-center")}>
                       {pct1(sums.checked ? (100 * sums.noVoice) / sums.checked : null)}
                     </td>
-                    <td className={cn(td, "border-r text-right")}>{sums.noVoice ? "100%" : "0%"}</td>
-                    <td className={cn(td, "text-right")}>{sums.dead}</td>
-                    <td className={cn(td, "text-right")}>{sums.agentOnly}</td>
-                    <td className={cn(td, "border-r text-right")}>{sums.agentBeep}</td>
-                    <td className={cn(td, "text-right")}>{sums.ivr}</td>
-                    <td className={cn(td, "text-right")}>{sums.robocall}</td>
-                    <td className={cn(td, "text-right")}>{sums.valid}</td>
+                    <td className={cn(td, "border-r text-center")}>{sums.noVoice ? "100%" : "0%"}</td>
+                    <td className={cn(td, "text-center")}>{sums.dead}</td>
+                    <td className={cn(td, "text-center")}>{sums.agentOnly}</td>
+                    <td className={cn(td, "border-r text-center")}>{sums.agentBeep}</td>
+                    <td className={cn(td, "text-center")}>{sums.ivr}</td>
+                    <td className={cn(td, "text-center")}>{sums.robocall}</td>
+                    <td className={cn(td, "text-center")}>{sums.valid}</td>
                     <td className={td} />
                     <td className={cn(td, "pr-4")} />
                   </tr>
