@@ -29,7 +29,7 @@ export const aiBreakdown: ExtraTranslations = {
     "x650.status.ok": "OK",
     "x650.headline": "{name} sent {n} No Voice calls today, {share}% of all No Voice.",
     "x650.headlineAbove": "Above 25% with real volume: {names}.",
-    "x650.sendTo": "Evidence for {name}",
+    "x650.sendTo": "Send evidence to {name}",
     "x650.today": "No Voice today",
     "x650.ofChecked": "of {n} checked · {pct}",
     "x650.most": "Most No Voice calls",

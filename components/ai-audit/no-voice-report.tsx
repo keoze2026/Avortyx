@@ -253,8 +253,11 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
   return (
     <Card className="mt-4">
       <CardContent className="p-0">
-        <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4">
-          <div>
+        {/* CH-651 (Sir, 9 Nov 11:25 PM: "the bar should be on the right not bottom"):
+            the bar keeps a fixed width and stays right of the title on wide
+            screens - a long name in the list no longer pushes it below. */}
+        <div className="flex flex-col gap-3 px-4 pt-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
             {/* Sir, 9 Nov 10:48 PM: "Green header - add as well". */}
             <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[12px] font-medium text-emerald-600 dark:text-emerald-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -263,12 +266,12 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
             <div className="text-lg font-semibold">{t("x557.title")}</div>
             <div className="text-[13px] text-muted-foreground">{t("x650.desc").replace("{date}", dayLabel(date))}</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-0.5 self-start rounded-lg border p-1">
             <select
               value={pick}
               onChange={(e) => setPick(e.target.value)}
               aria-label={t("x613.filter")}
-              className="h-8 max-w-[12rem] rounded-md border bg-background px-2 text-sm"
+              className="h-7 w-24 truncate rounded-md bg-transparent px-2 text-[13px] text-muted-foreground hover:text-foreground focus:outline-none"
             >
               <option value="">{t("x613.all")}</option>
               {(items ?? []).map((r) => (
@@ -277,21 +280,21 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
                 </option>
               ))}
             </select>
-            <div className="flex rounded-md border p-0.5">
+            <>
               {(["publisher", "campaign", "buyer", "tfn", "hour"] as const).map((b) => (
                 <button
                   key={b}
                   type="button"
                   onClick={() => setBy(b)}
                   className={cn(
-                    "rounded px-3 py-1 text-[13px]",
-                    by === b ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+                    "whitespace-nowrap rounded-md px-3 py-1 text-[13px]",
+                    by === b ? "bg-foreground font-medium text-background" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {t(`x557.by.${b}`)}
                 </button>
               ))}
-            </div>
+            </>
           </div>
         </div>
 
@@ -314,7 +317,12 @@ export function NoVoiceReport({ date, onCalls }: { date: string; onCalls: (s: Ca
                 )}
               </span>
             </div>
-            <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => void evidence(top)}>
+            <Button
+              size="sm"
+              className="shrink-0 bg-foreground text-background hover:bg-foreground/90"
+              disabled={busy !== null}
+              onClick={() => void evidence(top)}
+            >
               {busy === (top.key || top.name) ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {t("x650.sendTo").replace("{name}", top.name)} →
             </Button>

@@ -3296,3 +3296,17 @@ layout. The three sections under the call list are now one component,
   Block button (asks "Block?" first; adds the number to Blocked Numbers).
 - Evidence file: "Quick export, above 25%" buttons, one per publisher.
 - Words in en / ru / ja / zh (`lib/i18n/extra/ai-breakdown.ts`, x650.*).
+
+## CH-651 - AI Audit: the No Voice bar stays on the right of the title
+
+Sir, 9 Nov 11:25 PM: "the bar should be on the right not bottom. Only Buyer
+positions it correctly". The name list ("All") grew as wide as the longest
+publisher or campaign name, so on those tabs the bar no longer fitted beside
+the title and dropped below it; buyer names are short, so Buyer fitted.
+
+- The "All" list has a fixed width and sits inside the same bar as the tabs
+  (Sir's layout); the bar stays to the right of the title on every tab, and
+  goes under the title only on narrow screens.
+- The headline button is white like Sir's and reads "Send evidence to
+  {name}" (`components/ai-audit/no-voice-report.tsx`,
+  `lib/i18n/extra/ai-breakdown.ts`).
