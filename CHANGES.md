@@ -3269,3 +3269,30 @@ message even with the right password.
   with the run for 7 days (artifact "robot-check-screenshot").
 
 The pages checked and the read-only rule are unchanged.
+
+## CH-650 - AI Audit: Sir's No Voice report (headline, figures, share, status, actions)
+
+Sir, 9 Nov: "Under AI audit push this one, with correct data", with his
+layout. The three sections under the call list are now one component,
+`components/ai-audit/no-voice-report.tsx`; every figure comes from
+`/api/ai-audit` (backend CH-650 adds each row's key and the Robocall count).
+
+- A green "AI Call Inspector Live · {date} · EST" tag above the title (Sir,
+  9 Nov 10:48 PM: "Green header - add as well").
+- No Voice report: a headline (who sent the most No Voice calls and their
+  share of all No Voice; the rows above 25% with 10+ calls checked) with a
+  button that downloads that row's evidence file; four figures (No Voice
+  today of calls checked, most No Voice calls, rows above 25%, main No Voice
+  type); the table with Share of No Voice, the three No Voice types under
+  one heading, Voicemail / IVR, Robocall (new: those calls were in Checked
+  but in no column, so the columns did not add up), Valid, a Status and a
+  Total row. Status: 25%+ -> "Send evidence" (10+ checked) or "Low volume";
+  10-25% -> "Watch"; below -> "OK". Rows at 25%+ are marked red.
+- Each row: a list button shows that row's No Voice calls in the call list
+  above ("Showing X", with an X to clear; the Excel download follows it),
+  and a download button for its evidence file.
+- Repeat callers: "N publishers" tag when one caller came from more than
+  one, No Voice rate, the time in EST, a button for the caller's calls and a
+  Block button (asks "Block?" first; adds the number to Blocked Numbers).
+- Evidence file: "Quick export, above 25%" buttons, one per publisher.
+- Words in en / ru / ja / zh (`lib/i18n/extra/ai-breakdown.ts`, x650.*).

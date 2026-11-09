@@ -27,6 +27,12 @@ import * as React from "react";
 import { Check, Download, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  EvidenceExportReport,
+  NoVoiceReport,
+  RepeatCallersReport,
+  type CallsScope,
+} from "@/components/ai-audit/no-voice-report";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +55,6 @@ import { friendlyErrorMessage } from "@/lib/api/errors";
 import { calendarDayKey, dayKeyToLocalDate } from "@/lib/format";
 import { downloadRows, type ExportColumn } from "@/lib/export";
 import { onReportChanged } from "@/lib/report-events";
-import { usePublishersStore } from "@/lib/store/publishers-store";
 import { cn } from "@/lib/utils";
 
 /** Labels a reviewer can pick (Sir's four, Voicemail / IVR - CH-553, and
@@ -177,315 +182,6 @@ function labelVariant(l: string): React.ComponentProps<typeof Badge>["variant"] 
   return "secondary";
 }
 
-interface RepeatCaller {
-  caller: string;
-  noVoice: number;
-  calls: number;
-  publishers: string[];
-  campaigns: string[];
-  labels: Record<string, number>;
-  lastCall: string | null;
-}
-
-interface EvidenceRow {
-  startedAt: string;
-  caller: string;
-  campaign: string;
-  publisher: string;
-  buyer: string;
-  destination: string;
-  talkSeconds: number;
-  label: string;
-  audioFault: boolean;
-  confidence: number | null;
-  callerSpeech: number | null;
-  agentSpeech: number | null;
-  beepSeconds: number | null;
-  comment: string;
-  recordingUrl: string;
-  callId: string;
-}
-
-/** CH-546: the evidence file's columns (Sir: "no-voice calls with recordings, labels and timestamps"). */
-const EVIDENCE_COLUMNS: ExportColumn<EvidenceRow>[] = [
-  { label: "Call time (EST)", value: (r) => r.startedAt },
-  { label: "Caller ID", value: (r) => r.caller },
-  { label: "Campaign", value: (r) => r.campaign },
-  { label: "Publisher", value: (r) => r.publisher },
-  { label: "Buyer", value: (r) => r.buyer },
-  { label: "Destination", value: (r) => r.destination },
-  { label: "Talk (s)", value: (r) => r.talkSeconds },
-  { label: "AI label", value: (r) => (r.audioFault ? `${r.label} (Possible audio fault)` : r.label) },
-  { label: "Confidence %", value: (r) => r.confidence ?? "" },
-  { label: "Caller speech (s)", value: (r) => r.callerSpeech ?? "" },
-  { label: "Agent speech (s)", value: (r) => r.agentSpeech ?? "" },
-  { label: "Beeping (s)", value: (r) => r.beepSeconds ?? "" },
-  { label: "AI comment", value: (r) => r.comment },
-  { label: "Recording", value: (r) => r.recordingUrl },
-  { label: "Call ID", value: (r) => r.callId },
-];
-
-/** CH-546: caller IDs with two or more No Voice calls that day. */
-// CH-569: both tables laid out as Reports' Call Summary - the first column
-// on the left, every other header and its values centred in the same column.
-function RepeatCallers({ date }: { date: string }) {
-  const { t } = useTranslation();
-  const [items, setItems] = React.useState<RepeatCaller[] | null>(null);
-  React.useEffect(() => {
-    let cancelled = false;
-    setItems(null);
-    http
-      .get<{ items: RepeatCaller[] }>("/api/ai-audit/repeat-callers", { query: { dateFrom: date, dateTo: date } })
-      .then((r) => !cancelled && setItems(r.items))
-      .catch(() => !cancelled && setItems([]));
-    return () => {
-      cancelled = true;
-    };
-  }, [date]);
-  return (
-    <Card className="mt-4">
-      <CardContent className="p-0">
-        <div className="border-b px-4 py-3">
-          <div className="text-sm font-semibold">{t("x546.repeatTitle")}</div>
-          <div className="text-[13px] text-muted-foreground">{t("x546.repeatDesc")}</div>
-        </div>
-        {items === null ? (
-          <div className="p-4">
-            <Skeleton className="h-5 w-full" />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground">{t("x546.repeatNone")}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table className="text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6 text-left">{t("x543.col.caller")}</TableHead>
-                  <TableHead className="text-center">{t("x546.noVoice")}</TableHead>
-                  <TableHead className="text-center">{t("x546.allCalls")}</TableHead>
-                  <TableHead className="text-center">{t("x546.publishers")}</TableHead>
-                  <TableHead className="text-center">{t("x546.campaigns")}</TableHead>
-                  <TableHead className="pr-6 text-center">{t("x546.lastCall")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((r) => (
-                  <TableRow key={r.caller}>
-                    <TableCell className="pl-6 text-left tabular-nums">{r.caller}</TableCell>
-                    <TableCell className="text-center font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
-                    <TableCell className="text-center tabular-nums">{r.calls}</TableCell>
-                    <TableCell className="text-center">{r.publishers.join(", ")}</TableCell>
-                    <TableCell className="text-center">{r.campaigns.join(", ")}</TableCell>
-                    <TableCell className="pr-6 text-center tabular-nums">{r.lastCall ? timeEst(r.lastCall) : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-interface BreakdownRow {
-  name: string;
-  checked: number;
-  noVoice: number;
-  noVoicePct: number | null;
-  deadCaller: number;
-  agentOnly: number;
-  agentBeep: number;
-  ivr: number;
-  valid: number;
-}
-/** CH-600 (Sir, 4 Nov: "no-voice rate by publisher, campaign, TFN, buyer and
- *  hour"): TFN and hour (EST, in the day's order) added. */
-type BreakdownBy = "publisher" | "campaign" | "buyer" | "tfn" | "hour";
-
-/** CH-557 (Sir, 5 Nov: "put this under AI audit report"): the No Voice / No
- *  Voice % that were Call Summary columns on Reports - per publisher, campaign
- *  or buyer, for the day on screen. Highest No Voice % first. */
-function NoVoiceBreakdown({ date }: { date: string }) {
-  const { t } = useTranslation();
-  const [by, setBy] = React.useState<BreakdownBy>("publisher");
-  const [items, setItems] = React.useState<BreakdownRow[] | null>(null);
-  // CH-613 (Sir, 6 Nov: "Give filter option here if anyone wants to see or send
-  // screenshot of specific publisher"): one name, or all.
-  const [pick, setPick] = React.useState("");
-  const shown = React.useMemo(
-    () => (items && pick ? items.filter((r) => r.name === pick) : items),
-    [items, pick],
-  );
-  React.useEffect(() => {
-    let cancelled = false;
-    setItems(null);
-    setPick("");
-    http
-      .get<{ items: BreakdownRow[] }>("/api/ai-audit/breakdown", { query: { dateFrom: date, dateTo: date, by } })
-      .then((r) => !cancelled && setItems(r.items))
-      .catch(() => !cancelled && setItems([]));
-    return () => {
-      cancelled = true;
-    };
-  }, [date, by]);
-  const pct = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)}%`);
-  return (
-    <Card className="mt-4">
-      <CardContent className="p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <div>
-            <div className="text-sm font-semibold">{t("x557.title")}</div>
-            <div className="text-[13px] text-muted-foreground">{t("x557.desc")}</div>
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
-            <select
-              value={pick}
-              onChange={(e) => setPick(e.target.value)}
-              aria-label={t("x613.filter")}
-              className="mr-2 h-8 max-w-[14rem] rounded-md border bg-background px-2 text-sm"
-            >
-              <option value="">{t("x613.all")}</option>
-              {(items ?? []).map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-            {(["publisher", "campaign", "buyer", "tfn", "hour"] as const).map((b) => (
-              <Button key={b} size="sm" variant={by === b ? "default" : "outline"} onClick={() => setBy(b)}>
-                {t(`x557.by.${b}`)}
-              </Button>
-            ))}
-          </div>
-        </div>
-        {shown === null ? (
-          <div className="p-4">
-            <Skeleton className="h-5 w-full" />
-          </div>
-        ) : shown.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground">{t("x557.none")}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table className="text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6 text-left">{t(`x557.by.${by}`)}</TableHead>
-                  <TableHead className="text-center">{t("x557.checked")}</TableHead>
-                  <TableHead className="text-center">{t("x546.noVoice")}</TableHead>
-                  <TableHead className="text-center">{t("x546.noVoicePct")}</TableHead>
-                  <TableHead className="text-center">{t("x543.label.dead_caller")}</TableHead>
-                  <TableHead className="text-center">{t("x543.label.agent_only")}</TableHead>
-                  <TableHead className="text-center">{t("x543.label.agent_beep")}</TableHead>
-                  <TableHead className="text-center">{t("x543.label.ivr")}</TableHead>
-                  <TableHead className="pr-6 text-center">{t("x543.label.valid")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {shown.map((r) => (
-                  <TableRow key={r.name}>
-                    <TableCell className="pl-6 text-left font-medium">{r.name}</TableCell>
-                    <TableCell className="text-center tabular-nums">{r.checked}</TableCell>
-                    <TableCell className="text-center font-semibold tabular-nums text-destructive">{r.noVoice}</TableCell>
-                    <TableCell className={cn("text-center font-semibold tabular-nums", (r.noVoicePct ?? 0) > 15 && "text-destructive")}>
-                      {pct(r.noVoicePct)}
-                    </TableCell>
-                    <TableCell className="text-center tabular-nums">{r.deadCaller}</TableCell>
-                    <TableCell className="text-center tabular-nums">{r.agentOnly}</TableCell>
-                    <TableCell className="text-center tabular-nums">{r.agentBeep}</TableCell>
-                    <TableCell className="text-center tabular-nums">{r.ivr}</TableCell>
-                    <TableCell className="pr-6 text-center tabular-nums">{r.valid}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** CH-546: a publisher's No Voice calls as a spreadsheet - the evidence file. */
-function EvidenceExport({ date }: { date: string }) {
-  const { t } = useTranslation();
-  const publishers = usePublishersStore((s) => s.publishers);
-  const [publisherId, setPublisherId] = React.useState("");
-  const [from, setFrom] = React.useState(date);
-  const [to, setTo] = React.useState(date);
-  const [busy, setBusy] = React.useState(false);
-  React.useEffect(() => {
-    setFrom(date);
-    setTo(date);
-  }, [date]);
-  const sorted = React.useMemo(() => [...publishers].sort((a, b) => a.name.localeCompare(b.name)), [publishers]);
-  const run = async () => {
-    setBusy(true);
-    try {
-      const r = await http.get<{ count: number; items: EvidenceRow[] }>("/api/ai-audit/evidence", {
-        query: { publisherId: publisherId || undefined, dateFrom: from, dateTo: to },
-      });
-      if (r.count === 0) {
-        toast.info(t("x546.evidenceNone"));
-        return;
-      }
-      const name = sorted.find((p) => p.id === publisherId)?.name ?? "all-publishers";
-      const stem = `no-voice-evidence-${name.replace(/[^A-Za-z0-9-]+/g, "_")}-${from}${to !== from ? `-to-${to}` : ""}`;
-      downloadRows("xlsx", EVIDENCE_COLUMNS, r.items, stem, "No Voice evidence");
-      toast.success(t("x546.evidenceDone").replace("{count}", String(r.count)));
-    } catch (e) {
-      toast.error(friendlyErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Card className="mt-4">
-      <CardContent className="flex flex-wrap items-end gap-3 py-4 text-sm">
-        <div className="mr-auto">
-          <div className="font-semibold">{t("x546.evidenceTitle")}</div>
-          <div className="text-[13px] text-muted-foreground">{t("x546.evidenceDesc")}</div>
-        </div>
-        <label className="flex flex-col gap-1">
-          <span className="text-[13px] text-muted-foreground">{t("x546.publisher")}</span>
-          <select
-            value={publisherId}
-            onChange={(e) => setPublisherId(e.target.value)}
-            className="h-8 rounded-md border bg-background px-2"
-          >
-            <option value="">{t("x546.allPublishers")}</option>
-            {sorted.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {/* CH-603: the Reports date picker, not the browser's grey calendar. */}
-        <div className="flex flex-col gap-1">
-          <span className="text-[13px] text-muted-foreground">
-            {t("x546.from")} ~ {t("x546.to")}
-          </span>
-          <DateRangePicker
-            value={{ from: dayKeyToLocalDate(from), to: dayKeyToLocalDate(to) }}
-            onChange={(r) => {
-              if (!r?.from) return;
-              setFrom(calendarDayKey(r.from));
-              setTo(calendarDayKey(r.to ?? r.from));
-            }}
-            today={dayKeyToLocalDate(todayEst())}
-            className="hover:bg-muted hover:text-foreground dark:hover:bg-muted/70"
-          />
-        </div>
-        <Button size="sm" onClick={() => void run()} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          {t("x546.evidenceButton")}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function AiAuditPage() {
   const { t } = useTranslation();
   const [date, setDate] = React.useState(todayEst);
@@ -496,6 +192,15 @@ export default function AiAuditPage() {
   const [loading, setLoading] = React.useState(true);
   const [wrong, setWrong] = React.useState<{ row: Row; label: Label; note: string; saving: boolean } | null>(null);
   const [saving, setSaving] = React.useState<string | null>(null);
+  // CH-650: a No Voice report row (or a repeat caller) whose calls the list shows.
+  const [scope, setScope] = React.useState<CallsScope | null>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const showCalls = React.useCallback((s: CallsScope) => {
+    setScope(s);
+    setFilter(s.by === "caller" ? "" : "no_voice");
+    setPage(1);
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const labelText = React.useCallback((l: string) => t(`x543.label.${l}`), [t]);
 
@@ -509,7 +214,9 @@ export default function AiAuditPage() {
     try {
       const all: Row[] = [];
       for (let p = 1; p <= 100; p++) {
-        const r = await http.get<Page>("/api/ai-audit/calls", { query: { date, label: filter, page: p, pageSize: 200 } });
+        const r = await http.get<Page>("/api/ai-audit/calls", {
+          query: { date, label: filter, page: p, pageSize: 200, by: scope?.by, key: scope?.key },
+        });
         all.push(...r.items);
         if (r.items.length === 0 || all.length >= r.total) break;
       }
@@ -545,7 +252,7 @@ export default function AiAuditPage() {
         { label: "RECORDING", value: (r) => r.recordingUrl || "" },
         { label: "CALL ID", value: (r) => r.id },
       ];
-      downloadRows("xlsx", columns, all, `ai-audit-${date}${filter ? `-${filter}` : ""}`, "AI Audit", {
+      downloadRows("xlsx", columns, all, `ai-audit-${date}${filter ? `-${filter}` : ""}${scope ? `-${scope.name.replace(/[^A-Za-z0-9-]+/g, "_")}` : ""}`, "AI Audit", {
         boldHeader: true,
         linkColumns: ["RECORDING"],
       });
@@ -562,7 +269,9 @@ export default function AiAuditPage() {
       if (!quiet) setLoading(true);
       try {
         const [p, s] = await Promise.all([
-          http.get<Page>("/api/ai-audit/calls", { query: { date, label: filter, page, pageSize: PAGE_SIZE } }),
+          http.get<Page>("/api/ai-audit/calls", {
+            query: { date, label: filter, page, pageSize: PAGE_SIZE, by: scope?.by, key: scope?.key },
+          }),
           http.get<Status>("/api/ai-audit/status"),
         ]);
         setData(p);
@@ -573,7 +282,7 @@ export default function AiAuditPage() {
         if (!quiet) setLoading(false);
       }
     },
-    [date, filter, page, t],
+    [date, filter, page, scope, t],
   );
 
   React.useEffect(() => {
@@ -691,6 +400,7 @@ export default function AiAuditPage() {
               onChange={(r) => {
                 if (!r?.from) return;
                 setDate(calendarDayKey(r.from));
+                setScope(null);
                 setPage(1);
               }}
               today={dayKeyToLocalDate(todayEst())}
@@ -723,7 +433,26 @@ export default function AiAuditPage() {
         ))}
       </div>
 
-      <Card>
+      {scope && (
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1">
+            {t("x650.showing").replace("{name}", scope.name)}
+            <button
+              type="button"
+              aria-label={t("x650.clear")}
+              title={t("x650.clear")}
+              onClick={() => {
+                setScope(null);
+                setPage(1);
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        </div>
+      )}
+      <Card ref={listRef} className="scroll-mt-20">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table className="text-sm">
@@ -910,9 +639,10 @@ export default function AiAuditPage() {
         </CardContent>
       </Card>
 
-      <NoVoiceBreakdown date={date} />
-      <RepeatCallers date={date} />
-      <EvidenceExport date={date} />
+      {/* CH-650: Sir's No Voice report (9 Nov). */}
+      <NoVoiceReport date={date} onCalls={showCalls} />
+      <RepeatCallersReport date={date} onCalls={showCalls} />
+      <EvidenceExportReport date={date} todayKey={todayEst()} />
 
       <Dialog open={wrong !== null} onOpenChange={(o) => !o && !wrong?.saving && setWrong(null)}>
         <DialogContent className="sm:max-w-md">
