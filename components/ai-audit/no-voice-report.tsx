@@ -584,9 +584,9 @@ export function RepeatCallersReport({ date, onCalls }: { date: string; onCalls: 
               <thead>
                 <tr className="border-b">
                   <th className={cn(th, "pl-4 text-left")}>{t("x543.col.caller")}</th>
-                  <th className={cn(th, "text-right")}>{t("x546.noVoice")}</th>
-                  <th className={cn(th, "text-right")}>{t("x546.allCalls")}</th>
-                  <th className={cn(th, "text-right")}>{t("x650.rate")}</th>
+                  <th className={cn(th, "text-center")}>{t("x546.noVoice")}</th>
+                  <th className={cn(th, "text-center")}>{t("x546.allCalls")}</th>
+                  <th className={cn(th, "text-center")}>{t("x650.rate")}</th>
                   <th className={cn(th, "text-left")}>{t("x546.publishers")}</th>
                   <th className={cn(th, "text-left")}>{t("x546.campaigns")}</th>
                   <th className={cn(th, "text-right")}>{t("x546.lastCall")}</th>
@@ -608,9 +608,9 @@ export function RepeatCallersReport({ date, onCalls }: { date: string; onCalls: 
                           )}
                         </span>
                       </td>
-                      <td className={cn(td, "text-right text-destructive")}>{r.noVoice}</td>
-                      <td className={cn(td, "text-right")}>{r.calls}</td>
-                      <td className={cn(td, "text-right text-muted-foreground")}>
+                      <td className={cn(td, "text-center text-destructive")}>{r.noVoice}</td>
+                      <td className={cn(td, "text-center")}>{r.calls}</td>
+                      <td className={cn(td, "text-center text-muted-foreground")}>
                         {r.calls ? `${Math.round((100 * r.noVoice) / r.calls)}%` : "—"}
                       </td>
                       <td className={cn(td, "font-mono")}>{r.publishers.join(", ")}</td>
