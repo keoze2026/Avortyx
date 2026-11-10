@@ -4,6 +4,7 @@
  *   POST /api/support/chat                  start a session     → { sessionId, message }
  *   POST /api/support/chat/{sessionId}      visitor follow-up   → { message }
  *   GET  /api/support/chat/{sessionId}      poll for replies    → { messages: [...] }
+ *   POST /api/support/chat/{sessionId}/image  a picture (CH-654) → { id, imageUrl }
  *
  * On the visitor's side the admin team monitors incoming sessions via
  * Telegram and replies via Telegram or email. Replies land in the
@@ -16,7 +17,19 @@
  * rate-limited by IP server-side.
  */
 
+import { API_BASE_URL } from "@/lib/api/env";
 import { http } from "@/lib/api/http";
+
+/** CH-654: a picture in the chat - PNG, JPG, GIF or WEBP, up to 2 MB (the
+ *  server checks the same, from the file's own bytes). */
+export const SUPPORT_PICTURE_MAX_BYTES = 2 * 1024 * 1024;
+export const SUPPORT_PICTURE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+/** Where an <img> loads a chat picture from: the server's address for a sent
+ *  one, or the local preview of one still being sent. */
+export function supportPictureSrc(url: string): string {
+  return /^(blob:|data:|https?:)/.test(url) ? url : `${API_BASE_URL}${url}`;
+}
 
 /* ─── Inputs ─────────────────────────────────────────────────────────── */
 
@@ -45,6 +58,8 @@ export interface ChatMessage {
   id?: string;
   sender: ChatSender;
   body: string;
+  /** CH-654: the message's picture, if it has one (see supportPictureSrc). */
+  imageUrl?: string;
   /** ms-epoch timestamp normalized from the wire ISO string. */
   createdAt: number;
 }
@@ -78,6 +93,8 @@ interface ChatMessageWire {
   message?: string;
   text?: string;
   content?: string;
+  /** CH-654: `image_url` on the wire. */
+  imageUrl?: string | null;
   createdAt?: string | number;
   timestamp?: string | number;
   sentAt?: string | number;
@@ -124,6 +141,7 @@ function wireToMessage(w: ChatMessageWire): ChatMessage {
     id: w.id !== undefined ? String(w.id) : undefined,
     sender: normalizeSender(w.sender),
     body: w.body ?? w.message ?? w.text ?? w.content ?? "",
+    imageUrl: w.imageUrl ?? undefined,
     createdAt: toTs(w.createdAt ?? w.timestamp ?? w.sentAt),
   };
 }
@@ -166,6 +184,21 @@ export const supportService = {
   async sendMessage(sessionId: string, input: SendMessageInput): Promise<void> {
     await http.post(`/api/support/chat/${encodeURIComponent(sessionId)}`, {
       body: input,
+      anonymous: true,
+    });
+  },
+
+  /**
+   * CH-654: send a picture (pasted or picked) to an existing session, with
+   * an optional line of text. The support team gets it in Telegram.
+   */
+  async sendPicture(sessionId: string, picture: Blob, message = ""): Promise<void> {
+    const form = new FormData();
+    const name = picture instanceof File && picture.name ? picture.name : "picture";
+    form.append("image", picture, name);
+    if (message) form.append("message", message);
+    await http.post(`/api/support/chat/${encodeURIComponent(sessionId)}/image`, {
+      body: form,
       anonymous: true,
     });
   },

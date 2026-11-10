@@ -3310,3 +3310,21 @@ the title and dropped below it; buyer names are short, so Buyer fitted.
 - The headline button is white like Sir's and reads "Send evidence to
   {name}" (`components/ai-audit/no-voice-report.tsx`,
   `lib/i18n/extra/ai-breakdown.ts`).
+
+## CH-654 - Support chat: pictures (paste or attach, up to 2 MB)
+
+10 Nov: someone in the support chat can send a picture - paste it while
+typing, or attach it - up to 2 MB. Backend: CH-654 (push it first).
+
+- The "Need help?" chat (`components/app-shell/support-chat.tsx`): a picture
+  button next to the box (PNG, JPG, GIF, WEBP), and a picture pasted into the
+  box (a screenshot, a copied image) is attached instead of lost. It shows
+  above the box with its size and an X; it goes with the text typed, or alone.
+  Over 2 MB or another kind of file: a clear message, nothing sent.
+- Pictures show in the conversation (click to open full size), the
+  customer's and the team's alike - the team answers with a photo in
+  Telegram (caption: the chat's 8 characters, then the text).
+- A new chat cannot open with a picture alone, so it opens with the text (or
+  "Picture") and the picture follows.
+- `lib/api/services/support.service.ts`: `sendPicture`, `imageUrl` on each
+  message, `supportPictureSrc`.

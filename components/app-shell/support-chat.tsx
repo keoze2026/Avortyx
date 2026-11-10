@@ -16,19 +16,28 @@
  *     together with their organisation and the page they started on, so the
  *     team knows who is asking and from where;
  *   - the conversation is remembered per user, so it survives a refresh;
- *   - a dot on the bubble shows when the team has replied while it was closed.
+ *   - a dot on the bubble shows when the team has replied while it was closed;
+ *   - CH-654: a picture can be sent too - paste it into the box while typing,
+ *     or pick one with the picture button (PNG, JPG, GIF, WEBP, up to 2 MB).
+ *     The team's photo replies from Telegram show here the same way.
  */
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
+import { ImagePlus, Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/use-translation";
 import { ApiError, friendlyErrorMessage } from "@/lib/api/errors";
-import { supportService, type ChatMessage } from "@/lib/api/services/support.service";
+import {
+  SUPPORT_PICTURE_MAX_BYTES,
+  SUPPORT_PICTURE_TYPES,
+  supportPictureSrc,
+  supportService,
+  type ChatMessage,
+} from "@/lib/api/services/support.service";
 import { uiLocaleTag } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
@@ -121,9 +130,12 @@ export function SupportChat() {
   const [draft, setDraft] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const [seenAgentCount, setSeenAgentCount] = React.useState(0);
+  // CH-654: the picture waiting to be sent, with its local preview.
+  const [picture, setPicture] = React.useState<{ file: File; preview: string } | null>(null);
 
   const listRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   const userId = user?.id ?? null;
 
@@ -201,6 +213,34 @@ export function SupportChat() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // CH-654: one picture at a time; checked here as the server checks it.
+  const pickPicture = React.useCallback(
+    (file: File | null | undefined) => {
+      if (!file) return;
+      if (!SUPPORT_PICTURE_TYPES.includes(file.type)) {
+        toast.error(tr("supportChat.pictureType", "Only PNG, JPG, GIF or WEBP pictures can be sent."));
+        return;
+      }
+      if (file.size > SUPPORT_PICTURE_MAX_BYTES) {
+        toast.error(tr("supportChat.pictureTooBig", "The picture is larger than 2 MB."));
+        return;
+      }
+      setPicture((old) => {
+        if (old) URL.revokeObjectURL(old.preview);
+        return { file, preview: URL.createObjectURL(file) };
+      });
+      inputRef.current?.focus();
+    },
+    [tr],
+  );
+
+  const dropPicture = React.useCallback(() => {
+    setPicture((old) => {
+      if (old) URL.revokeObjectURL(old.preview);
+      return null;
+    });
+  }, []);
+
   if (!user) return null;
 
   const firstName = (user.name || "").trim().split(/\s+/)[0] || "";
@@ -228,17 +268,40 @@ export function SupportChat() {
 
   async function send() {
     const text = draft.trim();
-    if (!text || sending) return;
+    const pic = picture;
+    if ((!text && !pic) || sending) return;
     setSending(true);
 
     // Show it straight away; the transcript reload below replaces it.
-    const optimistic: ChatMessage = { sender: "visitor", body: text, createdAt: Date.now() };
+    const optimistic: ChatMessage = {
+      sender: "visitor",
+      body: text,
+      imageUrl: pic?.preview,
+      createdAt: Date.now(),
+    };
     setMessages((m) => [...m, optimistic]);
     setDraft("");
+    setPicture(null);
 
     try {
       let id = sessionId;
-      if (!id) {
+      if (pic) {
+        // CH-654: a chat cannot start with a picture alone, so a new one opens
+        // with the text (or "Picture"), and the picture follows it.
+        const opening = text || tr("supportChat.pictureOnly", "📷 Picture");
+        if (!id) {
+          id = await startConversation(opening);
+          await supportService.sendPicture(id, pic.file);
+        } else {
+          try {
+            await supportService.sendPicture(id, pic.file, text);
+          } catch (e) {
+            if (!isSessionGone(e)) throw e;
+            id = await startConversation(opening);
+            await supportService.sendPicture(id, pic.file);
+          }
+        }
+      } else if (!id) {
         id = await startConversation(text);
       } else {
         try {
@@ -251,10 +314,12 @@ export function SupportChat() {
       }
       const list = await loadTranscript(id);
       if (list) markSeen(list);
+      if (pic) URL.revokeObjectURL(pic.preview);
     } catch (e) {
-      // Take the optimistic bubble back out and give the text back to the user.
+      // Take the optimistic bubble back out and give the text (and picture) back.
       setMessages((m) => m.filter((x) => x !== optimistic));
       setDraft(text);
+      if (pic) setPicture(pic);
       toast.error(
         isRateLimited(e)
           ? tr("supportChat.tooFast", "You're sending messages too quickly. Please wait a moment.")
@@ -263,6 +328,17 @@ export function SupportChat() {
     } finally {
       setSending(false);
     }
+  }
+
+  /** CH-654: a picture pasted into the box (a screenshot, a copied image)
+   *  is attached instead of being lost; pasted text works as before. */
+  function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const item = Array.from(e.clipboardData?.items ?? []).find(
+      (i) => i.kind === "file" && i.type.startsWith("image/"),
+    );
+    if (!item) return;
+    e.preventDefault();
+    pickPicture(item.getAsFile());
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -349,9 +425,21 @@ export function SupportChat() {
                       className={cn(
                         "max-w-[85%] rounded-lg px-3 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
                         mine ? "bg-zinc-700 text-white" : "bg-accent text-accent-foreground",
+                        m.imageUrl && "p-1.5",
                       )}
                     >
-                      {m.body}
+                      {m.imageUrl && (
+                        <a href={supportPictureSrc(m.imageUrl)} target="_blank" rel="noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={supportPictureSrc(m.imageUrl)}
+                            alt={tr("supportChat.picture", "Picture")}
+                            loading="lazy"
+                            className="block max-h-56 max-w-full rounded-md object-contain"
+                          />
+                        </a>
+                      )}
+                      {m.body && <div className={cn(m.imageUrl && "px-1.5 pt-1.5 pb-0.5")}>{m.body}</div>}
                     </div>
                     <span className="mt-0.5 text-xs text-foreground/60">{formatTime(m.createdAt)}</span>
                   </div>
@@ -365,13 +453,57 @@ export function SupportChat() {
             )}
           </div>
 
+          {/* CH-654: the picture waiting to be sent */}
+          {picture && (
+            <div className="flex items-center gap-2 border-t px-3 pt-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={picture.preview} alt="" className="size-12 shrink-0 rounded-md border object-cover" />
+              <div className="min-w-0 flex-1 text-[13px]">
+                <p className="truncate">{picture.file.name || tr("supportChat.picture", "Picture")}</p>
+                <p className="text-foreground/60">{(picture.file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={dropPicture}
+                disabled={sending}
+                aria-label={tr("supportChat.removePicture", "Remove picture")}
+                title={tr("supportChat.removePicture", "Remove picture")}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          )}
+
           {/* Composer */}
           <div className="flex items-end gap-2 border-t p-3">
+            <input
+              ref={fileRef}
+              type="file"
+              accept={SUPPORT_PICTURE_TYPES.join(",")}
+              className="hidden"
+              onChange={(e) => {
+                pickPicture(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => fileRef.current?.click()}
+              disabled={sending}
+              aria-label={tr("supportChat.attachPicture", "Attach a picture (up to 2 MB)")}
+              title={tr("supportChat.attachPicture", "Attach a picture (up to 2 MB)")}
+            >
+              <ImagePlus className="size-4" />
+            </Button>
             <Textarea
               ref={inputRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
+              onPaste={onPaste}
               rows={2}
               maxLength={4000}
               placeholder={tr("supportChat.placeholder", "Type your question…")}
@@ -382,7 +514,7 @@ export function SupportChat() {
               size="icon"
               className={DARK}
               onClick={() => void send()}
-              disabled={sending || !draft.trim()}
+              disabled={sending || (!draft.trim() && !picture)}
               aria-label={tr("supportChat.send", "Send")}
             >
               {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
