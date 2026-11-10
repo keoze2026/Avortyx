@@ -34,7 +34,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { friendlyErrorMessage } from "@/lib/api/errors";
 import { http } from "@/lib/api/http";
 import { downloadRows, type ExportColumn } from "@/lib/export";
-import { calendarDayKey, dayKeyToLocalDate } from "@/lib/format";
+import { calendarDayKey, dayKeyToLocalDate, uiLocaleTag } from "@/lib/format";
 import { useBlockedNumbersStore } from "@/lib/store/blocked-numbers-store";
 import { usePublishersStore } from "@/lib/store/publishers-store";
 import { cn } from "@/lib/utils";
@@ -126,11 +126,11 @@ function pct1(v: number | null | undefined): string {
 }
 
 function dayLabel(day: string): string {
-  return dayKeyToLocalDate(day).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return dayKeyToLocalDate(day).toLocaleDateString(uiLocaleTag(), { month: "short", day: "numeric" });
 }
 
 function timeEst(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
+  return new Date(iso).toLocaleTimeString(uiLocaleTag(), {
     timeZone: "America/New_York",
     hour: "numeric",
     minute: "2-digit",

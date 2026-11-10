@@ -3337,3 +3337,22 @@ most calls the account may have live at the same time, 0 = no limit, with a
 line saying what it does. Our own account shows no such field (it is never
 limited). `app/(app)/owner/page.tsx`; words in en / ru / ja / zh
 (`lib/i18n/extra/ai-breakdown.ts`, x655.*).
+
+## CH-656 - AI Audit fully in the reader's language
+
+10 Nov: "for AI audit, everything should be translated - e.g. AI and PM and
+any other part". In Russian, Japanese and Chinese the page now has no English
+left:
+
+- Times are in the reader's format (下午3:18:34, 15:18:34), not always "PM";
+  the seconds unit too (12.5秒, 12,5 с) - `x656.seconds`.
+- "AI", "EST", "IVR", "Telegram", "Excel" and "TFN" in the page's words are
+  translated (智能审核, 人工知能監査; 美东时间, 米国東部時間, по Нью-Йорку; ...).
+- The AI's own comment on each call (written in English) is asked for in the
+  reader's language (backend CH-656, push it first) and shown as soon as it
+  arrives; the English stays on hover, and shows if no translation comes.
+- The No Voice report's dates and times follow the reader's language too.
+
+`app/(app)/ai-audit/page.tsx`, `components/ai-audit/no-voice-report.tsx`,
+`lib/i18n/extra/ai-audit.ts`, `lib/i18n/extra/ai-breakdown.ts`. The Excel
+file's column headings stay English (a file for Sir and the publishers).

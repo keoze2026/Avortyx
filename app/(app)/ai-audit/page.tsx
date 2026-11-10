@@ -52,9 +52,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useTranslation } from "@/hooks/use-translation";
 import { http } from "@/lib/api/http";
 import { friendlyErrorMessage } from "@/lib/api/errors";
-import { calendarDayKey, dayKeyToLocalDate } from "@/lib/format";
+import { calendarDayKey, dayKeyToLocalDate, uiLocaleTag } from "@/lib/format";
+import { tFor } from "@/lib/i18n";
 import { downloadRows, type ExportColumn } from "@/lib/export";
 import { onReportChanged } from "@/lib/report-events";
+import { useLocaleStore } from "@/lib/store/locale-store";
 import { cn } from "@/lib/utils";
 
 /** Labels a reviewer can pick (Sir's four, Voicemail / IVR - CH-553, and
@@ -157,8 +159,9 @@ function todayEst(): string {
   );
 }
 
+// CH-656: in the reader's language (下午3:18:34, 15:18:34 ...), not always "PM".
 function timeEst(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(uiLocaleTag(), {
     timeZone: ET,
     hour: "2-digit",
     minute: "2-digit",
@@ -172,8 +175,10 @@ function mmss(s: number): string {
   return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`;
 }
 
+// CH-656: the seconds unit in the reader's language too (12.5s, 12,5 с, 12.5秒).
 function sec(v: number | null | undefined): string {
-  return typeof v === "number" ? `${v.toFixed(1)}s` : "—";
+  if (typeof v !== "number") return "—";
+  return tFor(useLocaleStore.getState().locale, "x656.seconds").replace("{n}", v.toFixed(1));
 }
 
 function labelVariant(l: string): React.ComponentProps<typeof Badge>["variant"] {
@@ -203,6 +208,31 @@ export default function AiAuditPage() {
   }, []);
 
   const labelText = React.useCallback((l: string) => t(`x543.label.${l}`), [t]);
+
+  // CH-656: the AI's comment on each call (written in English) in the
+  // reader's language, asked for the calls on screen once and remembered.
+  // Until it arrives, or if it cannot be had, the English shows.
+  const locale = useLocaleStore((st) => st.locale);
+  const [comments, setComments] = React.useState<Record<string, string>>({});
+  React.useEffect(() => setComments({}), [locale]);
+  React.useEffect(() => {
+    if (locale === "en" || !data) return;
+    const ids = data.items.filter((r) => r.summary && !(r.id in comments)).map((r) => r.id);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    http
+      .post<{ items: Record<string, string> }>("/api/ai-audit/translate", { body: { lang: locale, ids } })
+      .then((res) => {
+        if (cancelled) return;
+        // Keep a miss as the English, so it is not asked again on every refresh.
+        setComments((c) => ({ ...c, ...Object.fromEntries(ids.map((id) => [id, res.items[id] ?? ""])) }));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, locale]);
 
   // CH-613 (Sir, 6 Nov: "give an option to download this file in Excel with
   // comment like we do reporting"): every call of the day under the tile
@@ -517,7 +547,7 @@ export default function AiAuditPage() {
                                 className="col-start-1 mt-1 line-clamp-4 w-0 min-w-full whitespace-normal text-center text-[12px] leading-snug text-muted-foreground [text-wrap:balance]"
                                 title={r.summary}
                               >
-                                {r.summary}
+                                {comments[r.id] || r.summary}
                               </div>
                             )}
                           </div>
