@@ -128,6 +128,10 @@ export default function OwnerPage() {
   const [feeForm, setFeeForm] = useState<Record<FeeField, string>>(
     Object.fromEntries(FEE_FIELDS.map((f) => [f, ""])) as Record<FeeField, string>,
   );
+  // CH-655 (customer accounts point 6): the account's limit on live calls
+  // (0 = no limit). Our own account is never limited, so it shows no field.
+  const [callLimit, setCallLimit] = useState("");
+  const [limitIsOurs, setLimitIsOurs] = useState(false);
   const [moneyFor, setMoneyFor] = useState<{ org: OrgRow; direction: "credit" | "debit" } | null>(null);
   const [moneyForm, setMoneyForm] = useState({ amount: "", note: "" });
   const [suspendFor, setSuspendFor] = useState<OrgRow | null>(null);
@@ -191,9 +195,13 @@ export default function OwnerPage() {
   async function openFees(org: OrgRow) {
     setFeesFor(org);
     try {
-      const d = await http.get<{ billing: Record<string, string> }>(
-        `/api/owner/organizations/${org.id}`,
-      );
+      const d = await http.get<{
+        billing: Record<string, string>;
+        maxConcurrentCalls?: number;
+        isMainAccount?: boolean;
+      }>(`/api/owner/organizations/${org.id}`);
+      setCallLimit(String(d.maxConcurrentCalls ?? 0));
+      setLimitIsOurs(d.isMainAccount === true);
       // The billing keys arrive camelCased; read them that way or the form opens blank.
       setFeeForm(
         Object.fromEntries(FEE_FIELDS.map((f) => [f, d.billing[camel(f)] ?? ""])) as Record<FeeField, string>,
@@ -208,7 +216,9 @@ export default function OwnerPage() {
     if (!feesFor) return;
     setBusy(true);
     try {
-      await http.patch(`/api/owner/organizations/${feesFor.id}`, { body: feeForm });
+      await http.patch(`/api/owner/organizations/${feesFor.id}`, {
+        body: limitIsOurs ? feeForm : { ...feeForm, max_concurrent_calls: callLimit.trim() || "0" },
+      });
       toast.success(t("owner.orgs.saved"));
       setFeesFor(null);
       load(search);
@@ -456,6 +466,17 @@ export default function OwnerPage() {
               </div>
             ))}
           </div>
+          {!limitIsOurs && (
+            <div className="space-y-1.5 border-t pt-3">
+              <Label className="text-xs">{t("x655.callLimit")}</Label>
+              <Input
+                inputMode="numeric"
+                value={callLimit}
+                onChange={(e) => setCallLimit(e.target.value.replace(/[^0-9]/g, ""))}
+              />
+              <p className="text-xs text-muted-foreground">{t("x655.callLimitHint")}</p>
+            </div>
+          )}
           <DialogFooter>
             <Button disabled={busy} onClick={submitFees}>
               {t("owner.orgs.saved")}

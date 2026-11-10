@@ -3328,3 +3328,12 @@ typing, or attach it - up to 2 MB. Backend: CH-654 (push it first).
   "Picture") and the picture follows.
 - `lib/api/services/support.service.ts`: `sendPicture`, `imageUrl` on each
   message, `supportPictureSrc`.
+
+## CH-655 - Owner page: a customer account's limit on live calls
+
+Customer accounts point 6 (backend CH-655, push it first): the account's
+Rates & fees form on the Owner page has "Live calls at once (limit)" - the
+most calls the account may have live at the same time, 0 = no limit, with a
+line saying what it does. Our own account shows no such field (it is never
+limited). `app/(app)/owner/page.tsx`; words in en / ru / ja / zh
+(`lib/i18n/extra/ai-breakdown.ts`, x655.*).
