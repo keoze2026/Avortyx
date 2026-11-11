@@ -35,6 +35,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { useLocalName } from "@/lib/i18n/local-name";
 import { useCampaignsStore } from "@/lib/store/campaigns-store";
 import { useNumbersStore } from "@/lib/store/numbers-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { numbersService } from "@/lib/api/services/numbers.service";
 import { toE164 } from "@/lib/format";
 import type { NumberType, TrackingNumber } from "@/lib/types";
@@ -82,6 +83,9 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
   const provisionNumber = useNumbersStore((s) => s.provisionNumber);
 
   const [mode, setMode] = useState<Mode>("add");
+  // CH-665: a customer account buys numbers only from our stock, on the
+  // Tracking Numbers page - here it adds the numbers it already has.
+  const customerAccount = useAuthStore((s) => s.user?.isMainAccount === false);
 
   // ─── "Add existing" state ─────────────────────────────────────────────
   // Only numbers that aren't already linked to a campaign are eligible —
@@ -281,6 +285,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
         </DialogHeader>
 
         {/* Add existing numbers / Buy new numbers */}
+        {!customerAccount && (
         <div className="inline-flex w-full rounded-md border border-border bg-muted p-0.5 sm:w-auto sm:self-start">
           {(["add", "buy"] as Mode[]).map((m) => (
             <button
@@ -296,6 +301,7 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
             </button>
           ))}
         </div>
+        )}
 
         {mode === "add" ? (
           <>
@@ -361,11 +367,15 @@ export function AttachTrackingNumberDialog({ campaignId, open, onOpenChange }: P
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-12 text-center">
                 <Hash className="mx-auto h-6 w-6 text-muted-foreground" />
                 <p className="mt-2 text-sm font-medium">{t("x5.attachNumbers.emptyTitle")}</p>
+                {customerAccount ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{t("x665.attachHint")}</p>
+                ) : (
                 <p className="mt-1 text-xs text-muted-foreground">
                   {emptyHintParts[0]}
                   <span className="font-medium text-foreground">{t("x5.attachNumbers.modeBuy")}</span>
                   {emptyHintParts[1]}
                 </p>
+                )}
               </div>
             ) : (
               <div className="min-h-[240px] flex-1 overflow-auto rounded-lg border border-border">

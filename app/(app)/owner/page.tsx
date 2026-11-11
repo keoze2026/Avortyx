@@ -45,6 +45,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -76,7 +83,27 @@ interface OrgRow {
   billingStatus: string | null;
   callsToday: number;
   revenueToday: string;
+  /** CH-665: High / Low Risk - which stock numbers the account buys ("" = not set). */
+  tfnRisk?: string;
 }
+
+/** CH-665: the stock bucket, per type and carrier. */
+interface StockRow {
+  risk: "high" | "low";
+  carrier: string;
+  forSale: number;
+  sold: number;
+}
+
+/**
+ * CH-665 (Sir, 11 Nov): the prices an account's type fills in, one time,
+ * until changed - the same as the backend's CUSTOMER_TFN_PRICES. Picking a
+ * type puts them in the form; they can still be edited before saving.
+ */
+const TYPE_PRICES: Record<"high" | "low", { tfn_purchase_fee: string; per_minute_rate: string }> = {
+  high: { tfn_purchase_fee: "20.00", per_minute_rate: "0.0400" },
+  low: { tfn_purchase_fee: "10.00", per_minute_rate: "0.0350" },
+};
 
 /** What deleting an organization would remove, and whether it is allowed. */
 interface DeletePreview {
@@ -132,6 +159,9 @@ export default function OwnerPage() {
   // (0 = no limit). Our own account is never limited, so it shows no field.
   const [callLimit, setCallLimit] = useState("");
   const [limitIsOurs, setLimitIsOurs] = useState(false);
+  // CH-665: the account's type ("none" = not set; Select items cannot be "").
+  const [tfnRisk, setTfnRisk] = useState("none");
+  const [stock, setStock] = useState<StockRow[]>([]);
   const [moneyFor, setMoneyFor] = useState<{ org: OrgRow; direction: "credit" | "debit" } | null>(null);
   const [moneyForm, setMoneyForm] = useState({ amount: "", note: "" });
   const [suspendFor, setSuspendFor] = useState<OrgRow | null>(null);
@@ -146,6 +176,10 @@ export default function OwnerPage() {
         `/api/owner/organizations?search=${encodeURIComponent(q)}&page_size=200`,
       );
       setRows(r.items);
+      http
+        .get<{ rows: StockRow[] }>(`/api/owner/tfn-stock`)
+        .then((s) => setStock(s.rows))
+        .catch(() => setStock([]));
     } catch (e) {
       toast.error(errText(e));
     } finally {
@@ -199,9 +233,11 @@ export default function OwnerPage() {
         billing: Record<string, string>;
         maxConcurrentCalls?: number;
         isMainAccount?: boolean;
+        tfnRisk?: string;
       }>(`/api/owner/organizations/${org.id}`);
       setCallLimit(String(d.maxConcurrentCalls ?? 0));
       setLimitIsOurs(d.isMainAccount === true);
+      setTfnRisk(d.tfnRisk || "none");
       // The billing keys arrive camelCased; read them that way or the form opens blank.
       setFeeForm(
         Object.fromEntries(FEE_FIELDS.map((f) => [f, d.billing[camel(f)] ?? ""])) as Record<FeeField, string>,
@@ -217,7 +253,13 @@ export default function OwnerPage() {
     setBusy(true);
     try {
       await http.patch(`/api/owner/organizations/${feesFor.id}`, {
-        body: limitIsOurs ? feeForm : { ...feeForm, max_concurrent_calls: callLimit.trim() || "0" },
+        body: limitIsOurs
+          ? feeForm
+          : {
+              ...feeForm,
+              max_concurrent_calls: callLimit.trim() || "0",
+              tfn_risk: tfnRisk === "none" ? "" : tfnRisk,
+            },
       });
       toast.success(t("owner.orgs.saved"));
       setFeesFor(null);
@@ -296,6 +338,17 @@ export default function OwnerPage() {
     }
   }
 
+  function pickType(v: string) {
+    setTfnRisk(v);
+    if (v === "high" || v === "low") setFeeForm((f) => ({ ...f, ...TYPE_PRICES[v] }));
+  }
+
+  const stockTotals = (["high", "low"] as const).map((risk) => ({
+    risk,
+    forSale: stock.filter((s) => s.risk === risk).reduce((n, s) => n + s.forSale, 0),
+    sold: stock.filter((s) => s.risk === risk).reduce((n, s) => n + s.sold, 0),
+  }));
+
   const canDelete =
     deleteFor != null &&
     deletePreview != null &&
@@ -322,6 +375,25 @@ export default function OwnerPage() {
         </Button>
       </div>
 
+      {/* CH-665: the stock customers buy from, per type. */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium">{t("x665.owner.stock")}</span>
+        {stockTotals.map((s) => (
+          <Badge
+            key={s.risk}
+            variant="outline"
+            title={stock
+              .filter((r) => r.risk === s.risk)
+              .map((r) => `${r.carrier || "—"}: ${r.forSale} / ${r.sold}`)
+              .join("\n")}
+          >
+            {t(s.risk === "high" ? "x665.type.high" : "x665.type.low")}:{" "}
+            {t("x665.owner.forSale").replace("{count}", String(s.forSale))} ·{" "}
+            {t("x665.owner.sold").replace("{count}", String(s.sold))}
+          </Badge>
+        ))}
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -343,7 +415,14 @@ export default function OwnerPage() {
                 <TableRow key={o.id} className={o.isActive ? "" : "opacity-60"}>
                   <TableCell>
                     <LocalName name={o.name} className="block font-medium" />
-                    <div className="text-xs text-muted-foreground">{o.slug}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {o.slug}
+                      {(o.tfnRisk === "high" || o.tfnRisk === "low") && (
+                        <Badge variant={o.tfnRisk === "high" ? "destructive" : "secondary"} className="ml-2 px-1.5 py-0 text-[10px]">
+                          {t(o.tfnRisk === "high" ? "x665.type.high" : "x665.type.low")}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={o.isActive ? "secondary" : "destructive"}>
@@ -454,6 +533,22 @@ export default function OwnerPage() {
               {t("owner.orgs.editRates")} — {localName(feesFor?.name)}
             </DialogTitle>
           </DialogHeader>
+          {!limitIsOurs && (
+            <div className="space-y-1.5 border-b pb-3">
+              <Label className="text-xs">{t("x665.owner.type")}</Label>
+              <Select value={tfnRisk} onValueChange={pickType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("x665.type.none")}</SelectItem>
+                  <SelectItem value="high">{t("x665.type.high")}</SelectItem>
+                  <SelectItem value="low">{t("x665.type.low")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("x665.owner.typeHint")}</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             {FEE_FIELDS.map((f) => (
               <div key={f} className="space-y-1.5">

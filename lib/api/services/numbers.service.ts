@@ -393,6 +393,17 @@ export interface NewPoolInput {
 
 /* ─── Public services ─────────────────────────────────────────────────── */
 
+/** CH-665: what a customer account may buy from our stock. */
+export interface StockOffer {
+  risk: "high" | "low";
+  /** One-time price of one number, e.g. "20.00". */
+  price: string;
+  /** The account's price a minute, e.g. "0.0400". */
+  minute: string;
+  total: number;
+  items: { id: string; number: string }[];
+}
+
 export const numbersService = {
   async list(
     query: { page?: number; pageSize?: number } = {},
@@ -518,6 +529,20 @@ export const numbersService = {
         },
       }),
     );
+  },
+
+  /**
+   * CH-665: a customer account's own type of stock (High or Low Risk) and its
+   * prices. GET /api/numbers/stock. Our own account gets 400 (it never buys
+   * from the stock).
+   */
+  async stockOffer(): Promise<StockOffer> {
+    return http.get<StockOffer>("/api/numbers/stock", { query: { limit: 500 } });
+  },
+
+  /** CH-665: buy one stock number; its price is taken from the balance. */
+  async stockBuy(id: string): Promise<TrackingNumber> {
+    return wireToNumber(await http.post<NumberWire>(`/api/numbers/stock/${id}/buy`));
   },
 
   async importNumber(input: {

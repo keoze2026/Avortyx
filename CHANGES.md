@@ -3356,3 +3356,24 @@ left:
 `app/(app)/ai-audit/page.tsx`, `components/ai-audit/no-voice-report.tsx`,
 `lib/i18n/extra/ai-audit.ts`, `lib/i18n/extra/ai-breakdown.ts`. The Excel
 file's column headings stay English (a file for Sir and the publishers).
+
+## CH-665 - Customers buy tracking numbers only from our stock
+
+Sir, 11 Nov: customers never buy from Twilio; a High Risk account sees and
+buys only High Risk numbers, a Low Risk account only Low Risk. Needs backend
+CH-665 (push it first).
+
+- Tracking Numbers page, customer account: the add button opens "Buy tracking
+  numbers" - the stock of the account's type, its price per number and per
+  minute, search, pick one or several, buy (one at a time; a failure says
+  exactly which were bought). Our own account keeps the Twilio dialog.
+- Campaign > attach numbers, customer account: no "Buy new" (Twilio); the
+  empty list says to buy on the Tracking Numbers page.
+- Owner page: account type (Not set / High Risk / Low Risk) in Edit rates -
+  picking one fills its prices ($20 + $0.040, or $10 + $0.035), still
+  editable; the type shows under the account's name; the number stock per
+  type (for sale / sold) above the list.
+
+`components/numbers/stock-buy-dialog.tsx` (new), `app/(app)/numbers/page.tsx`,
+`app/(app)/owner/page.tsx`, `components/campaigns/settings/attach-tracking-number-dialog.tsx`,
+`lib/api/services/numbers.service.ts`, `lib/i18n/extra/tfn-stock.ts` (new).

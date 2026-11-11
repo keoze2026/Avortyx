@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { usePartnerPermissions } from "@/hooks/use-partner-permissions";
 import { PoolsTable, POOL_COLUMNS } from "@/components/numbers/pools-table";
 import { ProvisionNumberDialog } from "@/components/numbers/provision-number-dialog";
+import { StockBuyDialog } from "@/components/numbers/stock-buy-dialog";
 import {
   TrackNumbersTable,
   TRACK_NUMBERS_COLUMNS,
@@ -29,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/use-translation";
 import { ROUTES } from "@/lib/constants";
 import { useNumbersStore } from "@/lib/store/numbers-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { NumberPool, TrackingNumber } from "@/lib/types";
 import { usePermissions } from "@/lib/my-permissions";
 import { compareByRiskThenAssigned } from "@/lib/risk-order";
@@ -80,6 +82,8 @@ export default function NumbersPage() {
   const pools = useNumbersStore((s) => s.pools);
 
   const [provisionOpen, setProvisionOpen] = React.useState(false);
+  // CH-665: a customer account buys only from our stock, of its own type.
+  const customerAccount = useAuthStore((s) => s.user?.isMainAccount === false);
   const [tab, setTab] = React.useState<"all" | "pools">("all");
   const { isPartner } = usePartnerPermissions();
 
@@ -287,7 +291,11 @@ export default function NumbersPage() {
 
       </Tabs>
 
-      <ProvisionNumberDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
+      {customerAccount ? (
+        <StockBuyDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
+      ) : (
+        <ProvisionNumberDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
+      )}
 
     </>
   );
