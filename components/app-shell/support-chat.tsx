@@ -263,6 +263,7 @@ export function SupportChat() {
     });
     writeStored(storageKey(user!.id, "session"), result.sessionId);
     setSessionId(result.sessionId);
+    if (result.blocked) toast.info(tr("x669.notice", "Please tell us what you need help with."));
     return result.sessionId;
   }
 
@@ -305,7 +306,9 @@ export function SupportChat() {
         id = await startConversation(text);
       } else {
         try {
-          await supportService.sendMessage(id, { message: text });
+          const sent = await supportService.sendMessage(id, { message: text });
+          // CH-669: a greeting that was not sent to the team.
+          if (sent.blocked) toast.info(tr("x669.notice", "Please tell us what you need help with."));
         } catch (e) {
           if (!isSessionGone(e)) throw e;
           // The old conversation no longer exists: open a new one with this message.

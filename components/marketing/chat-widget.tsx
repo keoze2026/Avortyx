@@ -268,16 +268,22 @@ export function ChatWidget() {
           // The backend has the session (and pings the team on Telegram
           // from here). Say so — with nothing on screen after the first
           // message the panel reads as "not connected", even when it is.
+          // CH-669: a greeting that was not sent asks what they need instead.
           setMessages((m) => [
             ...m,
             {
               sender: "system",
-              content: t("marketingUI.chat.delivered").replace("{name}", t(activeAgent.nameKey)),
+              content: result.blocked
+                ? t("x669.notice")
+                : t("marketingUI.chat.delivered").replace("{name}", t(activeAgent.nameKey)),
               at: Date.now(),
             },
           ]);
         } else {
-          await supportService.sendMessage(sessionId, { message: trimmed });
+          const sent = await supportService.sendMessage(sessionId, { message: trimmed });
+          if (sent.blocked) {
+            setMessages((m) => [...m, { sender: "system", content: t("x669.notice"), at: Date.now() }]);
+          }
         }
       } catch (err) {
         const friendly =

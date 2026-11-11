@@ -69,6 +69,15 @@ export interface StartChatResult {
   sessionId: string;
   /** Server's acknowledgement / echo. Optional in case the backend omits it. */
   message?: string;
+  /** CH-669: a greeting only, from someone whose greetings are blocked - kept,
+   *  not sent to the team; `message` asks what they need help with. */
+  blocked?: boolean;
+}
+
+/** CH-669: what a follow-up message came back with. */
+export interface SendMessageResult {
+  blocked: boolean;
+  message?: string;
 }
 
 export interface SessionTranscript {
@@ -82,6 +91,30 @@ interface StartChatWire {
   /** `session_id` arrives camelCased thanks to the http layer's snake→camel pass. */
   sessionId: string;
   message?: string;
+  blocked?: boolean;
+}
+
+/**
+ * CH-669: this browser's own random id, kept in the browser, sent with each
+ * chat message so the backend knows the same person in a new chat (the chat
+ * code changes with every new chat). Not personal data; "" when storage is
+ * blocked.
+ */
+const BROWSER_KEY = "avx_chat_browser";
+function browserId(): string {
+  try {
+    let id = window.localStorage.getItem(BROWSER_KEY);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+      window.localStorage.setItem(BROWSER_KEY, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
 }
 
 interface ChatMessageWire {
@@ -171,21 +204,22 @@ export const supportService = {
    */
   async startChat(input: StartChatInput): Promise<StartChatResult> {
     const wire = await http.post<StartChatWire>("/api/support/chat", {
-      body: input,
+      body: { ...input, browserId: browserId() },
       anonymous: true,
     });
-    return { sessionId: wire.sessionId, message: wire.message };
+    return { sessionId: wire.sessionId, message: wire.message, blocked: wire.blocked === true };
   },
 
   /**
    * Visitor follow-up message on an existing session.
    * Not used yet — reserved for the future in-app chat history view.
    */
-  async sendMessage(sessionId: string, input: SendMessageInput): Promise<void> {
-    await http.post(`/api/support/chat/${encodeURIComponent(sessionId)}`, {
-      body: input,
-      anonymous: true,
-    });
+  async sendMessage(sessionId: string, input: SendMessageInput): Promise<SendMessageResult> {
+    const wire = await http.post<{ message?: string; blocked?: boolean } | undefined>(
+      `/api/support/chat/${encodeURIComponent(sessionId)}`,
+      { body: { ...input, browserId: browserId() }, anonymous: true },
+    );
+    return { blocked: wire?.blocked === true, message: wire?.message };
   },
 
   /**

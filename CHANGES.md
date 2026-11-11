@@ -3414,3 +3414,14 @@ default hourly candle is fine, the rest D."
 - Dashboard chart unchanged (opens on H).
 
 `components/reports/hourly-distribution.tsx` (`defaultGrain`), `app/(app)/reports/page.tsx`.
+
+## CH-669 - Support chat: greetings only ("hi") are blocked
+
+Backend CH-669 (deploy it first) blocks greeting-only messages after 3 from
+the same person. Here: both chats (portal and website) send this browser's
+own random id (kept in the browser) so the same person is known in a new
+chat, and a greeting that was not sent shows "Please tell us what you need
+help with."
+
+`lib/api/services/support.service.ts`, `components/marketing/chat-widget.tsx`,
+`components/app-shell/support-chat.tsx`, `lib/i18n/extra/support-greetings.ts` (new).
