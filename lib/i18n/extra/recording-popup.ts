@@ -7,23 +7,27 @@ export const recordingPopup: ExtraTranslations = {
     "x666.back": "Back 10 seconds",
     "x666.forward": "Forward 10 seconds",
     "x666.newTab": "Open in a new tab",
+    "x666.close": "Close",
   },
   ru: {
     "x666.title": "Запись звонка",
     "x666.back": "Назад на 10 секунд",
     "x666.forward": "Вперёд на 10 секунд",
     "x666.newTab": "Открыть в новой вкладке",
+    "x666.close": "Закрыть",
   },
   ja: {
     "x666.title": "通話録音",
     "x666.back": "10秒戻る",
     "x666.forward": "10秒進む",
     "x666.newTab": "新しいタブで開く",
+    "x666.close": "閉じる",
   },
   zh: {
     "x666.title": "通话录音",
     "x666.back": "后退 10 秒",
     "x666.forward": "前进 10 秒",
     "x666.newTab": "在新标签页中打开",
+    "x666.close": "关闭",
   },
 };

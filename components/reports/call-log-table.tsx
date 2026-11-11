@@ -873,6 +873,11 @@ export function CallLogTable({
 
   const openRecording = React.useCallback(
     async (call: Call) => {
+      // The row's own button again closes the player.
+      if (player?.callId === call.id) {
+        setPlayer(null);
+        return;
+      }
       setLoadingId(call.id);
       try {
         const url = await resolveRecordingUrl(call);
@@ -887,7 +892,7 @@ export function CallLogTable({
         setLoadingId((id) => (id === call.id ? null : id));
       }
     },
-    [resolveRecordingUrl, t],
+    [player, resolveRecordingUrl, t],
   );
 
   // CH-267: the export opens "choose the details" before it downloads.

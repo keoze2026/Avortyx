@@ -3393,3 +3393,11 @@ clicking on that link every time, so that we can do fast forward/reverse".
 `components/reports/recording-dialog.tsx` (new), `components/reports/call-panel-parts.tsx`,
 `components/reports/call-log-table.tsx`, `app/(app)/ai-audit/page.tsx`,
 `lib/i18n/extra/recording-popup.ts` (new). Frontend only.
+
+## CH-666 (follow-up, 12 Nov) - The recording player sits bottom right
+
+"Put this box in the bottom right-hand corner, near the chat box." The player
+is now a small box docked bottom right, left of the support chat button (on a
+phone, above it). It no longer covers the page: the list stays usable, play on
+another call switches to that call, the same row's button, X or Esc closes it.
+Call Log and AI Audit.
