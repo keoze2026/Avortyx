@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 
 import { CallActivityPanel } from "@/components/reports/call-activity-panel";
+import { RecordingDialog, type RecordingToPlay } from "@/components/reports/recording-dialog";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { ExportColumnsDialog, applyColumnChoice } from "@/components/reports/export-columns-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -843,27 +844,18 @@ export function CallLogTable({
   }, [visible, locale, t]);
 
   /* ─── Recording playback ───────────────────────────────────────────
-   * One <audio> element for the whole table: starting a second recording
-   * stops the first, and there's never a stack of orphaned players. The
-   * row's own `recordingUrl` is used when the CDR carried one; otherwise
-   * we resolve it through GET /api/analytics/calls/{id}/recording, which
-   * is what the endpoint exists for. */
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+   * CH-666: play opens the recording in a pop-up (back / forward, seek,
+   * speed), one at a time. The row's own `recordingUrl` is used when the
+   * CDR carried one; otherwise we resolve it through
+   * GET /api/analytics/calls/{id}/recording, which is what the endpoint
+   * exists for. */
+  const [player, setPlayer] = React.useState<(RecordingToPlay & { callId: string }) | null>(null);
   // CH-372: one shared, centred box width per name column.
   const nameBoxRef = React.useRef<HTMLDivElement | null>(null);
   useNameBoxWidths(nameBoxRef);
-  const [playingId, setPlayingId] = React.useState<string | null>(null);
   const [loadingId, setLoadingId] = React.useState<string | null>(null);
   // Resolved URLs are cached so replaying a row doesn't refetch.
   const urlCache = React.useRef(new Map<string, string>());
-
-  React.useEffect(() => {
-    // Release the element (and stop audio) when the table unmounts.
-    return () => {
-      audioRef.current?.pause();
-      audioRef.current = null;
-    };
-  }, []);
 
   const resolveRecordingUrl = React.useCallback(async (call: Call): Promise<string> => {
     if (call.recordingUrl) return call.recordingUrl;
@@ -879,38 +871,23 @@ export function CallLogTable({
     return url;
   }, []);
 
-  const toggleRecording = React.useCallback(
+  const openRecording = React.useCallback(
     async (call: Call) => {
-      const audio = audioRef.current ?? new Audio();
-      audioRef.current = audio;
-
-      // Second click on the row that's already playing → pause.
-      if (playingId === call.id && !audio.paused) {
-        audio.pause();
-        setPlayingId(null);
-        return;
-      }
-
-      audio.pause();
       setLoadingId(call.id);
       try {
         const url = await resolveRecordingUrl(call);
-        audio.src = url;
-        audio.onended = () => setPlayingId((id) => (id === call.id ? null : id));
-        audio.onerror = () => {
-          setPlayingId((id) => (id === call.id ? null : id));
-          toast.error(t("toolsUI.reports.callLog.actions.recordingError"));
-        };
-        await audio.play();
-        setPlayingId(call.id);
+        setPlayer({
+          callId: call.id,
+          url,
+          subtitle: `${formatCallerId(call.callerNumber)} → ${toE164(call.calledNumber)}`,
+        });
       } catch {
-        setPlayingId(null);
         toast.error(t("toolsUI.reports.callLog.actions.recordingError"));
       } finally {
         setLoadingId((id) => (id === call.id ? null : id));
       }
     },
-    [playingId, resolveRecordingUrl, t],
+    [resolveRecordingUrl, t],
   );
 
   // CH-267: the export opens "choose the details" before it downloads.
@@ -1006,6 +983,7 @@ export function CallLogTable({
         setPendingExport(null);
       }}
     />
+    <RecordingDialog recording={player} onClose={() => setPlayer(null)} />
     <Card className="overflow-hidden p-0">
       {/* Section title */}
       <div className="flex items-center justify-between gap-2 border-b border-border px-6 py-4">
@@ -1287,9 +1265,9 @@ export function CallLogTable({
                         <TableCell>
                           <RecordingCell
                             call={c}
-                            playing={playingId === c.id}
+                            playing={player?.callId === c.id}
                             loading={loadingId === c.id}
-                            onToggle={() => toggleRecording(c)}
+                            onToggle={() => openRecording(c)}
                           />
                         </TableCell>
                       )}

@@ -25,6 +25,8 @@ import {
   Pause,
   Phone,
   Play,
+  RotateCcw,
+  RotateCw,
   X,
 } from "lucide-react";
 
@@ -430,7 +432,10 @@ async function loadPeaks(url: string, signal: AbortSignal): Promise<number[] | n
   return peaks.map((p) => p / top);
 }
 
-export function RecordingPlayer({ url }: { url: string }) {
+/** CH-666: how far the back / forward buttons jump. */
+const SKIP_SECONDS = 10;
+
+export function RecordingPlayer({ url, autoPlay = false }: { url: string; autoPlay?: boolean }) {
   const { t } = useTranslation();
   const audioRef = React.useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = React.useState(false);
@@ -460,6 +465,14 @@ export function RecordingPlayer({ url }: { url: string }) {
     const box = e.currentTarget.getBoundingClientRect();
     a.currentTime = Math.min(length, Math.max(0, ((e.clientX - box.left) / box.width) * length));
   };
+  // CH-666: back / forward without leaving the portal.
+  const skip = (by: number) => {
+    const a = audioRef.current;
+    if (!a) return;
+    const end = Number.isFinite(a.duration) ? a.duration : Number.MAX_SAFE_INTEGER;
+    a.currentTime = Math.min(end, Math.max(0, a.currentTime + by));
+    setNow(a.currentTime);
+  };
   const nextRate = () => {
     const r = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1;
     setRate(r);
@@ -473,6 +486,7 @@ export function RecordingPlayer({ url }: { url: string }) {
         ref={audioRef}
         src={url}
         preload="metadata"
+        autoPlay={autoPlay}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
@@ -509,7 +523,27 @@ export function RecordingPlayer({ url }: { url: string }) {
           {clock(now)} / {clock(length)}
         </span>
       </div>
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => skip(-SKIP_SECONDS)}
+          aria-label={t("x666.back")}
+          title={t("x666.back")}
+          className="inline-flex items-center gap-1 rounded-md border border-border/70 px-2 py-0.5 font-mono text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          <RotateCcw className="h-3 w-3" />
+          {SKIP_SECONDS}s
+        </button>
+        <button
+          type="button"
+          onClick={() => skip(SKIP_SECONDS)}
+          aria-label={t("x666.forward")}
+          title={t("x666.forward")}
+          className="inline-flex items-center gap-1 rounded-md border border-border/70 px-2 py-0.5 font-mono text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          {SKIP_SECONDS}s
+          <RotateCw className="h-3 w-3" />
+        </button>
         <button
           type="button"
           onClick={nextRate}

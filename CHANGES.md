@@ -3377,3 +3377,19 @@ CH-665 (push it first).
 `components/numbers/stock-buy-dialog.tsx` (new), `app/(app)/numbers/page.tsx`,
 `app/(app)/owner/page.tsx`, `components/campaigns/settings/attach-tracking-number-dialog.tsx`,
 `lib/api/services/numbers.service.ts`, `lib/i18n/extra/tfn-stock.ts` (new).
+
+## CH-666 - Recordings play in a pop-up, with back and forward
+
+11 Nov: "possible we get access to recording pop up in portal instead of
+clicking on that link every time, so that we can do fast forward/reverse".
+
+- Reports > Call Log: the play button opens the call's recording in a pop-up
+  (caller and TFN on top). It starts playing at once; back 10 s, forward
+  10 s, click anywhere on the bar to jump there, speed 1x / 1.5x / 2x,
+  download. The new-tab link stays, in the row and in the pop-up.
+- AI Audit: "Listen" opens the same pop-up.
+- The call panel's player has the same back / forward buttons.
+
+`components/reports/recording-dialog.tsx` (new), `components/reports/call-panel-parts.tsx`,
+`components/reports/call-log-table.tsx`, `app/(app)/ai-audit/page.tsx`,
+`lib/i18n/extra/recording-popup.ts` (new). Frontend only.

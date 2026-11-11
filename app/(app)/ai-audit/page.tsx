@@ -35,6 +35,7 @@ import {
 } from "@/components/ai-audit/no-voice-report";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { PageHeader } from "@/components/shared/page-header";
+import { RecordingDialog, type RecordingToPlay } from "@/components/reports/recording-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -224,6 +225,8 @@ export default function AiAuditPage() {
   // Until it arrives, or if it cannot be had, the English shows.
   const locale = useLocaleStore((st) => st.locale);
   const [comments, setComments] = React.useState<Record<string, string>>({});
+  // CH-666: Listen opens the recording in a pop-up (back / forward, speed).
+  const [listen, setListen] = React.useState<RecordingToPlay | null>(null);
   React.useEffect(() => setComments({}), [locale]);
   React.useEffect(() => {
     if (locale === "en" || !data) return;
@@ -377,6 +380,7 @@ export default function AiAuditPage() {
 
   return (
     <>
+      <RecordingDialog recording={listen} onClose={() => setListen(null)} />
       <PageHeader
         title={t("x543.title")}
         description={t("x543.desc")}
@@ -622,14 +626,13 @@ export default function AiAuditPage() {
                           )}
                           {r.recordingUrl && (
                             <div className="mt-1">
-                              <a
-                                href={r.recordingUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => setListen({ url: r.recordingUrl, subtitle: r.destination ? `${r.caller} → ${r.destination}` : r.caller })}
                                 className="text-accent underline-offset-2 hover:underline"
                               >
                                 {t("x543.listen")}
-                              </a>
+                              </button>
                             </div>
                           )}
                         </TableCell>
