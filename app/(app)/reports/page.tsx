@@ -577,7 +577,13 @@ export default function ReportsPage() {
                       "lg:block lg:h-full",
                     )}
                   >
-                    <HourlyDistribution calls={logCalls} className="lg:h-full" />
+                    <HourlyDistribution
+                      calls={logCalls}
+                      className="lg:h-full"
+                      // CH-668: one day (today, yesterday) opens hourly;
+                      // a longer range (7 days, a month, a year) by day.
+                      defaultGrain={fromKey && toKey && fromKey !== toKey ? "D" : "H"}
+                    />
                   </div>
                 )}
                 {visibility.donut && (

@@ -62,7 +62,7 @@ function CandleShape(raw: unknown) {
   );
 }
 
-type Grain = "H" | "D" | "M";
+export type Grain = "H" | "D" | "M";
 
 const GRAINS: Array<{ id: Grain; label: string }> = [
   { id: "H", label: "H" },
@@ -104,6 +104,12 @@ interface HourlyDistributionProps {
    * instead of from `calls`. Pages that don't pass it are unaffected.
    */
   series?: ChartSeriesPoint[];
+  /**
+   * CH-668: the H / D / M the chart opens on. When it changes (a new date
+   * range), the chart goes back to it; the buttons still switch as before.
+   * Pages that don't pass it open on H, as before.
+   */
+  defaultGrain?: Grain;
 }
 
 /** One hourly point: `period` carries the report timezone's offset
@@ -582,10 +588,13 @@ export function HourlyDistribution({
   rangeStartKey,
   rangeEndKey,
   series,
+  defaultGrain = "H",
 }: HourlyDistributionProps) {
   const { t, locale } = useTranslation();
   const timeZone = useUIStore((s) => s.reportTimezone);
-  const [grain, setGrain] = React.useState<Grain>("H");
+  const [grain, setGrain] = React.useState<Grain>(defaultGrain);
+  // CH-668: a new date range opens on its own default again.
+  React.useEffect(() => setGrain(defaultGrain), [defaultGrain]);
   // Track the actual CHART CONTAINER width via ResizeObserver — the
   // viewport can be 1200px while the chart card only gets ~600px because
   // of the sidebar + donut neighbour. Three tiers:

@@ -3401,3 +3401,16 @@ is now a small box docked bottom right, left of the support chat button (on a
 phone, above it). It no longer covers the page: the list stays usable, play on
 another call switches to that call, the same row's button, X or Esc closes it.
 Call Log and AI Audit.
+
+## CH-668 - Reports chart opens by day for a range of days
+
+12 Nov: "When anyone wants to see a custom report - last 7 days, month or
+years - give the default candle as Days, not hours. For yesterday only the
+default hourly candle is fine, the rest D."
+
+- Reports, Calls By chart: one day (today, yesterday, any single day) opens on
+  H; more than one day (7 days, a month, a year, any custom range) opens on D.
+- Changing the date range goes back to its default; H / D / M still switch.
+- Dashboard chart unchanged (opens on H).
+
+`components/reports/hourly-distribution.tsx` (`defaultGrain`), `app/(app)/reports/page.tsx`.
