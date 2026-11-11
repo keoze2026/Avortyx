@@ -24,7 +24,7 @@
  */
 
 import * as React from "react";
-import { Check, Download, Loader2, RefreshCw, X } from "lucide-react";
+import { Check, Download, Loader2, RefreshCw, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -192,6 +192,16 @@ export default function AiAuditPage() {
   const [date, setDate] = React.useState(todayEst);
   const [filter, setFilter] = React.useState<Filter>("");
   const [page, setPage] = React.useState(1);
+  // CH-664: search by caller ID (any part of the number), on the chosen day.
+  const [search, setSearch] = React.useState("");
+  const [q, setQ] = React.useState("");
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      setQ(search.replace(/\D/g, "").length >= 3 ? search.trim() : "");
+      setPage(1);
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [search]);
   const [data, setData] = React.useState<Page | null>(null);
   const [status, setStatus] = React.useState<Status | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -245,7 +255,7 @@ export default function AiAuditPage() {
       const all: Row[] = [];
       for (let p = 1; p <= 100; p++) {
         const r = await http.get<Page>("/api/ai-audit/calls", {
-          query: { date, label: filter, page: p, pageSize: 200, by: scope?.by, key: scope?.key },
+          query: { date, label: filter, page: p, pageSize: 200, by: scope?.by, key: scope?.key, q: q || undefined },
         });
         all.push(...r.items);
         if (r.items.length === 0 || all.length >= r.total) break;
@@ -300,7 +310,7 @@ export default function AiAuditPage() {
       try {
         const [p, s] = await Promise.all([
           http.get<Page>("/api/ai-audit/calls", {
-            query: { date, label: filter, page, pageSize: PAGE_SIZE, by: scope?.by, key: scope?.key },
+            query: { date, label: filter, page, pageSize: PAGE_SIZE, by: scope?.by, key: scope?.key, q: q || undefined },
           }),
           http.get<Status>("/api/ai-audit/status"),
         ]);
@@ -312,7 +322,7 @@ export default function AiAuditPage() {
         if (!quiet) setLoading(false);
       }
     },
-    [date, filter, page, scope, t],
+    [date, filter, page, scope, q, t],
   );
 
   React.useEffect(() => {
@@ -440,8 +450,9 @@ export default function AiAuditPage() {
         </CardContent>
       </Card>
 
-      {/* CH-557 (Sir, 5 Nov): the filter boxes all the same size, in an even grid. */}
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
+      {/* CH-557 (Sir, 5 Nov): the filter boxes all the same size, in an even grid.
+          CH-664 (11 Nov): small - name and count on one line. */}
+      <div className="mb-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
         {FILTERS.map((f) => (
           <button
             key={f || "all"}
@@ -452,15 +463,42 @@ export default function AiAuditPage() {
               setPage(1);
             }}
             className={cn(
-              "flex min-h-[68px] flex-col items-start justify-between gap-1 rounded-lg border px-3 py-2 text-left transition-colors",
+              "flex min-h-[34px] items-center justify-between gap-2 rounded-md border px-2.5 py-1 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               filter === f ? "border-accent bg-accent/10" : "border-border bg-card hover:bg-muted/50",
             )}
           >
-            <span className="text-[13px] font-medium leading-tight text-muted-foreground">{t(`x543.f.${f || "all"}`)}</span>
-            <span className="text-xl font-semibold tabular-nums">{data ? data.counts[FILTER_COUNT[f]] ?? 0 : "—"}</span>
+            <span className="truncate text-[12px] font-medium leading-tight text-muted-foreground">{t(`x543.f.${f || "all"}`)}</span>
+            <span className="text-sm font-semibold tabular-nums">{data ? data.counts[FILTER_COUNT[f]] ?? 0 : "—"}</span>
           </button>
         ))}
+      </div>
+
+      {/* CH-664: search by caller ID. */}
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("x664.search")}
+            aria-label={t("x664.search")}
+            inputMode="tel"
+            className="h-8 pl-8 pr-8 text-sm"
+          />
+          {search && (
+            <button
+              type="button"
+              aria-label={t("x664.clear")}
+              title={t("x664.clear")}
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground">{t("x664.hint")}</span>
       </div>
 
       {scope && (
