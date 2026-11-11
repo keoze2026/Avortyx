@@ -455,19 +455,19 @@ export function BuyerSummaryCard({
                           <button
                             type="button"
                             onClick={() => setPausing(r)}
-                            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
                           >
                             <Pause className="h-3 w-3" /> {t("x399.pause")}
                           </button>
                           <Link
                             href={`${ROUTES.buyers}/${r.buyer.id}?tab=settings`}
-                            className="rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                            className="whitespace-nowrap rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
                           >
                             {t("x399.edit")}
                           </Link>
                           <Link
                             href={`${ROUTES.buyers}/${r.buyer.id}`}
-                            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
                           >
                             {t("x399.callsLink")} <ArrowRight className="h-3 w-3" />
                           </Link>

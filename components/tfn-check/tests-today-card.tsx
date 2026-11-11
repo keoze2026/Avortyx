@@ -212,7 +212,7 @@ export function TestsTodayCard({
                         <Result status={n.lastStatus} />
                       </TableCell>
                       <TableCell className="whitespace-nowrap pr-5 text-right text-xs tabular-nums text-muted-foreground">
-                        {easternTime(n.lastAt)} EST
+                        {easternTime(n.lastAt)} {t("x663.est")}
                       </TableCell>
                     </TableRow>
                     {isOpen && (
@@ -222,7 +222,7 @@ export function TestsTodayCard({
                             {n.lastCheckedAt && (
                               <div className="text-[11px] text-muted-foreground">
                                 {t("x342.today.lastChecked")
-                                  .replace("{time}", `${easternTime(n.lastCheckedAt)} EST`)
+                                  .replace("{time}", `${easternTime(n.lastCheckedAt)} ${t("x663.est")}`)
                                   .replace("{count}", String(n.checks))}
                               </div>
                             )}
@@ -231,7 +231,7 @@ export function TestsTodayCard({
                             )}
                             {(byNumber[n.number] ?? []).map((row) => (
                               <div key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
-                                <span className="w-24 tabular-nums text-muted-foreground">{easternTime(row.createdAt)} EST</span>
+                                <span className="w-24 tabular-nums text-muted-foreground">{easternTime(row.createdAt)} {t("x663.est")}</span>
                                 <span className="w-28">
                                   <Result status={row.status} />
                                 </span>

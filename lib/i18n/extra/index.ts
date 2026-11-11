@@ -106,9 +106,10 @@ import { numberPools } from "./number-pools";
 import { numberPoolDesign } from "./number-pool-design";
 import { tfnEndToEnd } from "./tfn-end-to-end";
 import { expenses } from "./expenses";
+import { portalWords } from "./portal-words";
 import type { ExtraTranslations } from "./types";
 
-const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, activeBots, groupStatusFilter, buyerDelete, buyerCapEdit, campaignDestSearch, searchableSelect, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod, expenses, tfnToday, tfnCheckToday, tfnTestRunner, teamReport, tfnEndToEnd, serverUpdate, tfnNotReady, carrierWatch, numberLifetime, tfnTestPassed, destinationColumns, buyerCapWarning, dashboardCards, buyersCard, buyerDashboard, buyersPage, campaignPage, campaignGroupPage, publishersPage, sidebarDesign, serverMessagesUi, callSummaryDesign, carrierStatements, companyProfitPage, numberPools, numberPoolDesign, callRecording, groupBulkBill, voiceCheck, exportWords, aiAudit, aiReports, guideVideos, aiBreakdown, notificationsBox, groupTops, destinationsRefresh, callPanel];
+const AREAS: ExtraTranslations[] = [base, daily, activity, bulk, buyerAccess, routing, ivr, reports, marketplace, ownerCosts, buyerReport, automatedReports, activeBots, groupStatusFilter, buyerDelete, buyerCapEdit, campaignDestSearch, searchableSelect, risk, publisherBlocks, campaignNumbers, deletedTfns, blockedBy, routingCost, trafficUi, fillMissing, sweep1, sweep2, sweep5, sweep6, sweepY, missingKeys, acronyms, signIn, loginScreen, loginForm, lineSwitch, tfnCheck, repeatedAndMonth, reportWatch, routedBulk, hangUp, translateAll, gettingStarted, tfnWords, telegramConnect, tfnTestReport, everythingReports, everythingNetwork, everythingApp, everythingUi, campaignGroups, campaignDelete, attachUnassigned, profitPeriod, expenses, tfnToday, tfnCheckToday, tfnTestRunner, teamReport, tfnEndToEnd, serverUpdate, tfnNotReady, carrierWatch, numberLifetime, tfnTestPassed, destinationColumns, buyerCapWarning, dashboardCards, buyersCard, buyerDashboard, buyersPage, campaignPage, campaignGroupPage, publishersPage, sidebarDesign, serverMessagesUi, callSummaryDesign, carrierStatements, companyProfitPage, numberPools, numberPoolDesign, callRecording, groupBulkBill, voiceCheck, exportWords, aiAudit, aiReports, guideVideos, aiBreakdown, notificationsBox, groupTops, destinationsRefresh, callPanel, portalWords];
 
 export const EXTRA: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 for (const area of AREAS) {
@@ -125,7 +126,8 @@ for (const area of AREAS) {
 export const OVERRIDE: Record<LocaleId, Record<string, string>> = { en: {}, ru: {}, ja: {}, zh: {} };
 // CH-318: the "everything translated" files also correct texts the main
 // dictionaries hold in English (Email, White Label...), so they win too.
-for (const area of [acronyms, tfnWords, everythingReports, everythingNetwork, everythingApp, everythingUi]) {
+// CH-663: the last English words (portal-words) win too.
+for (const area of [acronyms, tfnWords, everythingReports, everythingNetwork, everythingApp, everythingUi, portalWords]) {
   for (const locale of ["ru", "ja", "zh"] as LocaleId[]) Object.assign(OVERRIDE[locale], area[locale]);
 }
 

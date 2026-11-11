@@ -234,7 +234,7 @@ export function TeamReportCard() {
                             if (v && v !== c.sendTime) void update(c, { sendTime: v });
                           }}
                         />
-                        <span className="text-[11px] text-muted-foreground">EST</span>
+                        <span className="text-[11px] text-muted-foreground">{t("x663.est")}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground" title={c.lastResult}>

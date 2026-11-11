@@ -1,0 +1,86 @@
+/**
+ * CH-663: the last English words in the portal, in the reader's language.
+ * Found by checking every text the portal shows against the four
+ * dictionaries (11 Nov). Brand names (Avortyx, Slack, Capitalist), file
+ * types (PDF, CSV, JSON, XML), example addresses and sample names stay as
+ * they are. Registered with the overrides, so it wins over a main dictionary
+ * that still holds the English word.
+ */
+import type { ExtraTranslations } from "./types";
+
+export const portalWords: ExtraTranslations = {
+  en: {
+    "x663.est": "EST",
+  },
+  ru: {
+    "x663.est": "по Нью-Йорку",
+    "settings.profileSection.telegram": "Телеграм",
+    "trafficUI.campaigns.settings.forward.conversion.webhook": "Вебхук",
+    "trafficUI.campaigns.settings.forward.conversion.events.webhook": "Вебхук",
+    "toolsUI.integrations.webhooks.title": "Вебхуки",
+    "trafficUI.campaigns.settings.enrichment.url": "Адрес",
+    "toolsUI.integrations.webhooks.dialog.urlLabel": "Адрес",
+    "trafficUI.campaigns.settings.cards.filter.or": "ИЛИ",
+    "trafficUI.routing.inspector.idLabel": "Номер:",
+    "toolsUI.insights.chat.title": "Помощник Avortyx",
+    "x6.scheduledReports.formatExcel": "Таблица",
+    "x6.scheduledReports.formatExcelCsv": "Таблица + CSV",
+    "tfnCheck.links.api": "Программный интерфейс",
+    "reportColumn.TTC": "Время до соединения",
+    "x434.line.voip": "Защита от IP-телефонии",
+    "login.email": "Эл. почта",
+    "settings.profileSection.email": "Эл. почта",
+    "settings.notificationsSection.email": "Эл. почта",
+    "workspaceUI.members.columnEmail": "Эл. почта",
+    "workspaceUI.invite.emailLabel": "Эл. почта",
+    "workspaceUI.editMember.emailLabel": "Эл. почта",
+    "workspaceUI.notifications.columnEmail": "Эл. почта",
+    "networkUI.common.email": "Эл. почта",
+    "networkUI.buyers.invite.email": "Эл. почта",
+    "y.ref.email": "Эл. почта",
+    "settings.notificationsSection.sms": "СМС",
+    "workspaceUI.notifications.columnSms": "СМС",
+    "settings.notificationsSection.push": "Уведомления на устройство",
+    "toolsUI.integrations.webhooks.dialog.namePlaceholder": "Обратный вызов CRM",
+    "x6.time.am": "дп",
+    "x6.time.pm": "пп",
+    "y.wl.title": "Белый лейбл",
+  },
+  ja: {
+    "x663.est": "米国東部時間",
+    "settings.profileSection.telegram": "テレグラム",
+    "trafficUI.campaigns.settings.forward.conversion.webhook": "ウェブフック",
+    "trafficUI.campaigns.settings.forward.conversion.events.webhook": "ウェブフック",
+    "toolsUI.integrations.webhooks.title": "ウェブフック",
+    "trafficUI.campaigns.settings.enrichment.url": "アドレス",
+    "toolsUI.integrations.webhooks.dialog.urlLabel": "アドレス",
+    "trafficUI.campaigns.settings.cards.filter.or": "または",
+    "trafficUI.routing.inspector.idLabel": "番号:",
+    "toolsUI.insights.chat.title": "Avortyx アシスタント",
+    "x6.scheduledReports.formatExcel": "スプレッドシート",
+    "x6.scheduledReports.formatExcelCsv": "スプレッドシート + CSV",
+    "tfnCheck.links.api": "連携インターフェース",
+    "reportColumn.TTC": "接続までの時間",
+    "x434.line.voip": "IP電話シールド",
+    "settings.notificationsSection.sms": "ショートメッセージ",
+    "workspaceUI.notifications.columnSms": "ショートメッセージ",
+    "trafficUI.common.msSuffix": "ミリ秒",
+  },
+  zh: {
+    "x663.est": "美国东部时间",
+    "settings.profileSection.telegram": "电报",
+    "trafficUI.campaigns.settings.forward.conversion.webhook": "网络回调",
+    "trafficUI.campaigns.settings.forward.conversion.events.webhook": "网络回调",
+    "toolsUI.integrations.webhooks.title": "网络回调",
+    "trafficUI.campaigns.settings.enrichment.url": "网址",
+    "toolsUI.integrations.webhooks.dialog.urlLabel": "网址",
+    "trafficUI.campaigns.settings.cards.filter.or": "或",
+    "trafficUI.routing.inspector.idLabel": "编号：",
+    "toolsUI.insights.chat.title": "Avortyx 智能助手",
+    "x6.scheduledReports.formatExcel": "电子表格",
+    "x6.scheduledReports.formatExcelCsv": "电子表格 + CSV",
+    "tfnCheck.links.api": "接口",
+    "reportColumn.TTC": "接通用时",
+    "x434.line.voip": "网络电话防护",
+  },
+};
