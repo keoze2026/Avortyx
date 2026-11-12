@@ -3425,3 +3425,9 @@ help with."
 
 `lib/api/services/support.service.ts`, `components/marketing/chat-widget.tsx`,
 `components/app-shell/support-chat.tsx`, `lib/i18n/extra/support-greetings.ts` (new).
+
+## CH-669 (follow-up, 12 Nov) - No pop-up notice; the answer is in the chat
+
+The backend now answers a held greeting in the chat itself, from the team, so
+the short pop-up notice (easy to miss) and the website chat's extra line are
+removed - no answer twice.
