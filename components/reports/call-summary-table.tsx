@@ -1150,9 +1150,9 @@ function sortValue(r: SummaryRow, key: SummarySortKey): number | string {
 }
 
 export function CallSummaryTable({
-  calls,
+  calls: allCalls,
   activeStatusFilter = null,
-  onStatusFilterChange,
+  onStatusFilterChange: onStatusFilterChangeProp,
   liveNow,
   onScopeChange,
   summaries,
@@ -1179,6 +1179,24 @@ export function CallSummaryTable({
     [isBuyerLogin, isPublisherLogin],
   );
   const [tab, setTab] = React.useState<GroupKey>(isBuyerLogin ? "destination" : "campaign");
+  // CH-673 (12 Nov: "if someone clicked on Not Connected, only the 5 Not
+  // Connected should come, so they can check the 5 numbers' carrier or other
+  // details"): the tab a total was clicked on keeps its full figures (27 Oct,
+  // a total never shrinks to its own click); every OTHER tab then counts only
+  // the clicked calls - e.g. Caller Profile shows those 5 calls' carriers.
+  const [statusTab, setStatusTab] = React.useState<GroupKey | null>(null);
+  const onStatusFilterChange = React.useMemo(
+    () =>
+      onStatusFilterChangeProp &&
+      ((next: CallStatusFilter | null) => {
+        setStatusTab(next ? tab : null);
+        onStatusFilterChangeProp(next);
+      }),
+    [onStatusFilterChangeProp, tab],
+  );
+  React.useEffect(() => {
+    if (!activeStatusFilter) setStatusTab(null);
+  }, [activeStatusFilter]);
   React.useEffect(() => {
     if (!isBuyerLogin) return;
     const allowed = tabs.flatMap((td) => (td.sub ? td.sub.map((s) => s.id) : [td.id]));
@@ -1198,7 +1216,7 @@ export function CallSummaryTable({
   const campaignsByPublisher = React.useMemo(() => {
     const byId = new Map<string, Set<string>>();
     const byName = new Map<string, Set<string>>();
-    for (const c of calls) {
+    for (const c of allCalls) {
       const camp = (c.campaignName ?? "").trim();
       if (!camp) continue;
       const add = (m: Map<string, Set<string>>, k: string) => {
@@ -1212,7 +1230,7 @@ export function CallSummaryTable({
     const sorted = (set?: Set<string>) =>
       set ? [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
     return (key: string, label: string) => sorted(byId.get(key) ?? byName.get(label.trim().toLowerCase()));
-  }, [calls]);
+  }, [allCalls]);
   const copyLabel = (el: HTMLElement, label: string) => {
     const sel = window.getSelection();
     if (sel) {
@@ -1295,8 +1313,19 @@ export function CallSummaryTable({
   // buyer's name; the number alone only for a call with no buyer).
   const destinationNames = React.useMemo(() => destinationNameMap(destinations), [destinations]);
 
+  // CH-673: on another tab than the one clicked, only the clicked calls - the
+  // same calls the clicked total counted (its tab's calls, of that status).
+  const narrowTo = activeStatusFilter && statusTab && statusTab !== tab ? statusTab : null;
   const groupedRows = React.useMemo(() => {
-    const summary = summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
+    const calls = narrowTo && activeStatusFilter
+      ? allCalls.filter(
+          (c) =>
+            Boolean(deriveGroup(c, narrowTo, timeZone, destinationNames)?.key) &&
+            matchesCallStatusFilter(c, activeStatusFilter),
+        )
+      : allCalls;
+    // The whole-range aggregates know nothing of a clicked total.
+    const summary = narrowTo ? undefined : summaries?.[SUMMARY_ENTITY_FOR_TAB[tab] ?? "none"];
     // CH-377 (Sir, 29 Oct: "Why it's showing Not forwarded, remove this"): a
     // buyer's Destination tab lists only its own TFNs. A call that was never
     // sent to one of them is not the buyer's; a call that rang the buyer's TFN
@@ -1331,7 +1360,7 @@ export function CallSummaryTable({
       }
     }
     return grouped;
-  }, [calls, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive, isBuyerLogin, drill]);
+  }, [allCalls, narrowTo, activeStatusFilter, tab, campaignsById, destinations, destinationNames, liveNow, timeZone, summaries, showLive, isBuyerLogin, drill]);
 
   // Sort the full set first, then paginate. Totals + pagination both read
   // from the sorted set so the order is stable across pages.
@@ -1397,7 +1426,7 @@ export function CallSummaryTable({
   // Reset to page 0 whenever the result set, page size, or sort changes.
   React.useEffect(() => {
     setPage(0);
-  }, [tab, pageSize, calls.length, sortKey, sortDir]);
+  }, [tab, pageSize, allCalls.length, sortKey, sortDir]);
 
   /** Click a header — toggle direction if already active, else activate. */
   const requestSort = (key: SummarySortKey) => {

@@ -3431,3 +3431,19 @@ help with."
 The backend now answers a held greeting in the chat itself, from the team, so
 the short pop-up notice (easy to miss) and the website chat's extra line are
 removed - no answer twice.
+
+## CH-673 - A clicked total narrows the other summary tabs to those calls
+
+12 Nov: "If someone clicked on Not Connected, only the 5 Not Connected should
+come, so in case they want to check the 5 numbers' carrier or other details
+they can." The Call Log, chart and Call Performance already narrowed; the
+Call Summary tabs kept every call.
+
+- Click a total (Not Connected, Connected, Qualified, Converted, Repeated, No
+  Voice, Total, Live) on a tab: that tab keeps its full figures (27 Oct, a
+  total never shrinks to its own click); every OTHER tab - Caller Profile
+  (carrier), Caller Identity, Dialed, Publisher ... - counts only the clicked
+  calls (that tab's calls of that status, e.g. the 5).
+- Reset Filter, or clicking the total again, brings all tabs back.
+
+`components/reports/call-summary-table.tsx`. Frontend only.
