@@ -23,7 +23,7 @@ export const aiBreakdown: ExtraTranslations = {
     "x650.desc": "Calls the AI checked on {date} · No Voice % = No Voice calls ÷ calls checked · highest first",
     "x650.live": "AI Call Inspector Live · {date} · EST",
     "x656.seconds": "{n}s",
-    "x655.callLimit": "Live calls at once (limit)",
+    "x655.callLimit": "Live Calls at Once (Limit)",
     "x655.callLimitHint": "The most calls this account may have live at the same time. 0 = no limit. Calls over it are refused, so this account can never affect ours.",
     "x650.status": "Status",
     "x650.status.send": "Send evidence",
