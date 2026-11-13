@@ -5,6 +5,8 @@ import { AuthGuard } from "@/components/app-shell/auth-guard";
 import { DocumentTitle } from "@/components/app-shell/document-title";
 import { NotificationRuntime } from "@/components/app-shell/notification-runtime";
 import { OnboardingGate } from "@/components/app-shell/onboarding-gate";
+import { OwnerMessageBar } from "@/components/app-shell/owner-message-bar";
+import { OwnerViewBanner } from "@/components/app-shell/owner-view-banner";
 import { AppSidebar } from "@/components/app-shell/sidebar-nav";
 import { StoreHydrator } from "@/components/app-shell/store-hydrator";
 import { SupportChat } from "@/components/app-shell/support-chat";
@@ -36,7 +38,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <SidebarProvider className="h-svh overflow-hidden">
           <AppSidebar />
           <SidebarInset className="app-canvas !bg-transparent">
+            {/* CH-675: the owner's read-only view of this portal, and messages
+                from the platform owner - each shows only when there is one. */}
+            <OwnerViewBanner />
             <Topbar />
+            <OwnerMessageBar />
             {/* CH-394: the server-update banner (CH-355) is never shown in the
                 portal (Sir, 29 Oct). Restart status is for the dev team only. */}
             <DocumentTitle />

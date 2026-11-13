@@ -1,40 +1,43 @@
 "use client";
 
 /**
- * Owner — M1: Organizations.
+ * Owner — Organizations.
  *
- * The system owner's client list: every workspace with its balance, rates,
- * headcount and today's traffic, plus the four actions that matter — edit
- * rates & fees, credit, debit, suspend/activate. Renders only for
- * is_superuser; everyone else is turned away in plain words even if they
- * type the URL. Backend: /api/owner/organizations (CH-113).
+ * The system owner's client list: every workspace with its balance, how long
+ * the balance lasts (Runway), rates, headcount, today's traffic and whether
+ * it needs attention (Health). A row opens the account page
+ * (/owner/{id}: Overview, Traffic, Numbers, Caller & TFN lookup, Users,
+ * Billing). The actions stay on every row: edit rates & fees, adjust the
+ * balance, message the client, suspend / activate, delete.
+ *
+ * CH-675 (Sir, 13 Nov: "Org page - change it to the updated version with
+ * more details"). Renders only for is_superuser; everyone else is turned
+ * away in plain words even if they type the URL. Backend:
+ * /api/owner/organizations (CH-113, CH-675).
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { Crown, MoreHorizontal, Plus, Search, ShieldX, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, MoreHorizontal, Plus, Search, ShieldX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeader } from "@/components/shared/page-header";
+import { CreateOrgDialog, errText, useOrgActions } from "@/components/owner/org-actions";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  HealthMark,
+  MainBadge,
+  OrgTile,
+  StatTile,
+  StatusMark,
+  money,
+  rateText,
+  runwayIsShort,
+  runwayText,
+  type OrgRow,
+} from "@/components/owner/org-format";
+import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,14 +46,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -60,32 +55,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/hooks/use-translation";
-import { http, ApiError } from "@/lib/api/http";
-import { formatLocalDate } from "@/lib/format";
-import { tFor } from "@/lib/i18n";
-import { LocalName, useLocalName } from "@/lib/i18n/local-name";
+import { http } from "@/lib/api/http";
+import { LocalName } from "@/lib/i18n/local-name";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useLocaleStore } from "@/lib/store/locale-store";
-
-// The http client turns every response key into camelCase, so the row is typed
-// the way it arrives. It was typed snake_case before, which read every field
-// as undefined: every organization showed Suspended, and the rate, markup and
-// today's figures were blank.
-interface OrgRow {
-  id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-  users: number;
-  balance: string | null;
-  perMinuteRate: string | null;
-  markupPercent: string | null;
-  billingStatus: string | null;
-  callsToday: number;
-  revenueToday: string;
-  /** CH-665: High / Low Risk - which stock numbers the account buys ("" = not set). */
-  tfnRisk?: string;
-}
+import { cn } from "@/lib/utils";
 
 /** CH-665: the stock bucket, per type and carrier. */
 interface StockRow {
@@ -95,80 +68,21 @@ interface StockRow {
   sold: number;
 }
 
-/**
- * CH-665 (Sir, 11 Nov): the prices an account's type fills in, one time,
- * until changed - the same as the backend's CUSTOMER_TFN_PRICES. Picking a
- * type puts them in the form; they can still be edited before saving.
- */
-const TYPE_PRICES: Record<"high" | "low", { tfn_purchase_fee: string; per_minute_rate: string }> = {
-  high: { tfn_purchase_fee: "20.00", per_minute_rate: "0.0400" },
-  low: { tfn_purchase_fee: "10.00", per_minute_rate: "0.0350" },
-};
+type Filter = "all" | "attention" | "today";
 
-/** What deleting an organization would remove, and whether it is allowed. */
-interface DeletePreview {
-  id: string;
-  name: string;
-  slug: string;
-  blocked: string | null;
-  users: number;
-  phoneNumbers: number;
-  campaigns: number;
-  calls: number;
-  lastCall: string | null;
-  balance: string | null;
-}
-
-const FEE_FIELDS = [
-  "per_minute_rate",
-  "markup_percent",
-  "recording_fee_per_minute",
-  "voip_shield_fee_per_call",
-  "rejected_call_fee",
-  "tfn_purchase_fee",
-  "monthly_portal_fee",
-  "credit_limit",
-] as const;
-type FeeField = (typeof FEE_FIELDS)[number];
-
-/** per_minute_rate -> perMinuteRate, to read a response the client camelCased. */
-const camel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
-
-function errText(e: unknown): string {
-  if (e instanceof ApiError) return e.message;
-  return tFor(useLocaleStore.getState().locale, "x1.carrierCosts.genericError");
-}
+const needsAttention = (o: OrgRow) => (o.health ?? "ok") !== "ok";
 
 export default function OwnerPage() {
   const { t } = useTranslation();
-  const localName = useLocalName();
+  const router = useRouter();
   const isSuperuser = useAuthStore((s) => s.user?.isSuperuser === true);
 
   const [rows, setRows] = useState<OrgRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  // Dialog state: which org (null = closed), and the form values.
+  const [filter, setFilter] = useState<Filter>("all");
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", admin_email: "", per_minute_rate: "" });
-  const [feesFor, setFeesFor] = useState<OrgRow | null>(null);
-  const [feeForm, setFeeForm] = useState<Record<FeeField, string>>(
-    Object.fromEntries(FEE_FIELDS.map((f) => [f, ""])) as Record<FeeField, string>,
-  );
-  // CH-655 (customer accounts point 6): the account's limit on live calls
-  // (0 = no limit). Our own account is never limited, so it shows no field.
-  const [callLimit, setCallLimit] = useState("");
-  const [limitIsOurs, setLimitIsOurs] = useState(false);
-  // CH-665: the account's type ("none" = not set; Select items cannot be "").
-  const [tfnRisk, setTfnRisk] = useState("none");
   const [stock, setStock] = useState<StockRow[]>([]);
-  const [moneyFor, setMoneyFor] = useState<{ org: OrgRow; direction: "credit" | "debit" } | null>(null);
-  const [moneyForm, setMoneyForm] = useState({ amount: "", note: "" });
-  const [suspendFor, setSuspendFor] = useState<OrgRow | null>(null);
-  const [deleteFor, setDeleteFor] = useState<OrgRow | null>(null);
-  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(null);
-  const [deleteTyped, setDeleteTyped] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (q: string) => {
     try {
@@ -187,11 +101,34 @@ export default function OwnerPage() {
     }
   }, []);
 
+  const reload = useCallback(() => load(search), [load, search]);
+  const actions = useOrgActions(reload);
+
   useEffect(() => {
     if (!isSuperuser) return;
     const h = setTimeout(() => load(search), search ? 250 : 0);
     return () => clearTimeout(h);
   }, [isSuperuser, search, load]);
+
+  const summary = useMemo(() => {
+    const clients = rows.filter((o) => !o.isMainAccount);
+    const withTraffic = rows.filter((o) => o.callsToday > 0);
+    const attention = rows.filter(needsAttention);
+    const ratesWithRevenue = Array.from(
+      new Set(rows.filter((o) => Number(o.revenueToday) > 0 && o.perMinuteRate).map((o) => Number(o.perMinuteRate))),
+    );
+    return {
+      total: rows.length,
+      active: rows.filter((o) => o.isActive).length,
+      clients: clients.length,
+      balances: rows.reduce((n, o) => n + (Number(o.balance) || 0), 0),
+      calls: rows.reduce((n, o) => n + (o.callsToday || 0), 0),
+      withTraffic: withTraffic.length,
+      revenue: rows.reduce((n, o) => n + (Number(o.revenueToday) || 0), 0),
+      oneRate: ratesWithRevenue.length === 1 ? ratesWithRevenue[0] : null,
+      attention,
+    };
+  }, [rows]);
 
   if (!isSuperuser) {
     return (
@@ -203,164 +140,161 @@ export default function OwnerPage() {
     );
   }
 
-  const money = (v: string | null) => (v == null ? "—" : `$${v}`);
-
-  async function submitCreate() {
-    setBusy(true);
-    try {
-      await http.post(`/api/owner/organizations`, {
-        body: {
-          name: createForm.name,
-          admin_email: createForm.admin_email || null,
-          per_minute_rate: createForm.per_minute_rate || null,
-        },
-      });
-      toast.success(t("owner.orgs.created"));
-      setCreateOpen(false);
-      setCreateForm({ name: "", admin_email: "", per_minute_rate: "" });
-      load(search);
-    } catch (e) {
-      toast.error(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openFees(org: OrgRow) {
-    setFeesFor(org);
-    try {
-      const d = await http.get<{
-        billing: Record<string, string>;
-        maxConcurrentCalls?: number;
-        isMainAccount?: boolean;
-        tfnRisk?: string;
-      }>(`/api/owner/organizations/${org.id}`);
-      setCallLimit(String(d.maxConcurrentCalls ?? 0));
-      setLimitIsOurs(d.isMainAccount === true);
-      setTfnRisk(d.tfnRisk || "none");
-      // The billing keys arrive camelCased; read them that way or the form opens blank.
-      setFeeForm(
-        Object.fromEntries(FEE_FIELDS.map((f) => [f, d.billing[camel(f)] ?? ""])) as Record<FeeField, string>,
-      );
-    } catch (e) {
-      toast.error(errText(e));
-      setFeesFor(null);
-    }
-  }
-
-  async function submitFees() {
-    if (!feesFor) return;
-    setBusy(true);
-    try {
-      await http.patch(`/api/owner/organizations/${feesFor.id}`, {
-        body: limitIsOurs
-          ? feeForm
-          : {
-              ...feeForm,
-              max_concurrent_calls: callLimit.trim() || "0",
-              tfn_risk: tfnRisk === "none" ? "" : tfnRisk,
-            },
-      });
-      toast.success(t("owner.orgs.saved"));
-      setFeesFor(null);
-      load(search);
-    } catch (e) {
-      toast.error(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitMoney() {
-    if (!moneyFor) return;
-    setBusy(true);
-    try {
-      const r = await http.post<{ balance: string }>(
-        `/api/owner/organizations/${moneyFor.org.id}/${moneyFor.direction}`,
-        { body: { amount: moneyForm.amount, note: moneyForm.note } },
-      );
-      toast.success(`${t("owner.orgs.moved")} — $${r.balance}`);
-      setMoneyFor(null);
-      setMoneyForm({ amount: "", note: "" });
-      load(search);
-    } catch (e) {
-      toast.error(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitSuspend() {
-    if (!suspendFor) return;
-    setBusy(true);
-    try {
-      await http.post(
-        `/api/owner/organizations/${suspendFor.id}/${suspendFor.isActive ? "suspend" : "activate"}`,
-        { body: {} },
-      );
-      toast.success(t("owner.orgs.saved"));
-      setSuspendFor(null);
-      load(search);
-    } catch (e) {
-      toast.error(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openDelete(org: OrgRow) {
-    setDeleteFor(org);
-    setDeletePreview(null);
-    setDeleteTyped("");
-    try {
-      setDeletePreview(await http.get<DeletePreview>(`/api/owner/organizations/${org.id}/delete-preview`));
-    } catch (e) {
-      toast.error(errText(e));
-      setDeleteFor(null);
-    }
-  }
-
-  async function submitDelete() {
-    if (!deleteFor) return;
-    setBusy(true);
-    try {
-      await http.delete(
-        `/api/owner/organizations/${deleteFor.id}?confirm=${encodeURIComponent(deleteTyped.trim())}`,
-      );
-      toast.success(t("owner.orgs.deleted"));
-      setDeleteFor(null);
-      setDeletePreview(null);
-      load(search);
-    } catch (e) {
-      toast.error(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function pickType(v: string) {
-    setTfnRisk(v);
-    if (v === "high" || v === "low") setFeeForm((f) => ({ ...f, ...TYPE_PRICES[v] }));
-  }
-
   const stockTotals = (["high", "low"] as const).map((risk) => ({
     risk,
     forSale: stock.filter((s) => s.risk === risk).reduce((n, s) => n + s.forSale, 0),
     sold: stock.filter((s) => s.risk === risk).reduce((n, s) => n + s.sold, 0),
   }));
 
-  const canDelete =
-    deleteFor != null &&
-    deletePreview != null &&
-    !deletePreview.blocked &&
-    deleteTyped.trim() === deleteFor.name;
+  const shown = rows.filter((o) =>
+    filter === "attention" ? needsAttention(o) : filter === "today" ? o.callsToday > 0 : true,
+  );
+  const ours = shown.filter((o) => o.isMainAccount);
+  const clients = shown.filter((o) => !o.isMainAccount);
+
+  const fill = (key: string, n: number | string) => t(key).replace("{count}", String(n));
+
+  const renderRow = (o: OrgRow) => (
+    <TableRow
+      key={o.id}
+      className={cn("cursor-pointer", o.isActive ? "" : "opacity-60")}
+      onClick={() => router.push(`/owner/${o.id}`)}
+    >
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <OrgTile name={o.name} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <LocalName name={o.name} className="truncate font-medium" />
+              {o.isMainAccount && <MainBadge t={t} />}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {o.slug}
+              {(o.tfnRisk === "high" || o.tfnRisk === "low") && (
+                <Badge variant={o.tfnRisk === "high" ? "destructive" : "secondary"} className="ml-2 px-1.5 py-0 text-[10px]">
+                  {t(o.tfnRisk === "high" ? "x665.type.high" : "x665.type.low")}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <StatusMark active={o.isActive} t={t} />
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{money(o.balance)}</TableCell>
+      <TableCell className={cn("text-right tabular-nums", runwayIsShort(o) && "font-medium text-red-600 dark:text-red-400")}>
+        {runwayText(o.runwayMinutes)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{rateText(o.perMinuteRate)}</TableCell>
+      <TableCell className="text-right tabular-nums">
+        {o.markupPercent == null ? "—" : `${Number(o.markupPercent)}%`}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{o.users}</TableCell>
+      <TableCell className="text-right tabular-nums">{o.callsToday}</TableCell>
+      <TableCell className="text-right tabular-nums">{money(o.revenueToday)}</TableCell>
+      <TableCell>
+        <HealthMark health={o.health} t={t} />
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()} className="w-[72px]">
+        <div className="flex items-center justify-end gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("x675.actions")}>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => actions.openFees(o)}>{t("owner.orgs.editRates")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => actions.openMoney(o, "credit")}>{t("owner.orgs.credit")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => actions.openMoney(o, "debit")}>{t("owner.orgs.debit")}</DropdownMenuItem>
+              {!o.isMainAccount && (
+                <DropdownMenuItem onClick={() => actions.openMessage(o)}>{t("x675.message.title")}</DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                className={o.isActive ? "text-destructive" : ""}
+                onClick={() => actions.openSuspend(o)}
+              >
+                {o.isActive ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive" onClick={() => actions.openDelete(o)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("owner.orgs.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ChevronRight aria-hidden className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
+  const section = (label: string) => (
+    <TableRow className="hover:bg-transparent">
+      <TableCell colSpan={11} className="bg-muted/40 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </TableCell>
+    </TableRow>
+  );
+
+  const chip = (id: Filter, label: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => setFilter(id)}
+      className={cn(
+        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        filter === id ? "border-accent bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-6">
-      <PageHeader title={t("owner.orgs.title")} description={t("owner.description")} />
+    <div className="mx-auto w-full max-w-[1280px] space-y-6">
+      <PageHeader
+        title={t("owner.orgs.title")}
+        description={t("x675.list.subtitle")}
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t("owner.orgs.newOrg")}
+          </Button>
+        }
+        className="pb-0"
+      />
 
-      <div className="flex items-center gap-3">
-        <div className="relative max-w-sm flex-1">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <StatTile
+          label={t("x675.card.organizations")}
+          value={summary.total}
+          sub={`${fill("x675.card.activeCount", summary.active)} · ${fill("x675.card.clientsCount", summary.clients)}`}
+        />
+        <StatTile label={t("x675.card.balances")} value={money(summary.balances)} sub={t("x675.card.balancesSub")} />
+        <StatTile
+          label={t("owner.orgs.callsToday")}
+          value={summary.calls}
+          sub={fill("x675.card.withTraffic", summary.withTraffic)}
+        />
+        <StatTile
+          label={t("owner.orgs.revenueToday")}
+          value={money(summary.revenue)}
+          sub={summary.oneRate != null ? fill("x675.card.atRate", rateText(String(summary.oneRate))) : "—"}
+        />
+        <StatTile
+          label={t("x675.card.attention")}
+          value={summary.attention.length}
+          sub={summary.attention.length ? summary.attention.map((o) => o.name).join(" · ") : t("x675.card.allGood")}
+          tone={summary.attention.length ? "warn" : undefined}
+          onClick={() => setFilter(filter === "attention" ? "all" : "attention")}
+          active={filter === "attention"}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-sm flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
@@ -369,10 +303,11 @@ export default function OwnerPage() {
             className="pl-8"
           />
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          {t("owner.orgs.newOrg")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {chip("all", `${t("x675.filter.all")} ${rows.length}`)}
+          {chip("attention", `${t("x675.card.attention")} ${summary.attention.length}`)}
+          {chip("today", `${t("x675.filter.activeToday")} ${summary.withTraffic}`)}
+        </div>
       </div>
 
       {/* CH-665: the stock customers buy from, per type. */}
@@ -399,80 +334,27 @@ export default function OwnerPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("owner.orgs.name")}</TableHead>
+                <TableHead>{t("x675.col.organization")}</TableHead>
                 <TableHead>{t("owner.orgs.status")}</TableHead>
                 <TableHead className="text-right">{t("owner.orgs.balance")}</TableHead>
+                <TableHead className="text-right">{t("x675.col.runway")}</TableHead>
                 <TableHead className="text-right">{t("owner.orgs.rate")}</TableHead>
                 <TableHead className="text-right">{t("owner.orgs.markup")}</TableHead>
                 <TableHead className="text-right">{t("owner.orgs.users")}</TableHead>
                 <TableHead className="text-right">{t("owner.orgs.callsToday")}</TableHead>
                 <TableHead className="text-right">{t("owner.orgs.revenueToday")}</TableHead>
-                <TableHead className="w-10" />
+                <TableHead>{t("x675.col.health")}</TableHead>
+                <TableHead className="w-[72px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((o) => (
-                <TableRow key={o.id} className={o.isActive ? "" : "opacity-60"}>
-                  <TableCell>
-                    <LocalName name={o.name} className="block font-medium" />
-                    <div className="text-xs text-muted-foreground">
-                      {o.slug}
-                      {(o.tfnRisk === "high" || o.tfnRisk === "low") && (
-                        <Badge variant={o.tfnRisk === "high" ? "destructive" : "secondary"} className="ml-2 px-1.5 py-0 text-[10px]">
-                          {t(o.tfnRisk === "high" ? "x665.type.high" : "x665.type.low")}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={o.isActive ? "secondary" : "destructive"}>
-                      {o.isActive ? t("owner.orgs.active") : t("owner.orgs.suspended")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{money(o.balance)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{money(o.perMinuteRate)}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {o.markupPercent == null ? "—" : `${o.markupPercent}%`}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{o.users}</TableCell>
-                  <TableCell className="text-right tabular-nums">{o.callsToday}</TableCell>
-                  <TableCell className="text-right tabular-nums">${o.revenueToday}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openFees(o)}>
-                          {t("owner.orgs.editRates")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setMoneyFor({ org: o, direction: "credit" })}>
-                          {t("owner.orgs.credit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setMoneyFor({ org: o, direction: "debit" })}>
-                          {t("owner.orgs.debit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className={o.isActive ? "text-destructive" : ""}
-                          onClick={() => setSuspendFor(o)}
-                        >
-                          {o.isActive ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => openDelete(o)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t("owner.orgs.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!loading && rows.length === 0 && (
+              {ours.length > 0 && section(t("x675.section.yours"))}
+              {ours.map(renderRow)}
+              {clients.length > 0 && section(`${t("x675.section.clients")} ${clients.length}`)}
+              {clients.map(renderRow)}
+              {!loading && shown.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
                     {t("owner.orgs.empty")}
                   </TableCell>
                 </TableRow>
@@ -482,217 +364,8 @@ export default function OwnerPage() {
         </CardContent>
       </Card>
 
-      {/* Create */}
-      <Dialog open={createOpen} onOpenChange={(v) => !busy && setCreateOpen(v)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Crown className="h-4 w-4" /> {t("owner.orgs.newOrg")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>{t("owner.orgs.orgName")}</Label>
-              <Input
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("owner.orgs.adminEmail")}</Label>
-              <Input
-                type="email"
-                value={createForm.admin_email}
-                onChange={(e) => setCreateForm({ ...createForm, admin_email: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("owner.orgs.fees.per_minute_rate")}</Label>
-              <Input
-                inputMode="decimal"
-                placeholder="0.4500"
-                value={createForm.per_minute_rate}
-                onChange={(e) => setCreateForm({ ...createForm, per_minute_rate: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button disabled={busy || !createForm.name.trim()} onClick={submitCreate}>
-              {t("owner.orgs.newOrg")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Rates & fees */}
-      <Dialog open={feesFor != null} onOpenChange={(v) => !busy && !v && setFeesFor(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {t("owner.orgs.editRates")} — {localName(feesFor?.name)}
-            </DialogTitle>
-          </DialogHeader>
-          {!limitIsOurs && (
-            <div className="space-y-1.5 border-b pb-3">
-              <Label className="text-xs">{t("x665.owner.type")}</Label>
-              <Select value={tfnRisk} onValueChange={pickType}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("x665.type.none")}</SelectItem>
-                  <SelectItem value="high">{t("x665.type.high")}</SelectItem>
-                  <SelectItem value="low">{t("x665.type.low")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">{t("x665.owner.typeHint")}</p>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            {FEE_FIELDS.map((f) => (
-              <div key={f} className="space-y-1.5">
-                <Label className="text-xs">{t(`owner.orgs.fees.${f}`)}</Label>
-                <Input
-                  inputMode="decimal"
-                  value={feeForm[f]}
-                  onChange={(e) => setFeeForm({ ...feeForm, [f]: e.target.value })}
-                />
-              </div>
-            ))}
-          </div>
-          {!limitIsOurs && (
-            <div className="space-y-1.5 border-t pt-3">
-              <Label className="text-xs">{t("x655.callLimit")}</Label>
-              <Input
-                inputMode="numeric"
-                value={callLimit}
-                onChange={(e) => setCallLimit(e.target.value.replace(/[^0-9]/g, ""))}
-              />
-              <p className="text-xs text-muted-foreground">{t("x655.callLimitHint")}</p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button disabled={busy} onClick={submitFees}>
-              {t("owner.orgs.saved")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Credit / debit */}
-      <Dialog open={moneyFor != null} onOpenChange={(v) => !busy && !v && setMoneyFor(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {moneyFor?.direction === "credit" ? t("owner.orgs.credit") : t("owner.orgs.debit")} —{" "}
-              {localName(moneyFor?.org.name)}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>{t("owner.orgs.amount")}</Label>
-              <Input
-                inputMode="decimal"
-                placeholder="25.00"
-                value={moneyForm.amount}
-                onChange={(e) => setMoneyForm({ ...moneyForm, amount: e.target.value })}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("owner.orgs.note")}</Label>
-              <Input
-                value={moneyForm.note}
-                onChange={(e) => setMoneyForm({ ...moneyForm, note: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button disabled={busy || !moneyForm.amount.trim()} onClick={submitMoney}>
-              {moneyFor?.direction === "credit" ? t("owner.orgs.credit") : t("owner.orgs.debit")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Suspend / activate */}
-      <AlertDialog open={suspendFor != null} onOpenChange={(v) => !busy && !v && setSuspendFor(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {suspendFor?.isActive
-                ? t("owner.orgs.suspendTitle")
-                : `${t("owner.orgs.activate")} — ${localName(suspendFor?.name)}`}
-            </AlertDialogTitle>
-            {suspendFor?.isActive && (
-              <AlertDialogDescription>{t("owner.orgs.suspendBody")}</AlertDialogDescription>
-            )}
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>{t("y.common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction disabled={busy} onClick={submitSuspend}>
-              {suspendFor?.isActive ? t("owner.orgs.suspend") : t("owner.orgs.activate")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete: permanent, so it shows what goes and asks for the name back */}
-      <Dialog open={deleteFor != null} onOpenChange={(v) => !busy && !v && setDeleteFor(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-4 w-4" /> {t("owner.orgs.deleteTitle")} — {localName(deleteFor?.name)}
-            </DialogTitle>
-          </DialogHeader>
-          {!deletePreview ? (
-            <p className="text-sm text-muted-foreground">…</p>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{t("owner.orgs.deleteBody")}</p>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border p-3 text-sm">
-                <dt className="text-muted-foreground">{t("owner.orgs.users")}</dt>
-                <dd className="text-right tabular-nums">{deletePreview.users}</dd>
-                <dt className="text-muted-foreground">{t("owner.orgs.numbers")}</dt>
-                <dd className="text-right tabular-nums">{deletePreview.phoneNumbers}</dd>
-                <dt className="text-muted-foreground">{t("owner.orgs.campaigns")}</dt>
-                <dd className="text-right tabular-nums">{deletePreview.campaigns}</dd>
-                <dt className="text-muted-foreground">{t("owner.orgs.calls")}</dt>
-                <dd className="text-right tabular-nums">{deletePreview.calls}</dd>
-                <dt className="text-muted-foreground">{t("owner.orgs.lastCall")}</dt>
-                <dd className="text-right tabular-nums">
-                  {deletePreview.lastCall ? formatLocalDate(deletePreview.lastCall) : "—"}
-                </dd>
-                <dt className="text-muted-foreground">{t("owner.orgs.balance")}</dt>
-                <dd className="text-right tabular-nums">{money(deletePreview.balance)}</dd>
-              </dl>
-              {deletePreview.blocked ? (
-                <p className="text-sm font-medium text-destructive">{deletePreview.blocked}</p>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label>
-                    {t("owner.orgs.deleteType")} <span className="font-semibold">{deleteFor?.name}</span>
-                  </Label>
-                  <Input
-                    value={deleteTyped}
-                    onChange={(e) => setDeleteTyped(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" disabled={busy} onClick={() => setDeleteFor(null)}>
-              {t("y.common.cancel")}
-            </Button>
-            <Button variant="destructive" disabled={busy || !canDelete} onClick={submitDelete}>
-              {t("owner.orgs.delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateOrgDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={reload} />
+      {actions.dialogs}
     </div>
   );
 }

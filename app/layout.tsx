@@ -99,6 +99,17 @@ const ORGANIZATION_JSON_LD = JSON.stringify([
   { "@context": "https://schema.org", "@type": "WebSite", name: BRAND.name, url: SITE_URL },
 ]);
 
+/**
+ * CH-675: the platform owner's read-only view of a client portal (Open their
+ * portal). Runs before any other script. /owner-view#t=<pass>&a=<account>&u=<ends>
+ * starts it: the pass is kept in THIS tab's sessionStorage, and for this tab
+ * localStorage is pointed at sessionStorage - so the client's sign-in, saved
+ * settings and caches never touch the owner's own sign-in in the other tabs,
+ * and closing the tab ends the view. Ends by itself at <ends>. Changes are
+ * refused by the server (backend accounts/owner_view.py), not here.
+ */
+const ownerViewInitScript = `(function(){try{var K='avortyx.ownerView',s=window.sessionStorage;if(location.pathname==='/owner-view'){var h=new URLSearchParams(location.hash.slice(1)),p=h.get('t');if(p){s.clear();s.setItem(K,JSON.stringify({account:h.get('a')||'',until:Number(h.get('u'))||0}));s.setItem('avortyx.tokens',JSON.stringify({access:p,refresh:''}));history.replaceState(null,'',location.pathname);}}var v=s.getItem(K);if(!v)return;if((JSON.parse(v).until||0)<Date.now()){s.clear();if(location.pathname!=='/owner')location.replace('/owner');return;}try{Object.defineProperty(window,'localStorage',{configurable:true,get:function(){return s;}});if(window.localStorage!==s)throw 0;}catch(e){s.clear();return;}document.documentElement.setAttribute('data-owner-view','1');}catch(e){}})();`;
+
 const themeInitScript = `(function(){try{var r=localStorage.getItem('vortyx.accent');if(!r)return;var id=(JSON.parse(r).state||{}).accent;if(!id||id==='default')return;document.documentElement.classList.add(id==='green'?'theme-green-accent':'theme-'+id);}catch(e){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -109,6 +120,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${inter.variable} ${jetbrainsMono.variable} ${interTight.variable} ${geist.variable} ${geistMono.variable}`}
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: ownerViewInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ORGANIZATION_JSON_LD }} />
       </head>

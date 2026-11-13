@@ -3447,3 +3447,38 @@ Call Summary tabs kept every call.
 - Reset Filter, or clicking the total again, brings all tabs back.
 
 `components/reports/call-summary-table.tsx`. Frontend only.
+
+## CH-675 - Organizations page with more details
+
+13 Nov, Sir: "Org page - change it to the updated version with more
+details" (5 screens). Backend CH-675 first (new fields and endpoints).
+
+- Organizations list (Owner): summary cards (Organizations, Total balances,
+  Calls today, Revenue today, Needs attention), search, filters All / Needs
+  attention / Active today, the number stock line (CH-665) as before, and the
+  table in two parts - Your account and Clients - with Runway (how many
+  minutes the balance pays for) and Health (OK, Low balance, No balance,
+  Billing not set, Suspended). A row opens the account's page.
+- Account page (/owner/{id}): header with Main badge, slug and health;
+  Message client, Adjust balance, Open their portal; tabs Overview (balance,
+  live now, calls today, revenue, users, today's flow publishers -> buyers
+  -> connected, Health checks), Traffic (by campaign, publisher bought from,
+  buyer sold to, any day), Numbers (every TFN: on Avortyx stock or the
+  client's own, risk, campaign, calls today, live / expired), Caller & TFN
+  lookup, Users (with 2FA), Billing (rates and fees, transactions).
+- Every action the list had stays, on the list and on the account page:
+  New Organization, Edit rates & fees (with the account type and the call
+  limit), Credit / Debit (now also "Adjust balance"), Suspend / Activate,
+  Delete with its preview. Moved unchanged to `components/owner/org-actions.tsx`.
+- Message client: shown at the top of the client's portal until each login
+  clicks Seen (not to buyer / publisher logins).
+- Open their portal: opens the client's portal in a new tab, read-only, as
+  its main login, for 60 minutes; a bar says so, with Exit. The tab keeps the
+  pass to itself (its own storage), so the owner's sign-in in other tabs is
+  untouched; the server refuses every change and logs every view.
+
+`app/(app)/owner/page.tsx`, `app/(app)/owner/[id]/page.tsx` (new),
+`app/owner-view/page.tsx` (new), `app/layout.tsx` (view start script),
+`app/(app)/layout.tsx` (the two bars), `components/owner/org-actions.tsx`,
+`org-format.tsx`, `org-tabs.tsx`, `components/app-shell/owner-view-banner.tsx`,
+`owner-message-bar.tsx`, `lib/owner-view.ts`, `lib/i18n/extra/org-page.ts` (new).
