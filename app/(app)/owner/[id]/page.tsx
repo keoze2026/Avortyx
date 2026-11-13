@@ -14,11 +14,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Eye, MessageSquare, MoreHorizontal, ShieldX, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MoreHorizontal, ShieldX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { errText, useOrgActions } from "@/components/owner/org-actions";
-import { HEALTH_KEY, MainBadge, OrgTile, type Health } from "@/components/owner/org-format";
+import { HEALTH_KEY, HEALTH_STYLE, MainBadge, OrgTile, type Health } from "@/components/owner/org-format";
 import {
   BillingTab,
   LookupTab,
@@ -46,6 +46,10 @@ import { formatRelativeTime } from "@/lib/format";
 import { LocalName } from "@/lib/i18n/local-name";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
+
+/** Underlined tabs, as on Sir's design. */
+const TAB =
+  "-mb-px h-auto flex-none rounded-none border-0 border-b-2 border-transparent bg-transparent px-0 pb-2.5 pt-1 text-sm font-normal text-muted-foreground shadow-none hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:border-foreground dark:data-[state=active]:bg-transparent";
 
 interface Detail {
   id: string;
@@ -132,7 +136,11 @@ export default function OrganizationPage() {
 
   const org = { id: detail.id, name: detail.name, isActive: detail.isActive };
   const health: Health = overview?.health ?? (detail.isActive ? "ok" : "suspended");
-  const canView = !detail.isMainAccount && detail.isActive;
+  // Our own account: the buttons are there, but there is no client to
+  // message and no portal to open (the server refuses both).
+  const own = detail.isMainAccount;
+  const canView = !own && detail.isActive;
+  const viewTitle = own ? t("x675.view.ownAccount") : detail.isActive ? undefined : t("x675.view.suspended");
 
   async function openPortal() {
     // Opened at once (inside the click), filled once the pass arrives - a
@@ -164,17 +172,17 @@ export default function OrganizationPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1280px] space-y-5">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
         <Link href="/owner" className="inline-flex items-center gap-1 hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> {t("owner.orgs.title")}
+          <ArrowLeft className="h-3.5 w-3.5" /> {t("owner.orgs.title")}
         </Link>
         <span aria-hidden>/</span>
-        <LocalName name={detail.name} className="text-foreground" />
+        <LocalName name={detail.name} />
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <OrgTile name={detail.name} className="h-12 w-12 text-sm" />
+          <OrgTile name={detail.name} className="h-11 w-11 text-sm" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate text-xl font-semibold tracking-tight">
@@ -182,37 +190,34 @@ export default function OrganizationPage() {
               </h1>
               {detail.isMainAccount && <MainBadge t={t} />}
             </div>
-            <div className="text-sm text-muted-foreground">
-              {detail.slug} ·{" "}
-              <span
-                className={cn(
-                  health === "ok" && "text-emerald-600 dark:text-emerald-400",
-                  (health === "low_balance") && "text-amber-600 dark:text-amber-400",
-                  (health === "no_balance" || health === "suspended") && "text-red-600 dark:text-red-400",
-                )}
-              >
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-mono">{detail.slug}</span>
+              <span aria-hidden>·</span>
+              <span className={cn("inline-flex items-center gap-1", HEALTH_STYLE[health])}>
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
                 {t(HEALTH_KEY[health])}
               </span>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!detail.isMainAccount && (
-            <Button variant="outline" onClick={() => actions.openMessage(org)}>
-              <MessageSquare className="mr-1.5 h-4 w-4" /> {t("x675.message.title")}
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => actions.openMoney(org, "credit")}>
-            <Wallet className="mr-1.5 h-4 w-4" /> {t("x675.adjustBalance")}
+          <Button
+            variant="outline"
+            onClick={() => actions.openMessage(org)}
+            disabled={own}
+            title={own ? t("x675.view.ownAccount") : undefined}
+          >
+            {t("x675.message.title")}
           </Button>
-          {!detail.isMainAccount && (
-            <Button onClick={openPortal} disabled={!canView || opening} title={canView ? undefined : t("x675.view.suspended")}>
-              {t("x675.view.open")} <ExternalLink className="ml-1.5 h-4 w-4" />
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => actions.openMoney(org, "credit")}>
+            {t("x675.adjustBalance")}
+          </Button>
+          <Button onClick={openPortal} disabled={!canView || opening} title={viewTitle}>
+            {t("x675.view.open")} <ArrowUpRight className="ml-1 h-4 w-4" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t("x675.actions")}>
+              <Button variant="ghost" size="icon" aria-label={t("x675.actions")} title={t("x675.actions")}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -233,44 +238,44 @@ export default function OrganizationPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <span className="flex items-center gap-2">
-          <Eye className="h-4 w-4 shrink-0 text-accent" />
+      <div className="flex flex-col gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-2.5 text-[13px] sm:flex-row sm:items-center sm:justify-between">
+        <span className="flex items-center gap-2.5">
+          <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
           <span>
-            <span className="font-medium">{t("x675.view.ownerView")}</span> {t("x675.view.note")}
+            {t("x675.view.ownerView")} {t("x675.view.note")}
           </span>
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="font-mono text-xs text-muted-foreground">
           {t("x675.lastCall")}{" "}
           {overview?.lastCallAt ? formatRelativeTime(new Date(overview.lastCallAt).getTime()) : t("x675.us.never")}
         </span>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
-        <TabsList className="h-auto flex-wrap justify-start">
-          <TabsTrigger value="overview">{t("x675.tab.overview")}</TabsTrigger>
-          <TabsTrigger value="traffic">{t("x675.tab.traffic")}</TabsTrigger>
-          <TabsTrigger value="numbers">{t("x675.tab.numbers")}</TabsTrigger>
-          <TabsTrigger value="lookup">{t("x675.tab.lookup")}</TabsTrigger>
-          <TabsTrigger value="users">{t("x675.tab.users")}</TabsTrigger>
-          <TabsTrigger value="billing">{t("x675.tab.billing")}</TabsTrigger>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-6 rounded-none border-b bg-transparent p-0">
+          <TabsTrigger value="overview" className={TAB}>{t("x675.tab.overview")}</TabsTrigger>
+          <TabsTrigger value="traffic" className={TAB}>{t("x675.tab.traffic")}</TabsTrigger>
+          <TabsTrigger value="numbers" className={TAB}>{t("x675.tab.numbers")}</TabsTrigger>
+          <TabsTrigger value="lookup" className={TAB}>{t("x675.tab.lookup")}</TabsTrigger>
+          <TabsTrigger value="users" className={TAB}>{t("x675.tab.users")}</TabsTrigger>
+          <TabsTrigger value="billing" className={TAB}>{t("x675.tab.billing")}</TabsTrigger>
         </TabsList>
-        <TabsContent value="overview" className="mt-4">
+        <TabsContent value="overview" className="mt-5">
           <OverviewTab data={overview} />
         </TabsContent>
-        <TabsContent value="traffic" className="mt-4">
+        <TabsContent value="traffic" className="mt-5">
           {tab === "traffic" && <TrafficTab orgId={detail.id} />}
         </TabsContent>
-        <TabsContent value="numbers" className="mt-4">
+        <TabsContent value="numbers" className="mt-5">
           {tab === "numbers" && <NumbersTab orgId={detail.id} />}
         </TabsContent>
-        <TabsContent value="lookup" className="mt-4">
+        <TabsContent value="lookup" className="mt-5">
           <LookupTab />
         </TabsContent>
-        <TabsContent value="users" className="mt-4">
+        <TabsContent value="users" className="mt-5">
           <UsersTab users={detail.users} />
         </TabsContent>
-        <TabsContent value="billing" className="mt-4">
+        <TabsContent value="billing" className="mt-5">
           {tab === "billing" && (
             <BillingTab
               orgId={detail.id}
